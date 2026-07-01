@@ -222,6 +222,216 @@ def copy_cleanup_prompt(args: argparse.Namespace) -> None:
         print(f"[clipboard] cleanup prompt for {args.corpus_id} ({len(prompt)} chars)")
 
 
+def duration_label(seconds: Any) -> str:
+    if not seconds:
+        return "?m"
+    total = int(seconds)
+    minutes = total // 60
+    secs = total % 60
+    return f"{minutes}:{secs:02d}"
+
+
+def transcript_status(row: dict[str, Any]) -> str:
+    corpus_id = row["corpus_id"]
+    if workspace_path(corpus_id).exists():
+        return "workspace"
+    if autosave_path(corpus_id).exists():
+        return "autosave"
+    if whisper_json_path(corpus_id).exists():
+        return "whisper"
+    return "missing"
+
+
+def short(value: str, width: int) -> str:
+    value = value.replace("\n", " ").strip()
+    if len(value) <= width:
+        return value
+    return value[: max(0, width - 1)] + "…"
+
+
+def tui_choice(stdscr: Any, title: str, items: list[tuple[str, Any]]) -> Any | None:
+    import curses
+
+    index = 0
+    offset = 0
+    while True:
+        height, width = stdscr.getmaxyx()
+        visible = max(1, height - 5)
+        if index < offset:
+            offset = index
+        if index >= offset + visible:
+            offset = index - visible + 1
+
+        stdscr.erase()
+        stdscr.addstr(0, 0, short(title, width - 1), curses.A_BOLD)
+        stdscr.addstr(1, 0, "↑/↓ choisir · Entrée valider · q retour", curses.A_DIM)
+        for screen_row, (label, _value) in enumerate(items[offset : offset + visible], start=3):
+            item_index = offset + screen_row - 3
+            marker = "› " if item_index == index else "  "
+            attr = curses.A_REVERSE if item_index == index else curses.A_NORMAL
+            stdscr.addstr(screen_row, 0, short(marker + label, width - 1), attr)
+        stdscr.refresh()
+
+        key = stdscr.getch()
+        if key in {ord("q"), 27}:
+            return None
+        if key in {curses.KEY_UP, ord("k")}:
+            index = max(0, index - 1)
+        elif key in {curses.KEY_DOWN, ord("j")}:
+            index = min(len(items) - 1, index + 1)
+        elif key in {10, 13, curses.KEY_ENTER}:
+            return items[index][1]
+
+
+def tui_message(stdscr: Any, lines: list[str]) -> None:
+    import curses
+
+    stdscr.erase()
+    height, width = stdscr.getmaxyx()
+    for row, line in enumerate(lines[: height - 2]):
+        stdscr.addstr(row, 0, short(line, width - 1))
+    stdscr.addstr(height - 1, 0, "Entrée pour continuer", curses.A_DIM)
+    stdscr.refresh()
+    while stdscr.getch() not in {10, 13, curses.KEY_ENTER}:
+        pass
+
+
+def tui_confirm(stdscr: Any, question: str) -> bool:
+    import curses
+
+    stdscr.erase()
+    stdscr.addstr(0, 0, question, curses.A_BOLD)
+    stdscr.addstr(2, 0, "y confirmer · n annuler", curses.A_DIM)
+    stdscr.refresh()
+    while True:
+        key = stdscr.getch()
+        if key in {ord("y"), ord("Y"), ord("o"), ord("O")}:
+            return True
+        if key in {ord("n"), ord("N"), ord("q"), 27}:
+            return False
+
+
+def tui_input(stdscr: Any, label: str, default: str = "") -> str:
+    import curses
+
+    stdscr.erase()
+    stdscr.addstr(0, 0, label, curses.A_BOLD)
+    if default:
+        stdscr.addstr(1, 0, f"Défaut: {default}", curses.A_DIM)
+    stdscr.addstr(3, 0, "> ")
+    curses.echo()
+    try:
+        raw = stdscr.getstr(3, 2, 500)
+    finally:
+        curses.noecho()
+    value = raw.decode("utf-8").strip()
+    return value or default
+
+
+def tui_run_shell(stdscr: Any, action: Any) -> None:
+    import curses
+
+    curses.def_prog_mode()
+    curses.endwin()
+    try:
+        action()
+    except SystemExit as exc:
+        print(f"\n[error] {exc}")
+    except subprocess.CalledProcessError as exc:
+        print(f"\n[error] command exited with code {exc.returncode}")
+    finally:
+        input("\nEntrée pour revenir au TUI...")
+        curses.reset_prog_mode()
+        stdscr.clear()
+
+
+def tui_video_items(rows: list[dict[str, Any]]) -> list[tuple[str, dict[str, Any]]]:
+    return [
+        (
+            f"{row['corpus_id']} · {duration_label(row.get('duration_seconds'))} · {transcript_status(row)} · "
+            f"{row.get('title', '')}",
+            row,
+        )
+        for row in rows
+    ]
+
+
+def run_tui(_: argparse.Namespace) -> None:
+    import curses
+
+    def app(stdscr: Any) -> None:
+        curses.curs_set(0)
+        stdscr.keypad(True)
+        while True:
+            action = tui_choice(
+                stdscr,
+                "Ashrafent CLI",
+                [
+                    ("Lister les vidéos sans transcription", "missing"),
+                    ("Transcrire une vidéo", "transcribe_one"),
+                    ("Transcrire tout ce qui manque", "transcribe_missing"),
+                    ("Télécharger une vidéo YouTube", "download"),
+                    ("Copier un prompt de nettoyage", "cleanup_prompt"),
+                    ("Quitter", "quit"),
+                ],
+            )
+            if action in {None, "quit"}:
+                return
+            if action == "missing":
+                rows = read_manifest()
+                missing = [row for row in rows if Path(row.get("audio_path", "")).as_posix() and not has_subtitle(row)]
+                if not missing:
+                    tui_message(stdscr, ["Toutes les vidéos du manifest ont une transcription locale ou un workspace."])
+                else:
+                    selected = tui_choice(stdscr, "Vidéos sans transcription", tui_video_items(missing))
+                    if selected and tui_confirm(stdscr, f"Transcrire {selected['corpus_id']} maintenant ?"):
+                        tui_run_shell(stdscr, lambda row=selected: transcribe_one(row))
+            elif action == "transcribe_one":
+                rows = read_manifest()
+                selected = tui_choice(stdscr, "Choisir une vidéo à transcrire", tui_video_items(rows))
+                if selected:
+                    force = has_subtitle(selected) and tui_confirm(
+                        stdscr,
+                        f"{selected['corpus_id']} a déjà une transcription. Forcer le remplacement ?",
+                    )
+                    if not has_subtitle(selected) or force:
+                        tui_run_shell(stdscr, lambda row=selected, force=force: transcribe_one(row, force=force))
+            elif action == "transcribe_missing":
+                if tui_confirm(stdscr, "Lancer Whisper sur toutes les vidéos manquantes ?"):
+                    args = argparse.Namespace(force=False)
+                    tui_run_shell(stdscr, lambda: transcribe_missing(args))
+            elif action == "download":
+                url = tui_input(stdscr, "URL YouTube")
+                if not url:
+                    continue
+                corpus_id = tui_input(stdscr, "corpus_id optionnel")
+                speaker = tui_input(stdscr, "Speaker optionnel")
+                series = tui_input(stdscr, "Série optionnelle", "YouTube imports")
+                transcribe = tui_confirm(stdscr, "Transcrire automatiquement après téléchargement ?")
+                args = argparse.Namespace(
+                    url=url,
+                    corpus_id=corpus_id or None,
+                    speaker=speaker or None,
+                    series=series or None,
+                    transcribe=transcribe,
+                    force=False,
+                )
+                tui_run_shell(stdscr, lambda: download_command(args))
+            elif action == "cleanup_prompt":
+                rows = [row for row in read_manifest() if has_subtitle(row)]
+                selected = tui_choice(stdscr, "Choisir une transcription à nettoyer", tui_video_items(rows))
+                if selected:
+                    args = argparse.Namespace(
+                        corpus_id=selected["corpus_id"],
+                        prompt_file=str(DEFAULT_CLEANUP_PROMPT.relative_to(ROOT)),
+                        print=False,
+                        no_copy=False,
+                    )
+                    tui_run_shell(stdscr, lambda: copy_cleanup_prompt(args))
+
+    curses.wrapper(app)
+
+
 def yt_dlp_json(url: str) -> dict[str, Any]:
     if not YTDLP.exists():
         raise SystemExit(f"Missing yt-dlp: {YTDLP}")
@@ -342,6 +552,12 @@ def main() -> None:
     cleanup.add_argument("--print", action="store_true", help="Also print the generated prompt to stdout")
     cleanup.add_argument("--no-copy", action="store_true", help="Do not copy to clipboard")
     cleanup.set_defaults(func=copy_cleanup_prompt)
+
+    tui = sub.add_parser("tui", help="Open an interactive terminal UI")
+    tui.set_defaults(func=run_tui)
+
+    menu = sub.add_parser("menu", help="Alias for tui")
+    menu.set_defaults(func=run_tui)
 
     download = sub.add_parser("download", help="Download a YouTube URL into the corpus")
     download.add_argument("url")

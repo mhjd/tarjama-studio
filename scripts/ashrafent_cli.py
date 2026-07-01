@@ -213,7 +213,7 @@ def validate_cleaned_transcript(current: dict[str, Any], cleaned: dict[str, Any]
             end = float(segment["end"])
         except (TypeError, ValueError) as exc:
             raise SystemExit(f"Segment {index} has invalid timestamps") from exc
-        if start < 0 or end <= start:
+        if start < 0 or end < start:
             raise SystemExit(f"Segment {index} has inconsistent timestamps")
         if start < previous_start:
             raise SystemExit(f"Segment {index} starts before the previous segment")

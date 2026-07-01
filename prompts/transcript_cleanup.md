@@ -27,7 +27,7 @@ Contraintes imperatives:
 - Conserve exactement corpus_id, audio_path, source_transcript, source_model, project_instructions, created_at et updated_at.
 - Conserve autant que possible les segments existants, leurs id, start et end.
 - Tu peux supprimer un segment seulement s'il est entierement inutile: repetition parasite, hallucination evidente, bruit de modele, ou fragment vide/non exploitable.
-- Tu peux remplacer ou ajouter un segment seulement si cela preserve un JSON sain: id unique, timestamps numeriques, start < end, ordre chronologique.
+- Tu peux remplacer ou ajouter un segment seulement si cela preserve un JSON sain: id unique, timestamps numeriques, end >= start, ordre chronologique. Pour un nouveau segment non vide, prefere end > start.
 - Modifie principalement les champs "text" des segments.
 - Laisse tous les champs "translation" inchanges.
 - Ne recalcule pas librement les timestamps. Si tu conserves un segment existant, garde ses timestamps.

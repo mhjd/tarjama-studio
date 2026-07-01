@@ -119,22 +119,42 @@ function validateTranscript(payload: unknown): WorkspaceTranscript {
 async function runTool(command: string, args: string[], cwd: string): Promise<string> {
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, windowsHide: true });
-    let output = "";
+    let stdout = "";
+    let stderr = "";
     child.stdout.on("data", (chunk) => {
-      output += String(chunk);
+      stdout += String(chunk);
     });
     child.stderr.on("data", (chunk) => {
-      output += String(chunk);
+      stderr += String(chunk);
     });
     child.on("error", reject);
     child.on("close", (code) => {
       if (code === 0) {
-        resolve(output);
+        resolve(stdout);
       } else {
-        reject(new Error(`${command} exited with code ${code}\n${output.trim()}`));
+        reject(new Error(`${command} exited with code ${code}\n${(stderr || stdout).trim()}`));
       }
     });
   });
+}
+
+function parseYtdlpJson(output: string): { id?: string; title?: string; duration?: number; webpage_url?: string } {
+  const trimmed = output.trim();
+  try {
+    return JSON.parse(trimmed) as { id?: string; title?: string; duration?: number; webpage_url?: string };
+  } catch {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1)) as {
+        id?: string;
+        title?: string;
+        duration?: number;
+        webpage_url?: string;
+      };
+    }
+    throw new Error("yt-dlp did not return valid JSON metadata");
+  }
 }
 
 async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: boolean; video: boolean }> {
@@ -211,8 +231,8 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
-  const metadataText = await runTool(ytdlp, ["-J", request.url], libraryDir());
-  const metadata = JSON.parse(metadataText) as { id?: string; title?: string; duration?: number; webpage_url?: string };
+  const metadataText = await runTool(ytdlp, ["--no-warnings", "-J", request.url], libraryDir());
+  const metadata = parseYtdlpJson(metadataText);
   const youtubeId = metadata.id || randomUUID();
   const id = slugify(`youtube_${youtubeId}`);
   const dir = projectDir(id);

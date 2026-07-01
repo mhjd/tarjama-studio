@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Check,
   Combine,
+  Copy,
   Download,
   FileInput,
   GitCompare,
@@ -226,6 +227,22 @@ function formatTime(seconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
+function formatTimeMs(seconds: number): string {
+  if (!Number.isFinite(seconds)) return "00:00.000";
+  const safe = Math.max(0, seconds);
+  const totalMilliseconds = Math.round(safe * 1000);
+  const milliseconds = totalMilliseconds % 1000;
+  const totalSeconds = Math.floor(totalMilliseconds / 1000);
+  const secs = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+  const base = hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  return `${base}.${String(milliseconds).padStart(3, "0")}`;
+}
+
 function parseTime(value: string): number | null {
   const parts = value.trim().split(":").map(Number);
   if (parts.some((part) => Number.isNaN(part))) return null;
@@ -319,6 +336,50 @@ function transcriptWithoutTranslations(transcript: Transcript): Transcript {
   };
 }
 
+function translationPromptFromTranscript(transcript: Transcript): string {
+  const projectInstructions = transcript.project_instructions?.trim();
+  const sourceBlocks = transcript.segments
+    .map((segment) => {
+      const start = formatTimeMs(segment.start);
+      const end = formatTimeMs(segment.end);
+      return `## ${start} --> ${end}\n${segment.text.trim()}`;
+    })
+    .join("\n\n");
+
+  return `Tu es traducteur professionnel arabe -> français.
+
+Traduis la transcription arabe ci-dessous en français naturel, précis et fidèle au sens.
+
+Contraintes impératives:
+- Réponds uniquement avec le document Markdown final, sans commentaire avant ou après.
+- Conserve exactement les métadonnées source_corpus_id, language et format.
+- Conserve exactement le même nombre de blocs.
+- Conserve exactement chaque ligne de titre "## début --> fin", sans modifier les timestamps.
+- Ne fusionne pas et ne divise pas les blocs.
+- Sous chaque titre, remplace le texte arabe par la traduction française du bloc.
+- Si un passage est ambigu, traduis au mieux sans ajouter de note.
+${projectInstructions ? `\nInstructions propres à ce projet:\n${projectInstructions}\n` : ""}
+Format de sortie attendu:
+
+# Translation
+
+source_corpus_id: ${transcript.corpus_id}
+language: fr
+format: ashrafent-translation-v1
+
+## 00:00.000 --> 00:03.440
+Traduction française du bloc.
+
+Transcription à traduire:
+
+# Source
+
+source_corpus_id: ${transcript.corpus_id}
+
+${sourceBlocks}
+`;
+}
+
 function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const translationFileRef = useRef<HTMLInputElement | null>(null);
@@ -333,6 +394,7 @@ function App() {
   const [previewSnapshot, setPreviewSnapshot] = useState<SnapshotInfo | null>(null);
   const [attachedTranslation, setAttachedTranslation] = useState<Translation | null>(null);
   const [translationState, setTranslationState] = useState("Aucune traduction");
+  const [copyState, setCopyState] = useState("Copier prompt");
   const [exportTrack, setExportTrack] = useState<ExportTrack>("transcript");
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
   const [exportState, setExportState] = useState("Export vidéo");
@@ -403,6 +465,7 @@ function App() {
     setPreviewSnapshot(null);
     setAttachedTranslation(null);
     setTranslationState("Aucune traduction");
+    setCopyState("Copier prompt");
     setExportTrack("transcript");
     setExportJob(null);
     setExportState("Export vidéo");
@@ -681,6 +744,19 @@ function App() {
       setError(message);
     } finally {
       if (translationFileRef.current) translationFileRef.current.value = "";
+    }
+  }
+
+  async function copyTranslationPrompt() {
+    if (!transcript || editorLocked) return;
+    try {
+      await navigator.clipboard.writeText(translationPromptFromTranscript(transcript));
+      setCopyState("Copié");
+      setError("");
+      window.setTimeout(() => setCopyState("Copier prompt"), 1800);
+    } catch (err) {
+      setCopyState("Copier prompt");
+      setError(err instanceof Error ? err.message : "Copie impossible");
     }
   }
 
@@ -1091,6 +1167,10 @@ function App() {
         {transcript && (
           <div className="translation-tools">
             <span>{translationState}</span>
+            <button disabled={editorLocked} onClick={() => void copyTranslationPrompt()}>
+              <Copy size={16} />
+              <span>{copyState}</span>
+            </button>
             <input
               ref={translationFileRef}
               accept=".md,text/markdown,text/plain"

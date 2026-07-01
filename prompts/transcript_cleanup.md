@@ -27,6 +27,9 @@ Contraintes imperatives:
 - Conserve exactement corpus_id, audio_path, source_transcript, source_model, project_instructions, created_at et updated_at.
 - Conserve autant que possible les segments existants, leurs id, start et end.
 - Tu peux supprimer un segment seulement s'il est entierement inutile: repetition parasite, hallucination evidente, bruit de modele, ou fragment vide/non exploitable.
+- Supprime obligatoirement les segments dont "text" est vide ou uniquement compose d'espaces.
+- Supprime obligatoirement les segments vides a duree nulle ou micro-duree issus de Whisper.
+- Ne laisse aucun segment vide dans le JSON final.
 - Tu peux remplacer ou ajouter un segment seulement si cela preserve un JSON sain: id unique, timestamps numeriques, end >= start, ordre chronologique. Pour un nouveau segment non vide, prefere end > start.
 - Modifie principalement les champs "text" des segments.
 - Laisse tous les champs "translation" inchanges.

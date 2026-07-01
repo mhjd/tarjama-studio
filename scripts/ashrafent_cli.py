@@ -173,7 +173,11 @@ def same_timestamp(left: Any, right: Any) -> bool:
         return False
 
 
-def validate_cleaned_transcript(current: dict[str, Any], cleaned: dict[str, Any]) -> dict[str, int]:
+def validate_cleaned_transcript(
+    current: dict[str, Any],
+    cleaned: dict[str, Any],
+    allow_empty_segments: bool = False,
+) -> dict[str, int]:
     if not isinstance(cleaned, dict):
         raise SystemExit("Cleaned transcript must be a JSON object")
     if set(cleaned.keys()) != set(current.keys()):
@@ -194,6 +198,7 @@ def validate_cleaned_transcript(current: dict[str, Any], cleaned: dict[str, Any]
 
     required_segment_keys = {"id", "start", "end", "text", "translation"}
     seen_ids = set()
+    empty_segment_indexes = []
     previous_start = -1.0
     for index, segment in enumerate(cleaned_segments):
         if not isinstance(segment, dict):
@@ -220,8 +225,17 @@ def validate_cleaned_transcript(current: dict[str, Any], cleaned: dict[str, Any]
         previous_start = start
         if not isinstance(segment.get("text"), str):
             raise SystemExit(f"Segment {index} text must be a string")
+        if not allow_empty_segments and not segment["text"].strip():
+            empty_segment_indexes.append(index)
         if not isinstance(segment.get("translation"), str):
             raise SystemExit(f"Segment {index} translation must be a string")
+    if empty_segment_indexes:
+        preview = ", ".join(str(index) for index in empty_segment_indexes[:12])
+        suffix = "..." if len(empty_segment_indexes) > 12 else ""
+        raise SystemExit(
+            "Cleaned transcript still contains empty segment(s): "
+            f"{preview}{suffix}. Remove empty/hallucinated segments before import."
+        )
 
     before_by_id = {str(segment.get("id", "")): segment for segment in current_segments if isinstance(segment, dict)}
     after_by_id = {str(segment.get("id", "")): segment for segment in cleaned_segments}
@@ -353,7 +367,7 @@ def import_cleaned_transcript(args: argparse.Namespace) -> None:
     except json.JSONDecodeError as exc:
         raise SystemExit(f"Invalid JSON: {exc}") from exc
 
-    summary = validate_cleaned_transcript(current, cleaned)
+    summary = validate_cleaned_transcript(current, cleaned, allow_empty_segments=args.allow_empty_segments)
     backup = backup_workspace(args.corpus_id, current)
     write_workspace_json(args.corpus_id, cleaned)
     print(f"[workspace] imported cleaned transcript: {workspace_path(args.corpus_id).relative_to(ROOT)}")
@@ -574,13 +588,17 @@ def run_tui(_: argparse.Namespace) -> None:
                         stdscr,
                         f"Prompt copié ({copied_chars} caractères). Coller le JSON nettoyé maintenant ?",
                     ):
-                        args = argparse.Namespace(corpus_id=selected["corpus_id"], file=None)
+                        args = argparse.Namespace(
+                            corpus_id=selected["corpus_id"],
+                            file=None,
+                            allow_empty_segments=False,
+                        )
                         tui_run_shell(stdscr, lambda: import_cleaned_transcript(args))
             elif action == "import_cleaned":
                 rows = [row for row in read_manifest() if has_subtitle(row)]
                 selected = tui_choice(stdscr, "Choisir la transcription à remplacer", tui_video_items(rows))
                 if selected:
-                    args = argparse.Namespace(corpus_id=selected["corpus_id"], file=None)
+                    args = argparse.Namespace(corpus_id=selected["corpus_id"], file=None, allow_empty_segments=False)
                     tui_run_shell(stdscr, lambda: import_cleaned_transcript(args))
 
     curses.wrapper(app)
@@ -710,6 +728,7 @@ def main() -> None:
     import_cleaned = sub.add_parser("import-cleaned-transcript", help="Import cleaned workspace JSON from a file or paste")
     import_cleaned.add_argument("corpus_id")
     import_cleaned.add_argument("--file", help="Read cleaned JSON from a file instead of stdin/paste")
+    import_cleaned.add_argument("--allow-empty-segments", action="store_true", help="Import even if some cleaned segments have empty text")
     import_cleaned.set_defaults(func=import_cleaned_transcript)
 
     tui = sub.add_parser("tui", help="Open an interactive terminal UI")

@@ -30,18 +30,26 @@ L'application doit permettre de partir d'un audio/vidéo, générer ou charger u
 
 ## CLI
 
-Commandes principales:
+Chemin principal:
 
 - `make tui`
+
+Dans le TUI, l'action principale est `Nouvelle vidéo complète: télécharger -> transcrire -> nettoyer`. Elle télécharge une URL YouTube, extrait l'audio, ajoute l'entrée au manifest, lance Whisper local, copie le prompt de nettoyage ChatGPT dans le presse-papiers, puis attend le JSON nettoyé collé dans le terminal pour l'importer après validation.
+
+Commande directe équivalente:
+
+- `python scripts/ashrafent_cli.py youtube-pipeline <youtube_url>`
+
+Commandes secondaires/deprecated, gardées pour maintenance:
+
 - `python scripts/ashrafent_cli.py list-missing`
 - `python scripts/ashrafent_cli.py transcribe <corpus_id>`
 - `python scripts/ashrafent_cli.py transcribe-missing`
 - `python scripts/ashrafent_cli.py download <youtube_url> --transcribe`
 - `python scripts/ashrafent_cli.py copy-cleanup-prompt <corpus_id>`
+- `python scripts/ashrafent_cli.py import-cleaned-transcript <corpus_id>`
 
 La CLI télécharge les vidéos YouTube dans `data/raw/videos/youtube/`, extrait un WAV mono 16 kHz dans `data/raw/audio/youtube/`, ajoute une ligne au manifest, lance Whisper local si demandé, puis crée le workspace d'édition.
-
-`tui` ouvre un menu terminal interactif pour lister les vidéos manquantes, transcrire une vidéo, transcrire tout ce qui manque, télécharger une vidéo YouTube, ou copier un prompt de nettoyage.
 
 `copy-cleanup-prompt` copie dans le presse-papiers un prompt ChatGPT de nettoyage de transcription suivi du JSON workspace courant. Le prompt est personnalisable dans `prompts/transcript_cleanup.md`. Le TUI peut ensuite importer le JSON nettoyé collé; l'import vérifie le format workspace, les métadonnées et la cohérence des timestamps, tout en autorisant les ajouts/suppressions de segments.
 

@@ -27,5 +27,5 @@ Build a local-first app to help transcribe, correct, and translate Arabic audio/
 - Frontend: React + TypeScript + Vite.
 - Backend: FastAPI local server.
 - Initial transcription format: Whisper-style JSON converted into a stable workspace JSON.
-- CLI: download YouTube videos, list missing transcripts, run local Whisper, and create workspace JSON.
+- CLI: prioritize the guided YouTube pipeline: download, transcribe with local Whisper, copy the cleanup prompt, then import the cleaned ChatGPT JSON. Keep separate list/transcribe/download/import commands available as deprecated maintenance actions.
 - Web MVP priority: video selection, audio player, editable timestamped segments, silent current-state persistence, and explicit immutable saves in snapshots. Do not run transcription jobs from the web UI.

@@ -253,10 +253,13 @@ def validate_cleaned_transcript(
     }
 
 
-def read_pasted_text(end_marker: str = "EOF") -> str:
+def read_pasted_text(end_marker: str = "EOF", cancel_marker: str = "CANCEL") -> str:
     if not sys.stdin.isatty():
         return sys.stdin.read()
-    print(f"Colle le JSON nettoyé, puis termine par une ligne contenant uniquement {end_marker}.")
+    print(
+        f"Colle le JSON nettoyé, puis termine par une ligne contenant uniquement {end_marker}.\n"
+        f"Pour annuler, écris {cancel_marker} sur une ligne vide."
+    )
     lines = []
     while True:
         try:
@@ -265,6 +268,8 @@ def read_pasted_text(end_marker: str = "EOF") -> str:
             break
         if line.strip() == end_marker:
             break
+        if line.strip() == cancel_marker:
+            raise SystemExit("Import cancelled")
         lines.append(line)
     return "\n".join(lines)
 
@@ -377,6 +382,28 @@ def import_cleaned_transcript(args: argparse.Namespace) -> None:
         f"{summary['before']} -> {summary['after']} "
         f"({summary['changed']} changed, {summary['added']} added, {summary['removed']} removed)"
     )
+
+
+def youtube_cleanup_pipeline(args: argparse.Namespace) -> None:
+    row = download_youtube(args)
+    corpus_id = row["corpus_id"]
+
+    if not has_subtitle(row) or args.force:
+        transcribe_one(row, force=args.force)
+    else:
+        print(f"[skip] {corpus_id}: transcript already exists")
+
+    copied_chars = copy_cleanup_prompt_for_row(row)
+    print(f"[clipboard] cleanup prompt for {corpus_id} ({copied_chars} chars)")
+    print("")
+    print("Étape suivante:")
+    print("1. Colle le presse-papiers dans ChatGPT.")
+    print("2. Copie uniquement le JSON complet renvoyé par ChatGPT.")
+    print("3. Reviens ici, colle le JSON, puis termine par EOF.")
+    print("")
+
+    import_args = argparse.Namespace(corpus_id=corpus_id, file=None, allow_empty_segments=False)
+    import_cleaned_transcript(import_args)
 
 
 def duration_label(seconds: Any) -> str:
@@ -513,6 +540,31 @@ def tui_video_items(rows: list[dict[str, Any]]) -> list[tuple[str, dict[str, Any
     ]
 
 
+def tui_guided_youtube_pipeline(stdscr: Any) -> None:
+    url = tui_input(stdscr, "URL YouTube")
+    if not url:
+        return
+
+    use_defaults = tui_confirm(stdscr, "Utiliser les paramètres par défaut ?")
+    if use_defaults:
+        corpus_id = ""
+        speaker = ""
+        series = "YouTube imports"
+    else:
+        corpus_id = tui_input(stdscr, "corpus_id optionnel")
+        speaker = tui_input(stdscr, "Speaker optionnel")
+        series = tui_input(stdscr, "Série optionnelle", "YouTube imports")
+
+    args = argparse.Namespace(
+        url=url,
+        corpus_id=corpus_id or None,
+        speaker=speaker or None,
+        series=series or None,
+        force=False,
+    )
+    tui_run_shell(stdscr, lambda: youtube_cleanup_pipeline(args))
+
+
 def run_tui(_: argparse.Namespace) -> None:
     import curses
 
@@ -524,18 +576,21 @@ def run_tui(_: argparse.Namespace) -> None:
                 stdscr,
                 "Ashrafent CLI",
                 [
-                    ("Lister les vidéos sans transcription", "missing"),
-                    ("Transcrire une vidéo", "transcribe_one"),
-                    ("Transcrire tout ce qui manque", "transcribe_missing"),
-                    ("Télécharger une vidéo YouTube", "download"),
-                    ("Copier un prompt de nettoyage", "cleanup_prompt"),
-                    ("Coller une transcription nettoyée", "import_cleaned"),
+                    ("Nouvelle vidéo complète: télécharger -> transcrire -> nettoyer", "guided_youtube"),
+                    ("Deprecated · Lister les vidéos sans transcription", "missing"),
+                    ("Deprecated · Transcrire une vidéo", "transcribe_one"),
+                    ("Deprecated · Transcrire tout ce qui manque", "transcribe_missing"),
+                    ("Deprecated · Télécharger une vidéo YouTube seule", "download"),
+                    ("Deprecated · Copier un prompt de nettoyage seul", "cleanup_prompt"),
+                    ("Deprecated · Coller une transcription nettoyée seule", "import_cleaned"),
                     ("Quitter", "quit"),
                 ],
             )
             if action in {None, "quit"}:
                 return
-            if action == "missing":
+            if action == "guided_youtube":
+                tui_guided_youtube_pipeline(stdscr)
+            elif action == "missing":
                 rows = read_manifest()
                 missing = [row for row in rows if Path(row.get("audio_path", "")).as_posix() and not has_subtitle(row)]
                 if not missing:
@@ -745,6 +800,17 @@ def main() -> None:
     download.add_argument("--transcribe", action="store_true", help="Run local Whisper after download")
     download.add_argument("--force", action="store_true")
     download.set_defaults(func=download_command)
+
+    pipeline = sub.add_parser(
+        "youtube-pipeline",
+        help="Download a YouTube URL, transcribe it, copy cleanup prompt, then import cleaned JSON",
+    )
+    pipeline.add_argument("url")
+    pipeline.add_argument("--corpus-id")
+    pipeline.add_argument("--speaker")
+    pipeline.add_argument("--series")
+    pipeline.add_argument("--force", action="store_true")
+    pipeline.set_defaults(func=youtube_cleanup_pipeline)
 
     args = parser.parse_args()
     args.func(args)

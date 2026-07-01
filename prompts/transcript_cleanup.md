@@ -25,11 +25,12 @@ Contraintes imperatives:
 - Reponds uniquement avec le JSON complet corrige, sans Markdown, sans commentaire avant ou apres.
 - Conserve exactement la meme structure JSON et les memes cles.
 - Conserve exactement corpus_id, audio_path, source_transcript, source_model, project_instructions, created_at et updated_at.
-- Conserve exactement le meme nombre de segments, dans le meme ordre.
-- Pour chaque segment, conserve exactement id, start et end.
-- Modifie uniquement les champs "text" des segments.
+- Conserve autant que possible les segments existants, leurs id, start et end.
+- Tu peux supprimer un segment seulement s'il est entierement inutile: repetition parasite, hallucination evidente, bruit de modele, ou fragment vide/non exploitable.
+- Tu peux remplacer ou ajouter un segment seulement si cela preserve un JSON sain: id unique, timestamps numeriques, start < end, ordre chronologique.
+- Modifie principalement les champs "text" des segments.
 - Laisse tous les champs "translation" inchanges.
-- Ne fusionne pas les segments, ne les divise pas, ne deplace pas de texte entre timestamps sauf correction evidente d'un chevauchement local.
+- Ne recalcule pas librement les timestamps. Si tu conserves un segment existant, garde ses timestamps.
 - Ne transforme pas la transcription en texte litteraire; garde une transcription orale propre.
 - Ne rajoute pas de contenu absent de l'audio probable.
 - Si une correction est incertaine, prefere une correction minimale ou conserve le texte existant.

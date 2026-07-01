@@ -43,7 +43,7 @@ La CLI télécharge les vidéos YouTube dans `data/raw/videos/youtube/`, extrait
 
 `tui` ouvre un menu terminal interactif pour lister les vidéos manquantes, transcrire une vidéo, transcrire tout ce qui manque, télécharger une vidéo YouTube, ou copier un prompt de nettoyage.
 
-`copy-cleanup-prompt` copie dans le presse-papiers un prompt ChatGPT de nettoyage de transcription suivi du JSON workspace courant. Le prompt est personnalisable dans `prompts/transcript_cleanup.md`.
+`copy-cleanup-prompt` copie dans le presse-papiers un prompt ChatGPT de nettoyage de transcription suivi du JSON workspace courant. Le prompt est personnalisable dans `prompts/transcript_cleanup.md`. Le TUI peut ensuite importer le JSON nettoyé collé; l'import vérifie le format workspace, les métadonnées et la cohérence des timestamps, tout en autorisant les ajouts/suppressions de segments.
 
 ## Données et scripts
 

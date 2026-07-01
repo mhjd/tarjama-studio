@@ -59,6 +59,10 @@ def autosave_path(corpus_id: str) -> Path:
     return WORKSPACES / corpus_id / "autosave.json"
 
 
+def snapshots_path(corpus_id: str) -> Path:
+    return WORKSPACES / corpus_id / "snapshots"
+
+
 def whisper_json_path(corpus_id: str) -> Path:
     return LOCAL_WHISPER_DIR / f"{corpus_id}.json"
 
@@ -143,6 +147,114 @@ def render_cleanup_prompt(row: dict[str, Any], transcript: dict[str, Any], promp
     )
 
 
+def write_workspace_json(corpus_id: str, payload: dict[str, Any]) -> None:
+    out = workspace_path(corpus_id)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def backup_workspace(corpus_id: str, transcript: dict[str, Any], prefix: str = "pre_cleanup") -> Path:
+    backup = json.loads(json.dumps(transcript, ensure_ascii=False))
+    backup["snapshot_at"] = now_iso()
+    out = snapshots_path(corpus_id) / f"{prefix}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    index = 1
+    while out.exists():
+        out = snapshots_path(corpus_id) / f"{prefix}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}_{index}.json"
+        index += 1
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(backup, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
+def same_timestamp(left: Any, right: Any) -> bool:
+    try:
+        return round(float(left), 3) == round(float(right), 3)
+    except (TypeError, ValueError):
+        return False
+
+
+def validate_cleaned_transcript(current: dict[str, Any], cleaned: dict[str, Any]) -> dict[str, int]:
+    if not isinstance(cleaned, dict):
+        raise SystemExit("Cleaned transcript must be a JSON object")
+    if set(cleaned.keys()) != set(current.keys()):
+        missing = sorted(set(current.keys()) - set(cleaned.keys()))
+        extra = sorted(set(cleaned.keys()) - set(current.keys()))
+        raise SystemExit(f"Top-level JSON keys changed. Missing={missing}, extra={extra}")
+
+    for key in ["corpus_id", "audio_path", "source_transcript", "source_model", "project_instructions", "created_at", "updated_at"]:
+        if key in current and cleaned.get(key) != current.get(key):
+            raise SystemExit(f"Field changed unexpectedly: {key}")
+
+    current_segments = current.get("segments")
+    cleaned_segments = cleaned.get("segments")
+    if not isinstance(current_segments, list) or not isinstance(cleaned_segments, list):
+        raise SystemExit("Both transcripts must contain a segments list")
+    if not cleaned_segments:
+        raise SystemExit("Cleaned transcript has no segment")
+
+    required_segment_keys = {"id", "start", "end", "text", "translation"}
+    seen_ids = set()
+    previous_start = -1.0
+    for index, segment in enumerate(cleaned_segments):
+        if not isinstance(segment, dict):
+            raise SystemExit(f"Segment {index} must be an object")
+        if set(segment.keys()) != required_segment_keys:
+            missing = sorted(required_segment_keys - set(segment.keys()))
+            extra = sorted(set(segment.keys()) - required_segment_keys)
+            raise SystemExit(f"Segment {index} keys changed. Missing={missing}, extra={extra}")
+        segment_id = str(segment.get("id", "")).strip()
+        if not segment_id:
+            raise SystemExit(f"Segment {index} has an empty id")
+        if segment_id in seen_ids:
+            raise SystemExit(f"Duplicate segment id: {segment_id}")
+        seen_ids.add(segment_id)
+        try:
+            start = float(segment["start"])
+            end = float(segment["end"])
+        except (TypeError, ValueError) as exc:
+            raise SystemExit(f"Segment {index} has invalid timestamps") from exc
+        if start < 0 or end <= start:
+            raise SystemExit(f"Segment {index} has inconsistent timestamps")
+        if start < previous_start:
+            raise SystemExit(f"Segment {index} starts before the previous segment")
+        previous_start = start
+        if not isinstance(segment.get("text"), str):
+            raise SystemExit(f"Segment {index} text must be a string")
+        if not isinstance(segment.get("translation"), str):
+            raise SystemExit(f"Segment {index} translation must be a string")
+
+    before_by_id = {str(segment.get("id", "")): segment for segment in current_segments if isinstance(segment, dict)}
+    after_by_id = {str(segment.get("id", "")): segment for segment in cleaned_segments}
+    kept_ids = set(before_by_id) & set(after_by_id)
+    return {
+        "before": len(current_segments),
+        "after": len(cleaned_segments),
+        "added": len(set(after_by_id) - set(before_by_id)),
+        "removed": len(set(before_by_id) - set(after_by_id)),
+        "changed": sum(
+            1
+            for segment_id in kept_ids
+            if str(before_by_id[segment_id].get("text", "")) != str(after_by_id[segment_id].get("text", ""))
+        ),
+    }
+
+
+def read_pasted_text(end_marker: str = "EOF") -> str:
+    if not sys.stdin.isatty():
+        return sys.stdin.read()
+    print(f"Colle le JSON nettoyé, puis termine par une ligne contenant uniquement {end_marker}.")
+    lines = []
+    while True:
+        try:
+            line = input()
+        except EOFError:
+            break
+        if line.strip() == end_marker:
+            break
+        lines.append(line)
+    return "\n".join(lines)
+
+
 def copy_to_clipboard(text: str) -> None:
     if sys.platform == "darwin":
         subprocess.run(["pbcopy"], input=text, text=True, check=True)
@@ -220,6 +332,37 @@ def copy_cleanup_prompt(args: argparse.Namespace) -> None:
     if not args.no_copy:
         copy_to_clipboard(prompt)
         print(f"[clipboard] cleanup prompt for {args.corpus_id} ({len(prompt)} chars)")
+
+
+def copy_cleanup_prompt_for_row(row: dict[str, Any]) -> int:
+    transcript = read_workspace_or_create(row)
+    prompt = render_cleanup_prompt(row, transcript, DEFAULT_CLEANUP_PROMPT)
+    copy_to_clipboard(prompt)
+    return len(prompt)
+
+
+def import_cleaned_transcript(args: argparse.Namespace) -> None:
+    row = find_row(args.corpus_id)
+    current = read_workspace_or_create(row)
+    if args.file:
+        content = Path(args.file).read_text(encoding="utf-8")
+    else:
+        content = read_pasted_text()
+    try:
+        cleaned = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid JSON: {exc}") from exc
+
+    summary = validate_cleaned_transcript(current, cleaned)
+    backup = backup_workspace(args.corpus_id, current)
+    write_workspace_json(args.corpus_id, cleaned)
+    print(f"[workspace] imported cleaned transcript: {workspace_path(args.corpus_id).relative_to(ROOT)}")
+    print(f"[backup] previous transcript: {backup.relative_to(ROOT)}")
+    print(
+        "[segments] "
+        f"{summary['before']} -> {summary['after']} "
+        f"({summary['changed']} changed, {summary['added']} added, {summary['removed']} removed)"
+    )
 
 
 def duration_label(seconds: Any) -> str:
@@ -372,6 +515,7 @@ def run_tui(_: argparse.Namespace) -> None:
                     ("Transcrire tout ce qui manque", "transcribe_missing"),
                     ("Télécharger une vidéo YouTube", "download"),
                     ("Copier un prompt de nettoyage", "cleanup_prompt"),
+                    ("Coller une transcription nettoyée", "import_cleaned"),
                     ("Quitter", "quit"),
                 ],
             )
@@ -421,13 +565,23 @@ def run_tui(_: argparse.Namespace) -> None:
                 rows = [row for row in read_manifest() if has_subtitle(row)]
                 selected = tui_choice(stdscr, "Choisir une transcription à nettoyer", tui_video_items(rows))
                 if selected:
-                    args = argparse.Namespace(
-                        corpus_id=selected["corpus_id"],
-                        prompt_file=str(DEFAULT_CLEANUP_PROMPT.relative_to(ROOT)),
-                        print=False,
-                        no_copy=False,
-                    )
-                    tui_run_shell(stdscr, lambda: copy_cleanup_prompt(args))
+                    try:
+                        copied_chars = copy_cleanup_prompt_for_row(selected)
+                    except SystemExit as exc:
+                        tui_message(stdscr, [f"Erreur: {exc}"])
+                        continue
+                    if tui_confirm(
+                        stdscr,
+                        f"Prompt copié ({copied_chars} caractères). Coller le JSON nettoyé maintenant ?",
+                    ):
+                        args = argparse.Namespace(corpus_id=selected["corpus_id"], file=None)
+                        tui_run_shell(stdscr, lambda: import_cleaned_transcript(args))
+            elif action == "import_cleaned":
+                rows = [row for row in read_manifest() if has_subtitle(row)]
+                selected = tui_choice(stdscr, "Choisir la transcription à remplacer", tui_video_items(rows))
+                if selected:
+                    args = argparse.Namespace(corpus_id=selected["corpus_id"], file=None)
+                    tui_run_shell(stdscr, lambda: import_cleaned_transcript(args))
 
     curses.wrapper(app)
 
@@ -552,6 +706,11 @@ def main() -> None:
     cleanup.add_argument("--print", action="store_true", help="Also print the generated prompt to stdout")
     cleanup.add_argument("--no-copy", action="store_true", help="Do not copy to clipboard")
     cleanup.set_defaults(func=copy_cleanup_prompt)
+
+    import_cleaned = sub.add_parser("import-cleaned-transcript", help="Import cleaned workspace JSON from a file or paste")
+    import_cleaned.add_argument("corpus_id")
+    import_cleaned.add_argument("--file", help="Read cleaned JSON from a file instead of stdin/paste")
+    import_cleaned.set_defaults(func=import_cleaned_transcript)
 
     tui = sub.add_parser("tui", help="Open an interactive terminal UI")
     tui.set_defaults(func=run_tui)

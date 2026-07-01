@@ -19,6 +19,7 @@ LOCAL_WHISPER_MODEL = "mlx-community/whisper-large-v3-mlx"
 ASR_PYTHON = ROOT / ".venv-asr/bin/python"
 YTDLP = ROOT / ".venv/bin/yt-dlp"
 FFMPEG = ROOT / ".venv/lib/python3.14/site-packages/imageio_ffmpeg/binaries/ffmpeg-macos-aarch64-v7.1"
+DEFAULT_CLEANUP_PROMPT = ROOT / "prompts/transcript_cleanup.md"
 
 
 def now_iso() -> str:
@@ -119,6 +120,40 @@ def write_workspace_from_whisper(row: dict[str, Any]) -> Path:
     return out
 
 
+def read_workspace_or_create(row: dict[str, Any]) -> dict[str, Any]:
+    corpus_id = row["corpus_id"]
+    path = workspace_path(corpus_id)
+    if not path.exists():
+        if whisper_json_path(corpus_id).exists():
+            path = write_workspace_from_whisper(row)
+        else:
+            raise SystemExit(f"Missing workspace transcript: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def render_cleanup_prompt(row: dict[str, Any], transcript: dict[str, Any], prompt_path: Path) -> str:
+    if not prompt_path.exists():
+        raise SystemExit(f"Missing cleanup prompt template: {prompt_path}")
+    template = prompt_path.read_text(encoding="utf-8")
+    transcript_json = json.dumps(transcript, ensure_ascii=False, indent=2)
+    return (
+        template.replace("{{corpus_id}}", str(row["corpus_id"]))
+        .replace("{{title}}", str(row.get("title") or row["corpus_id"]))
+        .replace("{{transcript_json}}", transcript_json)
+    )
+
+
+def copy_to_clipboard(text: str) -> None:
+    if sys.platform == "darwin":
+        subprocess.run(["pbcopy"], input=text, text=True, check=True)
+        return
+    clipboard = subprocess.run(["which", "xclip"], text=True, capture_output=True, check=False)
+    if clipboard.returncode == 0:
+        subprocess.run(["xclip", "-selection", "clipboard"], input=text, text=True, check=True)
+        return
+    raise SystemExit("No supported clipboard command found. Use --print to write the prompt to stdout.")
+
+
 def list_missing(_: argparse.Namespace) -> None:
     rows = read_manifest()
     missing = [row for row in rows if Path(row.get("audio_path", "")).as_posix() and not has_subtitle(row)]
@@ -171,6 +206,20 @@ def transcribe_missing(args: argparse.Namespace) -> None:
         return
     for row in rows:
         transcribe_one(row, force=args.force)
+
+
+def copy_cleanup_prompt(args: argparse.Namespace) -> None:
+    row = find_row(args.corpus_id)
+    transcript = read_workspace_or_create(row)
+    prompt_path = Path(args.prompt_file)
+    if not prompt_path.is_absolute():
+        prompt_path = ROOT / prompt_path
+    prompt = render_cleanup_prompt(row, transcript, prompt_path)
+    if args.print:
+        print(prompt)
+    if not args.no_copy:
+        copy_to_clipboard(prompt)
+        print(f"[clipboard] cleanup prompt for {args.corpus_id} ({len(prompt)} chars)")
 
 
 def yt_dlp_json(url: str) -> dict[str, Any]:
@@ -286,6 +335,13 @@ def main() -> None:
     all_missing = sub.add_parser("transcribe-missing", help="Transcribe all manifest videos without transcript/workspace")
     all_missing.add_argument("--force", action="store_true")
     all_missing.set_defaults(func=transcribe_missing)
+
+    cleanup = sub.add_parser("copy-cleanup-prompt", help="Copy a ChatGPT cleanup prompt plus transcript JSON")
+    cleanup.add_argument("corpus_id")
+    cleanup.add_argument("--prompt-file", default=str(DEFAULT_CLEANUP_PROMPT.relative_to(ROOT)))
+    cleanup.add_argument("--print", action="store_true", help="Also print the generated prompt to stdout")
+    cleanup.add_argument("--no-copy", action="store_true", help="Do not copy to clipboard")
+    cleanup.set_defaults(func=copy_cleanup_prompt)
 
     download = sub.add_parser("download", help="Download a YouTube URL into the corpus")
     download.add_argument("url")

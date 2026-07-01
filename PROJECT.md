@@ -36,8 +36,11 @@ Commandes principales:
 - `python scripts/ashrafent_cli.py transcribe <corpus_id>`
 - `python scripts/ashrafent_cli.py transcribe-missing`
 - `python scripts/ashrafent_cli.py download <youtube_url> --transcribe`
+- `python scripts/ashrafent_cli.py copy-cleanup-prompt <corpus_id>`
 
 La CLI télécharge les vidéos YouTube dans `data/raw/videos/youtube/`, extrait un WAV mono 16 kHz dans `data/raw/audio/youtube/`, ajoute une ligne au manifest, lance Whisper local si demandé, puis crée le workspace d'édition.
+
+`copy-cleanup-prompt` copie dans le presse-papiers un prompt ChatGPT de nettoyage de transcription suivi du JSON workspace courant. Le prompt est personnalisable dans `prompts/transcript_cleanup.md`.
 
 ## Données et scripts
 

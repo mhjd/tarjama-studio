@@ -21,6 +21,7 @@ Build a local-first app to help transcribe, correct, and translate Arabic audio/
 - Keep APIs simple and file-backed until a real database is needed.
 - Avoid adding dependencies unless they clearly simplify the MVP.
 - Make local development easy to start and inspect.
+- When giving the user project commands, prefer `make ...` targets over raw `python`, `npm`, or nested `cd ui && ...` commands. Add a Makefile target first if a repeated project workflow lacks one.
 
 ## Current App Direction
 

@@ -396,6 +396,134 @@ ${sourceBlocks}
 `;
 }
 
+function DesktopApp() {
+  const desktop = window.ashrafentDesktop;
+  const [library, setLibrary] = useState<DesktopLibraryInfo | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [state, setState] = useState("Prêt");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const refreshLibrary = useCallback(async () => {
+    if (!desktop) return;
+    setLibrary(await desktop.readLibrary());
+  }, [desktop]);
+
+  useEffect(() => {
+    void refreshLibrary().catch((err) => setError(err instanceof Error ? err.message : "Bibliothèque impossible à charger"));
+  }, [refreshLibrary]);
+
+  async function runDesktopAction(label: string, action: () => Promise<void>) {
+    setBusy(true);
+    setState(label);
+    setError("");
+    try {
+      await action();
+      await refreshLibrary();
+      setState("Prêt");
+    } catch (err) {
+      setState("Erreur");
+      setError(err instanceof Error ? err.message : "Action impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importTranscriptDesktop() {
+    await runDesktopAction("Import transcription...", async () => {
+      const result = await desktop?.importTranscript();
+      if (result) setState(`Transcription importée: ${result.segmentCount} segments`);
+    });
+  }
+
+  async function downloadYoutubeDesktop() {
+    const url = youtubeUrl.trim();
+    if (!url) {
+      setError("Colle un lien YouTube avant de télécharger.");
+      return;
+    }
+    await runDesktopAction("Téléchargement vidéo...", async () => {
+      await desktop?.downloadYoutube({ url });
+      setYoutubeUrl("");
+    });
+  }
+
+  async function trashProjectDesktop(project: DesktopProject) {
+    const confirmed = window.confirm(`Déplacer le projet "${project.title}" à la corbeille ?`);
+    if (!confirmed) return;
+    await runDesktopAction("Suppression...", async () => {
+      await desktop?.trashProject(project.id);
+    });
+  }
+
+  return (
+    <main className="desktop-shell">
+      <header className="desktop-header">
+        <div>
+          <strong>Ashrafent Reviewer</strong>
+          <span>Bibliothèque locale</span>
+        </div>
+        <button disabled={busy} onClick={() => void refreshLibrary()}>
+          <RotateCcw size={16} />
+          <span>Actualiser</span>
+        </button>
+      </header>
+
+      <section className="desktop-panel">
+        <h1>Préparer un projet</h1>
+        <div className="desktop-actions">
+          <label>
+            <span>Lien YouTube</span>
+            <input
+              value={youtubeUrl}
+              onChange={(event) => setYoutubeUrl(event.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+            />
+          </label>
+          <button disabled={busy} onClick={() => void downloadYoutubeDesktop()}>
+            <Download size={16} />
+            <span>Télécharger vidéo</span>
+          </button>
+          <button disabled={busy} onClick={() => void importTranscriptDesktop()}>
+            <Upload size={16} />
+            <span>Importer transcription</span>
+          </button>
+        </div>
+        <p className="desktop-state">{state}</p>
+        {error && <p className="error">{error}</p>}
+        {library && <p className="desktop-path">{library.libraryDir}</p>}
+      </section>
+
+      <section className="desktop-projects">
+        <h2>Projets</h2>
+        {!library?.projects.length && <p className="state">Aucun projet local pour l'instant.</p>}
+        {library?.projects.map((project) => (
+          <article className="desktop-project" key={project.id}>
+            <div>
+              <strong>{project.title}</strong>
+              <span>{project.youtubeUrl || project.id}</span>
+              <small>
+                {project.videoPath ? "Vidéo présente" : "Vidéo absente"} ·{" "}
+                {project.transcriptPath ? "Transcription présente" : "Transcription absente"}
+              </small>
+            </div>
+            <div className="desktop-project-actions">
+              <button disabled={busy} onClick={() => void desktop?.openProjectFolder(project.id)}>
+                <FileInput size={16} />
+                <span>Dossier</span>
+              </button>
+              <button disabled={busy} onClick={() => void trashProjectDesktop(project)}>
+                <Trash2 size={16} />
+                <span>Corbeille</span>
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}
+
 function App() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const translationFileRef = useRef<HTMLInputElement | null>(null);
@@ -1381,8 +1509,13 @@ function App() {
   );
 }
 
+function Root() {
+  if (window.ashrafentDesktop) return <DesktopApp />;
+  return <App />;
+}
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <Root />
   </React.StrictMode>
 );

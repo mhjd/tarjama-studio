@@ -639,6 +639,104 @@ input:disabled {
   background: var(--panel);
 }
 
+.desktop-shell {
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 1.5rem;
+}
+
+.desktop-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.desktop-header div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.desktop-header strong {
+  font-size: 1.4rem;
+}
+
+.desktop-header span,
+.desktop-path,
+.desktop-project span,
+.desktop-project small,
+.desktop-state {
+  color: var(--muted);
+}
+
+.desktop-panel,
+.desktop-project {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.desktop-panel {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.desktop-panel h1,
+.desktop-projects h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.desktop-actions {
+  align-items: end;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(18rem, 1fr) auto auto;
+}
+
+.desktop-actions label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.desktop-actions input {
+  min-width: 0;
+  width: 100%;
+}
+
+.desktop-projects {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.desktop-project {
+  align-items: center;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 1rem;
+}
+
+.desktop-project div:first-child {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.desktop-project span,
+.desktop-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-project-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 @media (max-width: 820px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -722,5 +820,14 @@ input:disabled {
 
   .audio-controls {
     grid-template-columns: 1fr;
+  }
+
+  .desktop-actions,
+  .desktop-project {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-project-actions {
+    flex-wrap: wrap;
   }
 }

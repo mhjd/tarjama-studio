@@ -9,6 +9,7 @@ L'application doit permettre de partir d'un audio/vidéo, générer ou charger u
 - La génération de transcriptions est pilotée par la CLI locale `scripts/ashrafent_cli.py`.
 - L'interface web est spécialisée dans l'édition d'une transcription segmentée déjà existante.
 - Une vidéo sans transcription doit afficher qu'elle doit être transcrite via la CLI, pas lancer Whisper depuis le navigateur.
+- Une app desktop Electron est en cours d'introduction pour les utilisateurs non techniciens: pas de backend FastAPI à lancer, bibliothèque locale gérée automatiquement, import de transcription, téléchargement YouTube et export vidéo local.
 
 ## MVP interface
 
@@ -59,3 +60,4 @@ La CLI télécharge les vidéos YouTube dans `data/raw/videos/youtube/`, extrait
 - Manifest principal: `data/manifests/dedew_manifest.jsonl`
 - Scripts ASR/eval: `scripts/`
 - MVP local: backend FastAPI dans `server/`, frontend React/Vite dans `ui/`, lancement backend via `scripts/serve_mvp.py`.
+- Desktop reviewer: `ui/electron/`, build via `cd ui && npm run desktop:build`. Le mode desktop expose une API IPC limitée via `window.ashrafentDesktop`; toute suppression doit rester bornée à la bibliothèque Electron et passer par la corbeille.

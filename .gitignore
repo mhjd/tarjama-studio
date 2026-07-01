@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 
 .cache/
+.electron-cache/
 .tmp*/
 .npm-cache/
 .venv/
@@ -10,6 +11,7 @@ __pycache__/
 
 ui/node_modules/
 ui/dist/
+ui/dist-electron/
 ui/tsconfig.tsbuildinfo
 
 data/raw/

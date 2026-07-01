@@ -29,3 +29,4 @@ Build a local-first app to help transcribe, correct, and translate Arabic audio/
 - Initial transcription format: Whisper-style JSON converted into a stable workspace JSON.
 - CLI: prioritize the guided YouTube pipeline: download, transcribe with local Whisper, copy the cleanup prompt, then import the cleaned ChatGPT JSON. Keep separate list/transcribe/download/import commands available as deprecated maintenance actions.
 - Web MVP priority: video selection, audio player, editable timestamped segments, silent current-state persistence, and explicit immutable saves in snapshots. Do not run transcription jobs from the web UI.
+- Desktop direction: Electron reviewer app under `ui/electron/` for non-technical users. Keep filesystem access behind IPC, copy imports into the app library, verify downloaded media has audio and video, and never delete outside `app.getPath("userData")/projects`; use the OS trash for project deletion.

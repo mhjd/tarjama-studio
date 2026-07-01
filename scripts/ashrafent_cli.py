@@ -44,6 +44,23 @@ def append_manifest(row: dict[str, Any]) -> None:
         handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
+def write_manifest(rows: list[dict[str, Any]]) -> None:
+    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    with MANIFEST.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+
+
+def replace_manifest_row(updated: dict[str, Any]) -> None:
+    rows = read_manifest()
+    for index, row in enumerate(rows):
+        if row.get("corpus_id") == updated.get("corpus_id"):
+            rows[index] = updated
+            write_manifest(rows)
+            return
+    raise SystemExit(f"Unknown corpus_id: {updated.get('corpus_id')}")
+
+
 def find_row(corpus_id: str) -> dict[str, Any]:
     for row in read_manifest():
         if row["corpus_id"] == corpus_id:
@@ -666,13 +683,108 @@ def yt_dlp_json(url: str) -> dict[str, Any]:
     return json.loads(result.stdout)
 
 
+def media_streams(path: Path) -> tuple[bool, bool]:
+    result = subprocess.run(
+        [str(FFMPEG), "-hide_banner", "-i", str(path)],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    output = result.stdout
+    return " Video:" in output, " Audio:" in output
+
+
+def downloaded_media_candidates(video_dir: Path, corpus_id: str) -> list[Path]:
+    ignored_suffixes = {".json", ".description", ".part", ".ytdl"}
+    return sorted(
+        path
+        for path in video_dir.glob(f"{corpus_id}.*")
+        if path.is_file() and path.suffix not in ignored_suffixes
+    )
+
+
+def resolve_downloaded_video(video_dir: Path, corpus_id: str) -> Path:
+    merged = video_dir / f"{corpus_id}.mp4"
+    if merged.exists() and media_streams(merged) == (True, True):
+        return merged
+
+    video_only = []
+    audio_only = []
+    for candidate in downloaded_media_candidates(video_dir, corpus_id):
+        has_video, has_audio = media_streams(candidate)
+        if has_video and has_audio:
+            return candidate
+        if has_video:
+            video_only.append(candidate)
+        elif has_audio:
+            audio_only.append(candidate)
+
+    if not video_only:
+        raise SystemExit(f"Could not find a video stream in {video_dir}")
+    if not audio_only:
+        raise SystemExit(f"Could not find an audio stream in {video_dir}")
+
+    run(
+        [
+            str(FFMPEG),
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+            str(video_only[0]),
+            "-i",
+            str(audio_only[0]),
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "22",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-movflags",
+            "+faststart",
+            str(merged),
+        ]
+    )
+    return merged
+
+
+def ensure_row_has_playable_video(row: dict[str, Any]) -> dict[str, Any]:
+    corpus_id = row["corpus_id"]
+    current_value = row.get("video_path")
+    if current_value:
+        current_path = ROOT / current_value
+        if current_path.exists() and media_streams(current_path) == (True, True):
+            return row
+
+    if current_value:
+        video_dir = (ROOT / current_value).parent
+    else:
+        video_dir = ROOT / "data/raw/videos/youtube" / corpus_id
+    fixed_path = resolve_downloaded_video(video_dir, corpus_id)
+    row["video_path"] = str(fixed_path.relative_to(ROOT))
+    replace_manifest_row(row)
+    print(f"[manifest] repaired video_path for {corpus_id}: {row['video_path']}")
+    return row
+
+
 def download_youtube(args: argparse.Namespace) -> dict[str, Any]:
     info = yt_dlp_json(args.url)
     video_id = youtube_id_from_info(info)
     existing = [row for row in read_manifest() if row.get("youtube_id") == video_id]
     if existing:
         print(f"[exists] {existing[0]['corpus_id']}")
-        return existing[0]
+        return ensure_row_has_playable_video(existing[0])
 
     title = str(info.get("title") or video_id)
     corpus_id = args.corpus_id or f"youtube_{video_id}"
@@ -700,13 +812,7 @@ def download_youtube(args: argparse.Namespace) -> dict[str, Any]:
         ]
     )
 
-    video_path = video_dir / f"{corpus_id}.mp4"
-    if not video_path.exists():
-        candidates = sorted(video_dir.glob(f"{corpus_id}.*"))
-        candidates = [path for path in candidates if path.suffix not in {".json", ".description"}]
-        if not candidates:
-            raise SystemExit(f"Could not find downloaded media in {video_dir}")
-        video_path = candidates[0]
+    video_path = resolve_downloaded_video(video_dir, corpus_id)
 
     audio_path = audio_dir / f"{corpus_id}.wav"
     run(
@@ -747,6 +853,7 @@ def download_youtube(args: argparse.Namespace) -> dict[str, Any]:
         "validation_note": "Downloaded from YouTube via ashrafent CLI; local Whisper transcription may be generated separately.",
     }
     append_manifest(row)
+    row = ensure_row_has_playable_video(row)
     print(f"[manifest] {corpus_id}")
     return row
 

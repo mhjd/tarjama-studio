@@ -157,6 +157,17 @@ function parseYtdlpJson(output: string): { id?: string; title?: string; duration
   }
 }
 
+function lastOutputLine(output: string): string {
+  const lines = output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!lines.length) {
+    throw new Error("Command did not print an output path");
+  }
+  return lines[lines.length - 1];
+}
+
 async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: boolean; video: boolean }> {
   const output = await new Promise<string>((resolve, reject) => {
     const child = spawn(ffmpeg, ["-hide_banner", "-i", filePath], { windowsHide: true });
@@ -231,22 +242,29 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
-  const metadataText = await runTool(ytdlp, ["--no-warnings", "-J", request.url], libraryDir());
+  const metadataText = await runTool(
+    ytdlp,
+    ["--no-warnings", "--skip-download", "--print", "%(.{id,title,duration,webpage_url})#j", request.url],
+    libraryDir(),
+  );
   const metadata = parseYtdlpJson(metadataText);
   const youtubeId = metadata.id || randomUUID();
   const id = slugify(`youtube_${youtubeId}`);
   const dir = projectDir(id);
   await fs.mkdir(dir, { recursive: true });
 
-  await runTool(
+  const downloadOutput = await runTool(
     ytdlp,
     [
+      "--no-warnings",
       "--ffmpeg-location",
       path.dirname(ffmpeg),
       "-f",
       "bv*+ba/best",
       "--merge-output-format",
       "mp4",
+      "--print",
+      "after_move:filepath",
       "-o",
       path.join(dir, "source.%(ext)s"),
       request.url,
@@ -254,9 +272,11 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
     dir,
   );
 
-  const videoPath = path.join(dir, "source.mp4");
+  const printedPath = lastOutputLine(downloadOutput);
+  const videoPath = path.isAbsolute(printedPath) ? printedPath : path.resolve(dir, printedPath);
+  await assertInsideLibrary(videoPath);
   if (!(await pathExists(videoPath))) {
-    throw new Error("yt-dlp did not produce source.mp4");
+    throw new Error("yt-dlp did not produce the expected video file");
   }
   const streams = await mediaStreams(videoPath, ffmpeg);
   if (!streams.video || !streams.audio) {

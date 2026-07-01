@@ -495,9 +495,27 @@ input {
   margin-left: auto;
 }
 
-.translation-tools span {
+.export-tools {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.55rem;
+}
+
+.translation-tools span,
+.export-tools span,
+.export-tools a {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.export-tools a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
+.export-tools select {
+  min-width: 8.5rem;
 }
 
 .hidden-file {
@@ -671,7 +689,8 @@ input:disabled {
     margin-left: 0;
   }
 
-  .translation-tools {
+  .translation-tools,
+  .export-tools {
     align-items: stretch;
     flex-direction: column;
     margin-left: 0;

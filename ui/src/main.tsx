@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Check,
   Combine,
+  Download,
   FileInput,
   GitCompare,
   History,
@@ -30,6 +31,7 @@ type VideoItem = {
   episode?: number | null;
   duration_seconds?: number;
   audio_url?: string;
+  has_video: boolean;
   has_workspace: boolean;
   has_autosave: boolean;
   has_snapshot: boolean;
@@ -99,6 +101,19 @@ type Translation = {
   }>;
   created_at?: string;
   updated_at?: string;
+};
+
+type ExportTrack = "translation" | "transcript";
+
+type ExportJob = {
+  id: string;
+  corpus_id: string;
+  track: ExportTrack;
+  status: "queued" | "running" | "completed" | "failed";
+  created_at: string;
+  updated_at: string;
+  media_url?: string | null;
+  error?: string | null;
 };
 
 const api = {
@@ -179,6 +194,23 @@ const api = {
       body: JSON.stringify({ translation })
     });
     if (!response.ok) throw new Error("Sauvegarde de traduction impossible");
+  },
+  async createVideoExport(corpusId: string, track: ExportTrack): Promise<ExportJob> {
+    const response = await fetch(`/api/videos/${corpusId}/exports/video`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ track })
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.detail ?? "Export vidéo impossible");
+    }
+    return (await response.json()).job;
+  },
+  async exportJob(jobId: string): Promise<ExportJob> {
+    const response = await fetch(`/api/exports/jobs/${jobId}`);
+    if (!response.ok) throw new Error("Statut d'export impossible à charger");
+    return (await response.json()).job;
   }
 };
 
@@ -301,6 +333,9 @@ function App() {
   const [previewSnapshot, setPreviewSnapshot] = useState<SnapshotInfo | null>(null);
   const [attachedTranslation, setAttachedTranslation] = useState<Translation | null>(null);
   const [translationState, setTranslationState] = useState("Aucune traduction");
+  const [exportTrack, setExportTrack] = useState<ExportTrack>("transcript");
+  const [exportJob, setExportJob] = useState<ExportJob | null>(null);
+  const [exportState, setExportState] = useState("Export vidéo");
   const [restoreConfirm, setRestoreConfirm] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [loading, setLoading] = useState(false);
@@ -368,6 +403,9 @@ function App() {
     setPreviewSnapshot(null);
     setAttachedTranslation(null);
     setTranslationState("Aucune traduction");
+    setExportTrack("transcript");
+    setExportJob(null);
+    setExportState("Export vidéo");
     setRestoreConfirm(false);
     setShowRecoveryDiff(false);
     setShowPreviewDiff(false);
@@ -387,6 +425,7 @@ function App() {
       setTranscript(applyTranslation(loaded.transcript, loadedTranslation));
       setAttachedTranslation(loadedTranslation);
       setTranslationState(loadedTranslation ? "Traduction attachée" : "Aucune traduction");
+      setExportTrack(loadedTranslation ? "translation" : "transcript");
       setRecovery(loaded.recovery?.needs_resolution ? loaded.recovery : null);
       setSnapshots(history);
       setSelectedSnapshotId("");
@@ -411,6 +450,23 @@ function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [restoreConfirm]);
+
+  useEffect(() => {
+    if (!exportJob || !["queued", "running"].includes(exportJob.status)) return;
+    const timer = window.setInterval(() => {
+      api.exportJob(exportJob.id)
+        .then((job) => {
+          setExportJob(job);
+          if (job.status === "completed") setExportState("Export terminé");
+          if (job.status === "failed") setExportState("Export échoué");
+        })
+        .catch((err) => {
+          setExportState("Export échoué");
+          setError(err instanceof Error ? err.message : "Export vidéo impossible");
+        });
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [exportJob]);
 
   useEffect(() => {
     if (!transcript || !selectedId || editorLocked) return;
@@ -610,6 +666,7 @@ function App() {
       setAttachedTranslation(imported);
       setTranscript(applyTranslation(transcript, imported));
       setTranslationState("Traduction attachée");
+      setExportTrack("translation");
       setError("");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Import de traduction impossible";
@@ -624,6 +681,29 @@ function App() {
       setError(message);
     } finally {
       if (translationFileRef.current) translationFileRef.current.value = "";
+    }
+  }
+
+  async function startExport() {
+    if (!selectedId || !transcript || editorLocked) return;
+    if (exportTrack === "translation" && !attachedTranslation) {
+      setError("Importe une traduction alignée avant d'exporter la traduction.");
+      return;
+    }
+    try {
+      setExportState("Préparation...");
+      setExportJob(null);
+      await api.saveCurrent(selectedId, transcriptWithoutTranslations(transcript));
+      if (attachedTranslation) {
+        await api.saveTranslation(selectedId, translationFromTranscript(transcript, attachedTranslation));
+      }
+      const job = await api.createVideoExport(selectedId, exportTrack);
+      setExportJob(job);
+      setExportState(job.status === "queued" ? "Export en file" : "Export vidéo");
+      setError("");
+    } catch (err) {
+      setExportState("Export vidéo");
+      setError(err instanceof Error ? err.message : "Export vidéo impossible");
     }
   }
 
@@ -1025,6 +1105,42 @@ function App() {
               <Upload size={16} />
               <span>{attachedTranslation ? "Remplacer traduction" : "Importer traduction"}</span>
             </button>
+          </div>
+        )}
+        {transcript && (
+          <div className="export-tools">
+            <select
+              value={exportTrack}
+              onChange={(event) => setExportTrack(event.target.value as ExportTrack)}
+              disabled={editorLocked || exportJob?.status === "queued" || exportJob?.status === "running"}
+              title="Piste à brûler dans la vidéo"
+            >
+              <option value="transcript">Transcription</option>
+              <option value="translation" disabled={!attachedTranslation}>
+                Traduction
+              </option>
+            </select>
+            <button
+              disabled={
+                editorLocked ||
+                !selectedVideo?.has_video ||
+                exportJob?.status === "queued" ||
+                exportJob?.status === "running"
+              }
+              onClick={() => void startExport()}
+              title={selectedVideo?.has_video ? "Générer un MP4 sous-titré" : "Vidéo source absente"}
+            >
+              <Download size={16} />
+              <span>{exportState}</span>
+            </button>
+            {exportJob?.status === "running" || exportJob?.status === "queued" ? (
+              <span>Rendu en cours...</span>
+            ) : null}
+            {exportJob?.status === "completed" && exportJob.media_url ? (
+              <a href={exportJob.media_url} target="_blank" rel="noreferrer">
+                Ouvrir
+              </a>
+            ) : null}
           </div>
         )}
         {undoSnapshot && (

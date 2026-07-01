@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
+import threading
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -16,6 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "data/manifests/dedew_manifest.jsonl"
 WORKSPACES = ROOT / "data/workspaces"
 LOCAL_WHISPER_DIR = ROOT / "data/model_outputs/whisper_large_v3_mlx"
+EXPORTS = ROOT / "exports"
+IMAGEIO_FFMPEG = ROOT / ".venv/lib/python3.14/site-packages/imageio_ffmpeg/binaries/ffmpeg-macos-aarch64-v7.1"
+EXPORT_JOBS: dict[str, dict[str, Any]] = {}
 
 app = FastAPI(title="Ashrafent Local MVP")
 app.add_middleware(
@@ -50,6 +57,10 @@ class TranslationImport(BaseModel):
 
 class TranslationSave(BaseModel):
     translation: dict[str, Any]
+
+
+class VideoExportRequest(BaseModel):
+    track: str = "translation"
 
 
 def now_iso() -> str:
@@ -181,6 +192,7 @@ def transcript_alignment_fingerprint(transcript: dict[str, Any]) -> str:
 def public_video(row: dict[str, Any]) -> dict[str, Any]:
     corpus_id = row["corpus_id"]
     audio_path = row.get("audio_path")
+    video_path = row.get("video_path")
     return {
         "corpus_id": corpus_id,
         "title": row.get("title") or corpus_id,
@@ -189,6 +201,7 @@ def public_video(row: dict[str, Any]) -> dict[str, Any]:
         "episode": row.get("episode"),
         "duration_seconds": row.get("duration_seconds"),
         "audio_url": f"/media/{audio_path}" if audio_path else None,
+        "has_video": bool(video_path and safe_path(video_path).exists()),
         "has_workspace": transcript_path(corpus_id).exists(),
         "has_autosave": autosave_path(corpus_id).exists(),
         "has_snapshot": latest_snapshot_path(corpus_id) is not None,
@@ -454,6 +467,215 @@ def load_translation(corpus_id: str) -> dict[str, Any] | None:
     return None
 
 
+def export_dir(corpus_id: str) -> Path:
+    return EXPORTS / corpus_id
+
+
+def resolve_ffmpeg() -> str:
+    candidates = [shutil.which("ffmpeg"), str(IMAGEIO_FFMPEG) if IMAGEIO_FFMPEG.exists() else None]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        result = subprocess.run(
+            [candidate, "-version"],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if result.returncode == 0:
+            return candidate
+    raise HTTPException(status_code=500, detail="ffmpeg is not available")
+
+
+def ass_timestamp(seconds: float) -> str:
+    total_centiseconds = max(0, int(round(seconds * 100)))
+    centiseconds = total_centiseconds % 100
+    total_seconds = total_centiseconds // 100
+    secs = total_seconds % 60
+    minutes = (total_seconds // 60) % 60
+    hours = total_seconds // 3600
+    return f"{hours}:{minutes:02d}:{secs:02d}.{centiseconds:02d}"
+
+
+def ass_text(value: str) -> str:
+    text = value.strip()
+    text = text.replace("\\", "\\\\")
+    text = text.replace("{", "\\{").replace("}", "\\}")
+    return "\\N".join(line.strip() for line in text.splitlines() if line.strip())
+
+
+def ffmpeg_filter_path(path: Path) -> str:
+    value = str(path)
+    return value.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+
+
+def subtitle_export_segments(corpus_id: str, track: str) -> tuple[list[dict[str, Any]], str]:
+    transcript = ensure_transcript(corpus_id)
+    if track == "transcript":
+        segments = [
+            {
+                "start": float(segment.get("start", 0.0)),
+                "end": float(segment.get("end", 0.0)),
+                "text": str(segment.get("text", "")).strip(),
+            }
+            for segment in transcript.get("segments", [])
+        ]
+        return segments, "ar"
+
+    if track == "translation":
+        translation = load_translation(corpus_id)
+        if not translation:
+            raise HTTPException(status_code=404, detail="No attached translation to export")
+        if translation.get("source_transcript_fingerprint") != transcript_alignment_fingerprint(transcript):
+            raise HTTPException(status_code=400, detail="Translation is not aligned with current transcript")
+        segments = [
+            {
+                "start": float(segment.get("start", 0.0)),
+                "end": float(segment.get("end", 0.0)),
+                "text": str(segment.get("translation", "")).strip(),
+            }
+            for segment in translation.get("segments", [])
+        ]
+        return segments, str(translation.get("language") or "fr")
+
+    raise HTTPException(status_code=400, detail="track must be transcript or translation")
+
+
+def write_ass_subtitles(path: Path, segments: list[dict[str, Any]], title: str) -> None:
+    usable_segments = [
+        segment
+        for segment in segments
+        if segment.get("text") and float(segment.get("end", 0.0)) > float(segment.get("start", 0.0))
+    ]
+    if not usable_segments:
+        raise HTTPException(status_code=400, detail="No non-empty subtitle segment to export")
+
+    lines = [
+        "[Script Info]",
+        f"Title: {title}",
+        "ScriptType: v4.00+",
+        "ScaledBorderAndShadow: yes",
+        "PlayResX: 1280",
+        "PlayResY: 720",
+        "WrapStyle: 0",
+        "",
+        "[V4+ Styles]",
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+        "Style: Default,Arial,34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1",
+        "",
+        "[Events]",
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+    ]
+    for segment in usable_segments:
+        start = ass_timestamp(float(segment["start"]))
+        end = ass_timestamp(float(segment["end"]))
+        lines.append(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{ass_text(str(segment['text']))}")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def public_export_job(job: dict[str, Any]) -> dict[str, Any]:
+    output_path = job.get("output_path")
+    media_url = None
+    if output_path:
+        path = Path(output_path)
+        if path.exists():
+            media_url = f"/media/{path.relative_to(ROOT)}"
+    return {
+        "id": job["id"],
+        "corpus_id": job["corpus_id"],
+        "track": job["track"],
+        "status": job["status"],
+        "created_at": job["created_at"],
+        "updated_at": job["updated_at"],
+        "media_url": media_url,
+        "error": job.get("error"),
+    }
+
+
+def run_export_job(job_id: str, command: list[str]) -> None:
+    job = EXPORT_JOBS[job_id]
+    job["status"] = "running"
+    job["updated_at"] = now_iso()
+    try:
+        result = subprocess.run(
+            command,
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        job["log"] = result.stdout[-8000:]
+        job["returncode"] = result.returncode
+        job["status"] = "completed" if result.returncode == 0 else "failed"
+        if result.returncode != 0:
+            job["error"] = "ffmpeg export failed"
+    except Exception as exc:  # pragma: no cover - defensive job boundary
+        job["status"] = "failed"
+        job["error"] = str(exc)
+    finally:
+        job["updated_at"] = now_iso()
+
+
+def start_video_export(corpus_id: str, track: str) -> dict[str, Any]:
+    row = find_video(corpus_id)
+    video_value = row.get("video_path")
+    if not video_value:
+        raise HTTPException(status_code=404, detail="No source video for this corpus item")
+    source_video = safe_path(video_value)
+    if not source_video.exists():
+        raise HTTPException(status_code=404, detail="Source video file is missing")
+
+    segments, _language = subtitle_export_segments(corpus_id, track)
+    out_dir = export_dir(corpus_id)
+    stem = f"{corpus_id}_{track}_{filename_timestamp()}"
+    ass_path = out_dir / f"{stem}.ass"
+    output_path = out_dir / f"{stem}.mp4"
+    write_ass_subtitles(ass_path, segments, row.get("title") or corpus_id)
+
+    command = [
+        resolve_ffmpeg(),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        str(source_video),
+        "-vf",
+        f"subtitles='{ffmpeg_filter_path(ass_path)}'",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "23",
+        "-c:a",
+        "copy",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+
+    job_id = uuid.uuid4().hex
+    EXPORT_JOBS[job_id] = {
+        "id": job_id,
+        "corpus_id": corpus_id,
+        "track": track,
+        "status": "queued",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+        "ass_path": str(ass_path),
+        "output_path": str(output_path),
+    }
+    thread = threading.Thread(target=run_export_job, args=(job_id, command), daemon=True)
+    thread.start()
+    return EXPORT_JOBS[job_id]
+
+
 @app.get("/api/videos")
 def list_videos() -> dict[str, Any]:
     return {"videos": [public_video(row) for row in read_manifest()]}
@@ -578,6 +800,20 @@ def create_translation_snapshot(corpus_id: str, payload: TranslationSave) -> dic
     save_translation(corpus_id, payload)
     path = write_translation_snapshot(corpus_id, payload.translation)
     return {"ok": True, "path": str(path.relative_to(ROOT))}
+
+
+@app.post("/api/videos/{corpus_id}/exports/video")
+def create_video_export(corpus_id: str, payload: VideoExportRequest) -> dict[str, Any]:
+    job = start_video_export(corpus_id, payload.track)
+    return {"job": public_export_job(job)}
+
+
+@app.get("/api/exports/jobs/{job_id}")
+def get_export_job(job_id: str) -> dict[str, Any]:
+    job = EXPORT_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Unknown export job")
+    return {"job": public_export_job(job)}
 
 
 @app.get("/media/{path:path}")

@@ -1,0 +1,304 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MANIFEST = ROOT / "data/manifests/dedew_manifest.jsonl"
+WORKSPACES = ROOT / "data/workspaces"
+LOCAL_WHISPER_DIR = ROOT / "data/model_outputs/whisper_large_v3_mlx"
+LOCAL_WHISPER_MODEL = "mlx-community/whisper-large-v3-mlx"
+ASR_PYTHON = ROOT / ".venv-asr/bin/python"
+YTDLP = ROOT / ".venv/bin/yt-dlp"
+FFMPEG = ROOT / ".venv/lib/python3.14/site-packages/imageio_ffmpeg/binaries/ffmpeg-macos-aarch64-v7.1"
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def read_manifest() -> list[dict[str, Any]]:
+    if not MANIFEST.exists():
+        return []
+    rows = []
+    with MANIFEST.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+
+def append_manifest(row: dict[str, Any]) -> None:
+    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    with MANIFEST.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+
+
+def find_row(corpus_id: str) -> dict[str, Any]:
+    for row in read_manifest():
+        if row["corpus_id"] == corpus_id:
+            return row
+    raise SystemExit(f"Unknown corpus_id: {corpus_id}")
+
+
+def workspace_path(corpus_id: str) -> Path:
+    return WORKSPACES / corpus_id / "transcript.json"
+
+
+def autosave_path(corpus_id: str) -> Path:
+    return WORKSPACES / corpus_id / "autosave.json"
+
+
+def whisper_json_path(corpus_id: str) -> Path:
+    return LOCAL_WHISPER_DIR / f"{corpus_id}.json"
+
+
+def has_subtitle(row: dict[str, Any]) -> bool:
+    corpus_id = row["corpus_id"]
+    return workspace_path(corpus_id).exists() or autosave_path(corpus_id).exists() or whisper_json_path(corpus_id).exists()
+
+
+def slugify(value: str) -> str:
+    value = re.sub(r"[^A-Za-z0-9]+", "_", value.strip()).strip("_").lower()
+    return value or "video"
+
+
+def youtube_id_from_info(info: dict[str, Any]) -> str:
+    video_id = info.get("id")
+    if not video_id:
+        raise SystemExit("yt-dlp did not return a video id")
+    return str(video_id)
+
+
+def run(command: list[str]) -> None:
+    print("+ " + " ".join(command), flush=True)
+    subprocess.run(command, cwd=ROOT, check=True)
+
+
+def write_workspace_from_whisper(row: dict[str, Any]) -> Path:
+    corpus_id = row["corpus_id"]
+    source = whisper_json_path(corpus_id)
+    if not source.exists():
+        raise SystemExit(f"Missing Whisper JSON: {source}")
+
+    raw = json.loads(source.read_text(encoding="utf-8"))
+    segments = []
+    for index, segment in enumerate(raw.get("segments", [])):
+        segments.append(
+            {
+                "id": str(segment.get("id", index)),
+                "start": float(segment.get("start", 0.0)),
+                "end": float(segment.get("end", 0.0)),
+                "text": str(segment.get("text", "")).strip(),
+                "translation": "",
+            }
+        )
+
+    payload = {
+        "corpus_id": corpus_id,
+        "audio_path": row.get("audio_path"),
+        "source_transcript": str(source.relative_to(ROOT)),
+        "source_model": raw.get("model"),
+        "project_instructions": "",
+        "segments": segments,
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+    out = workspace_path(corpus_id)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
+def list_missing(_: argparse.Namespace) -> None:
+    rows = read_manifest()
+    missing = [row for row in rows if Path(row.get("audio_path", "")).as_posix() and not has_subtitle(row)]
+    if not missing:
+        print("All manifest videos have a local transcript/workspace.")
+        return
+    for row in missing:
+        duration = row.get("duration_seconds")
+        duration_text = f"{duration}s" if duration else "?s"
+        print(f"{row['corpus_id']}\t{duration_text}\t{row.get('title', '')}")
+
+
+def transcribe_one(row: dict[str, Any], force: bool = False) -> None:
+    corpus_id = row["corpus_id"]
+    if has_subtitle(row) and not force:
+        print(f"[skip] {corpus_id}: transcript already exists")
+        return
+
+    if not ASR_PYTHON.exists():
+        raise SystemExit(f"Missing ASR environment: {ASR_PYTHON}")
+    if not Path(row.get("audio_path", "")).exists():
+        raise SystemExit(f"Missing audio file for {corpus_id}: {row.get('audio_path')}")
+
+    run(
+        [
+            str(ASR_PYTHON),
+            "scripts/transcribe_mlx_whisper.py",
+            "--manifest",
+            str(MANIFEST.relative_to(ROOT)),
+            "--model",
+            LOCAL_WHISPER_MODEL,
+            "--output-dir",
+            str(LOCAL_WHISPER_DIR.relative_to(ROOT)),
+            "--only",
+            corpus_id,
+        ]
+    )
+    workspace = write_workspace_from_whisper(row)
+    print(f"[workspace] {workspace.relative_to(ROOT)}")
+
+
+def transcribe_command(args: argparse.Namespace) -> None:
+    transcribe_one(find_row(args.corpus_id), force=args.force)
+
+
+def transcribe_missing(args: argparse.Namespace) -> None:
+    rows = [row for row in read_manifest() if not has_subtitle(row)]
+    if not rows:
+        print("Nothing to transcribe.")
+        return
+    for row in rows:
+        transcribe_one(row, force=args.force)
+
+
+def yt_dlp_json(url: str) -> dict[str, Any]:
+    if not YTDLP.exists():
+        raise SystemExit(f"Missing yt-dlp: {YTDLP}")
+    result = subprocess.run([str(YTDLP), "-J", url], cwd=ROOT, text=True, capture_output=True, check=True)
+    return json.loads(result.stdout)
+
+
+def download_youtube(args: argparse.Namespace) -> dict[str, Any]:
+    info = yt_dlp_json(args.url)
+    video_id = youtube_id_from_info(info)
+    existing = [row for row in read_manifest() if row.get("youtube_id") == video_id]
+    if existing:
+        print(f"[exists] {existing[0]['corpus_id']}")
+        return existing[0]
+
+    title = str(info.get("title") or video_id)
+    corpus_id = args.corpus_id or f"youtube_{video_id}"
+    corpus_id = slugify(corpus_id)
+    video_dir = ROOT / "data/raw/videos/youtube" / corpus_id
+    audio_dir = ROOT / "data/raw/audio/youtube" / corpus_id
+    video_dir.mkdir(parents=True, exist_ok=True)
+    audio_dir.mkdir(parents=True, exist_ok=True)
+
+    output_template = str(video_dir / f"{corpus_id}.%(ext)s")
+    run(
+        [
+            str(YTDLP),
+            "--ffmpeg-location",
+            str(FFMPEG.parent),
+            "-f",
+            "bv*[ext=mp4]+ba/best",
+            "--merge-output-format",
+            "mp4",
+            "--write-info-json",
+            "--write-description",
+            "-o",
+            output_template,
+            args.url,
+        ]
+    )
+
+    video_path = video_dir / f"{corpus_id}.mp4"
+    if not video_path.exists():
+        candidates = sorted(video_dir.glob(f"{corpus_id}.*"))
+        candidates = [path for path in candidates if path.suffix not in {".json", ".description"}]
+        if not candidates:
+            raise SystemExit(f"Could not find downloaded media in {video_dir}")
+        video_path = candidates[0]
+
+    audio_path = audio_dir / f"{corpus_id}.wav"
+    run(
+        [
+            str(FFMPEG),
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+            str(video_path),
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            str(audio_path),
+        ]
+    )
+
+    row = {
+        "corpus_id": corpus_id,
+        "speaker": args.speaker,
+        "series": args.series or "YouTube imports",
+        "episode": None,
+        "language": "ar",
+        "youtube_id": video_id,
+        "youtube_url": info.get("webpage_url") or args.url,
+        "title": title,
+        "channel": info.get("channel") or info.get("uploader"),
+        "upload_date": info.get("upload_date"),
+        "duration_seconds": info.get("duration"),
+        "video_path": str(video_path.relative_to(ROOT)),
+        "audio_path": str(audio_path.relative_to(ROOT)),
+        "transcript_docx_path": None,
+        "transcript_txt_path": None,
+        "transcript_source_url": None,
+        "transcript_type": "generated_whisper_local",
+        "validation_note": "Downloaded from YouTube via ashrafent CLI; local Whisper transcription may be generated separately.",
+    }
+    append_manifest(row)
+    print(f"[manifest] {corpus_id}")
+    return row
+
+
+def download_command(args: argparse.Namespace) -> None:
+    row = download_youtube(args)
+    if args.transcribe:
+        transcribe_one(row, force=args.force)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Ashrafent local transcription CLI")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    missing = sub.add_parser("list-missing", help="List manifest videos without a local transcript/workspace")
+    missing.set_defaults(func=list_missing)
+
+    one = sub.add_parser("transcribe", help="Transcribe one manifest video by corpus_id")
+    one.add_argument("corpus_id")
+    one.add_argument("--force", action="store_true")
+    one.set_defaults(func=transcribe_command)
+
+    all_missing = sub.add_parser("transcribe-missing", help="Transcribe all manifest videos without transcript/workspace")
+    all_missing.add_argument("--force", action="store_true")
+    all_missing.set_defaults(func=transcribe_missing)
+
+    download = sub.add_parser("download", help="Download a YouTube URL into the corpus")
+    download.add_argument("url")
+    download.add_argument("--corpus-id")
+    download.add_argument("--speaker")
+    download.add_argument("--series")
+    download.add_argument("--transcribe", action="store_true", help="Run local Whisper after download")
+    download.add_argument("--force", action="store_true")
+    download.set_defaults(func=download_command)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

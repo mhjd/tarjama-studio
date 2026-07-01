@@ -1,7 +1,10 @@
-.PHONY: cli dev-api dev-api-reload dev-ui build-ui
+.PHONY: cli tui dev-api dev-api-reload dev-ui build-ui
 
 cli:
 	.venv-asr/bin/python scripts/ashrafent_cli.py $(ARGS)
+
+tui:
+	.venv-asr/bin/python scripts/ashrafent_cli.py tui
 
 dev-api:
 	.venv-app/bin/python scripts/serve_mvp.py

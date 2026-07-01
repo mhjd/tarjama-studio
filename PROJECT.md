@@ -32,7 +32,7 @@ L'application doit permettre de partir d'un audio/vidéo, générer ou charger u
 
 Commandes principales:
 
-- `python scripts/ashrafent_cli.py tui`
+- `make tui`
 - `python scripts/ashrafent_cli.py list-missing`
 - `python scripts/ashrafent_cli.py transcribe <corpus_id>`
 - `python scripts/ashrafent_cli.py transcribe-missing`

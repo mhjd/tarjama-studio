@@ -138,22 +138,42 @@ async function runTool(command: string, args: string[], cwd: string): Promise<st
   });
 }
 
-function parseYtdlpJson(output: string): { id?: string; title?: string; duration?: number; webpage_url?: string } {
-  const trimmed = output.trim();
-  try {
-    return JSON.parse(trimmed) as { id?: string; title?: string; duration?: number; webpage_url?: string };
-  } catch {
-    const start = trimmed.indexOf("{");
-    const end = trimmed.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      return JSON.parse(trimmed.slice(start, end + 1)) as {
-        id?: string;
-        title?: string;
-        duration?: number;
-        webpage_url?: string;
-      };
+function parseYtdlpMetadata(output: string): { id?: string; title?: string; duration?: number; webpage_url?: string } {
+  const lines = output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length !== 4) {
+    throw new Error(`yt-dlp returned ${lines.length} metadata fields; expected one video`);
+  }
+  const duration = Number(lines[2]);
+  return {
+    id: lines[0],
+    title: lines[1],
+    duration: Number.isFinite(duration) ? duration : undefined,
+    webpage_url: lines[3],
+  };
+}
+
+function assertYoutubeMetadata(metadata: { id?: string; title?: string; duration?: number; webpage_url?: string }): void {
+  if (!metadata.id || typeof metadata.id !== "string") {
+    throw new Error("yt-dlp metadata is missing the YouTube id");
+  }
+  if (!metadata.title || typeof metadata.title !== "string") {
+    throw new Error("yt-dlp metadata is missing the video title");
+  }
+  if (metadata.duration !== undefined && typeof metadata.duration !== "number") {
+    throw new Error("yt-dlp metadata duration is invalid");
+  }
+  if (metadata.webpage_url !== undefined) {
+    try {
+      const url = new URL(metadata.webpage_url);
+      if (!["http:", "https:"].includes(url.protocol)) {
+        throw new Error("invalid protocol");
+      }
+    } catch {
+      throw new Error("yt-dlp metadata webpage_url is invalid");
     }
-    throw new Error("yt-dlp did not return valid JSON metadata");
   }
 }
 
@@ -244,10 +264,24 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
   const ffmpeg = await resolveTool("ffmpeg");
   const metadataText = await runTool(
     ytdlp,
-    ["--no-warnings", "--skip-download", "--print", "%(.{id,title,duration,webpage_url})#j", request.url],
+    [
+      "--no-warnings",
+      "--no-playlist",
+      "--skip-download",
+      "--print",
+      "%(id)s",
+      "--print",
+      "%(title)s",
+      "--print",
+      "%(duration)s",
+      "--print",
+      "%(webpage_url)s",
+      request.url,
+    ],
     libraryDir(),
   );
-  const metadata = parseYtdlpJson(metadataText);
+  const metadata = parseYtdlpMetadata(metadataText);
+  assertYoutubeMetadata(metadata);
   const youtubeId = metadata.id || randomUUID();
   const id = slugify(`youtube_${youtubeId}`);
   const dir = projectDir(id);
@@ -257,8 +291,9 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
     ytdlp,
     [
       "--no-warnings",
+      "--no-playlist",
       "--ffmpeg-location",
-      path.dirname(ffmpeg),
+      ffmpeg,
       "-f",
       "bv*+ba/best",
       "--merge-output-format",

@@ -513,34 +513,23 @@ def ffmpeg_filter_path(path: Path) -> str:
 
 def subtitle_export_segments(corpus_id: str, track: str) -> tuple[list[dict[str, Any]], str]:
     transcript = ensure_transcript(corpus_id)
-    if track == "transcript":
-        segments = [
-            {
-                "start": float(segment.get("start", 0.0)),
-                "end": float(segment.get("end", 0.0)),
-                "text": str(segment.get("text", "")).strip(),
-            }
-            for segment in transcript.get("segments", [])
-        ]
-        return segments, "ar"
+    if track != "translation":
+        raise HTTPException(status_code=400, detail="MP4 export requires an attached translation")
 
-    if track == "translation":
-        translation = load_translation(corpus_id)
-        if not translation:
-            raise HTTPException(status_code=404, detail="No attached translation to export")
-        if translation.get("source_transcript_fingerprint") != transcript_alignment_fingerprint(transcript):
-            raise HTTPException(status_code=400, detail="Translation is not aligned with current transcript")
-        segments = [
-            {
-                "start": float(segment.get("start", 0.0)),
-                "end": float(segment.get("end", 0.0)),
-                "text": str(segment.get("translation", "")).strip(),
-            }
-            for segment in translation.get("segments", [])
-        ]
-        return segments, str(translation.get("language") or "fr")
-
-    raise HTTPException(status_code=400, detail="track must be transcript or translation")
+    translation = load_translation(corpus_id)
+    if not translation:
+        raise HTTPException(status_code=404, detail="No attached translation to export")
+    if translation.get("source_transcript_fingerprint") != transcript_alignment_fingerprint(transcript):
+        raise HTTPException(status_code=400, detail="Translation is not aligned with current transcript")
+    segments = [
+        {
+            "start": float(segment.get("start", 0.0)),
+            "end": float(segment.get("end", 0.0)),
+            "text": str(segment.get("translation", "")).strip(),
+        }
+        for segment in translation.get("segments", [])
+    ]
+    return segments, str(translation.get("language") or "fr")
 
 
 def write_ass_subtitles(path: Path, segments: list[dict[str, Any]], title: str) -> None:

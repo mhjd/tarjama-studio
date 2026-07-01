@@ -105,7 +105,7 @@ type Translation = {
   updated_at?: string;
 };
 
-type ExportTrack = "translation" | "transcript";
+type ExportTrack = "translation";
 
 type ExportJob = {
   id: string;
@@ -197,11 +197,11 @@ const api = {
     });
     if (!response.ok) throw new Error("Sauvegarde de traduction impossible");
   },
-  async createVideoExport(corpusId: string, track: ExportTrack): Promise<ExportJob> {
+  async createVideoExport(corpusId: string): Promise<ExportJob> {
     const response = await fetch(`/api/videos/${corpusId}/exports/video`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ track })
+      body: JSON.stringify({ track: "translation" satisfies ExportTrack })
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
@@ -398,7 +398,6 @@ function App() {
   const [copyState, setCopyState] = useState("Copier prompt");
   const [pasteImportOpen, setPasteImportOpen] = useState(false);
   const [pastedTranslation, setPastedTranslation] = useState("");
-  const [exportTrack, setExportTrack] = useState<ExportTrack>("transcript");
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
   const [exportState, setExportState] = useState("Export vidéo");
   const [restoreConfirm, setRestoreConfirm] = useState(false);
@@ -471,7 +470,6 @@ function App() {
     setCopyState("Copier prompt");
     setPasteImportOpen(false);
     setPastedTranslation("");
-    setExportTrack("transcript");
     setExportJob(null);
     setExportState("Export vidéo");
     setRestoreConfirm(false);
@@ -493,7 +491,6 @@ function App() {
       setTranscript(applyTranslation(loaded.transcript, loadedTranslation));
       setAttachedTranslation(loadedTranslation);
       setTranslationState(loadedTranslation ? "Traduction attachée" : "Aucune traduction");
-      setExportTrack(loadedTranslation ? "translation" : "transcript");
       setRecovery(loaded.recovery?.needs_resolution ? loaded.recovery : null);
       setSnapshots(history);
       setSelectedSnapshotId("");
@@ -736,7 +733,6 @@ function App() {
       setAttachedTranslation(imported);
       setTranscript(applyTranslation(transcript, imported));
       setTranslationState("Traduction attachée");
-      setExportTrack("translation");
       setPasteImportOpen(false);
       setPastedTranslation("");
       setError("");
@@ -789,8 +785,8 @@ function App() {
 
   async function startExport() {
     if (!selectedId || !transcript || editorLocked) return;
-    if (exportTrack === "translation" && !attachedTranslation) {
-      setError("Importe une traduction alignée avant d'exporter la traduction.");
+    if (!attachedTranslation) {
+      setError("Importe une traduction alignée avant de générer un MP4 sous-titré.");
       return;
     }
     try {
@@ -800,7 +796,7 @@ function App() {
       if (attachedTranslation) {
         await api.saveTranslation(selectedId, translationFromTranscript(transcript, attachedTranslation));
       }
-      const job = await api.createVideoExport(selectedId, exportTrack);
+      const job = await api.createVideoExport(selectedId);
       setExportJob(job);
       setExportState(job.status === "queued" ? "Export en file" : "Export vidéo");
       setError("");
@@ -1247,26 +1243,21 @@ function App() {
         )}
         {transcript && (
           <div className="export-tools">
-            <select
-              value={exportTrack}
-              onChange={(event) => setExportTrack(event.target.value as ExportTrack)}
-              disabled={editorLocked || exportJob?.status === "queued" || exportJob?.status === "running"}
-              title="Piste à brûler dans la vidéo"
-            >
-              <option value="transcript">Transcription</option>
-              <option value="translation" disabled={!attachedTranslation}>
-                Traduction
-              </option>
-            </select>
+            <span>{attachedTranslation ? "Traduction prête pour export" : "Importe une traduction pour exporter"}</span>
             <button
               disabled={
                 editorLocked ||
                 !selectedVideo?.has_video ||
+                !attachedTranslation ||
                 exportJob?.status === "queued" ||
                 exportJob?.status === "running"
               }
               onClick={() => void startExport()}
-              title={selectedVideo?.has_video ? "Générer un MP4 sous-titré" : "Vidéo source absente"}
+              title={
+                selectedVideo?.has_video
+                  ? "Générer un MP4 sous-titré avec la traduction"
+                  : "Vidéo source absente"
+              }
             >
               <Download size={16} />
               <span>{exportState}</span>

@@ -18,7 +18,7 @@ L'application doit permettre de partir d'un audio/vidéo, générer ou charger u
 - Enregistrement silencieux de l'état courant pour éviter de perdre les corrections en cas de crash.
 - Sauvegardes explicites et immuables sous `data/workspaces/<corpus_id>/snapshots/`; consulter une ancienne sauvegarde doit se faire en lecture seule. Restaurer une sauvegarde copie son contenu vers l'état courant après confirmation, mais le snapshot lui-même n'est jamais édité. Si l'état courant diffère de la dernière sauvegarde, l'interface doit demander à l'utilisateur de reprendre ou restaurer avant toute édition.
 - La traduction est importée depuis un fichier Markdown produit hors de l'app. L'import vérifie que chaque bloc conserve exactement les timestamps de la transcription courante; sinon il est refusé. Une traduction attachée est stockée séparément dans `data/workspaces/<corpus_id>/translation.json`.
-- L'interface peut exporter un MP4 sous-titré via `ffmpeg` en brûlant soit la transcription, soit la traduction attachée. Le rendu génère un `.ass` stylé texte blanc sur fond noir puis écrit les fichiers dans `exports/<corpus_id>/`.
+- L'interface peut exporter un MP4 sous-titré via `ffmpeg` uniquement quand une traduction attachée est disponible. Le rendu génère un `.ass` stylé texte blanc sur fond noir puis écrit les fichiers dans `exports/<corpus_id>/`.
 
 ## Décisions actuelles
 

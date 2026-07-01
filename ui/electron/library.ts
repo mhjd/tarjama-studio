@@ -176,39 +176,35 @@ export async function readLibrary(): Promise<DesktopLibraryInfo> {
   return { libraryDir: root, projects };
 }
 
-export async function importTranscript(): Promise<ImportTranscriptResult | null> {
+export async function importTranscript(projectId: string): Promise<ImportTranscriptResult | null> {
+  const projectPath = projectFile(projectId);
+  if (!(await pathExists(projectPath))) {
+    throw new Error("Project not found");
+  }
+  const project = await readJson<DesktopProject>(projectPath);
   const selection = await dialog.showOpenDialog({
-    title: "Importer une transcription",
+    title: `Importer une transcription pour ${project.title}`,
     properties: ["openFile"],
     filters: [{ name: "Transcript JSON", extensions: ["json"] }],
   });
   if (selection.canceled || !selection.filePaths[0]) return null;
 
   const transcript = validateTranscript(JSON.parse(await fs.readFile(selection.filePaths[0], "utf8")));
-  const id = slugify(transcript.corpus_id || path.basename(selection.filePaths[0], ".json"));
-  const dir = projectDir(id);
+  const dir = projectDir(project.id);
   await fs.mkdir(dir, { recursive: true });
 
   const transcriptPath = path.join(dir, "transcript.json");
-  transcript.corpus_id = id;
+  transcript.corpus_id = project.id;
   transcript.updated_at = nowIso();
   await writeJson(transcriptPath, transcript);
 
-  const existingProject = (await pathExists(projectFile(id))) ? await readJson<DesktopProject>(projectFile(id)) : null;
-  const project: DesktopProject = {
-    id,
-    title: existingProject?.title || id,
-    createdAt: existingProject?.createdAt || nowIso(),
+  const updatedProject: DesktopProject = {
+    ...project,
     updatedAt: nowIso(),
-    youtubeUrl: existingProject?.youtubeUrl,
-    youtubeId: existingProject?.youtubeId,
-    videoPath: existingProject?.videoPath,
     transcriptPath,
-    translationPath: existingProject?.translationPath,
-    durationSeconds: existingProject?.durationSeconds,
   };
-  await writeProject(project);
-  return { project, transcriptPath, segmentCount: transcript.segments.length };
+  await writeProject(updatedProject);
+  return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
 }
 
 export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult> {

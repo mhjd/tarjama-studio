@@ -8,7 +8,8 @@ import type {
 
 const api = {
   readLibrary: (): Promise<DesktopLibraryInfo> => ipcRenderer.invoke("library:read"),
-  importTranscript: (): Promise<ImportTranscriptResult | null> => ipcRenderer.invoke("transcript:import"),
+  importTranscript: (projectId: string): Promise<ImportTranscriptResult | null> =>
+    ipcRenderer.invoke("transcript:import", projectId),
   downloadYoutube: (request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult> =>
     ipcRenderer.invoke("youtube:download", request),
   openProjectFolder: (projectId: string): Promise<void> => ipcRenderer.invoke("project:open-folder", projectId),

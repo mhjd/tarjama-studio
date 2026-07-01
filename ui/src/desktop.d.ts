@@ -35,7 +35,7 @@ type DownloadYoutubeResult = {
 interface Window {
   ashrafentDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
-    importTranscript(): Promise<ImportTranscriptResult | null>;
+    importTranscript(projectId: string): Promise<ImportTranscriptResult | null>;
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;
     openProjectFolder(projectId: string): Promise<void>;
     trashProject(projectId: string): Promise<void>;

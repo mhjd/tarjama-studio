@@ -35,7 +35,7 @@ function createWindow(): void {
 
 function registerIpc(): void {
   ipcMain.handle("library:read", async () => readLibrary());
-  ipcMain.handle("transcript:import", async () => importTranscript());
+  ipcMain.handle("transcript:import", async (_event, projectId: string) => importTranscript(projectId));
   ipcMain.handle("youtube:download", async (_event, request: DownloadYoutubeRequest) => downloadYoutube(request));
   ipcMain.handle("project:open-folder", async (_event, projectId: string) => openProjectFolder(projectId));
   ipcMain.handle("project:trash", async (_event, projectId: string) => trashProject(projectId));

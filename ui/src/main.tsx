@@ -429,9 +429,9 @@ function DesktopApp() {
     }
   }
 
-  async function importTranscriptDesktop() {
+  async function importTranscriptDesktop(project: DesktopProject) {
     await runDesktopAction("Import transcription...", async () => {
-      const result = await desktop?.importTranscript();
+      const result = await desktop?.importTranscript(project.id);
       if (result) setState(`Transcription importée: ${result.segmentCount} segments`);
     });
   }
@@ -470,7 +470,7 @@ function DesktopApp() {
       </header>
 
       <section className="desktop-panel">
-        <h1>Préparer un projet</h1>
+        <h1>Créer un projet</h1>
         <div className="desktop-actions">
           <label>
             <span>Lien YouTube</span>
@@ -483,10 +483,6 @@ function DesktopApp() {
           <button disabled={busy} onClick={() => void downloadYoutubeDesktop()}>
             <Download size={16} />
             <span>Télécharger vidéo</span>
-          </button>
-          <button disabled={busy} onClick={() => void importTranscriptDesktop()}>
-            <Upload size={16} />
-            <span>Importer transcription</span>
           </button>
         </div>
         <p className="desktop-state">{state}</p>
@@ -508,6 +504,10 @@ function DesktopApp() {
               </small>
             </div>
             <div className="desktop-project-actions">
+              <button disabled={busy} onClick={() => void importTranscriptDesktop(project)}>
+                <Upload size={16} />
+                <span>{project.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
+              </button>
               <button disabled={busy} onClick={() => void desktop?.openProjectFolder(project.id)}>
                 <FileInput size={16} />
                 <span>Dossier</span>

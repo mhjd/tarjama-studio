@@ -187,7 +187,10 @@ const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ translation })
     });
-    if (!response.ok) throw new Error("Enregistrement de traduction impossible");
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.detail ?? "Enregistrement de traduction impossible");
+    }
   },
   async createTranslationSnapshot(corpusId: string, translation: Translation): Promise<void> {
     const response = await fetch(`/api/videos/${corpusId}/translation/snapshots`, {
@@ -540,19 +543,19 @@ function App() {
     if (!transcript || !selectedId || editorLocked) return;
     if (currentSaveTimer.current) window.clearTimeout(currentSaveTimer.current);
     currentSaveTimer.current = window.setTimeout(() => {
-      const jobs: Promise<unknown>[] = [api.saveCurrent(selectedId, transcriptWithoutTranslations(transcript))];
-      if (attachedTranslation) {
-        setTranslationState("Traduction enregistrement...");
-        jobs.push(api.saveTranslation(selectedId, translationFromTranscript(transcript, attachedTranslation)));
-      }
-      Promise.all(jobs)
-        .then(() => {
-          if (attachedTranslation) setTranslationState("Traduction attachée");
-        })
-        .catch((err) => {
-          if (attachedTranslation) setTranslationState("Traduction non alignée");
+      void (async () => {
+        try {
+          await api.saveCurrent(selectedId, transcriptWithoutTranslations(transcript));
+          if (attachedTranslation) {
+            setTranslationState("Traduction enregistrement...");
+            await api.saveTranslation(selectedId, translationFromTranscript(transcript, attachedTranslation));
+            setTranslationState("Traduction attachée");
+          }
+        } catch (err) {
+          if (attachedTranslation) setTranslationState("Traduction non sauvegardée");
           setError(err instanceof Error ? err.message : "L'état courant n'a pas pu être enregistré");
-        });
+        }
+      })();
     }, 900);
     return () => {
       if (currentSaveTimer.current) window.clearTimeout(currentSaveTimer.current);

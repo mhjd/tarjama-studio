@@ -460,6 +460,32 @@ def translation_from_markdown(
     }
 
 
+def ensure_translation_alignment(transcript: dict[str, Any], translation: dict[str, Any]) -> None:
+    source_segments = transcript.get("segments", [])
+    translated_segments = translation.get("segments", [])
+    if not isinstance(translated_segments, list):
+        raise HTTPException(status_code=400, detail="Translation segments must be a list")
+    if len(translated_segments) != len(source_segments):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Translation has {len(translated_segments)} segments; expected {len(source_segments)}",
+        )
+
+    mismatches = []
+    for index, (source, translated) in enumerate(zip(source_segments, translated_segments)):
+        if not isinstance(translated, dict):
+            mismatches.append(index + 1)
+            continue
+        same_id = str(source.get("id", index)) == str(translated.get("id", ""))
+        same_start = same_time(float(source.get("start", 0.0)), translated.get("start", 0.0))
+        same_end = same_time(float(source.get("end", 0.0)), translated.get("end", 0.0))
+        if not same_id or not same_start or not same_end:
+            mismatches.append(index + 1)
+    if mismatches:
+        preview = ", ".join(str(item) for item in mismatches[:8])
+        raise HTTPException(status_code=400, detail=f"Translation is not aligned in segment(s): {preview}")
+
+
 def load_translation(corpus_id: str) -> dict[str, Any] | None:
     path = translation_path(corpus_id)
     if path.exists():
@@ -519,8 +545,7 @@ def subtitle_export_segments(corpus_id: str, track: str) -> tuple[list[dict[str,
     translation = load_translation(corpus_id)
     if not translation:
         raise HTTPException(status_code=404, detail="No attached translation to export")
-    if translation.get("source_transcript_fingerprint") != transcript_alignment_fingerprint(transcript):
-        raise HTTPException(status_code=400, detail="Translation is not aligned with current transcript")
+    ensure_translation_alignment(transcript, translation)
     segments = [
         {
             "start": float(segment.get("start", 0.0)),
@@ -756,9 +781,9 @@ def get_translation(corpus_id: str) -> dict[str, Any]:
 def save_translation(corpus_id: str, payload: TranslationSave) -> dict[str, Any]:
     transcript = ensure_transcript(corpus_id)
     translation = payload.translation
-    if translation.get("source_transcript_fingerprint") != transcript_alignment_fingerprint(transcript):
-        raise HTTPException(status_code=400, detail="Translation is not aligned with current transcript")
+    ensure_translation_alignment(transcript, translation)
     translation["corpus_id"] = corpus_id
+    translation["source_transcript_fingerprint"] = transcript_alignment_fingerprint(transcript)
     translation["updated_at"] = now_iso()
     write_json(translation_path(corpus_id), translation)
     return {"ok": True, "path": str(translation_path(corpus_id).relative_to(ROOT))}

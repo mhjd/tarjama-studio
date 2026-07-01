@@ -1511,6 +1511,18 @@ function App() {
 
 function Root() {
   if (window.ashrafentDesktop) return <DesktopApp />;
+  if (navigator.userAgent.includes("Electron")) {
+    return (
+      <main className="desktop-shell">
+        <section className="desktop-panel">
+          <h1>Initialisation desktop impossible</h1>
+          <p className="error">
+            L'API Electron n'a pas été chargée. Relance l'application après avoir reconstruit le desktop.
+          </p>
+        </section>
+      </main>
+    );
+  }
   return <App />;
 }
 

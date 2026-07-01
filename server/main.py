@@ -139,7 +139,7 @@ def user_snapshot_paths(corpus_id: str) -> list[Path]:
     return [
         path
         for path in snapshot_paths(corpus_id)
-        if not path.name.startswith(("legacy_autosave_", "pre_restore_"))
+        if not path.name.startswith(("legacy_autosave_", "pre_restore_", "pre_cleanup_"))
     ]
 
 

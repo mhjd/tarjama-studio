@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   AlertTriangle,
   Check,
+  ClipboardPaste,
   Combine,
   Copy,
   Download,
@@ -395,6 +396,8 @@ function App() {
   const [attachedTranslation, setAttachedTranslation] = useState<Translation | null>(null);
   const [translationState, setTranslationState] = useState("Aucune traduction");
   const [copyState, setCopyState] = useState("Copier prompt");
+  const [pasteImportOpen, setPasteImportOpen] = useState(false);
+  const [pastedTranslation, setPastedTranslation] = useState("");
   const [exportTrack, setExportTrack] = useState<ExportTrack>("transcript");
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
   const [exportState, setExportState] = useState("Export vidéo");
@@ -466,6 +469,8 @@ function App() {
     setAttachedTranslation(null);
     setTranslationState("Aucune traduction");
     setCopyState("Copier prompt");
+    setPasteImportOpen(false);
+    setPastedTranslation("");
     setExportTrack("transcript");
     setExportJob(null);
     setExportState("Export vidéo");
@@ -506,13 +511,16 @@ function App() {
   }, [loadTranscript, selectedVideo]);
 
   useEffect(() => {
-    if (!restoreConfirm) return;
+    if (!restoreConfirm && !pasteImportOpen) return;
     const handler = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setRestoreConfirm(false);
+      if (event.key === "Escape") {
+        setRestoreConfirm(false);
+        setPasteImportOpen(false);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [restoreConfirm]);
+  }, [pasteImportOpen, restoreConfirm]);
 
   useEffect(() => {
     if (!exportJob || !["queued", "running"].includes(exportJob.status)) return;
@@ -720,28 +728,47 @@ function App() {
     }
   }
 
-  async function importTranslationFile(file: File, replace: boolean) {
+  async function importTranslationContent(content: string, filename: string, replace: boolean) {
     if (!selectedId || !transcript) return;
     try {
       setTranslationState("Import traduction...");
-      const content = await file.text();
-      const imported = await api.importTranslation(selectedId, content, file.name, replace);
+      const imported = await api.importTranslation(selectedId, content, filename, replace);
       setAttachedTranslation(imported);
       setTranscript(applyTranslation(transcript, imported));
       setTranslationState("Traduction attachée");
       setExportTrack("translation");
+      setPasteImportOpen(false);
+      setPastedTranslation("");
       setError("");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Import de traduction impossible";
       if (!replace && message.includes("already exists")) {
         const shouldReplace = window.confirm("Une traduction existe déjà. La remplacer par ce fichier ?");
         if (shouldReplace) {
-          await importTranslationFile(file, true);
+          await importTranslationContent(content, filename, true);
           return;
         }
       }
       setTranslationState(attachedTranslation ? "Traduction attachée" : "Aucune traduction");
       setError(message);
+    }
+  }
+
+  async function importTranslationFile(file: File, replace: boolean) {
+    try {
+      await importTranslationContent(await file.text(), file.name, replace);
+    } finally {
+      if (translationFileRef.current) translationFileRef.current.value = "";
+    }
+  }
+
+  async function importPastedTranslation() {
+    if (!pastedTranslation.trim()) {
+      setError("Colle une traduction Markdown avant d'importer.");
+      return;
+    }
+    try {
+      await importTranslationContent(pastedTranslation, "pasted-translation.md", false);
     } finally {
       if (translationFileRef.current) translationFileRef.current.value = "";
     }
@@ -1152,6 +1179,33 @@ function App() {
         </div>
       )}
 
+      {pasteImportOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPasteImportOpen(false);
+          }}
+        >
+          <section className="modal paste-modal" role="dialog" aria-modal="true" aria-labelledby="paste-title">
+            <h2 id="paste-title">Importer une traduction collée</h2>
+            <p>Colle le Markdown complet renvoyé par ChatGPT. Les timestamps seront validés avant remplacement.</p>
+            <textarea
+              value={pastedTranslation}
+              onChange={(event) => setPastedTranslation(event.target.value)}
+              placeholder="# Translation&#10;&#10;source_corpus_id: ..."
+            />
+            <div className="modal-actions">
+              <button onClick={() => setPasteImportOpen(false)}>Annuler</button>
+              <button onClick={() => void importPastedTranslation()}>
+                <Check size={16} />
+                <span>Importer</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       <section className="document-strip">
         {selectedVideo && (
           <div className="video-meta">
@@ -1170,6 +1224,10 @@ function App() {
             <button disabled={editorLocked} onClick={() => void copyTranslationPrompt()}>
               <Copy size={16} />
               <span>{copyState}</span>
+            </button>
+            <button disabled={editorLocked} onClick={() => setPasteImportOpen(true)}>
+              <ClipboardPaste size={16} />
+              <span>Coller</span>
             </button>
             <input
               ref={translationFileRef}

@@ -474,6 +474,10 @@ input {
   justify-content: end;
 }
 
+.paste-modal textarea {
+  min-height: 18rem;
+}
+
 .document-strip {
   align-items: center;
   display: flex;

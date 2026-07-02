@@ -583,12 +583,14 @@ async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
   const candidates = [
     path.join(process.resourcesPath, "desktop-bin", platformKey, `${name}${extension}`),
     path.join(app.getAppPath(), "desktop-bin", platformKey, `${name}${extension}`),
+    path.join(app.getAppPath(), "..", "desktop-bin", platformKey, `${name}${extension}`),
+    path.join(process.cwd(), "desktop-bin", platformKey, `${name}${extension}`),
     path.join(app.getPath("userData"), "bin", platformKey, `${name}${extension}`),
   ];
   for (const candidate of candidates) {
     if (await pathExists(candidate)) return candidate;
   }
-  return name;
+  throw new Error(`Missing bundled ${name}. Run make desktop-tools, then restart the app.`);
 }
 
 export async function readLibrary(): Promise<DesktopLibraryInfo> {

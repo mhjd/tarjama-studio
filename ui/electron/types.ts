@@ -9,6 +9,7 @@ export type DesktopProject = {
   transcriptPath?: string;
   translationPath?: string;
   durationSeconds?: number;
+  archivedAt?: string;
 };
 
 export type DesktopLibraryInfo = {
@@ -55,4 +56,52 @@ export type DownloadYoutubeRequest = {
 export type DownloadYoutubeResult = {
   project: DesktopProject;
   videoPath: string;
+};
+
+export type DesktopSnapshotInfo = {
+  id: string;
+  created_at?: string | null;
+  segment_count: number;
+  matches_current?: boolean;
+};
+
+export type DesktopRecoveryState = {
+  needs_resolution: boolean;
+  snapshot_path?: string | null;
+  snapshot?: WorkspaceTranscript | null;
+};
+
+export type DesktopProjectLoad = {
+  project: DesktopProject;
+  mediaUrl?: string;
+  transcript: WorkspaceTranscript | null;
+  translation: WorkspaceTranslation | null;
+  snapshots: DesktopSnapshotInfo[];
+  recovery: DesktopRecoveryState;
+};
+
+export type WorkspaceTranslation = {
+  corpus_id: string;
+  language: string;
+  format?: string;
+  source_transcript_fingerprint: string;
+  imported_from?: string | null;
+  segments: Array<{
+    id: string;
+    start: number;
+    end: number;
+    translation: string;
+  }>;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ImportTranslationResult = {
+  project: DesktopProject;
+  translation: WorkspaceTranslation;
+};
+
+export type DesktopExportResult = {
+  outputPath: string;
+  mediaUrl: string;
 };

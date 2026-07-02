@@ -2,13 +2,23 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  createTranscriptSnapshot,
   downloadYoutube,
+  exportTranslatedVideo,
+  importTranslationContent,
+  importTranslationFile,
   importTranscript,
+  loadProject,
+  loadSnapshot,
   openProjectFolder,
   readLibrary,
+  restoreSnapshot,
+  saveCurrentTranscript,
+  saveTranslation,
+  setProjectArchived,
   trashProject,
 } from "./library.js";
-import type { DownloadYoutubeRequest } from "./types.js";
+import type { DownloadYoutubeRequest, WorkspaceTranscript, WorkspaceTranslation } from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,8 +45,34 @@ function createWindow(): void {
 
 function registerIpc(): void {
   ipcMain.handle("library:read", async () => readLibrary());
+  ipcMain.handle("project:load", async (_event, projectId: string) => loadProject(projectId));
+  ipcMain.handle("project:save-current", async (_event, projectId: string, transcript: WorkspaceTranscript) =>
+    saveCurrentTranscript(projectId, transcript),
+  );
+  ipcMain.handle("project:create-snapshot", async (_event, projectId: string, transcript: WorkspaceTranscript) =>
+    createTranscriptSnapshot(projectId, transcript),
+  );
+  ipcMain.handle("project:load-snapshot", async (_event, projectId: string, snapshotId: string) =>
+    loadSnapshot(projectId, snapshotId),
+  );
+  ipcMain.handle("project:restore-snapshot", async (_event, projectId: string, snapshotId?: string) =>
+    restoreSnapshot(projectId, snapshotId),
+  );
   ipcMain.handle("transcript:import", async (_event, projectId: string) => importTranscript(projectId));
+  ipcMain.handle("translation:import-file", async (_event, projectId: string) => importTranslationFile(projectId));
+  ipcMain.handle(
+    "translation:import-content",
+    async (_event, projectId: string, content: string, filename: string, replace: boolean) =>
+      importTranslationContent(projectId, content, filename, replace),
+  );
+  ipcMain.handle("translation:save", async (_event, projectId: string, translation: WorkspaceTranslation) =>
+    saveTranslation(projectId, translation),
+  );
+  ipcMain.handle("video:export", async (_event, projectId: string) => exportTranslatedVideo(projectId));
   ipcMain.handle("youtube:download", async (_event, request: DownloadYoutubeRequest) => downloadYoutube(request));
+  ipcMain.handle("project:archive", async (_event, projectId: string, archived: boolean) =>
+    setProjectArchived(projectId, archived),
+  );
   ipcMain.handle("project:open-folder", async (_event, projectId: string) => openProjectFolder(projectId));
   ipcMain.handle("project:trash", async (_event, projectId: string) => trashProject(projectId));
 }

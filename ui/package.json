@@ -2,14 +2,49 @@
   "name": "ashrafent-ui",
   "private": true,
   "version": "0.1.0",
+  "description": "Local-first Arabic transcription and translation reviewer",
+  "author": "Ashrafent",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "electron:build": "tsc -p tsconfig.electron.json",
+    "desktop:tools": "python3 ../scripts/prepare_desktop_tools.py",
     "desktop:build": "npm run build && npm run electron:build",
-    "desktop:dev": "npm run electron:build && electron dist-electron/main.js"
+    "desktop:dev": "npm run electron:build && electron dist-electron/main.js",
+    "desktop:package": "npm run desktop:tools && npm run desktop:build && electron-builder --dir",
+    "desktop:dist": "npm run desktop:tools && npm run desktop:build && electron-builder"
+  },
+  "build": {
+    "appId": "org.ashrafent.reviewer",
+    "productName": "Ashrafent",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "desktop-bin",
+        "to": "desktop-bin"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dir"
+      ]
+    },
+    "win": {
+      "target": [
+        "dir"
+      ]
+    }
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
@@ -23,6 +58,7 @@
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "electron": "^43.0.0"
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3"
   }
 }

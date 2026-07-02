@@ -641,15 +641,20 @@ input:disabled {
 
 .desktop-shell {
   margin: 0 auto;
-  max-width: 1120px;
+  max-width: 1480px;
   padding: 1.5rem;
 }
 
 .desktop-header {
   align-items: center;
   display: flex;
+  gap: 0.75rem;
   justify-content: space-between;
   margin-bottom: 1.25rem;
+}
+
+.desktop-header > button {
+  flex: 0 0 auto;
 }
 
 .desktop-header div {
@@ -719,7 +724,28 @@ input:disabled {
   padding: 1rem;
 }
 
-.desktop-project div:first-child {
+.desktop-project.selected {
+  border-color: var(--accent);
+}
+
+.project-picker {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+  min-width: 0;
+  padding: 0;
+  text-align: start;
+}
+
+.project-picker:hover {
+  background: transparent;
+}
+
+.desktop-project div:first-child,
+.project-picker {
   display: grid;
   gap: 0.35rem;
   min-width: 0;
@@ -734,7 +760,23 @@ input:disabled {
 
 .desktop-project-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.archive-toggle {
+  justify-self: start;
+}
+
+.desktop-editor {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.desktop-editor .player-band {
+  position: static;
 }
 
 @media (max-width: 820px) {

@@ -399,10 +399,46 @@ ${sourceBlocks}
 function DesktopApp() {
   const desktop = window.ashrafentDesktop;
   const [library, setLibrary] = useState<DesktopLibraryInfo | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [loadedProject, setLoadedProject] = useState<DesktopProject | null>(null);
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [transcript, setTranscript] = useState<Transcript | null>(null);
+  const [attachedTranslation, setAttachedTranslation] = useState<Translation | null>(null);
+  const [snapshots, setSnapshots] = useState<DesktopSnapshotInfo[]>([]);
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState("");
+  const [previewTranscript, setPreviewTranscript] = useState<Transcript | null>(null);
+  const [previewSnapshot, setPreviewSnapshot] = useState<DesktopSnapshotInfo | null>(null);
+  const [showArchives, setShowArchives] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [state, setState] = useState("Prêt");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [rangeStart, setRangeStart] = useState("00:00");
+  const [rangeEnd, setRangeEnd] = useState("00:00");
+  const [loopEnabled, setLoopEnabled] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [pasteImportOpen, setPasteImportOpen] = useState(false);
+  const [pastedTranslation, setPastedTranslation] = useState("");
+  const [copyState, setCopyState] = useState("Copier prompt");
+  const [exportState, setExportState] = useState("Exporter MP4");
+  const [saveState, setSaveState] = useState("Sauvegarder");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autosaveTimer = useRef<number | null>(null);
+
+  const activeProjects = useMemo(
+    () => library?.projects.filter((project) => !project.archivedAt) ?? [],
+    [library]
+  );
+  const archivedProjects = useMemo(
+    () => library?.projects.filter((project) => project.archivedAt) ?? [],
+    [library]
+  );
+  const isHistoryPreview = Boolean(previewTranscript);
+  const displayedTranscript = previewTranscript ?? transcript;
+  const editorLocked = isHistoryPreview || busy;
 
   const refreshLibrary = useCallback(async () => {
     if (!desktop) return;
@@ -412,6 +448,72 @@ function DesktopApp() {
   useEffect(() => {
     void refreshLibrary().catch((err) => setError(err instanceof Error ? err.message : "Bibliothèque impossible à charger"));
   }, [refreshLibrary]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  const applyLoadedProject = useCallback((loaded: DesktopProjectLoad) => {
+    setLoadedProject(loaded.project);
+    setMediaUrl(loaded.mediaUrl ?? "");
+    const nextTranscript = loaded.transcript ? applyTranslation(loaded.transcript, loaded.translation) : null;
+    setTranscript(nextTranscript);
+    setAttachedTranslation(loaded.translation);
+    setSnapshots(loaded.snapshots);
+    setSelectedSnapshotId("");
+    setPreviewTranscript(null);
+    setPreviewSnapshot(null);
+    setState(
+      loaded.transcript
+        ? loaded.translation
+          ? "Transcription et traduction chargées"
+          : "Transcription chargée"
+        : "Vidéo sans transcription"
+    );
+  }, []);
+
+  const loadDesktopProject = useCallback(
+    async (projectId: string) => {
+      if (!desktop || !projectId) return;
+      setBusy(true);
+      setError("");
+      try {
+        applyLoadedProject(await desktop.loadProject(projectId));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Projet impossible à charger");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [applyLoadedProject, desktop]
+  );
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    void loadDesktopProject(selectedProjectId);
+  }, [loadDesktopProject, selectedProjectId]);
+
+  useEffect(() => {
+    if (!desktop || !selectedProjectId || !transcript || editorLocked) return;
+    if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const plainTranscript = transcriptWithoutTranslations(transcript);
+          const loaded = await desktop.saveCurrentTranscript(selectedProjectId, plainTranscript);
+          if (attachedTranslation) {
+            await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
+          }
+          setLoadedProject(loaded.project);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Sauvegarde automatique impossible");
+        }
+      })();
+    }, 900);
+    return () => {
+      if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    };
+  }, [attachedTranslation, desktop, editorLocked, selectedProjectId, transcript]);
 
   async function runDesktopAction(label: string, action: () => Promise<void>) {
     setBusy(true);
@@ -432,7 +534,11 @@ function DesktopApp() {
   async function importTranscriptDesktop(project: DesktopProject) {
     await runDesktopAction("Import transcription...", async () => {
       const result = await desktop?.importTranscript(project.id);
-      if (result) setState(`Transcription importée: ${result.segmentCount} segments`);
+      if (result) {
+        setState(`Transcription importée: ${result.segmentCount} segments`);
+        setSelectedProjectId(project.id);
+        await loadDesktopProject(project.id);
+      }
     });
   }
 
@@ -448,12 +554,290 @@ function DesktopApp() {
     });
   }
 
+  async function archiveProjectDesktop(project: DesktopProject, archived: boolean) {
+    await runDesktopAction(archived ? "Archivage..." : "Désarchivage...", async () => {
+      await desktop?.setProjectArchived(project.id, archived);
+      if (selectedProjectId === project.id && archived) {
+        setSelectedProjectId("");
+        setLoadedProject(null);
+        setTranscript(null);
+        setAttachedTranslation(null);
+      }
+    });
+  }
+
   async function trashProjectDesktop(project: DesktopProject) {
     const confirmed = window.confirm(`Déplacer le projet "${project.title}" à la corbeille ?`);
     if (!confirmed) return;
     await runDesktopAction("Suppression...", async () => {
       await desktop?.trashProject(project.id);
     });
+  }
+
+  function seekTo(seconds: number) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = Math.max(0, Math.min(seconds, duration || seconds));
+    setCurrentTime(audio.currentTime);
+  }
+
+  function seekBy(delta: number) {
+    seekTo((audioRef.current?.currentTime ?? 0) + delta);
+  }
+
+  function togglePlay() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const start = parseTime(rangeStart) ?? 0;
+    const end = parseTime(rangeEnd);
+    if (audio.paused && end !== null && end > start && audio.currentTime >= end - 0.05) {
+      audio.currentTime = start;
+      setCurrentTime(start);
+    }
+    if (audio.paused) void audio.play();
+    else audio.pause();
+  }
+
+  function stopAudio() {
+    audioRef.current?.pause();
+    seekTo(parseTime(rangeStart) ?? 0);
+  }
+
+  function onTimeUpdate() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const nextTime = audio.currentTime;
+    setCurrentTime(nextTime);
+    const end = parseTime(rangeEnd);
+    const start = parseTime(rangeStart) ?? 0;
+    if (loopEnabled && end !== null && end > start && nextTime >= end) {
+      audio.currentTime = start;
+      void audio.play();
+      return;
+    }
+    if (!loopEnabled && end !== null && end > start && nextTime >= end) {
+      audio.pause();
+      audio.currentTime = end;
+      setCurrentTime(end);
+    }
+  }
+
+  function updateSegment(id: string, patch: Partial<Segment>) {
+    if (!transcript || editorLocked) return;
+    setTranscript({
+      ...transcript,
+      segments: transcript.segments.map((segment) => (segment.id === id ? { ...segment, ...patch } : segment)),
+    });
+  }
+
+  function mutateSegments(mutator: (segments: Segment[]) => Segment[]) {
+    if (!transcript || editorLocked) return;
+    setTranscript({ ...transcript, segments: mutator(transcript.segments) });
+  }
+
+  function addSegmentAfter(segmentId: string) {
+    mutateSegments((segments) => {
+      const index = segments.findIndex((segment) => segment.id === segmentId);
+      if (index < 0) return segments;
+      const current = segments[index];
+      const next = segments[index + 1];
+      return [
+        ...segments.slice(0, index + 1),
+        {
+          id: `seg_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          start: current.end,
+          end: next ? Math.max(current.end, next.start) : current.end + 2,
+          text: "",
+          translation: "",
+        },
+        ...segments.slice(index + 1),
+      ];
+    });
+  }
+
+  function deleteSegment(segmentId: string) {
+    mutateSegments((segments) => segments.filter((segment) => segment.id !== segmentId));
+  }
+
+  function splitSegment(segmentId: string) {
+    mutateSegments((segments) => {
+      const index = segments.findIndex((segment) => segment.id === segmentId);
+      if (index < 0) return segments;
+      const current = segments[index];
+      if (currentTime <= current.start || currentTime >= current.end) return segments;
+      return [
+        ...segments.slice(0, index),
+        { ...current, end: currentTime },
+        {
+          ...current,
+          id: `seg_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          start: currentTime,
+          translation: "",
+        },
+        ...segments.slice(index + 1),
+      ];
+    });
+  }
+
+  function mergeWithNext(segmentId: string) {
+    mutateSegments((segments) => {
+      const index = segments.findIndex((segment) => segment.id === segmentId);
+      if (index < 0 || index >= segments.length - 1) return segments;
+      const current = segments[index];
+      const next = segments[index + 1];
+      return [
+        ...segments.slice(0, index),
+        {
+          ...current,
+          end: next.end,
+          text: [current.text, next.text].filter(Boolean).join(" ").trim(),
+          translation: [current.translation, next.translation].filter(Boolean).join("\n").trim(),
+        },
+        ...segments.slice(index + 2),
+      ];
+    });
+  }
+
+  async function createSavePointDesktop() {
+    if (!desktop || !selectedProjectId || !transcript || editorLocked) return;
+    setSaveState("Sauvegarde...");
+    setError("");
+    try {
+      const loaded = await desktop.createTranscriptSnapshot(selectedProjectId, transcriptWithoutTranslations(transcript));
+      if (attachedTranslation) {
+        applyLoadedProject(await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation)));
+      } else {
+        applyLoadedProject(loaded);
+      }
+      setSaveState("Sauvegardé");
+    } catch (err) {
+      setSaveState("Sauvegarder");
+      setError(err instanceof Error ? err.message : "Sauvegarde impossible");
+    }
+  }
+
+  async function copyTranslationPromptDesktop() {
+    if (!transcript) return;
+    try {
+      await navigator.clipboard.writeText(translationPromptFromTranscript(transcript));
+      setCopyState("Copié");
+      window.setTimeout(() => setCopyState("Copier prompt"), 1600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Copie impossible");
+    }
+  }
+
+  async function importTranslationFileDesktop() {
+    if (!desktop || !selectedProjectId) return;
+    setError("");
+    try {
+      const result = await desktop.importTranslationFile(selectedProjectId);
+      if (result) {
+        setAttachedTranslation(result.translation);
+        if (transcript) setTranscript(applyTranslation(transcript, result.translation));
+        await loadDesktopProject(selectedProjectId);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Import traduction impossible");
+    }
+  }
+
+  async function importPastedTranslationDesktop() {
+    if (!desktop || !selectedProjectId || !pastedTranslation.trim()) return;
+    setError("");
+    try {
+      const result = await desktop.importTranslationContent(selectedProjectId, pastedTranslation, "pasted-translation.md", true);
+      setAttachedTranslation(result.translation);
+      if (transcript) setTranscript(applyTranslation(transcript, result.translation));
+      setPastedTranslation("");
+      setPasteImportOpen(false);
+      await loadDesktopProject(selectedProjectId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Import traduction impossible");
+    }
+  }
+
+  async function exportVideoDesktop() {
+    if (!desktop || !selectedProjectId || !attachedTranslation) {
+      setError("Importe une traduction avant d'exporter.");
+      return;
+    }
+    setExportState("Export...");
+    setError("");
+    try {
+      if (transcript) await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
+      if (transcript && attachedTranslation) {
+        await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
+      }
+      const result = await desktop.exportTranslatedVideo(selectedProjectId);
+      setExportState(result ? "Export terminé" : "Exporter MP4");
+      if (result) setState(`Export créé: ${result.outputPath}`);
+    } catch (err) {
+      setExportState("Exporter MP4");
+      setError(err instanceof Error ? err.message : "Export impossible");
+    }
+  }
+
+  async function selectDesktopSnapshot(snapshotId: string) {
+    setSelectedSnapshotId(snapshotId);
+    if (!desktop || !selectedProjectId || !snapshotId) {
+      setPreviewSnapshot(null);
+      setPreviewTranscript(null);
+      return;
+    }
+    try {
+      const loaded = await desktop.loadSnapshot(selectedProjectId, snapshotId);
+      setPreviewSnapshot(loaded.snapshot);
+      setPreviewTranscript(loaded.transcript);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sauvegarde impossible à charger");
+    }
+  }
+
+  async function restoreDesktopSnapshot() {
+    if (!desktop || !selectedProjectId || !previewSnapshot) return;
+    const confirmed = window.confirm("Restaurer cette ancienne sauvegarde à la place de la version courante ?");
+    if (!confirmed) return;
+    try {
+      applyLoadedProject(await desktop.restoreSnapshot(selectedProjectId, previewSnapshot.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Restauration impossible");
+    }
+  }
+
+  function renderProject(project: DesktopProject) {
+    const selected = selectedProjectId === project.id;
+    return (
+      <article className={`desktop-project ${selected ? "selected" : ""}`} key={project.id}>
+        <button className="project-picker" onClick={() => setSelectedProjectId(project.id)}>
+          <strong>{project.title}</strong>
+          <span>{project.youtubeUrl || project.id}</span>
+          <small>
+            {project.videoPath ? "Vidéo" : "Vidéo absente"} ·{" "}
+            {project.transcriptPath ? "Transcription" : "À transcrire"} ·{" "}
+            {project.translationPath ? "Traduction" : "Sans traduction"}
+          </small>
+        </button>
+        <div className="desktop-project-actions">
+          <button disabled={busy} onClick={() => void importTranscriptDesktop(project)}>
+            <Upload size={16} />
+            <span>{project.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
+          </button>
+          <button disabled={busy} onClick={() => void archiveProjectDesktop(project, !project.archivedAt)}>
+            <History size={16} />
+            <span>{project.archivedAt ? "Désarchiver" : "Archiver"}</span>
+          </button>
+          <button disabled={busy} onClick={() => void desktop?.openProjectFolder(project.id)}>
+            <FileInput size={16} />
+            <span>Dossier</span>
+          </button>
+          <button disabled={busy} onClick={() => void trashProjectDesktop(project)}>
+            <Trash2 size={16} />
+            <span>Corbeille</span>
+          </button>
+        </div>
+      </article>
+    );
   }
 
   return (
@@ -466,6 +850,10 @@ function DesktopApp() {
         <button disabled={busy} onClick={() => void refreshLibrary()}>
           <RotateCcw size={16} />
           <span>Actualiser</span>
+        </button>
+        <button onClick={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}>
+          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          <span>{theme === "dark" ? "Clair" : "Sombre"}</span>
         </button>
       </header>
 
@@ -492,34 +880,226 @@ function DesktopApp() {
 
       <section className="desktop-projects">
         <h2>Projets</h2>
-        {!library?.projects.length && <p className="state">Aucun projet local pour l'instant.</p>}
-        {library?.projects.map((project) => (
-          <article className="desktop-project" key={project.id}>
-            <div>
-              <strong>{project.title}</strong>
-              <span>{project.youtubeUrl || project.id}</span>
-              <small>
-                {project.videoPath ? "Vidéo présente" : "Vidéo absente"} ·{" "}
-                {project.transcriptPath ? "Transcription présente" : "Transcription absente"}
-              </small>
-            </div>
-            <div className="desktop-project-actions">
-              <button disabled={busy} onClick={() => void importTranscriptDesktop(project)}>
-                <Upload size={16} />
-                <span>{project.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
-              </button>
-              <button disabled={busy} onClick={() => void desktop?.openProjectFolder(project.id)}>
-                <FileInput size={16} />
-                <span>Dossier</span>
-              </button>
-              <button disabled={busy} onClick={() => void trashProjectDesktop(project)}>
-                <Trash2 size={16} />
-                <span>Corbeille</span>
-              </button>
-            </div>
-          </article>
-        ))}
+        {!activeProjects.length && <p className="state">Aucun projet actif.</p>}
+        {activeProjects.map(renderProject)}
+        {archivedProjects.length > 0 && (
+          <>
+            <button className="archive-toggle" onClick={() => setShowArchives((value) => !value)}>
+              {showArchives ? "Masquer les archives" : `Afficher les archives (${archivedProjects.length})`}
+            </button>
+            {showArchives && archivedProjects.map(renderProject)}
+          </>
+        )}
       </section>
+
+      {loadedProject && (
+        <section className="desktop-editor">
+          <div className="document-strip">
+            <div className="video-meta">
+              <strong>{loadedProject.title}</strong>
+              <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
+            </div>
+            <button disabled={!transcript || editorLocked} onClick={() => void createSavePointDesktop()}>
+              <Save size={16} />
+              <span>{saveState}</span>
+            </button>
+            <button disabled={!transcript || editorLocked} onClick={() => void copyTranslationPromptDesktop()}>
+              <Copy size={16} />
+              <span>{copyState}</span>
+            </button>
+            <button disabled={!transcript || editorLocked} onClick={() => setPasteImportOpen(true)}>
+              <ClipboardPaste size={16} />
+              <span>Coller traduction</span>
+            </button>
+            <button disabled={!transcript || editorLocked} onClick={() => void importTranslationFileDesktop()}>
+              <Upload size={16} />
+              <span>{attachedTranslation ? "Remplacer traduction" : "Importer traduction"}</span>
+            </button>
+            <button disabled={!attachedTranslation || editorLocked} onClick={() => void exportVideoDesktop()}>
+              <Download size={16} />
+              <span>{exportState}</span>
+            </button>
+          </div>
+
+          {mediaUrl && (
+            <section className="player-band">
+              <audio
+                ref={audioRef}
+                src={mediaUrl}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={onTimeUpdate}
+                onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? loadedProject.durationSeconds ?? 0)}
+              />
+              <div className="interval-row">
+                <label>
+                  <span>Début</span>
+                  <input value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
+                  <button onClick={() => setRangeStart(formatTime(currentTime))}>
+                    <FileInput size={16} />
+                  </button>
+                </label>
+                <label>
+                  <span>Fin</span>
+                  <input value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
+                  <button onClick={() => setRangeEnd(formatTime(currentTime))}>
+                    <FileInput size={16} />
+                  </button>
+                </label>
+                <label className="toggle">
+                  <input checked={loopEnabled} type="checkbox" onChange={(event) => setLoopEnabled(event.target.checked)} />
+                  <span>Boucle</span>
+                </label>
+              </div>
+              <input
+                className="timeline"
+                type="range"
+                min="0"
+                max={duration || loadedProject.durationSeconds || 0}
+                step="0.01"
+                value={currentTime}
+                onChange={(event) => seekTo(Number(event.target.value))}
+              />
+              <div className="timeline-readout">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
+              </div>
+              <div className="audio-controls">
+                <button onClick={() => seekBy(-10)}>-10s</button>
+                <button onClick={() => seekBy(-3)}>-3s</button>
+                <button className="primary-control" onClick={togglePlay}>
+                  {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+                  <span>{isPlaying ? "Pause" : "Lire"}</span>
+                </button>
+                <button onClick={stopAudio}>
+                  <Square size={16} />
+                  <span>Stop</span>
+                </button>
+                <button onClick={() => seekBy(3)}>+3s</button>
+                <button onClick={() => seekBy(10)}>+10s</button>
+              </div>
+            </section>
+          )}
+
+          {snapshots.length > 0 && (
+            <section className="snapshot-history">
+              <div>
+                <History size={16} />
+                <strong>Historique</strong>
+              </div>
+              <select value={selectedSnapshotId} onChange={(event) => void selectDesktopSnapshot(event.target.value)}>
+                <option value="">Version courante</option>
+                {snapshots.filter((snapshot) => !snapshot.matches_current).map((snapshot) => (
+                  <option key={snapshot.id} value={snapshot.id}>
+                    {snapshotLabel(snapshot)}
+                  </option>
+                ))}
+              </select>
+              {isHistoryPreview && (
+                <>
+                  <button onClick={() => {
+                    setSelectedSnapshotId("");
+                    setPreviewSnapshot(null);
+                    setPreviewTranscript(null);
+                  }}>
+                    Version courante
+                  </button>
+                  <button className="danger-button" onClick={() => void restoreDesktopSnapshot()}>
+                    Restaurer...
+                  </button>
+                </>
+              )}
+            </section>
+          )}
+
+          {!transcript && <p className="state">Vidéo téléchargée. Importe une transcription nettoyée pour commencer l'édition.</p>}
+          {isHistoryPreview && <p className="state">Ancienne sauvegarde en lecture seule.</p>}
+          {displayedTranscript && (
+            <section className="workspace">
+              <section className="segments">
+                {displayedTranscript.segments.map((segment, index) => (
+                  <article className="segment-row" key={segment.id}>
+                    <div className="segment-meta">
+                      <label className="time-control time-control-nav">
+                        <span>Lire</span>
+                        <button className="timestamp" onClick={() => seekTo(segment.start)}>
+                          {formatTime(segment.start)}
+                        </button>
+                      </label>
+                      <label className="time-control">
+                        <span>Début</span>
+                        <input
+                          className="time-input"
+                          disabled={editorLocked}
+                          value={formatTime(segment.start)}
+                          onChange={(event) => updateSegment(segment.id, { start: parseTime(event.target.value) ?? segment.start })}
+                        />
+                      </label>
+                      <label className="time-control">
+                        <span>Fin</span>
+                        <input
+                          className="time-input"
+                          disabled={editorLocked}
+                          value={formatTime(segment.end)}
+                          onChange={(event) => updateSegment(segment.id, { end: parseTime(event.target.value) ?? segment.end })}
+                        />
+                      </label>
+                    </div>
+                    <div className="segment-fields">
+                      <textarea
+                        dir="rtl"
+                        lang="ar"
+                        disabled={editorLocked}
+                        value={segment.text}
+                        onChange={(event) => updateSegment(segment.id, { text: event.target.value })}
+                      />
+                      <textarea
+                        disabled={editorLocked || !attachedTranslation}
+                        value={segment.translation}
+                        placeholder={attachedTranslation ? "Traduction" : "Importer une traduction alignée"}
+                        onChange={(event) => updateSegment(segment.id, { translation: event.target.value })}
+                      />
+                      <div className="segment-actions">
+                        <button disabled={editorLocked} onClick={() => addSegmentAfter(segment.id)}>
+                          <Plus size={16} />
+                        </button>
+                        <button
+                          disabled={editorLocked || currentTime <= segment.start || currentTime >= segment.end}
+                          onClick={() => splitSegment(segment.id)}
+                        >
+                          <Scissors size={16} />
+                        </button>
+                        <button disabled={editorLocked || index >= displayedTranscript.segments.length - 1} onClick={() => mergeWithNext(segment.id)}>
+                          <Combine size={16} />
+                        </button>
+                        <button disabled={editorLocked} onClick={() => deleteSegment(segment.id)}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            </section>
+          )}
+        </section>
+      )}
+
+      {pasteImportOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal paste-modal" role="dialog" aria-modal="true">
+            <h2>Importer une traduction collée</h2>
+            <textarea value={pastedTranslation} onChange={(event) => setPastedTranslation(event.target.value)} />
+            <div className="modal-actions">
+              <button onClick={() => setPasteImportOpen(false)}>Annuler</button>
+              <button onClick={() => void importPastedTranslationDesktop()}>
+                <Check size={16} />
+                <span>Importer</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

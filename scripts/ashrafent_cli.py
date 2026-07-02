@@ -350,6 +350,69 @@ def read_from_clipboard() -> str:
     raise SystemExit("No supported clipboard command found. Use --file or paste manually.")
 
 
+def compact_preview(value: Any, width: int = 180) -> str:
+    text = str(value or "").replace("\n", " ").strip()
+    if len(text) <= width:
+        return text
+    return text[: width - 1] + "…"
+
+
+def clipboard_review_lines(content: str) -> tuple[bool, list[str]]:
+    lines = [f"Taille presse-papiers: {len(content)} caractères"]
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError as exc:
+        lines.append(f"JSON invalide: {exc}")
+        lines.append(f"Aperçu: {compact_preview(content)}")
+        return False, lines
+
+    if not isinstance(payload, dict):
+        lines.append(f"JSON valide, mais type inattendu: {type(payload).__name__}")
+        lines.append(f"Aperçu: {compact_preview(payload)}")
+        return False, lines
+
+    segments = payload.get("segments")
+    lines.append(f"corpus_id: {payload.get('corpus_id', '<absent>')}")
+    if not isinstance(segments, list):
+        lines.append("segments: absent ou invalide")
+        return False, lines
+    lines.append(f"segments: {len(segments)}")
+    if segments:
+        first = segments[0] if isinstance(segments[0], dict) else {}
+        last = segments[-1] if isinstance(segments[-1], dict) else {}
+        lines.append(
+            "premier: "
+            f"{first.get('start', '?')} -> {first.get('end', '?')} · {compact_preview(first.get('text'))}"
+        )
+        lines.append(
+            "dernier: "
+            f"{last.get('start', '?')} -> {last.get('end', '?')} · {compact_preview(last.get('text'))}"
+        )
+    return True, lines
+
+
+def read_clipboard_with_review() -> str:
+    while True:
+        content = read_from_clipboard()
+        valid, lines = clipboard_review_lines(content)
+        print("")
+        print("=== Revue du presse-papiers ===")
+        for line in lines:
+            print(line)
+        print("===============================")
+        if not content.strip():
+            choice = input("Le presse-papiers est vide. [r] recommencer, [n] annuler: ").strip().lower()
+        elif valid:
+            choice = input("Importer ce contenu ? [y] oui, [r] relire le presse-papiers, [n] annuler: ").strip().lower()
+        else:
+            choice = input("Ce contenu ne ressemble pas à une transcription complète. [r] recommencer, [n] annuler: ").strip().lower()
+        if choice in {"y", "yes", "o", "oui"} and valid:
+            return content
+        if choice in {"r", "retry", "recommencer"}:
+            continue
+        raise SystemExit("Import cancelled")
+
+
 def copy_to_clipboard(text: str) -> None:
     if sys.platform == "darwin":
         subprocess.run(["pbcopy"], input=text, text=True, check=True)
@@ -365,7 +428,7 @@ def read_cleaned_content(args: argparse.Namespace) -> str:
     if args.file:
         return Path(args.file).read_text(encoding="utf-8")
     if getattr(args, "clipboard", False):
-        content = read_from_clipboard()
+        content = read_clipboard_with_review() if sys.stdin.isatty() else read_from_clipboard()
         if not content.strip():
             raise SystemExit("Clipboard is empty")
         return content

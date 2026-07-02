@@ -9,6 +9,7 @@ import type {
   DownloadYoutubeResult,
   ImportTranslationResult,
   ImportTranscriptResult,
+  UpdateToolResult,
   WorkspaceTranscript,
   WorkspaceTranslation,
   DesktopExportResult,
@@ -42,8 +43,10 @@ const api = {
     ipcRenderer.invoke("translation:save", projectId, translation),
   exportTranslatedVideo: (projectId: string): Promise<DesktopExportResult | null> =>
     ipcRenderer.invoke("video:export", projectId),
+  importLocalVideo: (): Promise<DownloadYoutubeResult | null> => ipcRenderer.invoke("video:import-local"),
   downloadYoutube: (request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult> =>
     ipcRenderer.invoke("youtube:download", request),
+  updateYtdlp: (): Promise<UpdateToolResult> => ipcRenderer.invoke("tools:update-ytdlp"),
   onDownloadProgress: (callback: (progress: DownloadProgress) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: DownloadProgress) => callback(progress);
     ipcRenderer.on("youtube:progress", listener);

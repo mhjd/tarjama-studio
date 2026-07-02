@@ -5,6 +5,7 @@ import {
   createTranscriptSnapshot,
   downloadYoutube,
   exportTranslatedVideo,
+  importLocalVideo,
   importTranslationContent,
   importTranslationFile,
   importTranscript,
@@ -17,6 +18,7 @@ import {
   saveTranslation,
   setProjectArchived,
   trashProject,
+  updateYtdlp,
 } from "./library.js";
 import type { DownloadYoutubeRequest, WorkspaceTranscript, WorkspaceTranslation } from "./types.js";
 
@@ -69,9 +71,11 @@ function registerIpc(): void {
     saveTranslation(projectId, translation),
   );
   ipcMain.handle("video:export", async (_event, projectId: string) => exportTranslatedVideo(projectId));
+  ipcMain.handle("video:import-local", async () => importLocalVideo());
   ipcMain.handle("youtube:download", async (event, request: DownloadYoutubeRequest) =>
     downloadYoutube(request, (progress) => event.sender.send("youtube:progress", progress)),
   );
+  ipcMain.handle("tools:update-ytdlp", async () => updateYtdlp());
   ipcMain.handle("project:archive", async (_event, projectId: string, archived: boolean) =>
     setProjectArchived(projectId, archived),
   );

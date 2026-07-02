@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "data/manifests/dedew_manifest.jsonl"
 WORKSPACES = ROOT / "data/workspaces"
 LOCAL_WHISPER_DIR = ROOT / "data/model_outputs/whisper_large_v3_mlx"
+TRANSCRIPT_EXPORT_DIR = ROOT / "exports/transcriptions"
 LOCAL_WHISPER_MODEL = "mlx-community/whisper-large-v3-mlx"
 ASR_PYTHON = ROOT / ".venv-asr/bin/python"
 YTDLP = ROOT / ".venv/bin/yt-dlp"
@@ -84,6 +86,47 @@ def whisper_json_path(corpus_id: str) -> Path:
     return LOCAL_WHISPER_DIR / f"{corpus_id}.json"
 
 
+def copy_export_file(source: Path, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, target)
+
+
+def export_transcript_for_electron(
+    row: dict[str, Any],
+    transcript_path: Path,
+    transcript_kind: str,
+) -> Path:
+    """Expose the transcript near the repo root for Electron's Importer transcription flow."""
+    corpus_id = row["corpus_id"]
+    out_dir = TRANSCRIPT_EXPORT_DIR / corpus_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if not transcript_path.exists():
+        raise SystemExit(f"Missing transcript to export: {transcript_path}")
+    named_transcript = out_dir / f"transcript_{transcript_kind}.json"
+    active_transcript = out_dir / "transcript_import.json"
+    copy_export_file(transcript_path, named_transcript)
+    copy_export_file(transcript_path, active_transcript)
+
+    metadata = {
+        "corpus_id": corpus_id,
+        "title": row.get("title"),
+        "youtube_url": row.get("youtube_url"),
+        "transcript_to_import": active_transcript.name,
+        "kind": transcript_kind,
+        "updated_at": now_iso(),
+    }
+    (out_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (out_dir / "README.txt").write_text(
+        "Transcription prête pour Ashrafent Electron.\n"
+        "Dans le projet vidéo correspondant, utilise Importer transcription puis choisis transcript_import.json.\n"
+        "transcript_whisper.json est la sortie brute locale si disponible; transcript_cleaned.json est la version nettoyée si disponible.\n",
+        encoding="utf-8",
+    )
+    print(f"[export] {active_transcript.relative_to(ROOT)}")
+    return active_transcript
+
+
 def has_subtitle(row: dict[str, Any]) -> bool:
     corpus_id = row["corpus_id"]
     return workspace_path(corpus_id).exists() or autosave_path(corpus_id).exists() or whisper_json_path(corpus_id).exists()
@@ -138,6 +181,7 @@ def write_workspace_from_whisper(row: dict[str, Any]) -> Path:
     out = workspace_path(corpus_id)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    export_transcript_for_electron(row, out, "whisper")
     return out
 
 
@@ -392,6 +436,7 @@ def import_cleaned_transcript(args: argparse.Namespace) -> None:
     summary = validate_cleaned_transcript(current, cleaned, allow_empty_segments=args.allow_empty_segments)
     backup = backup_workspace(args.corpus_id, current)
     write_workspace_json(args.corpus_id, cleaned)
+    export_transcript_for_electron(row, workspace_path(args.corpus_id), "cleaned")
     print(f"[workspace] imported cleaned transcript: {workspace_path(args.corpus_id).relative_to(ROOT)}")
     print(f"[backup] previous transcript: {backup.relative_to(ROOT)}")
     print(

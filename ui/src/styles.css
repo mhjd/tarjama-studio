@@ -711,6 +711,17 @@ input:disabled {
   width: 100%;
 }
 
+.desktop-create-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.desktop-create-buttons button {
+  white-space: nowrap;
+}
+
 .download-progress {
   display: grid;
   gap: 0.45rem;
@@ -767,9 +778,10 @@ input:disabled {
   gap: 0.35rem;
   height: auto;
   justify-items: start;
+  justify-content: start;
   min-width: 0;
   padding: 0;
-  text-align: start;
+  text-align: left;
   width: 100%;
 }
 
@@ -781,7 +793,12 @@ input:disabled {
 .project-picker small {
   justify-self: start;
   max-width: 100%;
-  text-align: start;
+  text-align: left;
+  width: 100%;
+}
+
+.project-picker strong {
+  unicode-bidi: plaintext;
 }
 
 .project-link-row {

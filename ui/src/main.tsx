@@ -570,6 +570,26 @@ function DesktopApp() {
     });
   }
 
+  async function importLocalVideoDesktop() {
+    await runDesktopAction("Import vidéo...", async () => {
+      const result = await desktop?.importLocalVideo();
+      if (result) {
+        setSelectedProjectId(result.project.id);
+        setState("Vidéo importée. Tu peux maintenant importer une transcription.");
+        setDownloadProgress(null);
+      }
+    });
+  }
+
+  async function updateYtdlpDesktop() {
+    await runDesktopAction("Mise à jour yt-dlp...", async () => {
+      const result = await desktop?.updateYtdlp();
+      if (result) {
+        setState(`yt-dlp mis à jour: ${result.version}`);
+      }
+    });
+  }
+
   async function archiveProjectDesktop(project: DesktopProject, archived: boolean) {
     await runDesktopAction(archived ? "Archivage..." : "Désarchivage...", async () => {
       await desktop?.setProjectArchived(project.id, archived);
@@ -852,7 +872,7 @@ function DesktopApp() {
       <article className={`desktop-project ${selected ? "selected" : ""}`} key={project.id}>
         <div className="desktop-project-main">
           <button className="project-picker" onClick={() => setSelectedProjectId(project.id)}>
-            <strong>{project.title}</strong>
+            <strong dir="auto">{project.title}</strong>
             <small>
               {project.videoPath ? "Vidéo" : "Vidéo absente"} ·{" "}
               {project.transcriptPath ? "Transcription" : "À transcrire"} ·{" "}
@@ -917,10 +937,20 @@ function DesktopApp() {
               placeholder="https://www.youtube.com/watch?v=..."
             />
           </label>
-          <button disabled={busy} onClick={() => void downloadYoutubeDesktop()}>
-            <Download size={16} />
-            <span>Télécharger vidéo</span>
-          </button>
+          <div className="desktop-create-buttons">
+            <button disabled={busy} onClick={() => void downloadYoutubeDesktop()}>
+              <Download size={16} />
+              <span>Télécharger vidéo</span>
+            </button>
+            <button disabled={busy} onClick={() => void importLocalVideoDesktop()}>
+              <FileInput size={16} />
+              <span>Importer vidéo</span>
+            </button>
+            <button disabled={busy} onClick={() => void updateYtdlpDesktop()}>
+              <RotateCcw size={16} />
+              <span>Mettre à jour yt-dlp</span>
+            </button>
+          </div>
         </div>
         <p className="desktop-state">{state}</p>
         {downloadProgress && downloadProgress.stage !== "done" && (

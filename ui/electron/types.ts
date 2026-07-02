@@ -61,6 +61,11 @@ export type DownloadYoutubeResult = {
   videoPath: string;
 };
 
+export type UpdateToolResult = {
+  path: string;
+  version: string;
+};
+
 export type DesktopSnapshotInfo = {
   id: string;
   created_at?: string | null;

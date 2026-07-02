@@ -50,7 +50,9 @@ Commandes secondaires/deprecated, gardées pour maintenance:
 - `python scripts/ashrafent_cli.py copy-cleanup-prompt <corpus_id>`
 - `python scripts/ashrafent_cli.py import-cleaned-transcript <corpus_id>`
 
-La CLI télécharge les vidéos YouTube dans `data/raw/videos/youtube/`, extrait un WAV mono 16 kHz dans `data/raw/audio/youtube/`, ajoute une ligne au manifest, lance Whisper local si demandé, puis crée le workspace d'édition.
+La CLI télécharge les vidéos YouTube dans `data/raw/videos/youtube/`, extrait un WAV mono 16 kHz dans `data/raw/audio/youtube/`, ajoute une ligne au manifest, lance Whisper local si demandé, puis crée le workspace d'édition. Elle dépose aussi la transcription courante dans `exports/transcriptions/<corpus_id>/transcript_import.json`, uniquement pour faciliter le bouton Electron `Importer transcription`; elle ne crée pas de projet Electron.
+
+L'app Electron peut créer un projet soit par téléchargement YouTube, soit par import d'un fichier vidéo local. `make desktop-tools` embarque un yt-dlp récent au build, et l'app peut aussi mettre à jour yt-dlp dans son dossier utilisateur sans republier toute l'application.
 
 `copy-cleanup-prompt` copie dans le presse-papiers un prompt ChatGPT de nettoyage de transcription suivi du JSON workspace courant. Le prompt est personnalisable dans `prompts/transcript_cleanup.md`. Le TUI peut ensuite importer le JSON nettoyé collé; l'import vérifie le format workspace, les métadonnées et la cohérence des timestamps, tout en autorisant les ajouts/suppressions de segments.
 

@@ -15,6 +15,7 @@ import type {
   DownloadYoutubeResult,
   ImportTranslationResult,
   ImportTranscriptResult,
+  UpdateToolResult,
   WorkspaceTranscript,
   WorkspaceTranslation,
 } from "./types.js";
@@ -437,6 +438,47 @@ async function runTool(
   });
 }
 
+function platformKey(): string {
+  return `${process.platform}-${process.arch}`;
+}
+
+function executableExtension(): string {
+  return process.platform === "win32" ? ".exe" : "";
+}
+
+async function makeExecutable(filePath: string): Promise<void> {
+  if (process.platform !== "win32") {
+    await fs.chmod(filePath, 0o755);
+  }
+}
+
+function ytdlpDownloadUrl(): string {
+  if (process.platform === "darwin") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos";
+  if (process.platform === "win32") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
+  if (process.platform === "linux") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+  throw new Error(`Unsupported platform for yt-dlp update: ${process.platform}`);
+}
+
+async function downloadFile(url: string, targetPath: string): Promise<void> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Download failed: HTTP ${response.status}`);
+  }
+  const tmpPath = `${targetPath}.tmp`;
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  await fs.writeFile(tmpPath, Buffer.from(await response.arrayBuffer()));
+  await makeExecutable(tmpPath);
+  await fs.rm(targetPath, { force: true }).catch(() => undefined);
+  await fs.rename(tmpPath, targetPath);
+}
+
+export async function updateYtdlp(): Promise<UpdateToolResult> {
+  const targetPath = path.join(app.getPath("userData"), "bin", platformKey(), `yt-dlp${executableExtension()}`);
+  await downloadFile(ytdlpDownloadUrl(), targetPath);
+  const version = (await runTool(targetPath, ["--version"], app.getPath("userData"))).trim();
+  return { path: targetPath, version };
+}
+
 const YTDLP_RETRY_ARGS = ["--extractor-retries", "5", "--retry-sleep", "extractor:1"];
 
 function isRetryableYtdlpError(error: unknown): boolean {
@@ -578,14 +620,14 @@ async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: 
 }
 
 async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
-  const extension = process.platform === "win32" ? ".exe" : "";
-  const platformKey = `${process.platform}-${process.arch}`;
+  const extension = executableExtension();
+  const key = platformKey();
   const candidates = [
-    path.join(process.resourcesPath, "desktop-bin", platformKey, `${name}${extension}`),
-    path.join(app.getAppPath(), "desktop-bin", platformKey, `${name}${extension}`),
-    path.join(app.getAppPath(), "..", "desktop-bin", platformKey, `${name}${extension}`),
-    path.join(process.cwd(), "desktop-bin", platformKey, `${name}${extension}`),
-    path.join(app.getPath("userData"), "bin", platformKey, `${name}${extension}`),
+    path.join(app.getPath("userData"), "bin", key, `${name}${extension}`),
+    path.join(process.resourcesPath, "desktop-bin", key, `${name}${extension}`),
+    path.join(app.getAppPath(), "desktop-bin", key, `${name}${extension}`),
+    path.join(app.getAppPath(), "..", "desktop-bin", key, `${name}${extension}`),
+    path.join(process.cwd(), "desktop-bin", key, `${name}${extension}`),
   ];
   for (const candidate of candidates) {
     if (await pathExists(candidate)) return candidate;
@@ -646,6 +688,48 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
   };
   await writeProject(updatedProject);
   return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
+}
+
+export async function importLocalVideo(): Promise<DownloadYoutubeResult | null> {
+  await fs.mkdir(libraryDir(), { recursive: true });
+  const selection = await dialog.showOpenDialog({
+    title: "Importer une vidéo",
+    properties: ["openFile"],
+    filters: [
+      { name: "Vidéos", extensions: ["mp4", "mov", "mkv", "webm", "m4v"] },
+      { name: "Tous les fichiers", extensions: ["*"] },
+    ],
+  });
+  if (selection.canceled || !selection.filePaths[0]) return null;
+
+  const sourcePath = selection.filePaths[0];
+  const ffmpeg = await resolveTool("ffmpeg");
+  const streams = await mediaStreams(sourcePath, ffmpeg);
+  if (!streams.video || !streams.audio) {
+    throw new Error("La vidéo importée doit contenir une piste vidéo et une piste audio");
+  }
+
+  const extension = path.extname(sourcePath) || ".mp4";
+  const title = path.basename(sourcePath, extension);
+  let id = slugify(`local_${title}`);
+  if (await pathExists(projectDir(id))) {
+    id = slugify(`local_${title}_${Date.now()}`);
+  }
+  const dir = projectDir(id);
+  await fs.mkdir(dir, { recursive: true });
+  const videoPath = path.join(dir, `source${extension}`);
+  await fs.copyFile(sourcePath, videoPath);
+  await assertInsideLibrary(videoPath);
+
+  const project: DesktopProject = {
+    id,
+    title,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    videoPath,
+  };
+  await writeProject(project);
+  return { project, videoPath };
 }
 
 export async function downloadYoutube(

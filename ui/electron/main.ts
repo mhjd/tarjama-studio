@@ -69,7 +69,9 @@ function registerIpc(): void {
     saveTranslation(projectId, translation),
   );
   ipcMain.handle("video:export", async (_event, projectId: string) => exportTranslatedVideo(projectId));
-  ipcMain.handle("youtube:download", async (_event, request: DownloadYoutubeRequest) => downloadYoutube(request));
+  ipcMain.handle("youtube:download", async (event, request: DownloadYoutubeRequest) =>
+    downloadYoutube(request, (progress) => event.sender.send("youtube:progress", progress)),
+  );
   ipcMain.handle("project:archive", async (_event, projectId: string, archived: boolean) =>
     setProjectArchived(projectId, archived),
   );

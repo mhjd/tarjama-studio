@@ -33,6 +33,15 @@ type DownloadYoutubeResult = {
   videoPath: string;
 };
 
+type DownloadProgress = {
+  projectId: string;
+  stage: "metadata" | "download" | "mux" | "done";
+  message: string;
+  percent?: number;
+  speed?: string;
+  eta?: string;
+};
+
 type DesktopSegment = {
   id: string;
   start: number;
@@ -119,6 +128,7 @@ interface Window {
     saveTranslation(projectId: string, translation: DesktopTranslation): Promise<DesktopProjectLoad>;
     exportTranslatedVideo(projectId: string): Promise<DesktopExportResult | null>;
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;
+    onDownloadProgress(callback: (progress: DownloadProgress) => void): () => void;
     setProjectArchived(projectId: string, archived: boolean): Promise<DesktopProject>;
     openProjectFolder(projectId: string): Promise<void>;
     trashProject(projectId: string): Promise<void>;

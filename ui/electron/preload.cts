@@ -4,6 +4,7 @@ import type {
   DesktopProject,
   DesktopProjectLoad,
   DesktopSnapshotInfo,
+  DownloadProgress,
   DownloadYoutubeRequest,
   DownloadYoutubeResult,
   ImportTranslationResult,
@@ -43,6 +44,11 @@ const api = {
     ipcRenderer.invoke("video:export", projectId),
   downloadYoutube: (request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult> =>
     ipcRenderer.invoke("youtube:download", request),
+  onDownloadProgress: (callback: (progress: DownloadProgress) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: DownloadProgress) => callback(progress);
+    ipcRenderer.on("youtube:progress", listener);
+    return () => ipcRenderer.removeListener("youtube:progress", listener);
+  },
   setProjectArchived: (projectId: string, archived: boolean): Promise<DesktopProject> =>
     ipcRenderer.invoke("project:archive", projectId, archived),
   openProjectFolder: (projectId: string): Promise<void> => ipcRenderer.invoke("project:open-folder", projectId),

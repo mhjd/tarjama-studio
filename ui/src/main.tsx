@@ -413,6 +413,7 @@ function DesktopApp() {
   const [state, setState] = useState("Prêt");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -448,6 +449,14 @@ function DesktopApp() {
   useEffect(() => {
     void refreshLibrary().catch((err) => setError(err instanceof Error ? err.message : "Bibliothèque impossible à charger"));
   }, [refreshLibrary]);
+
+  useEffect(() => {
+    if (!desktop) return;
+    return desktop.onDownloadProgress((progress) => {
+      setDownloadProgress(progress);
+      setState(progress.message);
+    });
+  }, [desktop]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -549,8 +558,13 @@ function DesktopApp() {
       return;
     }
     await runDesktopAction("Téléchargement vidéo...", async () => {
-      await desktop?.downloadYoutube({ url });
+      setDownloadProgress({ projectId: "pending", stage: "metadata", message: "Analyse de la vidéo YouTube..." });
+      const result = await desktop?.downloadYoutube({ url });
       setYoutubeUrl("");
+      if (result) {
+        setSelectedProjectId(result.project.id);
+        setDownloadProgress({ projectId: result.project.id, stage: "done", percent: 100, message: "Téléchargement terminé" });
+      }
     });
   }
 
@@ -874,6 +888,23 @@ function DesktopApp() {
           </button>
         </div>
         <p className="desktop-state">{state}</p>
+        {downloadProgress && downloadProgress.stage !== "done" && (
+          <div className="download-progress" role="status" aria-live="polite">
+            <div>
+              <span>{downloadProgress.message}</span>
+              {downloadProgress.percent !== undefined && <strong>{downloadProgress.percent.toFixed(1)}%</strong>}
+            </div>
+            <progress value={downloadProgress.percent ?? undefined} max="100" />
+            <small>
+              {[downloadProgress.speed, downloadProgress.eta ? `ETA ${downloadProgress.eta}` : ""]
+                .filter(Boolean)
+                .join(" · ")}
+            </small>
+          </div>
+        )}
+        {downloadProgress?.stage === "done" && (
+          <p className="desktop-state">Téléchargement terminé. Le projet a été ajouté à la liste.</p>
+        )}
         {error && <p className="error">{error}</p>}
         {library && <p className="desktop-path">{library.libraryDir}</p>}
       </section>

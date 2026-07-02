@@ -711,6 +711,29 @@ input:disabled {
   width: 100%;
 }
 
+.download-progress {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.download-progress div {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+.download-progress progress {
+  accent-color: var(--accent);
+  height: 0.65rem;
+  width: 100%;
+}
+
+.download-progress small {
+  color: var(--muted);
+  min-height: 1rem;
+}
+
 .desktop-projects {
   display: grid;
   gap: 0.75rem;

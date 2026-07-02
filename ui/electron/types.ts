@@ -46,6 +46,9 @@ export type DownloadProgress = {
   projectId: string;
   stage: "metadata" | "download" | "mux" | "done";
   message: string;
+  percent?: number;
+  speed?: string;
+  eta?: string;
 };
 
 export type DownloadYoutubeRequest = {

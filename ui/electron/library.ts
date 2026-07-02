@@ -10,6 +10,7 @@ import type {
   DesktopProject,
   DesktopProjectLoad,
   DesktopSnapshotInfo,
+  DownloadProgress,
   DownloadYoutubeRequest,
   DownloadYoutubeResult,
   ImportTranslationResult,
@@ -389,16 +390,25 @@ function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function runTool(command: string, args: string[], cwd: string): Promise<string> {
+async function runTool(
+  command: string,
+  args: string[],
+  cwd: string,
+  onOutput?: (chunk: string) => void,
+): Promise<string> {
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, windowsHide: true });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => {
-      stdout += String(chunk);
+      const value = String(chunk);
+      stdout += value;
+      onOutput?.(value);
     });
     child.stderr.on("data", (chunk) => {
-      stderr += String(chunk);
+      const value = String(chunk);
+      stderr += value;
+      onOutput?.(value);
     });
     child.on("error", reject);
     child.on("close", (code) => {
@@ -420,11 +430,16 @@ function isRetryableYtdlpError(error: unknown): boolean {
   return /The page needs to be reloaded/i.test(output) || /Incomplete data received/i.test(output);
 }
 
-async function runYtdlp(command: string, args: string[], cwd: string): Promise<string> {
+async function runYtdlp(
+  command: string,
+  args: string[],
+  cwd: string,
+  onOutput?: (chunk: string) => void,
+): Promise<string> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      return await runTool(command, [...YTDLP_RETRY_ARGS, ...args], cwd);
+      return await runTool(command, [...YTDLP_RETRY_ARGS, ...args], cwd, onOutput);
     } catch (error) {
       lastError = error;
       if (!isRetryableYtdlpError(error) || attempt === 3) break;
@@ -480,6 +495,55 @@ function lastOutputLine(output: string): string {
     throw new Error("Command did not print an output path");
   }
   return lines[lines.length - 1];
+}
+
+function isHttp403YtdlpError(error: unknown): boolean {
+  if (!(error instanceof ToolError)) return false;
+  const output = `${error.stderr}\n${error.stdout}`;
+  return /HTTP Error 403|403:\s*Forbidden/i.test(output);
+}
+
+function parseProgressPercent(value: string): number | undefined {
+  const match = value.match(/([0-9]+(?:\.[0-9]+)?)%/);
+  if (!match) return undefined;
+  const percent = Number(match[1]);
+  if (!Number.isFinite(percent)) return undefined;
+  return Math.max(0, Math.min(100, percent));
+}
+
+function handleYtdlpProgressChunk(
+  chunk: string,
+  projectId: string,
+  emit?: (progress: DownloadProgress) => void,
+): void {
+  if (!emit) return;
+  for (const rawLine of chunk.split(/\r|\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line.startsWith("download:") || /^[0-9]+(?:\.[0-9]+)?%\|/.test(line)) {
+      const fields = line.startsWith("download:") ? line.split("|").slice(1) : line.split("|");
+      const [percentValue = "", speedValue = "", etaValue = ""] = fields;
+      const percent = parseProgressPercent(percentValue);
+      emit({
+        projectId,
+        stage: "download",
+        percent,
+        speed: speedValue.trim() || undefined,
+        eta: etaValue.trim() || undefined,
+        message: [
+          percent !== undefined ? `${percent.toFixed(1)}%` : "Téléchargement en cours",
+          speedValue.trim(),
+          etaValue.trim() ? `ETA ${etaValue.trim()}` : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      });
+      continue;
+    }
+    if (line.includes("[Merger]") || line.includes("[Fixup") || line.includes("[VideoRemuxer]")) {
+      emit({ projectId, stage: "mux", message: "Assemblage de la vidéo et de l'audio..." });
+    }
+  }
 }
 
 async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: boolean; video: boolean }> {
@@ -567,10 +631,14 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
   return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
 }
 
-export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult> {
+export async function downloadYoutube(
+  request: DownloadYoutubeRequest,
+  emitProgress?: (progress: DownloadProgress) => void,
+): Promise<DownloadYoutubeResult> {
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
+  emitProgress?.({ projectId: "pending", stage: "metadata", message: "Analyse de la vidéo YouTube..." });
   const metadataText = await runYtdlp(
     ytdlp,
     [
@@ -591,26 +659,52 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
   }
   const dir = projectDir(id);
   await fs.mkdir(dir, { recursive: true });
+  emitProgress?.({ projectId: id, stage: "download", percent: 0, message: "Démarrage du téléchargement..." });
 
-  const downloadOutput = await runYtdlp(
-    ytdlp,
-    [
+  const outputTemplate = path.join(dir, "source.%(ext)s");
+  const downloadArgs = (format: string): string[] => [
       "--no-warnings",
       "--no-playlist",
       "--ffmpeg-location",
       ffmpeg,
       "-f",
-      "bv*[ext=mp4]+ba/best",
+      format,
       "--merge-output-format",
       "mp4",
+      "--progress",
+      "--newline",
+      "--progress-template",
+      "download:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s",
       "--print",
       "after_move:filepath",
       "-o",
-      path.join(dir, "source.%(ext)s"),
+      outputTemplate,
       request.url,
-    ],
-    dir,
-  );
+    ];
+
+  let downloadOutput: string;
+  try {
+    downloadOutput = await runYtdlp(
+      ytdlp,
+      downloadArgs("bv*[ext=mp4]+ba/best"),
+      dir,
+      (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
+    );
+  } catch (error) {
+    if (!isHttp403YtdlpError(error)) throw error;
+    emitProgress?.({
+      projectId: id,
+      stage: "download",
+      percent: 0,
+      message: "Flux haute qualité refusé par YouTube, nouvel essai en format compatible...",
+    });
+    downloadOutput = await runYtdlp(
+      ytdlp,
+      downloadArgs("18/b[ext=mp4]/best"),
+      dir,
+      (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
+    );
+  }
 
   const printedPath = lastOutputLine(downloadOutput);
   const videoPath = path.isAbsolute(printedPath) ? printedPath : path.resolve(dir, printedPath);
@@ -622,6 +716,7 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
   if (!streams.video || !streams.audio) {
     throw new Error("Downloaded media must contain both video and audio streams");
   }
+  emitProgress?.({ projectId: id, stage: "done", percent: 100, message: "Téléchargement terminé" });
 
   const project: DesktopProject = {
     id,

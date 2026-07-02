@@ -740,10 +740,10 @@ input:disabled {
 }
 
 .desktop-project {
-  align-items: center;
+  align-items: start;
   display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  grid-template-columns: minmax(18rem, 1fr) minmax(28rem, auto);
   padding: 1rem;
 }
 
@@ -751,26 +751,53 @@ input:disabled {
   border-color: var(--accent);
 }
 
+.desktop-project-main {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
 .project-picker {
+  align-items: start;
+  align-self: start;
   background: transparent;
   border: 0;
   color: var(--text);
   display: grid;
   gap: 0.35rem;
+  height: auto;
   justify-items: start;
   min-width: 0;
   padding: 0;
   text-align: start;
+  width: 100%;
 }
 
 .project-picker:hover {
   background: transparent;
 }
 
-.desktop-project div:first-child,
-.project-picker {
+.project-picker strong,
+.project-picker small {
+  justify-self: start;
+  max-width: 100%;
+  text-align: start;
+}
+
+.project-link-row {
+  align-items: center;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.65rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+}
+
+.project-link-row button {
+  min-height: 2rem;
+  padding: 0 0.6rem;
+}
+
+.project-link-row span {
   min-width: 0;
 }
 
@@ -782,10 +809,17 @@ input:disabled {
 }
 
 .desktop-project-actions {
+  align-items: start;
+  align-self: start;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.desktop-project-actions button {
+  min-height: 2.35rem;
+  white-space: nowrap;
 }
 
 .archive-toggle {

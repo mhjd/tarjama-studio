@@ -413,6 +413,7 @@ function DesktopApp() {
   const [state, setState] = useState("Prêt");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [copiedProjectId, setCopiedProjectId] = useState("");
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [currentTime, setCurrentTime] = useState(0);
@@ -426,6 +427,7 @@ function DesktopApp() {
   const [copyState, setCopyState] = useState("Copier prompt");
   const [exportState, setExportState] = useState("Exporter MP4");
   const [saveState, setSaveState] = useState("Sauvegarder");
+  const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const autosaveTimer = useRef<number | null>(null);
 
@@ -580,6 +582,20 @@ function DesktopApp() {
     });
   }
 
+  async function copyProjectYoutubeUrl(project: DesktopProject) {
+    if (!project.youtubeUrl) return;
+    try {
+      await navigator.clipboard.writeText(project.youtubeUrl);
+      setCopiedProjectId(project.id);
+      setError("");
+      window.setTimeout(() => {
+        setCopiedProjectId((current) => (current === project.id ? "" : current));
+      }, 1600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Copie du lien impossible");
+    }
+  }
+
   async function trashProjectDesktop(project: DesktopProject) {
     const confirmed = window.confirm(`Déplacer le projet "${project.title}" à la corbeille ?`);
     if (!confirmed) return;
@@ -634,6 +650,17 @@ function DesktopApp() {
       audio.currentTime = end;
       setCurrentTime(end);
     }
+  }
+
+  function updateDesktopTimelineHover(event: React.PointerEvent<HTMLDivElement>) {
+    const max = duration || loadedProject?.durationSeconds || 0;
+    if (!max) {
+      setTimelineHover(null);
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    setTimelineHover({ time: ratio * max, x: ratio * 100 });
   }
 
   function updateSegment(id: string, patch: Partial<Segment>) {
@@ -823,15 +850,23 @@ function DesktopApp() {
     const selected = selectedProjectId === project.id;
     return (
       <article className={`desktop-project ${selected ? "selected" : ""}`} key={project.id}>
-        <button className="project-picker" onClick={() => setSelectedProjectId(project.id)}>
-          <strong>{project.title}</strong>
-          <span>{project.youtubeUrl || project.id}</span>
-          <small>
-            {project.videoPath ? "Vidéo" : "Vidéo absente"} ·{" "}
-            {project.transcriptPath ? "Transcription" : "À transcrire"} ·{" "}
-            {project.translationPath ? "Traduction" : "Sans traduction"}
-          </small>
-        </button>
+        <div className="desktop-project-main">
+          <button className="project-picker" onClick={() => setSelectedProjectId(project.id)}>
+            <strong>{project.title}</strong>
+            <small>
+              {project.videoPath ? "Vidéo" : "Vidéo absente"} ·{" "}
+              {project.transcriptPath ? "Transcription" : "À transcrire"} ·{" "}
+              {project.translationPath ? "Traduction" : "Sans traduction"}
+            </small>
+          </button>
+          <div className="project-link-row">
+            <span>{project.youtubeUrl || project.id}</span>
+            <button disabled={busy || !project.youtubeUrl} onClick={() => void copyProjectYoutubeUrl(project)}>
+              <Copy size={16} />
+              <span>{copiedProjectId === project.id ? "Copié" : "Copier"}</span>
+            </button>
+          </div>
+        </div>
         <div className="desktop-project-actions">
           <button disabled={busy} onClick={() => void importTranscriptDesktop(project)}>
             <Upload size={16} />
@@ -982,18 +1017,29 @@ function DesktopApp() {
                   <span>Boucle</span>
                 </label>
               </div>
-              <input
-                className="timeline"
-                type="range"
-                min="0"
-                max={duration || loadedProject.durationSeconds || 0}
-                step="0.01"
-                value={currentTime}
-                onChange={(event) => seekTo(Number(event.target.value))}
-              />
-              <div className="timeline-readout">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
+              <div
+                className="timeline-wrap"
+                onPointerMove={updateDesktopTimelineHover}
+                onPointerLeave={() => setTimelineHover(null)}
+              >
+                {timelineHover ? (
+                  <div className="timeline-tooltip" style={{ left: `${timelineHover.x}%` }}>
+                    {formatTime(timelineHover.time)}
+                  </div>
+                ) : null}
+                <input
+                  className="timeline"
+                  type="range"
+                  min="0"
+                  max={duration || loadedProject.durationSeconds || 0}
+                  step="0.01"
+                  value={currentTime}
+                  onChange={(event) => seekTo(Number(event.target.value))}
+                />
+                <div className="timeline-readout">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
+                </div>
               </div>
               <div className="audio-controls">
                 <button onClick={() => seekBy(-10)}>-10s</button>

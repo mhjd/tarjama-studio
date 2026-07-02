@@ -98,7 +98,7 @@ def export_transcript_for_electron(
 ) -> Path:
     """Expose the transcript near the repo root for Electron's Importer transcription flow."""
     corpus_id = row["corpus_id"]
-    out_dir = TRANSCRIPT_EXPORT_DIR / corpus_id
+    out_dir = TRANSCRIPT_EXPORT_DIR / transcript_export_folder(row)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if not transcript_path.exists():
@@ -112,6 +112,7 @@ def export_transcript_for_electron(
         "corpus_id": corpus_id,
         "title": row.get("title"),
         "youtube_url": row.get("youtube_url"),
+        "export_label": row.get("export_label"),
         "transcript_to_import": active_transcript.name,
         "kind": transcript_kind,
         "updated_at": now_iso(),
@@ -135,6 +136,73 @@ def has_subtitle(row: dict[str, Any]) -> bool:
 def slugify(value: str) -> str:
     value = re.sub(r"[^A-Za-z0-9]+", "_", value.strip()).strip("_").lower()
     return value or "video"
+
+
+ARABIC_TRANSLIT = {
+    "ا": "a",
+    "أ": "a",
+    "إ": "i",
+    "آ": "a",
+    "ب": "b",
+    "ت": "t",
+    "ث": "th",
+    "ج": "j",
+    "ح": "h",
+    "خ": "kh",
+    "د": "d",
+    "ذ": "dh",
+    "ر": "r",
+    "ز": "z",
+    "س": "s",
+    "ش": "sh",
+    "ص": "s",
+    "ض": "d",
+    "ط": "t",
+    "ظ": "z",
+    "ع": "a",
+    "غ": "gh",
+    "ف": "f",
+    "ق": "q",
+    "ك": "k",
+    "ل": "l",
+    "م": "m",
+    "ن": "n",
+    "ه": "h",
+    "ة": "h",
+    "و": "w",
+    "ؤ": "w",
+    "ي": "y",
+    "ى": "a",
+    "ئ": "y",
+    "ء": "",
+    "لا": "la",
+}
+
+
+def transliterate_word(value: str) -> str:
+    output = []
+    index = 0
+    while index < len(value):
+        pair = value[index : index + 2]
+        if pair in ARABIC_TRANSLIT:
+            output.append(ARABIC_TRANSLIT[pair])
+            index += 2
+            continue
+        char = value[index]
+        output.append(ARABIC_TRANSLIT.get(char, char))
+        index += 1
+    return "".join(output)
+
+
+def default_export_label(title: str, word_count: int = 4) -> str:
+    words = re.findall(r"[A-Za-z0-9\u0600-\u06FF]+", title)
+    label = "_".join(transliterate_word(word) for word in words[:word_count])
+    return slugify(label)[:56].strip("_") or "video"
+
+
+def transcript_export_folder(row: dict[str, Any]) -> str:
+    label = slugify(str(row.get("export_label") or ""))
+    return f"{row['corpus_id']}__{label}" if label else row["corpus_id"]
 
 
 def youtube_id_from_info(info: dict[str, Any]) -> str:
@@ -761,9 +829,26 @@ def tui_video_items(rows: list[dict[str, Any]]) -> list[tuple[str, dict[str, Any
 
 
 def tui_guided_youtube_pipeline(stdscr: Any) -> None:
+    import curses
+
     url = tui_input(stdscr, "URL YouTube")
     if not url:
         return
+
+    stdscr.erase()
+    stdscr.addstr(0, 0, "Analyse du titre YouTube...", curses.A_BOLD)
+    stdscr.refresh()
+    try:
+        info = yt_dlp_json(url)
+    except (subprocess.CalledProcessError, SystemExit) as exc:
+        tui_message(stdscr, [f"Impossible de lire les métadonnées YouTube: {exc}"])
+        return
+    title = str(info.get("title") or youtube_id_from_info(info))
+    export_label = tui_input(
+        stdscr,
+        "Libellé court du dossier de transcription",
+        default_export_label(title),
+    )
 
     use_defaults = tui_confirm(stdscr, "Utiliser les paramètres par défaut ?")
     if use_defaults:
@@ -780,6 +865,7 @@ def tui_guided_youtube_pipeline(stdscr: Any) -> None:
         corpus_id=corpus_id or None,
         speaker=speaker or None,
         series=series or None,
+        export_label=export_label or None,
         force=False,
     )
     tui_run_shell(stdscr, lambda: youtube_cleanup_pipeline(args))
@@ -846,6 +932,7 @@ def run_tui(_: argparse.Namespace) -> None:
                     corpus_id=corpus_id or None,
                     speaker=speaker or None,
                     series=series or None,
+                    export_label=None,
                     transcribe=transcribe,
                     force=False,
                 )
@@ -993,10 +1080,15 @@ def download_youtube(args: argparse.Namespace) -> dict[str, Any]:
     video_id = youtube_id_from_info(info)
     existing = [row for row in read_manifest() if row.get("youtube_id") == video_id]
     if existing:
+        export_label = getattr(args, "export_label", None)
+        if export_label and existing[0].get("export_label") != export_label:
+            existing[0]["export_label"] = export_label
+            replace_manifest_row(existing[0])
         print(f"[exists] {existing[0]['corpus_id']}")
         return ensure_row_has_playable_video(existing[0])
 
     title = str(info.get("title") or video_id)
+    export_label = getattr(args, "export_label", None) or default_export_label(title)
     corpus_id = args.corpus_id or f"youtube_{video_id}"
     corpus_id = slugify(corpus_id)
     video_dir = ROOT / "data/raw/videos/youtube" / corpus_id
@@ -1050,6 +1142,7 @@ def download_youtube(args: argparse.Namespace) -> dict[str, Any]:
         "language": "ar",
         "youtube_id": video_id,
         "youtube_url": info.get("webpage_url") or args.url,
+        "export_label": export_label,
         "title": title,
         "channel": info.get("channel") or info.get("uploader"),
         "upload_date": info.get("upload_date"),
@@ -1115,6 +1208,7 @@ def main() -> None:
     download.add_argument("--corpus-id")
     download.add_argument("--speaker")
     download.add_argument("--series")
+    download.add_argument("--export-label", help="Short Latin label used for exports/transcriptions/<corpus_id>__<label>")
     download.add_argument("--transcribe", action="store_true", help="Run local Whisper after download")
     download.add_argument("--force", action="store_true")
     download.set_defaults(func=download_command)
@@ -1127,6 +1221,7 @@ def main() -> None:
     pipeline.add_argument("--corpus-id")
     pipeline.add_argument("--speaker")
     pipeline.add_argument("--series")
+    pipeline.add_argument("--export-label", help="Short Latin label used for exports/transcriptions/<corpus_id>__<label>")
     pipeline.add_argument("--force", action="store_true")
     pipeline.set_defaults(func=youtube_cleanup_pipeline)
 

@@ -849,6 +849,20 @@ input:disabled {
   margin-top: 1rem;
 }
 
+.desktop-editor .workspace {
+  margin: 0;
+  max-width: none;
+  width: 100%;
+}
+
+.desktop-editor .segments {
+  width: 100%;
+}
+
+.desktop-editor .segment-row {
+  grid-template-columns: 7rem minmax(28rem, 1fr);
+}
+
 .desktop-editor .player-band {
   position: static;
 }
@@ -920,6 +934,10 @@ input:disabled {
   }
 
   .segment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-editor .segment-row {
     grid-template-columns: 1fr;
   }
 

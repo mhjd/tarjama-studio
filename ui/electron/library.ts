@@ -674,7 +674,7 @@ export async function downloadYoutube(
   }
   const dir = projectDir(id);
   await fs.mkdir(dir, { recursive: true });
-  emitProgress?.({ projectId: id, stage: "download", percent: 0, message: "Démarrage du téléchargement..." });
+  emitProgress?.({ projectId: id, stage: "download", percent: 0, message: "Téléchargement MP4 compatible..." });
 
   const outputTemplate = path.join(dir, "source.%(ext)s");
   const downloadArgs = (format: string, cleanStart = false): string[] => [
@@ -702,7 +702,7 @@ export async function downloadYoutube(
   try {
     downloadOutput = await runYtdlp(
       ytdlp,
-      downloadArgs("bv*[ext=mp4]+ba/best"),
+      downloadArgs("18/b[ext=mp4]/best", true),
       dir,
       (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
     );
@@ -712,12 +712,12 @@ export async function downloadYoutube(
       projectId: id,
       stage: "download",
       percent: 0,
-      message: "Flux haute qualité refusé par YouTube, nouvel essai en format compatible...",
+      message: "YouTube refuse ce flux, nouvel essai avec un format alternatif...",
     });
     await removeGeneratedSourceFiles(dir);
     downloadOutput = await runYtdlp(
       ytdlp,
-      downloadArgs("18/b[ext=mp4]/best", true),
+      downloadArgs("best[ext=mp4]/best", true),
       dir,
       (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
     );

@@ -373,6 +373,22 @@ function assertTranslationAlignment(transcript: WorkspaceTranscript, translation
   }
 }
 
+class ToolError extends Error {
+  constructor(
+    message: string,
+    readonly stdout: string,
+    readonly stderr: string,
+    readonly code: number | null,
+  ) {
+    super(message);
+    this.name = "ToolError";
+  }
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 async function runTool(command: string, args: string[], cwd: string): Promise<string> {
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, windowsHide: true });
@@ -389,27 +405,48 @@ async function runTool(command: string, args: string[], cwd: string): Promise<st
       if (code === 0) {
         resolve(stdout);
       } else {
-        reject(new Error(`${command} exited with code ${code}\n${(stderr || stdout).trim()}`));
+        const output = (stderr || stdout).trim();
+        reject(new ToolError(`${path.basename(command)} exited with code ${code}\n${output}`, stdout, stderr, code));
       }
     });
   });
 }
 
-function parseYtdlpMetadata(output: string): { id?: string; title?: string; duration?: number; webpage_url?: string } {
-  const lines = output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  if (lines.length !== 4) {
-    throw new Error(`yt-dlp returned ${lines.length} metadata fields; expected one video`);
+const YTDLP_RETRY_ARGS = ["--extractor-retries", "5", "--retry-sleep", "extractor:1"];
+
+function isRetryableYtdlpError(error: unknown): boolean {
+  if (!(error instanceof ToolError)) return false;
+  const output = `${error.stderr}\n${error.stdout}`;
+  return /The page needs to be reloaded/i.test(output) || /Incomplete data received/i.test(output);
+}
+
+async function runYtdlp(command: string, args: string[], cwd: string): Promise<string> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await runTool(command, [...YTDLP_RETRY_ARGS, ...args], cwd);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableYtdlpError(error) || attempt === 3) break;
+      await sleep(1000 * attempt);
+    }
   }
-  const duration = Number(lines[2]);
-  return {
-    id: lines[0],
-    title: lines[1],
-    duration: Number.isFinite(duration) ? duration : undefined,
-    webpage_url: lines[3],
-  };
+  throw lastError;
+}
+
+function parseYtdlpMetadata(output: string): { id?: string; title?: string; duration?: number; webpage_url?: string } {
+  const trimmed = output.trim();
+  try {
+    const metadata = JSON.parse(trimmed) as { id?: string; title?: string; duration?: number; webpage_url?: string };
+    return {
+      id: metadata.id,
+      title: metadata.title,
+      duration: Number.isFinite(Number(metadata.duration)) ? Number(metadata.duration) : undefined,
+      webpage_url: metadata.webpage_url,
+    };
+  } catch (error) {
+    throw new Error("yt-dlp did not return valid JSON metadata", { cause: error });
+  }
 }
 
 function assertYoutubeMetadata(metadata: { id?: string; title?: string; duration?: number; webpage_url?: string }): void {
@@ -534,20 +571,13 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
-  const metadataText = await runTool(
+  const metadataText = await runYtdlp(
     ytdlp,
     [
-      "--no-warnings",
       "--no-playlist",
-      "--skip-download",
-      "--print",
-      "%(id)s",
-      "--print",
-      "%(title)s",
-      "--print",
-      "%(duration)s",
-      "--print",
-      "%(webpage_url)s",
+      "--ffmpeg-location",
+      ffmpeg,
+      "-J",
       request.url,
     ],
     libraryDir(),
@@ -562,7 +592,7 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
   const dir = projectDir(id);
   await fs.mkdir(dir, { recursive: true });
 
-  const downloadOutput = await runTool(
+  const downloadOutput = await runYtdlp(
     ytdlp,
     [
       "--no-warnings",
@@ -570,7 +600,7 @@ export async function downloadYoutube(request: DownloadYoutubeRequest): Promise<
       "--ffmpeg-location",
       ffmpeg,
       "-f",
-      "bv*+ba/best",
+      "bv*[ext=mp4]+ba/best",
       "--merge-output-format",
       "mp4",
       "--print",

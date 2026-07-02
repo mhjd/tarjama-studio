@@ -68,6 +68,21 @@ async function assertInsideLibrary(targetPath: string): Promise<void> {
   }
 }
 
+async function removeGeneratedSourceFiles(dir: string): Promise<void> {
+  await assertInsideLibrary(dir);
+  if (!(await pathExists(dir))) return;
+  const entries = await fs.readdir(dir);
+  await Promise.all(
+    entries
+      .filter((entry) => entry.startsWith("source."))
+      .map(async (entry) => {
+        const target = path.join(dir, entry);
+        await assertInsideLibrary(target);
+        await fs.unlink(target).catch(() => undefined);
+      }),
+  );
+}
+
 function projectDir(projectId: string): string {
   return path.join(libraryDir(), projectId);
 }
@@ -662,13 +677,14 @@ export async function downloadYoutube(
   emitProgress?.({ projectId: id, stage: "download", percent: 0, message: "Démarrage du téléchargement..." });
 
   const outputTemplate = path.join(dir, "source.%(ext)s");
-  const downloadArgs = (format: string): string[] => [
+  const downloadArgs = (format: string, cleanStart = false): string[] => [
       "--no-warnings",
       "--no-playlist",
       "--ffmpeg-location",
       ffmpeg,
       "-f",
       format,
+      ...(cleanStart ? ["--no-continue", "--force-overwrites"] : []),
       "--merge-output-format",
       "mp4",
       "--progress",
@@ -698,9 +714,10 @@ export async function downloadYoutube(
       percent: 0,
       message: "Flux haute qualité refusé par YouTube, nouvel essai en format compatible...",
     });
+    await removeGeneratedSourceFiles(dir);
     downloadOutput = await runYtdlp(
       ytdlp,
-      downloadArgs("18/b[ext=mp4]/best"),
+      downloadArgs("18/b[ext=mp4]/best", true),
       dir,
       (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
     );

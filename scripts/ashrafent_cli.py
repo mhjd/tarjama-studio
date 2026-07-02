@@ -335,6 +335,21 @@ def read_pasted_text(end_marker: str = "EOF", cancel_marker: str = "CANCEL") -> 
     return "\n".join(lines)
 
 
+def read_from_clipboard() -> str:
+    if sys.platform == "darwin":
+        result = subprocess.run(["pbpaste"], text=True, capture_output=True, check=True)
+        return result.stdout
+    clipboard = subprocess.run(["which", "xclip"], text=True, capture_output=True, check=False)
+    if clipboard.returncode == 0:
+        result = subprocess.run(["xclip", "-selection", "clipboard", "-o"], text=True, capture_output=True, check=True)
+        return result.stdout
+    wl_clipboard = subprocess.run(["which", "wl-paste"], text=True, capture_output=True, check=False)
+    if wl_clipboard.returncode == 0:
+        result = subprocess.run(["wl-paste"], text=True, capture_output=True, check=True)
+        return result.stdout
+    raise SystemExit("No supported clipboard command found. Use --file or paste manually.")
+
+
 def copy_to_clipboard(text: str) -> None:
     if sys.platform == "darwin":
         subprocess.run(["pbcopy"], input=text, text=True, check=True)
@@ -344,6 +359,17 @@ def copy_to_clipboard(text: str) -> None:
         subprocess.run(["xclip", "-selection", "clipboard"], input=text, text=True, check=True)
         return
     raise SystemExit("No supported clipboard command found. Use --print to write the prompt to stdout.")
+
+
+def read_cleaned_content(args: argparse.Namespace) -> str:
+    if args.file:
+        return Path(args.file).read_text(encoding="utf-8")
+    if getattr(args, "clipboard", False):
+        content = read_from_clipboard()
+        if not content.strip():
+            raise SystemExit("Clipboard is empty")
+        return content
+    return read_pasted_text()
 
 
 def list_missing(_: argparse.Namespace) -> None:
@@ -424,10 +450,7 @@ def copy_cleanup_prompt_for_row(row: dict[str, Any]) -> int:
 def import_cleaned_transcript(args: argparse.Namespace) -> None:
     row = find_row(args.corpus_id)
     current = read_workspace_or_create(row)
-    if args.file:
-        content = Path(args.file).read_text(encoding="utf-8")
-    else:
-        content = read_pasted_text()
+    content = read_cleaned_content(args)
     try:
         cleaned = json.loads(content)
     except json.JSONDecodeError as exc:
@@ -461,10 +484,12 @@ def youtube_cleanup_pipeline(args: argparse.Namespace) -> None:
     print("Étape suivante:")
     print("1. Colle le presse-papiers dans ChatGPT.")
     print("2. Copie uniquement le JSON complet renvoyé par ChatGPT.")
-    print("3. Reviens ici, colle le JSON, puis termine par EOF.")
+    print("3. Reviens ici avec ce JSON dans le presse-papiers.")
     print("")
 
-    import_args = argparse.Namespace(corpus_id=corpus_id, file=None, allow_empty_segments=False)
+    if sys.stdin.isatty():
+        input("Quand le JSON nettoyé est copié, appuie sur Entrée pour l'importer depuis le presse-papiers...")
+    import_args = argparse.Namespace(corpus_id=corpus_id, file=None, clipboard=sys.stdin.isatty(), allow_empty_segments=False)
     import_cleaned_transcript(import_args)
 
 
@@ -560,18 +585,88 @@ def tui_confirm(stdscr: Any, question: str) -> bool:
 def tui_input(stdscr: Any, label: str, default: str = "") -> str:
     import curses
 
-    stdscr.erase()
-    stdscr.addstr(0, 0, label, curses.A_BOLD)
-    if default:
-        stdscr.addstr(1, 0, f"Défaut: {default}", curses.A_DIM)
-    stdscr.addstr(3, 0, "> ")
-    curses.echo()
+    buffer = list(default)
+    cursor = len(buffer)
+    insert_mode = True
+    curses.curs_set(1)
+    stdscr.keypad(True)
     try:
-        raw = stdscr.getstr(3, 2, 500)
+        while True:
+            height, width = stdscr.getmaxyx()
+            field_width = max(8, width - 4)
+            start = max(0, min(cursor - field_width + 1, max(0, len(buffer) - field_width)))
+            visible = "".join(buffer[start : start + field_width])
+            mode = "INSERT" if insert_mode else "NORMAL"
+
+            stdscr.erase()
+            stdscr.addstr(0, 0, short(label, width - 1), curses.A_BOLD)
+            stdscr.addstr(1, 0, short(f"Mode {mode} · Entrée valider · Ctrl+C annuler", width - 1), curses.A_DIM)
+            stdscr.addstr(2, 0, short("Insert: flèches/backspace/delete · Normal: h/l/0/$/x/i/a/A/I/q", width - 1), curses.A_DIM)
+            stdscr.addstr(4, 0, "> ")
+            stdscr.addstr(4, 2, visible)
+            stdscr.move(4, 2 + max(0, cursor - start))
+            stdscr.refresh()
+
+            key = stdscr.get_wch()
+            if key == "\n":
+                return "".join(buffer).strip()
+            if key == "\x03":
+                return ""
+            if isinstance(key, str) and key == "\x1b":
+                if insert_mode:
+                    insert_mode = False
+                    cursor = max(0, min(cursor, len(buffer)))
+                else:
+                    return ""
+                continue
+
+            if insert_mode:
+                if key in {curses.KEY_LEFT, "\x02"}:
+                    cursor = max(0, cursor - 1)
+                elif key in {curses.KEY_RIGHT, "\x06"}:
+                    cursor = min(len(buffer), cursor + 1)
+                elif key in {curses.KEY_HOME, "\x01"}:
+                    cursor = 0
+                elif key in {curses.KEY_END, "\x05"}:
+                    cursor = len(buffer)
+                elif key in {curses.KEY_BACKSPACE, "\b", "\x7f"}:
+                    if cursor > 0:
+                        del buffer[cursor - 1]
+                        cursor -= 1
+                elif key == curses.KEY_DC:
+                    if cursor < len(buffer):
+                        del buffer[cursor]
+                elif isinstance(key, str) and key.isprintable():
+                    buffer.insert(cursor, key)
+                    cursor += 1
+                continue
+
+            if key in {curses.KEY_LEFT, "h"}:
+                cursor = max(0, cursor - 1)
+            elif key in {curses.KEY_RIGHT, "l"}:
+                cursor = min(len(buffer), cursor + 1)
+            elif key in {curses.KEY_HOME, "0"}:
+                cursor = 0
+            elif key in {curses.KEY_END, "$"}:
+                cursor = len(buffer)
+            elif key == "x":
+                if cursor < len(buffer):
+                    del buffer[cursor]
+            elif key == "i":
+                insert_mode = True
+            elif key == "a":
+                cursor = min(len(buffer), cursor + 1)
+                insert_mode = True
+            elif key == "A":
+                cursor = len(buffer)
+                insert_mode = True
+            elif key == "I":
+                cursor = 0
+                insert_mode = True
+            elif key in {"q", "Q"}:
+                return ""
     finally:
-        curses.noecho()
-    value = raw.decode("utf-8").strip()
-    return value or default
+        curses.curs_set(0)
 
 
 def tui_run_shell(stdscr: Any, action: Any) -> None:
@@ -703,11 +798,12 @@ def run_tui(_: argparse.Namespace) -> None:
                         continue
                     if tui_confirm(
                         stdscr,
-                        f"Prompt copié ({copied_chars} caractères). Coller le JSON nettoyé maintenant ?",
+                        f"Prompt copié ({copied_chars} caractères). Lire le JSON nettoyé depuis le presse-papiers maintenant ?",
                     ):
                         args = argparse.Namespace(
                             corpus_id=selected["corpus_id"],
                             file=None,
+                            clipboard=True,
                             allow_empty_segments=False,
                         )
                         tui_run_shell(stdscr, lambda: import_cleaned_transcript(args))
@@ -715,7 +811,13 @@ def run_tui(_: argparse.Namespace) -> None:
                 rows = [row for row in read_manifest() if has_subtitle(row)]
                 selected = tui_choice(stdscr, "Choisir la transcription à remplacer", tui_video_items(rows))
                 if selected:
-                    args = argparse.Namespace(corpus_id=selected["corpus_id"], file=None, allow_empty_segments=False)
+                    use_clipboard = tui_confirm(stdscr, "Lire le JSON nettoyé depuis le presse-papiers ?")
+                    args = argparse.Namespace(
+                        corpus_id=selected["corpus_id"],
+                        file=None,
+                        clipboard=use_clipboard,
+                        allow_empty_segments=False,
+                    )
                     tui_run_shell(stdscr, lambda: import_cleaned_transcript(args))
 
     curses.wrapper(app)
@@ -935,6 +1037,7 @@ def main() -> None:
     import_cleaned = sub.add_parser("import-cleaned-transcript", help="Import cleaned workspace JSON from a file or paste")
     import_cleaned.add_argument("corpus_id")
     import_cleaned.add_argument("--file", help="Read cleaned JSON from a file instead of stdin/paste")
+    import_cleaned.add_argument("--clipboard", action="store_true", help="Read cleaned JSON from the clipboard")
     import_cleaned.add_argument("--allow-empty-segments", action="store_true", help="Import even if some cleaned segments have empty text")
     import_cleaned.set_defaults(func=import_cleaned_transcript)
 

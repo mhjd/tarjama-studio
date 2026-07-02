@@ -979,6 +979,17 @@ function assText(value: string): string {
     .join("\\N");
 }
 
+function displayTimecode(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const secs = total % 60;
+  const minutes = Math.floor(total / 60) % 60;
+  const hours = Math.floor(total / 3600);
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
 type SubtitleCue = {
   start: number;
   end: number;
@@ -1022,7 +1033,11 @@ export async function exportVideo(projectId: string, track: ExportSubtitleTrack)
   if (!project.videoPath || !(await pathExists(project.videoPath))) throw new Error("Vidéo source absente");
   const cues =
     track === "arabic"
-      ? transcript.segments.map((segment) => ({ start: segment.start, end: segment.end, text: segment.text }))
+      ? transcript.segments.map((segment) => ({
+          start: segment.start,
+          end: segment.end,
+          text: `[${displayTimecode(segment.start)}] ${segment.text}`,
+        }))
       : await (async () => {
           const translationPath = translationFile(projectId);
           if (!(await pathExists(translationPath))) throw new Error("Importe une traduction avant l'export");

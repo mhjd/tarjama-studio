@@ -10,6 +10,7 @@ import type {
   DesktopProject,
   DesktopProjectLoad,
   DesktopSnapshotInfo,
+  ExportSubtitleTrack,
   DownloadProgress,
   DownloadYoutubeRequest,
   DownloadYoutubeResult,
@@ -978,8 +979,14 @@ function assText(value: string): string {
     .join("\\N");
 }
 
-async function writeAssSubtitles(filePath: string, translation: WorkspaceTranslation): Promise<void> {
-  const usable = translation.segments.filter((segment) => segment.translation.trim() && segment.end > segment.start);
+type SubtitleCue = {
+  start: number;
+  end: number;
+  text: string;
+};
+
+async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise<void> {
+  const usable = cues.filter((cue) => cue.text.trim() && cue.end > cue.start);
   if (!usable.length) throw new Error("Aucun sous-titre non vide à exporter");
   const lines = [
     "[Script Info]",
@@ -997,8 +1004,8 @@ async function writeAssSubtitles(filePath: string, translation: WorkspaceTransla
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
-  for (const segment of usable) {
-    lines.push(`Dialogue: 0,${assTimestamp(segment.start)},${assTimestamp(segment.end)},Default,,0,0,0,,${assText(segment.translation)}`);
+  for (const cue of usable) {
+    lines.push(`Dialogue: 0,${assTimestamp(cue.start)},${assTimestamp(cue.end)},Default,,0,0,0,,${assText(cue.text)}`);
   }
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, `${lines.join("\n")}\n`, "utf8");
@@ -1008,19 +1015,30 @@ function ffmpegFilterPath(filePath: string): string {
   return filePath.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\\'");
 }
 
-export async function exportTranslatedVideo(projectId: string): Promise<DesktopExportResult | null> {
+export async function exportVideo(projectId: string, track: ExportSubtitleTrack): Promise<DesktopExportResult | null> {
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
   if (!transcript) throw new Error("Transcription absente");
   if (!project.videoPath || !(await pathExists(project.videoPath))) throw new Error("Vidéo source absente");
-  const translationPath = translationFile(projectId);
-  if (!(await pathExists(translationPath))) throw new Error("Importe une traduction avant l'export");
-  const translation = await readJson<WorkspaceTranslation>(translationPath);
-  assertTranslationAlignment(transcript, translation);
+  const cues =
+    track === "arabic"
+      ? transcript.segments.map((segment) => ({ start: segment.start, end: segment.end, text: segment.text }))
+      : await (async () => {
+          const translationPath = translationFile(projectId);
+          if (!(await pathExists(translationPath))) throw new Error("Importe une traduction avant l'export");
+          const translation = await readJson<WorkspaceTranslation>(translationPath);
+          assertTranslationAlignment(transcript, translation);
+          return translation.segments.map((segment) => ({
+            start: segment.start,
+            end: segment.end,
+            text: segment.translation,
+          }));
+        })();
 
-  const defaultName = `${slugify(project.title)}_sous_titres.mp4`;
+  const suffix = track === "arabic" ? "arabe" : "traduction";
+  const defaultName = `${slugify(project.title)}_${suffix}.mp4`;
   const selection = await dialog.showSaveDialog({
-    title: "Exporter la vidéo sous-titrée",
+    title: track === "arabic" ? "Exporter la vidéo sous-titrée en arabe" : "Exporter la vidéo avec traduction",
     defaultPath: defaultName,
     filters: [{ name: "Vidéo MP4", extensions: ["mp4"] }],
   });
@@ -1029,7 +1047,7 @@ export async function exportTranslatedVideo(projectId: string): Promise<DesktopE
   const outDir = exportsDir(projectId);
   const stem = `${filenameTimestamp()}_${createHash("sha1").update(selection.filePath).digest("hex").slice(0, 8)}`;
   const assPath = path.join(outDir, `${stem}.ass`);
-  await writeAssSubtitles(assPath, translation);
+  await writeAssSubtitles(assPath, cues);
   const ffmpeg = await resolveTool("ffmpeg");
   await runTool(
     ffmpeg,

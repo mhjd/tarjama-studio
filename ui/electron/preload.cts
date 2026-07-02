@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   DesktopLibraryInfo,
+  ExportSubtitleTrack,
   DesktopProject,
   DesktopProjectLoad,
   DesktopSnapshotInfo,
@@ -41,8 +42,8 @@ const api = {
   ): Promise<ImportTranslationResult> => ipcRenderer.invoke("translation:import-content", projectId, content, filename, replace),
   saveTranslation: (projectId: string, translation: WorkspaceTranslation): Promise<DesktopProjectLoad> =>
     ipcRenderer.invoke("translation:save", projectId, translation),
-  exportTranslatedVideo: (projectId: string): Promise<DesktopExportResult | null> =>
-    ipcRenderer.invoke("video:export", projectId),
+  exportVideo: (projectId: string, track: ExportSubtitleTrack): Promise<DesktopExportResult | null> =>
+    ipcRenderer.invoke("video:export", projectId, track),
   importLocalVideo: (): Promise<DownloadYoutubeResult | null> => ipcRenderer.invoke("video:import-local"),
   downloadYoutube: (request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult> =>
     ipcRenderer.invoke("youtube:download", request),

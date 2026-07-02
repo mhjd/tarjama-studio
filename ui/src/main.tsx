@@ -105,7 +105,7 @@ type Translation = {
   updated_at?: string;
 };
 
-type ExportTrack = "translation";
+type ExportTrack = "arabic" | "translation";
 
 type ExportJob = {
   id: string;
@@ -425,7 +425,7 @@ function DesktopApp() {
   const [pasteImportOpen, setPasteImportOpen] = useState(false);
   const [pastedTranslation, setPastedTranslation] = useState("");
   const [copyState, setCopyState] = useState("Copier prompt");
-  const [exportState, setExportState] = useState("Exporter MP4");
+  const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
   const [saveState, setSaveState] = useState("Sauvegarder");
   const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -818,24 +818,28 @@ function DesktopApp() {
     }
   }
 
-  async function exportVideoDesktop() {
-    if (!desktop || !selectedProjectId || !attachedTranslation) {
-      setError("Importe une traduction avant d'exporter.");
+  async function exportVideoDesktop(track: ExportTrack) {
+    if (!desktop || !selectedProjectId || !transcript) {
+      setError("Importe une transcription avant d'exporter.");
       return;
     }
-    setExportState("Export...");
+    if (track === "translation" && !attachedTranslation) {
+      setError("Importe une traduction avant d'exporter la traduction.");
+      return;
+    }
+    setExportingTrack(track);
     setError("");
     try {
-      if (transcript) await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
-      if (transcript && attachedTranslation) {
+      await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
+      if (attachedTranslation) {
         await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
       }
-      const result = await desktop.exportTranslatedVideo(selectedProjectId);
-      setExportState(result ? "Export terminé" : "Exporter MP4");
+      const result = await desktop.exportVideo(selectedProjectId, track);
       if (result) setState(`Export créé: ${result.outputPath}`);
     } catch (err) {
-      setExportState("Exporter MP4");
       setError(err instanceof Error ? err.message : "Export impossible");
+    } finally {
+      setExportingTrack(null);
     }
   }
 
@@ -1011,9 +1015,13 @@ function DesktopApp() {
               <Upload size={16} />
               <span>{attachedTranslation ? "Remplacer traduction" : "Importer traduction"}</span>
             </button>
-            <button disabled={!attachedTranslation || editorLocked} onClick={() => void exportVideoDesktop()}>
+            <button disabled={!transcript || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic")}>
               <Download size={16} />
-              <span>{exportState}</span>
+              <span>{exportingTrack === "arabic" ? "Export arabe..." : "Export arabe"}</span>
+            </button>
+            <button disabled={!attachedTranslation || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation")}>
+              <Download size={16} />
+              <span>{exportingTrack === "translation" ? "Export traduction..." : "Export traduction"}</span>
             </button>
           </div>
 

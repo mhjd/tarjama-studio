@@ -113,3 +113,5 @@ export type DesktopExportResult = {
   outputPath: string;
   mediaUrl: string;
 };
+
+export type ExportSubtitleTrack = "arabic" | "translation";

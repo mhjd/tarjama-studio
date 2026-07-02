@@ -114,6 +114,8 @@ type DesktopExportResult = {
   mediaUrl: string;
 };
 
+type DesktopExportSubtitleTrack = "arabic" | "translation";
+
 interface Window {
   ashrafentDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
@@ -131,7 +133,7 @@ interface Window {
       replace: boolean
     ): Promise<ImportTranslationResult>;
     saveTranslation(projectId: string, translation: DesktopTranslation): Promise<DesktopProjectLoad>;
-    exportTranslatedVideo(projectId: string): Promise<DesktopExportResult | null>;
+    exportVideo(projectId: string, track: DesktopExportSubtitleTrack): Promise<DesktopExportResult | null>;
     importLocalVideo(): Promise<DownloadYoutubeResult | null>;
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;
     updateYtdlp(): Promise<UpdateToolResult>;

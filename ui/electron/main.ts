@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   createTranscriptSnapshot,
   downloadYoutube,
-  exportTranslatedVideo,
+  exportVideo,
   importLocalVideo,
   importTranslationContent,
   importTranslationFile,
@@ -20,7 +20,7 @@ import {
   trashProject,
   updateYtdlp,
 } from "./library.js";
-import type { DownloadYoutubeRequest, WorkspaceTranscript, WorkspaceTranslation } from "./types.js";
+import type { DownloadYoutubeRequest, ExportSubtitleTrack, WorkspaceTranscript, WorkspaceTranslation } from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -70,7 +70,9 @@ function registerIpc(): void {
   ipcMain.handle("translation:save", async (_event, projectId: string, translation: WorkspaceTranslation) =>
     saveTranslation(projectId, translation),
   );
-  ipcMain.handle("video:export", async (_event, projectId: string) => exportTranslatedVideo(projectId));
+  ipcMain.handle("video:export", async (_event, projectId: string, track: ExportSubtitleTrack) =>
+    exportVideo(projectId, track),
+  );
   ipcMain.handle("video:import-local", async () => importLocalVideo());
   ipcMain.handle("youtube:download", async (event, request: DownloadYoutubeRequest) =>
     downloadYoutube(request, (progress) => event.sender.send("youtube:progress", progress)),

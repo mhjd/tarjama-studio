@@ -19,6 +19,8 @@ import type {
   UpdateToolResult,
   WorkspaceTranscript,
   WorkspaceTranslation,
+  YoutubeFormatOption,
+  YoutubeFormatsResult,
 } from "./types.js";
 
 const PROJECT_FILE = "project.json";
@@ -507,15 +509,40 @@ async function runYtdlp(
   throw lastError;
 }
 
-function parseYtdlpMetadata(output: string): { id?: string; title?: string; duration?: number; webpage_url?: string } {
+type YtdlpFormat = {
+  format_id?: string;
+  ext?: string;
+  acodec?: string;
+  vcodec?: string;
+  height?: number;
+  fps?: number;
+  filesize?: number;
+  filesize_approx?: number;
+  format_note?: string;
+  resolution?: string;
+  tbr?: number;
+};
+
+type YtdlpMetadata = {
+  id?: string;
+  title?: string;
+  duration?: number;
+  webpage_url?: string;
+  formats?: YtdlpFormat[];
+};
+
+const BEST_MERGED_FORMAT = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/best";
+
+function parseYtdlpMetadata(output: string): YtdlpMetadata {
   const trimmed = output.trim();
   try {
-    const metadata = JSON.parse(trimmed) as { id?: string; title?: string; duration?: number; webpage_url?: string };
+    const metadata = JSON.parse(trimmed) as YtdlpMetadata;
     return {
       id: metadata.id,
       title: metadata.title,
       duration: Number.isFinite(Number(metadata.duration)) ? Number(metadata.duration) : undefined,
       webpage_url: metadata.webpage_url,
+      formats: Array.isArray(metadata.formats) ? metadata.formats : [],
     };
   } catch (error) {
     throw new Error("yt-dlp did not return valid JSON metadata", { cause: error });
@@ -542,6 +569,52 @@ function assertYoutubeMetadata(metadata: { id?: string; title?: string; duration
       throw new Error("yt-dlp metadata webpage_url is invalid");
     }
   }
+}
+
+function formatBytes(value: number | undefined): string {
+  if (!value || !Number.isFinite(value)) return "";
+  const units = ["o", "Ko", "Mo", "Go"];
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
+function youtubeFormatLabel(format: YtdlpFormat): string {
+  const quality = format.height ? `${format.height}p` : format.resolution || "qualité inconnue";
+  const fps = format.fps ? `${format.fps}fps` : "";
+  const ext = format.ext ? format.ext.toUpperCase() : "";
+  const size = formatBytes(format.filesize ?? format.filesize_approx);
+  const note = format.format_note && format.format_note !== quality ? format.format_note : "";
+  return [quality, fps, ext, size, note].filter(Boolean).join(" · ");
+}
+
+function youtubeFormatOptions(metadata: YtdlpMetadata): YoutubeFormatOption[] {
+  const progressive = (metadata.formats ?? [])
+    .filter((format) => format.format_id && format.vcodec && format.vcodec !== "none" && format.acodec && format.acodec !== "none")
+    .map((format) => ({
+      id: String(format.format_id),
+      label: youtubeFormatLabel(format),
+      formatSelector: String(format.format_id),
+      height: Number.isFinite(Number(format.height)) ? Number(format.height) : undefined,
+      fps: Number.isFinite(Number(format.fps)) ? Number(format.fps) : undefined,
+      ext: format.ext,
+      filesizeApprox: Number(format.filesize ?? format.filesize_approx) || undefined,
+      note: format.format_note,
+    }))
+    .sort((left, right) => (right.height ?? 0) - (left.height ?? 0) || (right.fps ?? 0) - (left.fps ?? 0));
+  return [
+    {
+      id: "best_merged",
+      label: "Meilleure qualité fusionnée (vidéo + audio, recommandé)",
+      formatSelector: BEST_MERGED_FORMAT,
+      note: "Fusionne le meilleur flux vidéo et le meilleur flux audio disponibles",
+    },
+    ...progressive,
+  ];
 }
 
 function lastOutputLine(output: string): string {
@@ -733,6 +806,31 @@ export async function importLocalVideo(): Promise<DownloadYoutubeResult | null> 
   return { project, videoPath };
 }
 
+export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsResult> {
+  await fs.mkdir(libraryDir(), { recursive: true });
+  const ytdlp = await resolveTool("yt-dlp");
+  const ffmpeg = await resolveTool("ffmpeg");
+  const metadataText = await runYtdlp(
+    ytdlp,
+    [
+      "--no-playlist",
+      "--ffmpeg-location",
+      ffmpeg,
+      "-J",
+      url,
+    ],
+    libraryDir(),
+  );
+  const metadata = parseYtdlpMetadata(metadataText);
+  assertYoutubeMetadata(metadata);
+  return {
+    title: metadata.title ?? "",
+    duration: metadata.duration,
+    webpageUrl: metadata.webpage_url,
+    formats: youtubeFormatOptions(metadata),
+  };
+}
+
 export async function downloadYoutube(
   request: DownloadYoutubeRequest,
   emitProgress?: (progress: DownloadProgress) => void,
@@ -764,6 +862,7 @@ export async function downloadYoutube(
   emitProgress?.({ projectId: id, stage: "download", percent: 0, message: "Téléchargement MP4 compatible..." });
 
   const outputTemplate = path.join(dir, "source.%(ext)s");
+  const selectedFormat = request.formatSelector || BEST_MERGED_FORMAT;
   const downloadArgs = (format: string, cleanStart = false): string[] => [
       "--no-warnings",
       "--no-playlist",
@@ -789,7 +888,7 @@ export async function downloadYoutube(
   try {
     downloadOutput = await runYtdlp(
       ytdlp,
-      downloadArgs("18/b[ext=mp4]/best", true),
+      downloadArgs(selectedFormat, true),
       dir,
       (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
     );
@@ -804,7 +903,7 @@ export async function downloadYoutube(
     await removeGeneratedSourceFiles(dir);
     downloadOutput = await runYtdlp(
       ytdlp,
-      downloadArgs("best[ext=mp4]/best", true),
+      downloadArgs("18/b[ext=mp4]/best", true),
       dir,
       (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
     );

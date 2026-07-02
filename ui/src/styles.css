@@ -722,6 +722,21 @@ input:disabled {
   white-space: nowrap;
 }
 
+.youtube-format-picker {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.youtube-format-picker span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.youtube-format-picker select {
+  width: 100%;
+}
+
 .download-progress {
   display: grid;
   gap: 0.45rem;

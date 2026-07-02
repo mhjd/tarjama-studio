@@ -9,6 +9,7 @@ import {
   importTranslationContent,
   importTranslationFile,
   importTranscript,
+  listYoutubeFormats,
   loadProject,
   loadSnapshot,
   openProjectFolder,
@@ -74,6 +75,7 @@ function registerIpc(): void {
     exportVideo(projectId, track),
   );
   ipcMain.handle("video:import-local", async () => importLocalVideo());
+  ipcMain.handle("youtube:list-formats", async (_event, url: string) => listYoutubeFormats(url));
   ipcMain.handle("youtube:download", async (event, request: DownloadYoutubeRequest) =>
     downloadYoutube(request, (progress) => event.sender.send("youtube:progress", progress)),
   );

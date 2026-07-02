@@ -14,6 +14,7 @@ import type {
   WorkspaceTranscript,
   WorkspaceTranslation,
   DesktopExportResult,
+  YoutubeFormatsResult,
 } from "./types.js";
 
 const api = {
@@ -45,6 +46,7 @@ const api = {
   exportVideo: (projectId: string, track: ExportSubtitleTrack): Promise<DesktopExportResult | null> =>
     ipcRenderer.invoke("video:export", projectId, track),
   importLocalVideo: (): Promise<DownloadYoutubeResult | null> => ipcRenderer.invoke("video:import-local"),
+  listYoutubeFormats: (url: string): Promise<YoutubeFormatsResult> => ipcRenderer.invoke("youtube:list-formats", url),
   downloadYoutube: (request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult> =>
     ipcRenderer.invoke("youtube:download", request),
   updateYtdlp: (): Promise<UpdateToolResult> => ipcRenderer.invoke("tools:update-ytdlp"),

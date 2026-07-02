@@ -26,6 +26,7 @@ type ImportTranscriptResult = {
 type DownloadYoutubeRequest = {
   url: string;
   title?: string;
+  formatSelector?: string;
 };
 
 type DownloadYoutubeResult = {
@@ -36,6 +37,24 @@ type DownloadYoutubeResult = {
 type UpdateToolResult = {
   path: string;
   version: string;
+};
+
+type YoutubeFormatOption = {
+  id: string;
+  label: string;
+  formatSelector: string;
+  height?: number;
+  fps?: number;
+  ext?: string;
+  filesizeApprox?: number;
+  note?: string;
+};
+
+type YoutubeFormatsResult = {
+  title: string;
+  duration?: number;
+  webpageUrl?: string;
+  formats: YoutubeFormatOption[];
 };
 
 type DownloadProgress = {
@@ -135,6 +154,7 @@ interface Window {
     saveTranslation(projectId: string, translation: DesktopTranslation): Promise<DesktopProjectLoad>;
     exportVideo(projectId: string, track: DesktopExportSubtitleTrack): Promise<DesktopExportResult | null>;
     importLocalVideo(): Promise<DownloadYoutubeResult | null>;
+    listYoutubeFormats(url: string): Promise<YoutubeFormatsResult>;
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;
     updateYtdlp(): Promise<UpdateToolResult>;
     onDownloadProgress(callback: (progress: DownloadProgress) => void): () => void;

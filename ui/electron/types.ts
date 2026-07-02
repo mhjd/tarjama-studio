@@ -54,11 +54,30 @@ export type DownloadProgress = {
 export type DownloadYoutubeRequest = {
   url: string;
   title?: string;
+  formatSelector?: string;
 };
 
 export type DownloadYoutubeResult = {
   project: DesktopProject;
   videoPath: string;
+};
+
+export type YoutubeFormatOption = {
+  id: string;
+  label: string;
+  formatSelector: string;
+  height?: number;
+  fps?: number;
+  ext?: string;
+  filesizeApprox?: number;
+  note?: string;
+};
+
+export type YoutubeFormatsResult = {
+  title: string;
+  duration?: number;
+  webpageUrl?: string;
+  formats: YoutubeFormatOption[];
 };
 
 export type UpdateToolResult = {

@@ -410,6 +410,9 @@ function DesktopApp() {
   const [previewSnapshot, setPreviewSnapshot] = useState<DesktopSnapshotInfo | null>(null);
   const [showArchives, setShowArchives] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeFormats, setYoutubeFormats] = useState<YoutubeFormatOption[]>([]);
+  const [selectedYoutubeFormat, setSelectedYoutubeFormat] = useState("");
+  const [youtubeFormatTitle, setYoutubeFormatTitle] = useState("");
   const [state, setState] = useState("Prêt");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -561,12 +564,31 @@ function DesktopApp() {
     }
     await runDesktopAction("Téléchargement vidéo...", async () => {
       setDownloadProgress({ projectId: "pending", stage: "metadata", message: "Analyse de la vidéo YouTube..." });
-      const result = await desktop?.downloadYoutube({ url });
+      const result = await desktop?.downloadYoutube({ url, formatSelector: selectedYoutubeFormat || undefined });
       setYoutubeUrl("");
+      setYoutubeFormats([]);
+      setSelectedYoutubeFormat("");
+      setYoutubeFormatTitle("");
       if (result) {
         setSelectedProjectId(result.project.id);
         setDownloadProgress({ projectId: result.project.id, stage: "done", percent: 100, message: "Téléchargement terminé" });
       }
+    });
+  }
+
+  async function analyzeYoutubeFormatsDesktop() {
+    const url = youtubeUrl.trim();
+    if (!url) {
+      setError("Colle un lien YouTube avant d'analyser les formats.");
+      return;
+    }
+    await runDesktopAction("Analyse des formats...", async () => {
+      const result = await desktop?.listYoutubeFormats(url);
+      if (!result) return;
+      setYoutubeFormats(result.formats);
+      setSelectedYoutubeFormat(result.formats[0]?.formatSelector ?? "");
+      setYoutubeFormatTitle(result.title);
+      setState(`${result.formats.length} format(s) disponible(s)`);
     });
   }
 
@@ -937,11 +959,20 @@ function DesktopApp() {
             <span>Lien YouTube</span>
             <input
               value={youtubeUrl}
-              onChange={(event) => setYoutubeUrl(event.target.value)}
+              onChange={(event) => {
+                setYoutubeUrl(event.target.value);
+                setYoutubeFormats([]);
+                setSelectedYoutubeFormat("");
+                setYoutubeFormatTitle("");
+              }}
               placeholder="https://www.youtube.com/watch?v=..."
             />
           </label>
           <div className="desktop-create-buttons">
+            <button disabled={busy} onClick={() => void analyzeYoutubeFormatsDesktop()}>
+              <RotateCcw size={16} />
+              <span>Analyser formats</span>
+            </button>
             <button disabled={busy} onClick={() => void downloadYoutubeDesktop()}>
               <Download size={16} />
               <span>Télécharger vidéo</span>
@@ -956,6 +987,18 @@ function DesktopApp() {
             </button>
           </div>
         </div>
+        {youtubeFormats.length > 0 && (
+          <label className="youtube-format-picker">
+            <span>{youtubeFormatTitle ? `Format pour ${youtubeFormatTitle}` : "Format vidéo"}</span>
+            <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
+              {youtubeFormats.map((format) => (
+                <option key={format.id} value={format.formatSelector}>
+                  {format.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <p className="desktop-state">{state}</p>
         {downloadProgress && downloadProgress.stage !== "done" && (
           <div className="download-progress" role="status" aria-live="polite">

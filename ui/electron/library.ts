@@ -640,6 +640,59 @@ function youtubeFormatLabel(format: YtdlpFormat): string {
   return [quality, fps, ext, size, note].filter(Boolean).join(" · ");
 }
 
+function formatSize(format: YtdlpFormat): number {
+  return Number(format.filesize ?? format.filesize_approx) || 0;
+}
+
+function formatQualityRank(format: YtdlpFormat): number[] {
+  return [
+    Number(format.height) || 0,
+    Number(format.fps) || 0,
+    Number(format.tbr) || 0,
+    formatSize(format),
+  ];
+}
+
+function compareFormatQuality(left: YtdlpFormat, right: YtdlpFormat): number {
+  const leftRank = formatQualityRank(left);
+  const rightRank = formatQualityRank(right);
+  for (let index = 0; index < leftRank.length; index += 1) {
+    const delta = rightRank[index] - leftRank[index];
+    if (delta !== 0) return delta;
+  }
+  return 0;
+}
+
+function bestByQuality(formats: YtdlpFormat[]): YtdlpFormat | undefined {
+  return [...formats].sort(compareFormatQuality)[0];
+}
+
+function bestMergedLabel(metadata: YtdlpMetadata): string {
+  const formats = metadata.formats ?? [];
+  const videoFormats = formats.filter((format) => format.vcodec && format.vcodec !== "none");
+  const separateVideoFormats = videoFormats.filter((format) => !format.acodec || format.acodec === "none");
+  const audioFormats = formats.filter((format) => format.acodec && format.acodec !== "none");
+  const separateAudioFormats = audioFormats.filter((format) => !format.vcodec || format.vcodec === "none");
+  const bestVideo =
+    bestByQuality(separateVideoFormats.filter((format) => format.ext === "mp4")) ??
+    bestByQuality(separateVideoFormats) ??
+    bestByQuality(videoFormats.filter((format) => format.ext === "mp4")) ??
+    bestByQuality(videoFormats);
+  const bestAudio =
+    bestByQuality(separateAudioFormats.filter((format) => format.ext === "m4a")) ?? bestByQuality(separateAudioFormats);
+  if (!bestVideo) return "Meilleure qualité fusionnée (vidéo + audio, recommandé)";
+
+  const quality = bestVideo.height ? `${bestVideo.height}p` : bestVideo.resolution || "qualité inconnue";
+  const fps = bestVideo.fps ? `${bestVideo.fps}fps` : "";
+  const videoExt = bestVideo.ext ? bestVideo.ext.toUpperCase() : "vidéo";
+  const alreadyHasAudio = Boolean(bestVideo.acodec && bestVideo.acodec !== "none");
+  const audioExt = bestAudio?.ext ? bestAudio.ext.toUpperCase() : "audio";
+  const container = alreadyHasAudio || !bestAudio ? videoExt : `${videoExt} + ${audioExt}`;
+  const totalSize = formatSize(bestVideo) + (alreadyHasAudio ? 0 : formatSize(bestAudio ?? {}));
+  const size = totalSize > 0 ? `~${formatBytes(totalSize)}` : "";
+  return ["Meilleure qualité fusionnée", quality, fps, container, size].filter(Boolean).join(" · ");
+}
+
 function youtubeFormatOptions(metadata: YtdlpMetadata): YoutubeFormatOption[] {
   const progressive = (metadata.formats ?? [])
     .filter((format) => format.format_id && format.vcodec && format.vcodec !== "none" && format.acodec && format.acodec !== "none")
@@ -657,7 +710,7 @@ function youtubeFormatOptions(metadata: YtdlpMetadata): YoutubeFormatOption[] {
   return [
     {
       id: "best_merged",
-      label: "Meilleure qualité fusionnée (vidéo + audio, recommandé)",
+      label: bestMergedLabel(metadata),
       formatSelector: BEST_MERGED_FORMAT,
       note: "Fusionne le meilleur flux vidéo et le meilleur flux audio disponibles",
     },

@@ -431,8 +431,10 @@ function DesktopApp() {
   const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
   const [saveState, setSaveState] = useState("Sauvegarder");
   const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
+  const [focusedSegmentId, setFocusedSegmentId] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const autosaveTimer = useRef<number | null>(null);
+  const segmentRefs = useRef(new Map<string, HTMLElement>());
 
   const activeProjects = useMemo(
     () => library?.projects.filter((project) => !project.archivedAt) ?? [],
@@ -703,6 +705,23 @@ function DesktopApp() {
     const rect = event.currentTarget.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     setTimelineHover({ time: ratio * max, x: ratio * 100 });
+  }
+
+  function scrollToCurrentSegment() {
+    const segments = displayedTranscript?.segments;
+    if (!segments?.length) return;
+    const time = audioRef.current?.currentTime ?? currentTime;
+    const target =
+      segments.find((segment) => time >= segment.start && time < segment.end) ??
+      [...segments].reverse().find((segment) => segment.start <= time) ??
+      segments[0];
+    const element = segmentRefs.current.get(target.id);
+    if (!element) return;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    setFocusedSegmentId(target.id);
+    window.setTimeout(() => {
+      setFocusedSegmentId((current) => (current === target.id ? "" : current));
+    }, 1600);
   }
 
   function updateSegment(id: string, patch: Partial<Segment>) {
@@ -1135,6 +1154,10 @@ function DesktopApp() {
                 </button>
                 <button onClick={() => seekBy(3)}>+3s</button>
                 <button onClick={() => seekBy(10)}>+10s</button>
+                <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment}>
+                  <FileInput size={16} />
+                  <span>Segment</span>
+                </button>
               </div>
             </section>
           )}
@@ -1176,7 +1199,14 @@ function DesktopApp() {
             <section className="workspace">
               <section className="segments">
                 {displayedTranscript.segments.map((segment, index) => (
-                  <article className="segment-row" key={segment.id}>
+                  <article
+                    className={`segment-row ${focusedSegmentId === segment.id ? "segment-row-focused" : ""}`}
+                    key={segment.id}
+                    ref={(element) => {
+                      if (element) segmentRefs.current.set(segment.id, element);
+                      else segmentRefs.current.delete(segment.id);
+                    }}
+                  >
                     <div className="segment-meta">
                       <label className="time-control time-control-nav">
                         <span>Lire</span>

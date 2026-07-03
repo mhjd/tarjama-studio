@@ -238,7 +238,7 @@ input {
   align-items: center;
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: 4.6rem 4.6rem 6rem 5.4rem 4.6rem 4.6rem 6rem;
+  grid-template-columns: 4.6rem 4.6rem 6rem 5.4rem 4.6rem 4.6rem 6.4rem;
   justify-content: center;
 }
 
@@ -548,6 +548,13 @@ input {
   gap: 0.75rem;
   grid-template-columns: 6.4rem minmax(0, 1fr);
   padding: 0.75rem;
+  scroll-margin-top: 16rem;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.segment-row-focused {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .segment-meta {

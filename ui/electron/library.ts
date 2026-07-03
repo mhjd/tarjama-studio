@@ -387,6 +387,50 @@ function parseTranslationMarkdown(content: string): { metadata: Record<string, s
   return { metadata, sections };
 }
 
+function translationFromJson(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+  payload: unknown,
+  filename: string,
+): WorkspaceTranslation {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("La traduction JSON doit être un objet");
+  }
+  const source = payload as { language?: unknown; format?: unknown; segments?: unknown };
+  if (!Array.isArray(source.segments)) {
+    throw new Error("La traduction JSON doit contenir un tableau segments");
+  }
+  const translation: WorkspaceTranslation = {
+    corpus_id: projectId,
+    language: typeof source.language === "string" && source.language.trim() ? source.language.trim() : "fr",
+    format: typeof source.format === "string" && source.format.trim() ? source.format.trim() : "ashrafent-translation-v1",
+    source_transcript_fingerprint: transcriptAlignmentFingerprint(transcript),
+    imported_from: filename,
+    segments: source.segments.map((segment, index) => {
+      if (!segment || typeof segment !== "object") {
+        throw new Error(`Segment ${index + 1} invalide dans la traduction JSON`);
+      }
+      const candidate = segment as { id?: unknown; start?: unknown; end?: unknown; translation?: unknown; text?: unknown };
+      const translationText =
+        typeof candidate.translation === "string"
+          ? candidate.translation
+          : typeof candidate.text === "string"
+            ? candidate.text
+            : "";
+      return {
+        id: String(candidate.id ?? ""),
+        start: Number(candidate.start),
+        end: Number(candidate.end),
+        translation: translationText,
+      };
+    }),
+    created_at: nowIso(),
+    updated_at: nowIso(),
+  };
+  assertTranslationAlignment(transcript, translation);
+  return translation;
+}
+
 function translationFromMarkdown(
   projectId: string,
   transcript: WorkspaceTranscript,
@@ -394,9 +438,6 @@ function translationFromMarkdown(
   filename: string,
 ): WorkspaceTranslation {
   const { metadata, sections } = parseTranslationMarkdown(content);
-  if (metadata.source_corpus_id && metadata.source_corpus_id !== projectId) {
-    throw new Error(`Cette traduction est pour ${metadata.source_corpus_id}; projet attendu: ${projectId}`);
-  }
   if (sections.length !== transcript.segments.length) {
     throw new Error(`La traduction contient ${sections.length} segment(s); attendu: ${transcript.segments.length}`);
   }
@@ -426,6 +467,27 @@ function translationFromMarkdown(
     created_at: nowIso(),
     updated_at: nowIso(),
   };
+}
+
+function translationFromImportContent(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+  content: string,
+  filename: string,
+): WorkspaceTranslation {
+  const trimmed = content.trim();
+  if (!trimmed) throw new Error("La traduction est vide");
+  if (trimmed.startsWith("{")) {
+    try {
+      return translationFromJson(projectId, transcript, JSON.parse(trimmed), filename);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        throw new Error(`JSON de traduction invalide: ${err.message}`);
+      }
+      throw err;
+    }
+  }
+  return translationFromMarkdown(projectId, transcript, content, filename);
 }
 
 function assertTranslationAlignment(transcript: WorkspaceTranscript, translation: WorkspaceTranslation): void {
@@ -1376,6 +1438,8 @@ export async function importTranslationFile(projectId: string): Promise<ImportTr
     title: `Importer une traduction pour ${project.title}`,
     properties: ["openFile"],
     filters: [
+      { name: "Traduction Ashrafent", extensions: ["json", "md", "markdown", "txt"] },
+      { name: "JSON", extensions: ["json"] },
       { name: "Markdown ou texte", extensions: ["md", "markdown", "txt"] },
       { name: "Tous les fichiers", extensions: ["*"] },
     ],
@@ -1400,7 +1464,7 @@ export async function importTranslationContent(
   if (await pathExists(target)) {
     await writeTranslationSnapshot(projectId, await readJson<WorkspaceTranslation>(target), "pre_replace");
   }
-  const translation = translationFromMarkdown(projectId, transcript, content, filename);
+  const translation = translationFromImportContent(projectId, transcript, content, filename);
   await writeJson(target, translation);
   await writeTranslationSnapshot(projectId, translation, "import");
   const updatedProject = { ...project, updatedAt: nowIso(), translationPath: target };

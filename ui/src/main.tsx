@@ -928,7 +928,7 @@ function DesktopApp() {
     if (!desktop || !selectedProjectId || !pastedTranslation.trim()) return;
     setError("");
     try {
-      const result = await desktop.importTranslationContent(selectedProjectId, pastedTranslation, "pasted-translation.md", true);
+      const result = await desktop.importTranslationContent(selectedProjectId, pastedTranslation, "pasted-translation.json", true);
       setAttachedTranslation(result.translation);
       if (transcript) setTranscript(applyTranslation(transcript, result.translation));
       setPastedTranslation("");
@@ -1438,10 +1438,15 @@ function DesktopApp() {
         <div className="modal-backdrop" role="presentation">
           <section className="modal paste-modal" role="dialog" aria-modal="true">
             <h2>Importer une traduction collée</h2>
-            <textarea value={pastedTranslation} onChange={(event) => setPastedTranslation(event.target.value)} />
+            <p>Colle une traduction Ashrafent en JSON ou en Markdown. Les timestamps seront validés avant remplacement.</p>
+            <textarea
+              value={pastedTranslation}
+              onChange={(event) => setPastedTranslation(event.target.value)}
+              placeholder='{ "segments": [ ... ] }'
+            />
             <div className="modal-actions">
               <button onClick={() => setPasteImportOpen(false)}>Annuler</button>
-              <button onClick={() => void importPastedTranslationDesktop()}>
+              <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()}>
                 <Check size={16} />
                 <span>Importer</span>
               </button>

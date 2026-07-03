@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowUpToLine,
   Check,
   ClipboardPaste,
@@ -108,6 +109,7 @@ type Translation = {
 };
 
 type ExportTrack = "arabic" | "translation";
+type DesktopView = "library" | "editor";
 
 type ExportJob = {
   id: string;
@@ -264,6 +266,13 @@ function shortText(value: string, max = 140): string {
   return `${compact.slice(0, max - 1)}…`;
 }
 
+function projectStatusLabel(project: DesktopProject): string {
+  if (!project.videoPath) return "Vidéo absente";
+  if (!project.transcriptPath) return "À transcrire";
+  if (!project.translationPath) return "Transcription sans traduction";
+  return "Prêt à exporter";
+}
+
 function snapshotLabel(snapshot: SnapshotInfo): string {
   if (!snapshot.created_at) return snapshot.id;
   const parsed = new Date(snapshot.created_at);
@@ -401,6 +410,7 @@ ${sourceBlocks}
 function DesktopApp() {
   const desktop = window.ashrafentDesktop;
   const [library, setLibrary] = useState<DesktopLibraryInfo | null>(null);
+  const [desktopView, setDesktopView] = useState<DesktopView>("library");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [loadedProject, setLoadedProject] = useState<DesktopProject | null>(null);
   const [mediaUrl, setMediaUrl] = useState("");
@@ -555,9 +565,25 @@ function DesktopApp() {
       if (result) {
         setState(`Transcription importée: ${result.segmentCount} segments`);
         setSelectedProjectId(project.id);
+        setDesktopView("editor");
         await loadDesktopProject(project.id);
       }
     });
+  }
+
+  function openDesktopProject(projectId: string) {
+    setSelectedProjectId(projectId);
+    setDesktopView("editor");
+    window.scrollTo({ top: 0 });
+  }
+
+  function returnToLibrary() {
+    audioRef.current?.pause();
+    setDesktopView("library");
+    setPreviewTranscript(null);
+    setPreviewSnapshot(null);
+    setSelectedSnapshotId("");
+    window.scrollTo({ top: 0 });
   }
 
   async function downloadYoutubeDesktop() {
@@ -575,6 +601,7 @@ function DesktopApp() {
       setYoutubeFormatTitle("");
       if (result) {
         setSelectedProjectId(result.project.id);
+        setDesktopView("editor");
         setDownloadProgress({ projectId: result.project.id, stage: "done", percent: 100, message: "Téléchargement terminé" });
       }
     });
@@ -601,6 +628,7 @@ function DesktopApp() {
       const result = await desktop?.importLocalVideo();
       if (result) {
         setSelectedProjectId(result.project.id);
+        setDesktopView("editor");
         setState("Vidéo importée. Tu peux maintenant importer une transcription.");
         setDownloadProgress(null);
       }
@@ -621,6 +649,7 @@ function DesktopApp() {
       await desktop?.setProjectArchived(project.id, archived);
       if (selectedProjectId === project.id && archived) {
         setSelectedProjectId("");
+        setDesktopView("library");
         setLoadedProject(null);
         setTranscript(null);
         setAttachedTranslation(null);
@@ -922,7 +951,7 @@ function DesktopApp() {
     return (
       <article className={`desktop-project ${selected ? "selected" : ""}`} key={project.id}>
         <div className="desktop-project-main">
-          <button className="project-picker" onClick={() => setSelectedProjectId(project.id)}>
+          <button className="project-picker" onClick={() => openDesktopProject(project.id)}>
             <strong dir="auto">{project.title}</strong>
             <small>
               {project.videoPath ? "Vidéo" : "Vidéo absente"} ·{" "}
@@ -962,111 +991,141 @@ function DesktopApp() {
 
   return (
     <main className="desktop-shell">
-      <header className="desktop-header">
-        <div>
-          <strong>Ashrafent Reviewer</strong>
-          <span>Bibliothèque locale</span>
-        </div>
-        <button disabled={busy} onClick={() => void refreshLibrary()}>
-          <RotateCcw size={16} />
-          <span>Actualiser</span>
-        </button>
+      <header className={`desktop-header ${desktopView === "editor" ? "desktop-header-editor" : ""}`}>
+        {desktopView === "editor" ? (
+          <>
+            <button className="back-button" onClick={returnToLibrary}>
+              <ArrowLeft size={16} />
+              <span>Projets</span>
+            </button>
+            <div>
+              <strong dir="auto">{loadedProject?.title ?? "Projet"}</strong>
+              <span>{loadedProject ? projectStatusLabel(loadedProject) : "Chargement"}</span>
+            </div>
+          </>
+        ) : (
+          <div>
+            <strong>Ashrafent Reviewer</strong>
+            <span>Bibliothèque locale</span>
+          </div>
+        )}
+        {desktopView === "library" && (
+          <button disabled={busy} onClick={() => void refreshLibrary()}>
+            <RotateCcw size={16} />
+            <span>Actualiser</span>
+          </button>
+        )}
         <button onClick={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}>
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           <span>{theme === "dark" ? "Clair" : "Sombre"}</span>
         </button>
       </header>
 
-      <section className="desktop-panel">
-        <h1>Créer un projet</h1>
-        <div className="desktop-actions">
-          <label>
-            <span>Lien YouTube</span>
-            <input
-              value={youtubeUrl}
-              onChange={(event) => {
-                setYoutubeUrl(event.target.value);
-                setYoutubeFormats([]);
-                setSelectedYoutubeFormat("");
-                setYoutubeFormatTitle("");
-              }}
-              placeholder="https://www.youtube.com/watch?v=..."
-            />
-          </label>
-          <div className="desktop-create-buttons">
-            <button disabled={busy} onClick={() => void analyzeYoutubeFormatsDesktop()}>
-              <RotateCcw size={16} />
-              <span>Analyser formats</span>
-            </button>
-            <button disabled={busy} onClick={() => void downloadYoutubeDesktop()}>
-              <Download size={16} />
-              <span>Télécharger vidéo</span>
-            </button>
-            <button disabled={busy} onClick={() => void importLocalVideoDesktop()}>
-              <FileInput size={16} />
-              <span>Importer vidéo</span>
-            </button>
-            <button disabled={busy} onClick={() => void updateYtdlpDesktop()}>
-              <RotateCcw size={16} />
-              <span>Mettre à jour yt-dlp</span>
-            </button>
-          </div>
-        </div>
-        {youtubeFormats.length > 0 && (
-          <label className="youtube-format-picker">
-            <span>{youtubeFormatTitle ? `Format pour ${youtubeFormatTitle}` : "Format vidéo"}</span>
-            <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
-              {youtubeFormats.map((format) => (
-                <option key={format.id} value={format.formatSelector}>
-                  {format.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <p className="desktop-state">{state}</p>
-        {downloadProgress && downloadProgress.stage !== "done" && (
-          <div className="download-progress" role="status" aria-live="polite">
-            <div>
-              <span>{downloadProgress.message}</span>
-              {downloadProgress.percent !== undefined && <strong>{downloadProgress.percent.toFixed(1)}%</strong>}
+      {desktopView === "library" && (
+        <>
+          <section className="desktop-panel">
+            <h1>Créer un projet</h1>
+            <div className="desktop-actions">
+              <label>
+                <span>Lien YouTube</span>
+                <input
+                  value={youtubeUrl}
+                  onChange={(event) => {
+                    setYoutubeUrl(event.target.value);
+                    setYoutubeFormats([]);
+                    setSelectedYoutubeFormat("");
+                    setYoutubeFormatTitle("");
+                  }}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+              </label>
+              <div className="desktop-create-buttons">
+                <button disabled={busy} onClick={() => void analyzeYoutubeFormatsDesktop()}>
+                  <RotateCcw size={16} />
+                  <span>Analyser formats</span>
+                </button>
+                <button disabled={busy} onClick={() => void downloadYoutubeDesktop()}>
+                  <Download size={16} />
+                  <span>Télécharger vidéo</span>
+                </button>
+                <button disabled={busy} onClick={() => void importLocalVideoDesktop()}>
+                  <FileInput size={16} />
+                  <span>Importer vidéo</span>
+                </button>
+                <button disabled={busy} onClick={() => void updateYtdlpDesktop()}>
+                  <RotateCcw size={16} />
+                  <span>Mettre à jour yt-dlp</span>
+                </button>
+              </div>
             </div>
-            <progress value={downloadProgress.percent ?? undefined} max="100" />
-            <small>
-              {[downloadProgress.speed, downloadProgress.eta ? `ETA ${downloadProgress.eta}` : ""]
-                .filter(Boolean)
-                .join(" · ")}
-            </small>
-          </div>
-        )}
-        {downloadProgress?.stage === "done" && (
-          <p className="desktop-state">Téléchargement terminé. Le projet a été ajouté à la liste.</p>
-        )}
-        {error && <p className="error">{error}</p>}
-        {library && <p className="desktop-path">{library.libraryDir}</p>}
-      </section>
+            {youtubeFormats.length > 0 && (
+              <label className="youtube-format-picker">
+                <span>{youtubeFormatTitle ? `Format pour ${youtubeFormatTitle}` : "Format vidéo"}</span>
+                <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
+                  {youtubeFormats.map((format) => (
+                    <option key={format.id} value={format.formatSelector}>
+                      {format.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <p className="desktop-state">{state}</p>
+            {downloadProgress && downloadProgress.stage !== "done" && (
+              <div className="download-progress" role="status" aria-live="polite">
+                <div>
+                  <span>{downloadProgress.message}</span>
+                  {downloadProgress.percent !== undefined && <strong>{downloadProgress.percent.toFixed(1)}%</strong>}
+                </div>
+                <progress value={downloadProgress.percent ?? undefined} max="100" />
+                <small>
+                  {[downloadProgress.speed, downloadProgress.eta ? `ETA ${downloadProgress.eta}` : ""]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
+              </div>
+            )}
+            {downloadProgress?.stage === "done" && (
+              <p className="desktop-state">Téléchargement terminé. Le projet a été ajouté à la liste.</p>
+            )}
+            {error && <p className="error">{error}</p>}
+            {library && <p className="desktop-path">{library.libraryDir}</p>}
+          </section>
 
-      <section className="desktop-projects">
-        <h2>Projets</h2>
-        {!activeProjects.length && <p className="state">Aucun projet actif.</p>}
-        {activeProjects.map(renderProject)}
-        {archivedProjects.length > 0 && (
-          <>
-            <button className="archive-toggle" onClick={() => setShowArchives((value) => !value)}>
-              {showArchives ? "Masquer les archives" : `Afficher les archives (${archivedProjects.length})`}
-            </button>
-            {showArchives && archivedProjects.map(renderProject)}
-          </>
-        )}
-      </section>
+          <section className="desktop-projects">
+            <h2>Projets</h2>
+            {!activeProjects.length && <p className="state">Aucun projet actif.</p>}
+            {activeProjects.map(renderProject)}
+            {archivedProjects.length > 0 && (
+              <>
+                <button className="archive-toggle" onClick={() => setShowArchives((value) => !value)}>
+                  {showArchives ? "Masquer les archives" : `Afficher les archives (${archivedProjects.length})`}
+                </button>
+                {showArchives && archivedProjects.map(renderProject)}
+              </>
+            )}
+          </section>
+        </>
+      )}
 
-      {loadedProject && (
+      {desktopView === "editor" && !loadedProject && (
+        <section className="desktop-panel">
+          <p className="state">{busy ? "Chargement du projet..." : "Aucun projet ouvert."}</p>
+          {error && <p className="error">{error}</p>}
+        </section>
+      )}
+
+      {desktopView === "editor" && loadedProject && (
         <section className="desktop-editor">
           <div className="document-strip">
             <div className="video-meta">
               <strong>{loadedProject.title}</strong>
               <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
             </div>
+            <button disabled={busy || isHistoryPreview} onClick={() => void importTranscriptDesktop(loadedProject)}>
+              <Upload size={16} />
+              <span>{loadedProject.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
+            </button>
             <button disabled={!transcript || editorLocked} onClick={() => void createSavePointDesktop()}>
               <Save size={16} />
               <span>{saveState}</span>

@@ -664,10 +664,14 @@ input:disabled {
 
 .desktop-header {
   align-items: center;
-  display: flex;
+  display: grid;
   gap: 0.75rem;
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   margin-bottom: 1.25rem;
+}
+
+.desktop-header-editor {
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .desktop-header > button {
@@ -677,10 +681,14 @@ input:disabled {
 .desktop-header div {
   display: grid;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .desktop-header strong {
   font-size: 1.4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .desktop-header span,
@@ -689,6 +697,10 @@ input:disabled {
 .desktop-project small,
 .desktop-state {
   color: var(--muted);
+}
+
+.back-button {
+  justify-self: start;
 }
 
 .desktop-panel,

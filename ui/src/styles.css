@@ -376,6 +376,12 @@ input {
   font-size: 0.9rem;
 }
 
+.current-save-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .snapshot-history select,
 .snapshot-history button {
   width: auto;

@@ -459,6 +459,14 @@ function DesktopApp() {
   const isHistoryPreview = Boolean(previewTranscript);
   const displayedTranscript = previewTranscript ?? transcript;
   const editorLocked = isHistoryPreview || busy;
+  const currentSaveSnapshot = useMemo(
+    () => [...snapshots].reverse().find((snapshot) => snapshot.matches_current) ?? null,
+    [snapshots]
+  );
+  const oldSnapshots = useMemo(
+    () => snapshots.filter((snapshot) => !snapshot.matches_current),
+    [snapshots]
+  );
 
   const refreshLibrary = useCallback(async () => {
     if (!desktop) return;
@@ -1243,9 +1251,12 @@ function DesktopApp() {
                 <History size={16} />
                 <strong>Historique</strong>
               </div>
+              {currentSaveSnapshot && (
+                <span className="current-save-label">Dernière sauvegarde: {snapshotLabel(currentSaveSnapshot)}</span>
+              )}
               <select value={selectedSnapshotId} onChange={(event) => void selectDesktopSnapshot(event.target.value)}>
                 <option value="">Version courante</option>
-                {snapshots.filter((snapshot) => !snapshot.matches_current).map((snapshot) => (
+                {oldSnapshots.map((snapshot) => (
                   <option key={snapshot.id} value={snapshot.id}>
                     {snapshotLabel(snapshot)}
                   </option>

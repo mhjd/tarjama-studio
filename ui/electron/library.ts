@@ -546,7 +546,9 @@ async function runTool(
       stderr += value;
       onOutput?.(value);
     });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      reject(new ToolError(`${path.basename(command)} could not be started at ${command}\n${error.message}`, stdout, stderr, null));
+    });
     child.on("close", (code) => {
       if (code === 0) {
         resolve(stdout);
@@ -1552,7 +1554,7 @@ async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise
 }
 
 function ffmpegFilterPath(filePath: string): string {
-  return filePath.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\\'");
+  return filePath.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
 }
 
 async function subtitleFilter(assPath: string): Promise<string> {

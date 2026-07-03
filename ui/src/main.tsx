@@ -950,14 +950,21 @@ function DesktopApp() {
     }
     setExportingTrack(track);
     setError("");
+    setState(track === "arabic" ? "Préparation de l'export arabe..." : "Préparation de l'export traduction...");
     try {
       await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
       if (attachedTranslation) {
         await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
       }
+      setState("Choisis l'emplacement du fichier exporté...");
       const result = await desktop.exportVideo(selectedProjectId, track, openAfter);
-      if (result) setState(result.opened ? `Export créé et ouvert: ${result.outputPath}` : `Export créé: ${result.outputPath}`);
+      if (result) {
+        setState(result.opened ? `Export créé et ouvert: ${result.outputPath}` : `Export créé: ${result.outputPath}`);
+      } else {
+        setState("Export annulé.");
+      }
     } catch (err) {
+      setState("Export échoué.");
       setError(err instanceof Error ? err.message : "Export impossible");
     } finally {
       setExportingTrack(null);

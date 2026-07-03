@@ -9,6 +9,7 @@ import {
   Combine,
   Copy,
   Download,
+  ExternalLink,
   FileInput,
   GitCompare,
   History,
@@ -938,7 +939,7 @@ function DesktopApp() {
     }
   }
 
-  async function exportVideoDesktop(track: ExportTrack) {
+  async function exportVideoDesktop(track: ExportTrack, openAfter = false) {
     if (!desktop || !selectedProjectId || !transcript) {
       setError("Importe une transcription avant d'exporter.");
       return;
@@ -954,8 +955,8 @@ function DesktopApp() {
       if (attachedTranslation) {
         await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
       }
-      const result = await desktop.exportVideo(selectedProjectId, track);
-      if (result) setState(`Export créé: ${result.outputPath}`);
+      const result = await desktop.exportVideo(selectedProjectId, track, openAfter);
+      if (result) setState(result.opened ? `Export créé et ouvert: ${result.outputPath}` : `Export créé: ${result.outputPath}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Export impossible");
     } finally {
@@ -1176,9 +1177,17 @@ function DesktopApp() {
               <Download size={16} />
               <span>{exportingTrack === "arabic" ? "Export arabe..." : "Export arabe"}</span>
             </button>
+            <button disabled={!transcript || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic", true)}>
+              <ExternalLink size={16} />
+              <span>{exportingTrack === "arabic" ? "Ouverture..." : "Export+ouvrir arabe"}</span>
+            </button>
             <button disabled={!attachedTranslation || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation")}>
               <Download size={16} />
               <span>{exportingTrack === "translation" ? "Export traduction..." : "Export traduction"}</span>
+            </button>
+            <button disabled={!attachedTranslation || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation", true)}>
+              <ExternalLink size={16} />
+              <span>{exportingTrack === "translation" ? "Ouverture..." : "Export+ouvrir traduction"}</span>
             </button>
           </div>
 

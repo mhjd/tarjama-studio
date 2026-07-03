@@ -45,8 +45,8 @@ const api = {
   ): Promise<ImportTranslationResult> => ipcRenderer.invoke("translation:import-content", projectId, content, filename, replace),
   saveTranslation: (projectId: string, translation: WorkspaceTranslation): Promise<DesktopProjectLoad> =>
     ipcRenderer.invoke("translation:save", projectId, translation),
-  exportVideo: (projectId: string, track: ExportSubtitleTrack): Promise<DesktopExportResult | null> =>
-    ipcRenderer.invoke("video:export", projectId, track),
+  exportVideo: (projectId: string, track: ExportSubtitleTrack, openAfter?: boolean): Promise<DesktopExportResult | null> =>
+    ipcRenderer.invoke("video:export", projectId, track, openAfter),
   importLocalVideo: (projectId?: string): Promise<DownloadYoutubeResult | null> =>
     ipcRenderer.invoke("video:import-local", projectId),
   createYoutubeProject: (request: CreateYoutubeProjectRequest): Promise<CreateYoutubeProjectResult> =>

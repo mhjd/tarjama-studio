@@ -144,6 +144,7 @@ type ImportTranslationResult = {
 type DesktopExportResult = {
   outputPath: string;
   mediaUrl: string;
+  opened?: boolean;
 };
 
 type DesktopExportSubtitleTrack = "arabic" | "translation";
@@ -165,7 +166,7 @@ interface Window {
       replace: boolean
     ): Promise<ImportTranslationResult>;
     saveTranslation(projectId: string, translation: DesktopTranslation): Promise<DesktopProjectLoad>;
-    exportVideo(projectId: string, track: DesktopExportSubtitleTrack): Promise<DesktopExportResult | null>;
+    exportVideo(projectId: string, track: DesktopExportSubtitleTrack, openAfter?: boolean): Promise<DesktopExportResult | null>;
     importLocalVideo(projectId?: string): Promise<DownloadYoutubeResult | null>;
     createYoutubeProject(request: CreateYoutubeProjectRequest): Promise<CreateYoutubeProjectResult>;
     listYoutubeFormats(url: string): Promise<YoutubeFormatsResult>;

@@ -78,8 +78,8 @@ function registerIpc(): void {
   ipcMain.handle("translation:save", async (_event, projectId: string, translation: WorkspaceTranslation) =>
     saveTranslation(projectId, translation),
   );
-  ipcMain.handle("video:export", async (_event, projectId: string, track: ExportSubtitleTrack) =>
-    exportVideo(projectId, track),
+  ipcMain.handle("video:export", async (_event, projectId: string, track: ExportSubtitleTrack, openAfter?: boolean) =>
+    exportVideo(projectId, track, Boolean(openAfter)),
   );
   ipcMain.handle("video:import-local", async (_event, projectId?: string) => importLocalVideo(projectId));
   ipcMain.handle("youtube:create-project", async (_event, request: CreateYoutubeProjectRequest) =>

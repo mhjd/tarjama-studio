@@ -1476,7 +1476,11 @@ function ffmpegFilterPath(filePath: string): string {
   return filePath.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\\'");
 }
 
-export async function exportVideo(projectId: string, track: ExportSubtitleTrack): Promise<DesktopExportResult | null> {
+export async function exportVideo(
+  projectId: string,
+  track: ExportSubtitleTrack,
+  openAfter = false,
+): Promise<DesktopExportResult | null> {
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
   if (!transcript) throw new Error("Transcription absente");
@@ -1540,7 +1544,11 @@ export async function exportVideo(projectId: string, track: ExportSubtitleTrack)
     projectDir(projectId),
   );
   if (!(await pathExists(selection.filePath))) throw new Error("ffmpeg n'a pas produit le fichier attendu");
-  return { outputPath: selection.filePath, mediaUrl: pathToFileURL(selection.filePath).toString() };
+  if (openAfter) {
+    const openError = await shell.openPath(selection.filePath);
+    if (openError) throw new Error(`Export créé, mais ouverture impossible: ${openError}`);
+  }
+  return { outputPath: selection.filePath, mediaUrl: pathToFileURL(selection.filePath).toString(), opened: openAfter };
 }
 
 export async function setProjectArchived(projectId: string, archived: boolean): Promise<DesktopProject> {

@@ -144,6 +144,7 @@ export type ImportTranslationResult = {
 export type DesktopExportResult = {
   outputPath: string;
   mediaUrl: string;
+  opened?: boolean;
 };
 
 export type ExportSubtitleTrack = "arabic" | "translation";

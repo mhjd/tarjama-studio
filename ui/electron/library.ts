@@ -1551,13 +1551,17 @@ async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise
     "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1`,
+    `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`,
+    `Style: SubtitleBackground,${SUBTITLE_FONT_NAME},34,&H00000000,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,2,0,0,0,1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
   for (const cue of usable) {
-    lines.push(`Dialogue: 0,${assTimestamp(cue.start)},${assTimestamp(cue.end)},Default,,0,0,0,,${assText(cue.text)}`);
+    lines.push(
+      `Dialogue: 0,${assTimestamp(cue.start)},${assTimestamp(cue.end)},SubtitleBackground,,0,0,0,,{\\an2\\pos(640,720)\\p1\\c&H000000&\\alpha&H20&}m -640 -132 l 640 -132 l 640 0 l -640 0 l -640 -132`,
+    );
+    lines.push(`Dialogue: 1,${assTimestamp(cue.start)},${assTimestamp(cue.end)},Default,,0,0,0,,${assText(cue.text)}`);
   }
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, `${lines.join("\n")}\n`, "utf8");
@@ -1630,7 +1634,7 @@ export async function exportVideo(
       "-c:v",
       "libx264",
       "-preset",
-      "veryfast",
+      "superfast",
       "-crf",
       "23",
       "-c:a",

@@ -465,6 +465,7 @@ function DesktopApp() {
     () => library?.projects.filter((project) => project.archivedAt) ?? [],
     [library]
   );
+  const loadedProjectHasVideo = Boolean(loadedProject?.videoPath);
   const isHistoryPreview = Boolean(previewTranscript);
   const displayedTranscript = previewTranscript ?? transcript;
   const editorLocked = isHistoryPreview || busy;
@@ -580,6 +581,10 @@ function DesktopApp() {
   }
 
   async function importTranscriptDesktop(project: DesktopProject) {
+    if (!project.videoPath) {
+      setError("Ajoute d'abord une vidéo avant d'importer une transcription.");
+      return;
+    }
     await runDesktopAction("Import transcription...", async () => {
       const result = await desktop?.importTranscript(project.id);
       if (result) {
@@ -911,6 +916,10 @@ function DesktopApp() {
 
   async function importTranslationFileDesktop() {
     if (!desktop || !selectedProjectId) return;
+    if (!loadedProjectHasVideo) {
+      setError("Ajoute d'abord une vidéo avant d'importer une traduction.");
+      return;
+    }
     setError("");
     try {
       const result = await desktop.importTranslationFile(selectedProjectId);
@@ -926,6 +935,10 @@ function DesktopApp() {
 
   async function importPastedTranslationDesktop() {
     if (!desktop || !selectedProjectId || !pastedTranslation.trim()) return;
+    if (!loadedProjectHasVideo) {
+      setError("Ajoute d'abord une vidéo avant d'importer une traduction.");
+      return;
+    }
     setError("");
     try {
       const result = await desktop.importTranslationContent(selectedProjectId, pastedTranslation, "pasted-translation.json", true);
@@ -946,6 +959,10 @@ function DesktopApp() {
     }
     if (track === "translation" && !attachedTranslation) {
       setError("Importe une traduction avant d'exporter la traduction.");
+      return;
+    }
+    if (!loadedProjectHasVideo) {
+      setError("Ajoute d'abord une vidéo avant d'exporter.");
       return;
     }
     setExportingTrack(track);
@@ -1020,7 +1037,7 @@ function DesktopApp() {
           </div>
         </div>
         <div className="desktop-project-actions">
-          <button disabled={busy} onClick={() => void importTranscriptDesktop(project)}>
+          <button disabled={busy || !project.videoPath} onClick={() => void importTranscriptDesktop(project)}>
             <Upload size={16} />
             <span>{project.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
           </button>
@@ -1160,7 +1177,7 @@ function DesktopApp() {
               <strong>{loadedProject.title}</strong>
               <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
             </div>
-            <button disabled={busy || isHistoryPreview} onClick={() => void importTranscriptDesktop(loadedProject)}>
+            <button disabled={busy || isHistoryPreview || !loadedProjectHasVideo} onClick={() => void importTranscriptDesktop(loadedProject)}>
               <Upload size={16} />
               <span>{loadedProject.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
             </button>
@@ -1172,27 +1189,27 @@ function DesktopApp() {
               <Copy size={16} />
               <span>{copyState}</span>
             </button>
-            <button disabled={!transcript || editorLocked} onClick={() => setPasteImportOpen(true)}>
+            <button disabled={!transcript || editorLocked || !loadedProjectHasVideo} onClick={() => setPasteImportOpen(true)}>
               <ClipboardPaste size={16} />
               <span>Coller traduction</span>
             </button>
-            <button disabled={!transcript || editorLocked} onClick={() => void importTranslationFileDesktop()}>
+            <button disabled={!transcript || editorLocked || !loadedProjectHasVideo} onClick={() => void importTranslationFileDesktop()}>
               <Upload size={16} />
               <span>{attachedTranslation ? "Remplacer traduction" : "Importer traduction"}</span>
             </button>
-            <button disabled={!transcript || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic")}>
+            <button disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic")}>
               <Download size={16} />
               <span>{exportingTrack === "arabic" ? "Export arabe..." : "Export arabe"}</span>
             </button>
-            <button disabled={!transcript || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic", true)}>
+            <button disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic", true)}>
               <ExternalLink size={16} />
               <span>{exportingTrack === "arabic" ? "Ouverture..." : "Export+ouvrir arabe"}</span>
             </button>
-            <button disabled={!attachedTranslation || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation")}>
+            <button disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation")}>
               <Download size={16} />
               <span>{exportingTrack === "translation" ? "Export traduction..." : "Export traduction"}</span>
             </button>
-            <button disabled={!attachedTranslation || editorLocked || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation", true)}>
+            <button disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation", true)}>
               <ExternalLink size={16} />
               <span>{exportingTrack === "translation" ? "Ouverture..." : "Export+ouvrir traduction"}</span>
             </button>
@@ -1205,8 +1222,8 @@ function DesktopApp() {
                 {loadedProject.videoPath
                   ? "Vidéo disponible"
                   : loadedProject.youtubeUrl
-                    ? "Ajoute la vidéo depuis YouTube ou depuis ton ordinateur."
-                    : "Aucune vidéo attachée."}
+                    ? "Ajoute la vidéo depuis YouTube ou depuis ton ordinateur avant transcription, traduction ou export."
+                    : "Importe une vidéo avant transcription, traduction ou export."}
               </span>
             </div>
             <div className="media-tool-actions">

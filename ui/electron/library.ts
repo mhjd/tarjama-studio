@@ -139,6 +139,13 @@ async function writeProject(project: DesktopProject): Promise<void> {
   await writeJson(projectFile(project.id), project);
 }
 
+async function requireProjectVideo(project: DesktopProject): Promise<string> {
+  if (!project.videoPath || !(await pathExists(project.videoPath))) {
+    throw new Error("Ajoute d'abord une vidéo au projet");
+  }
+  return project.videoPath;
+}
+
 function validateTranscript(payload: unknown): WorkspaceTranscript {
   if (!payload || typeof payload !== "object") {
     throw new Error("Transcript must be a JSON object");
@@ -1111,6 +1118,7 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
     throw new Error("Project not found");
   }
   const project = await readJson<DesktopProject>(projectPath);
+  await requireProjectVideo(project);
   const selection = await dialog.showOpenDialog({
     title: `Importer une transcription pour ${project.title}`,
     properties: ["openFile"],
@@ -1435,6 +1443,7 @@ export async function restoreSnapshot(projectId: string, snapshotId?: string): P
 export async function importTranslationFile(projectId: string): Promise<ImportTranslationResult | null> {
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
+  await requireProjectVideo(project);
   if (!transcript) throw new Error("Importe d'abord une transcription");
   const selection = await dialog.showOpenDialog({
     title: `Importer une traduction pour ${project.title}`,
@@ -1458,6 +1467,7 @@ export async function importTranslationContent(
 ): Promise<ImportTranslationResult> {
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
+  await requireProjectVideo(project);
   if (!transcript) throw new Error("Importe d'abord une transcription");
   const target = translationFile(projectId);
   if (!replace && (await pathExists(target))) {
@@ -1572,7 +1582,7 @@ export async function exportVideo(
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
   if (!transcript) throw new Error("Transcription absente");
-  if (!project.videoPath || !(await pathExists(project.videoPath))) throw new Error("Vidéo source absente");
+  const videoPath = await requireProjectVideo(project);
   const cues =
     track === "arabic"
       ? transcript.segments.map((segment) => ({
@@ -1614,7 +1624,7 @@ export async function exportVideo(
       "error",
       "-y",
       "-i",
-      project.videoPath,
+      videoPath,
       "-vf",
       await subtitleFilter(assPath),
       "-c:v",

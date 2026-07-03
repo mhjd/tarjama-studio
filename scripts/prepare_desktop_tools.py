@@ -13,6 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "ui"
 BIN_ROOT = UI / "desktop-bin"
+FONT_ROOT = BIN_ROOT / "fonts"
+ARABIC_FONT_URL = (
+    "https://github.com/googlefonts/noto-fonts/raw/main/"
+    "hinted/ttf/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf"
+)
 
 
 def host_key() -> str:
@@ -40,14 +45,15 @@ def copy_file(source: Path, target: Path) -> None:
     make_executable(target)
 
 
-def download(url: str, target: Path) -> None:
+def download(url: str, target: Path, executable: bool = True) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".tmp")
     print(f"Downloading {url}")
     with urllib.request.urlopen(url, timeout=120) as response:
         tmp.write_bytes(response.read())
     tmp.replace(target)
-    make_executable(target)
+    if executable:
+        make_executable(target)
 
 
 def prepare_ytdlp(bin_dir: Path, key: str) -> None:
@@ -92,11 +98,19 @@ def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
     )
 
 
+def prepare_fonts() -> None:
+    target = FONT_ROOT / "NotoNaskhArabic-Regular.ttf"
+    if target.exists():
+        return
+    download(ARABIC_FONT_URL, target, executable=False)
+
+
 def main() -> int:
     key = host_key()
     bin_dir = BIN_ROOT / key
     prepare_ytdlp(bin_dir, key)
     prepare_ffmpeg(bin_dir, key)
+    prepare_fonts()
     print(f"Prepared desktop tools in {bin_dir.relative_to(ROOT)}")
     return 0
 

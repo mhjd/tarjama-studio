@@ -29,6 +29,7 @@ const PROJECT_FILE = "project.json";
 const TRANSCRIPT_FILE = "transcript.json";
 const CURRENT_FILE = "current.json";
 const TRANSLATION_FILE = "translation.json";
+const SUBTITLE_FONT_NAME = "Noto Naskh Arabic";
 
 export function libraryDir(): string {
   return path.join(app.getPath("userData"), "projects");
@@ -953,6 +954,20 @@ async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
   throw new Error(`Missing bundled ${name}. Run make desktop-tools, then restart the app.`);
 }
 
+async function resolveDesktopResource(relativePath: string): Promise<string | null> {
+  const candidates = [
+    path.join(app.getPath("userData"), relativePath),
+    path.join(process.resourcesPath, relativePath),
+    path.join(app.getAppPath(), relativePath),
+    path.join(app.getAppPath(), "..", relativePath),
+    path.join(process.cwd(), relativePath),
+  ];
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return null;
+}
+
 export async function readLibrary(): Promise<DesktopLibraryInfo> {
   const root = libraryDir();
   await fs.mkdir(root, { recursive: true });
@@ -1460,7 +1475,7 @@ async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise
     "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    "Style: Default,Arial,34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1",
+    `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -1474,6 +1489,13 @@ async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise
 
 function ffmpegFilterPath(filePath: string): string {
   return filePath.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\\'");
+}
+
+async function subtitleFilter(assPath: string): Promise<string> {
+  const fontsDir = await resolveDesktopResource(path.join("desktop-bin", "fonts"));
+  const base = `subtitles='${ffmpegFilterPath(assPath)}'`;
+  if (!fontsDir) return base;
+  return `${base}:fontsdir='${ffmpegFilterPath(fontsDir)}'`;
 }
 
 export async function exportVideo(
@@ -1528,7 +1550,7 @@ export async function exportVideo(
       "-i",
       project.videoPath,
       "-vf",
-      `subtitles='${ffmpegFilterPath(assPath)}'`,
+      await subtitleFilter(assPath),
       "-c:v",
       "libx264",
       "-preset",

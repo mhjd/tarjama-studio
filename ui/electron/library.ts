@@ -831,6 +831,11 @@ async function readProject(projectId: string): Promise<DesktopProject> {
   return await readJson<DesktopProject>(filePath);
 }
 
+async function findProjectByYoutubeId(youtubeId: string): Promise<DesktopProject | null> {
+  const library = await readLibrary();
+  return library.projects.find((project) => project.youtubeId === youtubeId) ?? null;
+}
+
 export async function importTranscript(projectId: string): Promise<ImportTranscriptResult | null> {
   const projectPath = projectFile(projectId);
   if (!(await pathExists(projectPath))) {
@@ -954,6 +959,11 @@ export async function downloadYoutube(
   const metadata = parseYtdlpMetadata(metadataText);
   assertYoutubeMetadata(metadata);
   const youtubeId = metadata.id || randomUUID();
+  const existingProject = await findProjectByYoutubeId(youtubeId);
+  if (existingProject) {
+    const archiveHint = existingProject.archivedAt ? " Il est actuellement archivé." : "";
+    throw new Error(`Cette vidéo existe déjà dans la bibliothèque: ${existingProject.title}.${archiveHint}`);
+  }
   let id = slugify(`youtube_${youtubeId}`);
   if (await pathExists(projectDir(id))) {
     id = slugify(`youtube_${youtubeId}_${Date.now()}`);

@@ -285,6 +285,12 @@ function snapshotLabel(snapshot: SnapshotInfo): string {
   })} · ${snapshot.segment_count} seg.`;
 }
 
+function snapshotSortTime(snapshot: SnapshotInfo): number {
+  if (!snapshot.created_at) return 0;
+  const parsed = new Date(snapshot.created_at);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
 function segmentDiff(current: Transcript | null, snapshot: Transcript | null | undefined): DiffLine[] {
   if (!current || !snapshot) return [];
   const previous = new Map(snapshot.segments.map((segment) => [segment.id, segment]));
@@ -464,7 +470,10 @@ function DesktopApp() {
     [snapshots]
   );
   const oldSnapshots = useMemo(
-    () => snapshots.filter((snapshot) => !snapshot.matches_current),
+    () =>
+      snapshots
+        .filter((snapshot) => !snapshot.matches_current)
+        .sort((left, right) => snapshotSortTime(right) - snapshotSortTime(left)),
     [snapshots]
   );
 

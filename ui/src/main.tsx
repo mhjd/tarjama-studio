@@ -1981,6 +1981,8 @@ function App() {
             <RotateCcw size={16} />
             <span>Début</span>
           </button>
+        </div>
+        <div className="player-nav">
           <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant">
             <LocateFixed size={16} />
             <span>Segment</span>

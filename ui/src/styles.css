@@ -147,7 +147,8 @@ input {
 
 .player-band > .interval-row,
 .player-band > .timeline-wrap,
-.player-band > .audio-controls {
+.player-band > .audio-controls,
+.player-band > .player-nav {
   margin: 0 auto;
   max-width: 1180px;
   width: 100%;
@@ -238,13 +239,22 @@ input {
   align-items: center;
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: 4.6rem 4.6rem 6rem 5.4rem 4.6rem 4.6rem 6.4rem 6.8rem 5.4rem;
+  grid-template-columns: 4.6rem 4.6rem 6rem 5.4rem 4.6rem 4.6rem 6.4rem;
   justify-content: center;
 }
 
-.audio-controls button {
+.audio-controls button,
+.player-nav button {
   min-width: 0;
   width: 100%;
+}
+
+.player-nav {
+  align-items: center;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: 7.6rem 6rem;
+  justify-content: center;
 }
 
 .primary-control {
@@ -969,17 +979,20 @@ input:disabled {
   }
 
   .interval-row,
-  .audio-controls {
+  .audio-controls,
+  .player-nav {
     align-items: stretch;
   }
 
   .interval-row label,
   .interval-row input:not([type="checkbox"]),
-  .audio-controls button {
+  .audio-controls button,
+  .player-nav button {
     width: 100%;
   }
 
-  .audio-controls {
+  .audio-controls,
+  .player-nav {
     grid-template-columns: 1fr;
   }
 

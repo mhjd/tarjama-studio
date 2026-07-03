@@ -178,7 +178,7 @@ function transcriptComparable(transcript: WorkspaceTranscript | null): string {
         start: Number(segment.start.toFixed(3)),
         end: Number(segment.end.toFixed(3)),
         text: segment.text.trim(),
-        translation: "",
+        translation: segment.translation.trim(),
       })),
     },
     null,
@@ -188,6 +188,54 @@ function transcriptComparable(transcript: WorkspaceTranscript | null): string {
 
 function transcriptsDiffer(left: WorkspaceTranscript | null, right: WorkspaceTranscript | null): boolean {
   return transcriptComparable(left) !== transcriptComparable(right);
+}
+
+function transcriptWithoutSegmentTranslations(transcript: WorkspaceTranscript): WorkspaceTranscript {
+  return {
+    ...transcript,
+    segments: transcript.segments.map((segment) => ({ ...segment, translation: "" })),
+  };
+}
+
+function transcriptHasSegmentTranslations(transcript: WorkspaceTranscript): boolean {
+  return transcript.segments.some((segment) => segment.translation.trim().length > 0);
+}
+
+function transcriptWithTranslation(
+  transcript: WorkspaceTranscript | null,
+  translation: WorkspaceTranslation | null,
+): WorkspaceTranscript | null {
+  if (!transcript) return null;
+  if (!translation) return transcript;
+  const byId = new Map(translation.segments.map((segment) => [segment.id, segment.translation]));
+  return {
+    ...transcript,
+    segments: transcript.segments.map((segment) => ({
+      ...segment,
+      translation: byId.get(segment.id) ?? "",
+    })),
+  };
+}
+
+function translationFromTranscriptSnapshot(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+): WorkspaceTranslation {
+  return {
+    corpus_id: projectId,
+    language: "fr",
+    format: "ashrafent-translation-v1",
+    source_transcript_fingerprint: transcriptAlignmentFingerprint(transcript),
+    imported_from: "snapshot",
+    segments: transcript.segments.map((segment) => ({
+      id: segment.id,
+      start: segment.start,
+      end: segment.end,
+      translation: segment.translation,
+    })),
+    created_at: nowIso(),
+    updated_at: nowIso(),
+  };
 }
 
 function transcriptAlignmentFingerprint(transcript: WorkspaceTranscript): string {
@@ -938,18 +986,19 @@ export async function downloadYoutube(
 export async function loadProject(projectId: string): Promise<DesktopProjectLoad> {
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
-  if (transcript) await ensureInitialSnapshot(projectId, transcript);
   const translationPath = translationFile(projectId);
   const translation = (await pathExists(translationPath))
     ? await readJson<WorkspaceTranslation>(translationPath)
     : null;
   if (transcript && translation) assertTranslationAlignment(transcript, translation);
+  const snapshotCurrent = transcriptWithTranslation(transcript, translation);
+  if (snapshotCurrent) await ensureInitialSnapshot(projectId, snapshotCurrent);
   return {
     project,
     mediaUrl: project.videoPath ? pathToFileURL(project.videoPath).toString() : undefined,
     transcript,
     translation,
-    snapshots: await listSnapshotInfo(projectId, transcript),
+    snapshots: await listSnapshotInfo(projectId, snapshotCurrent),
     recovery: await recoveryState(projectId),
   };
 }
@@ -969,10 +1018,22 @@ export async function createTranscriptSnapshot(projectId: string, transcript: Wo
   const clean = validateTranscript(transcript);
   clean.corpus_id = projectId;
   clean.updated_at = nowIso();
-  await writeJson(currentFile(projectId), clean);
-  await writeJson(transcriptFile(projectId), clean);
+  const plainTranscript = transcriptWithoutSegmentTranslations(clean);
+  await writeJson(currentFile(projectId), plainTranscript);
+  await writeJson(transcriptFile(projectId), plainTranscript);
   await writeSnapshot(projectId, clean);
-  await writeProject({ ...project, updatedAt: nowIso(), transcriptPath: transcriptFile(projectId) });
+  const hasTranslation = transcriptHasSegmentTranslations(clean);
+  if (hasTranslation) {
+    const translation = translationFromTranscriptSnapshot(projectId, clean);
+    await writeJson(translationFile(projectId), translation);
+    await writeTranslationSnapshot(projectId, translation);
+  }
+  await writeProject({
+    ...project,
+    updatedAt: nowIso(),
+    transcriptPath: transcriptFile(projectId),
+    translationPath: hasTranslation ? translationFile(projectId) : project.translationPath,
+  });
   return await loadProject(projectId);
 }
 
@@ -980,7 +1041,10 @@ export async function loadSnapshot(projectId: string, snapshotId: string): Promi
   const filePath = path.join(snapshotsDir(projectId), snapshotId);
   await assertInsideLibrary(filePath);
   if (!(await pathExists(filePath))) throw new Error("Sauvegarde inconnue");
-  const current = await loadSavedTranscript(projectId);
+  const current = transcriptWithTranslation(
+    await loadSavedTranscript(projectId),
+    (await pathExists(translationFile(projectId))) ? await readJson<WorkspaceTranslation>(translationFile(projectId)) : null,
+  );
   return {
     snapshot: await snapshotInfo(filePath, current),
     transcript: validateTranscript(await readJson<WorkspaceTranscript>(filePath)),
@@ -992,12 +1056,22 @@ export async function restoreSnapshot(projectId: string, snapshotId?: string): P
   if (!filePath) throw new Error("Aucune sauvegarde à restaurer");
   await assertInsideLibrary(filePath);
   const snapshot = validateTranscript(await readJson<WorkspaceTranscript>(filePath));
-  const current = await loadSavedTranscript(projectId);
+  const current = transcriptWithTranslation(
+    await loadSavedTranscript(projectId),
+    (await pathExists(translationFile(projectId))) ? await readJson<WorkspaceTranslation>(translationFile(projectId)) : null,
+  );
   if (current && transcriptsDiffer(current, snapshot)) await writeSnapshot(projectId, current, "pre_restore");
   snapshot.corpus_id = projectId;
   snapshot.updated_at = nowIso();
-  await writeJson(currentFile(projectId), snapshot);
-  await writeJson(transcriptFile(projectId), snapshot);
+  const plainSnapshot = transcriptWithoutSegmentTranslations(snapshot);
+  await writeJson(currentFile(projectId), plainSnapshot);
+  await writeJson(transcriptFile(projectId), plainSnapshot);
+  const hasTranslation = transcriptHasSegmentTranslations(snapshot);
+  if (hasTranslation) {
+    const translation = translationFromTranscriptSnapshot(projectId, snapshot);
+    await writeJson(translationFile(projectId), translation);
+    await writeTranslationSnapshot(projectId, translation, "restore");
+  }
   await writeSnapshot(projectId, snapshot, "restore");
   return await loadProject(projectId);
 }

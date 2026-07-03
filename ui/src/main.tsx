@@ -848,12 +848,7 @@ function DesktopApp() {
     setSaveState("Sauvegarde...");
     setError("");
     try {
-      const loaded = await desktop.createTranscriptSnapshot(selectedProjectId, transcriptWithoutTranslations(transcript));
-      if (attachedTranslation) {
-        applyLoadedProject(await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation)));
-      } else {
-        applyLoadedProject(loaded);
-      }
+      applyLoadedProject(await desktop.createTranscriptSnapshot(selectedProjectId, transcript));
       setSaveState("Sauvegardé");
     } catch (err) {
       setSaveState("Sauvegarder");

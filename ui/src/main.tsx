@@ -726,6 +726,10 @@ function DesktopApp() {
     }, 1600);
   }
 
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function updateSegment(id: string, patch: Partial<Segment>) {
     if (!transcript || editorLocked) return;
     setTranscript({
@@ -1156,9 +1160,19 @@ function DesktopApp() {
                 </button>
                 <button onClick={() => seekBy(3)}>+3s</button>
                 <button onClick={() => seekBy(10)}>+10s</button>
-                <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment}>
-                  <FileInput size={16} />
+                <button onClick={() => seekTo(parseTime(rangeStart) ?? 0)} title="Retour au début de l'intervalle">
+                  <RotateCcw size={16} />
+                  <span>Début</span>
+                </button>
+              </div>
+              <div className="player-nav">
+                <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant">
+                  <LocateFixed size={16} />
                   <span>Segment</span>
+                </button>
+                <button onClick={scrollToTop} title="Remonter en haut de la page">
+                  <ArrowUpToLine size={16} />
+                  <span>Haut</span>
                 </button>
               </div>
             </section>

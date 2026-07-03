@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client";
 import {
   AlertTriangle,
+  ArrowUpToLine,
   Check,
   ClipboardPaste,
   Combine,
@@ -10,6 +11,7 @@ import {
   FileInput,
   GitCompare,
   History,
+  LocateFixed,
   Moon,
   Pause,
   Plus,
@@ -1325,8 +1327,10 @@ function App() {
   const [showRecoveryDiff, setShowRecoveryDiff] = useState(false);
   const [showPreviewDiff, setShowPreviewDiff] = useState(false);
   const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
+  const [focusedSegmentId, setFocusedSegmentId] = useState("");
   const [undoSnapshot, setUndoSnapshot] = useState<Transcript | null>(null);
   const [textCaret, setTextCaret] = useState<{ segmentId: string; index: number } | null>(null);
+  const segmentRefs = useRef(new Map<string, HTMLElement>());
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.corpus_id === selectedId) ?? null,
@@ -1841,6 +1845,27 @@ function App() {
     setTimelineHover({ time: ratio * max, x: ratio * 100 });
   }
 
+  function scrollToCurrentSegment() {
+    const segments = displayedTranscript?.segments;
+    if (!segments?.length) return;
+    const time = audioRef.current?.currentTime ?? currentTime;
+    const target =
+      segments.find((segment) => time >= segment.start && time < segment.end) ??
+      [...segments].reverse().find((segment) => segment.start <= time) ??
+      segments[0];
+    const element = segmentRefs.current.get(target.id);
+    if (!element) return;
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    setFocusedSegmentId(target.id);
+    window.setTimeout(() => {
+      setFocusedSegmentId((current) => (current === target.id ? "" : current));
+    }, 1600);
+  }
+
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <main>
       <header className="topbar">
@@ -1955,6 +1980,14 @@ function App() {
           <button onClick={() => seekTo(parseTime(rangeStart) ?? 0)} title="Retour au début de l'intervalle">
             <RotateCcw size={16} />
             <span>Début</span>
+          </button>
+          <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant">
+            <LocateFixed size={16} />
+            <span>Segment</span>
+          </button>
+          <button onClick={scrollToTop} title="Remonter en haut de la page">
+            <ArrowUpToLine size={16} />
+            <span>Haut</span>
           </button>
         </div>
       </section>
@@ -2193,7 +2226,14 @@ function App() {
       <section className="workspace">
         <section className="segments">
           {displayedTranscript?.segments.map((segment, index) => (
-            <article className="segment-row" key={segment.id}>
+            <article
+              className={`segment-row ${focusedSegmentId === segment.id ? "segment-row-focused" : ""}`}
+              key={segment.id}
+              ref={(element) => {
+                if (element) segmentRefs.current.set(segment.id, element);
+                else segmentRefs.current.delete(segment.id);
+              }}
+            >
               <div className="segment-meta">
                 <label className="time-control time-control-nav">
                   <span>Lire</span>

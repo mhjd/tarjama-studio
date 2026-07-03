@@ -5,6 +5,8 @@ type DesktopProject = {
   updatedAt: string;
   youtubeUrl?: string;
   youtubeId?: string;
+  youtubeUrlUnverified?: boolean;
+  youtubeUrlWarning?: string;
   videoPath?: string;
   transcriptPath?: string;
   translationPath?: string;
@@ -25,6 +27,7 @@ type ImportTranscriptResult = {
 
 type DownloadYoutubeRequest = {
   url: string;
+  projectId?: string;
   title?: string;
   formatSelector?: string;
 };
@@ -32,6 +35,16 @@ type DownloadYoutubeRequest = {
 type DownloadYoutubeResult = {
   project: DesktopProject;
   videoPath: string;
+};
+
+type CreateYoutubeProjectRequest = {
+  url: string;
+  title?: string;
+};
+
+type CreateYoutubeProjectResult = {
+  project: DesktopProject;
+  warning?: string;
 };
 
 type UpdateToolResult = {
@@ -153,7 +166,8 @@ interface Window {
     ): Promise<ImportTranslationResult>;
     saveTranslation(projectId: string, translation: DesktopTranslation): Promise<DesktopProjectLoad>;
     exportVideo(projectId: string, track: DesktopExportSubtitleTrack): Promise<DesktopExportResult | null>;
-    importLocalVideo(): Promise<DownloadYoutubeResult | null>;
+    importLocalVideo(projectId?: string): Promise<DownloadYoutubeResult | null>;
+    createYoutubeProject(request: CreateYoutubeProjectRequest): Promise<CreateYoutubeProjectResult>;
     listYoutubeFormats(url: string): Promise<YoutubeFormatsResult>;
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;
     updateYtdlp(): Promise<UpdateToolResult>;

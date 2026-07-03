@@ -5,6 +5,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type {
+  CreateYoutubeProjectRequest,
+  CreateYoutubeProjectResult,
   DesktopExportResult,
   DesktopLibraryInfo,
   DesktopProject,
@@ -44,6 +46,10 @@ function slugify(value: string): string {
     .replace(/^_+|_+$/g, "")
     .toLowerCase();
   return slug || "project";
+}
+
+function shortHash(value: string): string {
+  return createHash("sha1").update(value).digest("hex").slice(0, 10);
 }
 
 async function pathExists(value: string): Promise<boolean> {
@@ -580,6 +586,143 @@ type YtdlpMetadata = {
 };
 
 const BEST_MERGED_FORMAT = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/best";
+const YOUTUBE_ID_PATTERN = /^[a-zA-Z0-9_-]{11}$/;
+
+type ParsedYoutubeUrl = {
+  inputUrl: string;
+  canonicalUrl: string;
+  youtubeId?: string;
+  unverified: boolean;
+  warning?: string;
+};
+
+function withDefaultProtocol(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed;
+  if (/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:[/:?#]|$)/.test(trimmed)) return `https://${trimmed}`;
+  return trimmed;
+}
+
+function firstYoutubeIdCandidate(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  const cleaned = value.trim();
+  if (YOUTUBE_ID_PATTERN.test(cleaned)) return cleaned;
+  const match = cleaned.match(/[?&/]([a-zA-Z0-9_-]{11})(?=$|[?&#/])/);
+  return match?.[1];
+}
+
+function isYoutubeHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^www\./, "");
+  return (
+    host === "youtube.com" ||
+    host === "youtu.be" ||
+    host === "youtube-nocookie.com" ||
+    host === "m.youtube.com" ||
+    host === "music.youtube.com"
+  );
+}
+
+function youtubeIdFromUrl(url: URL, depth = 0): string | undefined {
+  if (depth > 2) return undefined;
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const fromVParam = firstYoutubeIdCandidate(url.searchParams.get("v"));
+  if (fromVParam) return fromVParam;
+
+  if (host === "youtu.be" && pathParts[0]) {
+    return firstYoutubeIdCandidate(pathParts[0]);
+  }
+  if (["shorts", "embed", "live", "v", "e"].includes(pathParts[0] ?? "") && pathParts[1]) {
+    return firstYoutubeIdCandidate(pathParts[1]);
+  }
+  if (pathParts[0] === "watch" && pathParts[1]) {
+    return firstYoutubeIdCandidate(pathParts[1]);
+  }
+
+  const nested = url.searchParams.get("u") || url.searchParams.get("url") || url.searchParams.get("q");
+  if (nested) {
+    try {
+      const nestedUrl = new URL(nested, "https://www.youtube.com");
+      if (isYoutubeHost(nestedUrl.hostname)) return youtubeIdFromUrl(nestedUrl, depth + 1);
+    } catch {
+      return firstYoutubeIdCandidate(nested);
+    }
+  }
+  return undefined;
+}
+
+function parseYoutubeUrl(rawUrl: string): ParsedYoutubeUrl {
+  const inputUrl = rawUrl.trim();
+  if (!inputUrl) throw new Error("Colle un lien YouTube avant de créer le projet.");
+
+  if (YOUTUBE_ID_PATTERN.test(inputUrl)) {
+    return {
+      inputUrl,
+      canonicalUrl: `https://www.youtube.com/watch?v=${inputUrl}`,
+      youtubeId: inputUrl,
+      unverified: false,
+    };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(withDefaultProtocol(inputUrl));
+  } catch {
+    return {
+      inputUrl,
+      canonicalUrl: inputUrl,
+      unverified: true,
+      warning: "Lien non reconnu. Le projet est créé quand même, mais le lien peut être invalide et les doublons ne peuvent pas être détectés de façon fiable.",
+    };
+  }
+
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    return {
+      inputUrl,
+      canonicalUrl: inputUrl,
+      unverified: true,
+      warning: "Protocole non reconnu. Le projet est créé quand même, mais le téléchargement risque d'échouer.",
+    };
+  }
+
+  if (!isYoutubeHost(parsed.hostname)) {
+    return {
+      inputUrl,
+      canonicalUrl: parsed.toString(),
+      unverified: true,
+      warning: "Ce lien ne semble pas être un lien YouTube. Le projet est créé quand même, avec risque de doublon ou d'échec au téléchargement.",
+    };
+  }
+
+  const youtubeId = youtubeIdFromUrl(parsed);
+  if (youtubeId) {
+    return {
+      inputUrl,
+      canonicalUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
+      youtubeId,
+      unverified: false,
+    };
+  }
+
+  return {
+    inputUrl,
+    canonicalUrl: parsed.toString(),
+    unverified: true,
+    warning: "Format YouTube inhabituel. Le projet est créé quand même, mais Ashrafent ne peut pas garantir la détection des doublons avant téléchargement.",
+  };
+}
+
+function comparableUrl(value: string): string {
+  try {
+    const url = new URL(withDefaultProtocol(value));
+    url.hash = "";
+    url.hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    url.searchParams.sort();
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return value.trim().replace(/\/$/, "");
+  }
+}
 
 function parseYtdlpMetadata(output: string): YtdlpMetadata {
   const trimmed = output.trim();
@@ -836,6 +979,53 @@ async function findProjectByYoutubeId(youtubeId: string): Promise<DesktopProject
   return library.projects.find((project) => project.youtubeId === youtubeId) ?? null;
 }
 
+async function findProjectByYoutubeUrl(url: string): Promise<DesktopProject | null> {
+  const target = comparableUrl(url);
+  const library = await readLibrary();
+  return library.projects.find((project) => project.youtubeUrl && comparableUrl(project.youtubeUrl) === target) ?? null;
+}
+
+function duplicateProjectError(project: DesktopProject): Error {
+  const archiveHint = project.archivedAt ? " Il est actuellement archivé." : "";
+  return new Error(`Cette vidéo existe déjà dans la bibliothèque: ${project.title}.${archiveHint}`);
+}
+
+export async function createYoutubeProject(
+  request: CreateYoutubeProjectRequest,
+): Promise<CreateYoutubeProjectResult> {
+  await fs.mkdir(libraryDir(), { recursive: true });
+  const parsed = parseYoutubeUrl(request.url);
+  if (parsed.youtubeId) {
+    const existing = await findProjectByYoutubeId(parsed.youtubeId);
+    if (existing) throw duplicateProjectError(existing);
+  } else {
+    const existing = await findProjectByYoutubeUrl(parsed.canonicalUrl);
+    if (existing) throw duplicateProjectError(existing);
+  }
+
+  const idSeed = parsed.youtubeId ? `youtube_${parsed.youtubeId}` : `youtube_link_${shortHash(parsed.canonicalUrl)}`;
+  let id = slugify(idSeed);
+  if (await pathExists(projectDir(id))) {
+    id = slugify(`${idSeed}_${Date.now()}`);
+  }
+
+  const title =
+    request.title?.trim() ||
+    (parsed.youtubeId ? `YouTube ${parsed.youtubeId}` : `Lien YouTube ${shortHash(parsed.canonicalUrl).slice(0, 6)}`);
+  const project: DesktopProject = {
+    id,
+    title,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    youtubeUrl: parsed.canonicalUrl,
+    youtubeId: parsed.youtubeId,
+    youtubeUrlUnverified: parsed.unverified || undefined,
+    youtubeUrlWarning: parsed.warning,
+  };
+  await writeProject(project);
+  return { project, warning: parsed.warning };
+}
+
 export async function importTranscript(projectId: string): Promise<ImportTranscriptResult | null> {
   const projectPath = projectFile(projectId);
   if (!(await pathExists(projectPath))) {
@@ -870,7 +1060,36 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
   return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
 }
 
-export async function importLocalVideo(): Promise<DownloadYoutubeResult | null> {
+async function copyVideoIntoProject(
+  project: DesktopProject,
+  sourcePath: string,
+  fallbackTitle?: string,
+): Promise<DownloadYoutubeResult> {
+  const ffmpeg = await resolveTool("ffmpeg");
+  const streams = await mediaStreams(sourcePath, ffmpeg);
+  if (!streams.video || !streams.audio) {
+    throw new Error("La vidéo importée doit contenir une piste vidéo et une piste audio");
+  }
+
+  const extension = path.extname(sourcePath) || ".mp4";
+  const dir = projectDir(project.id);
+  await fs.mkdir(dir, { recursive: true });
+  await removeGeneratedSourceFiles(dir);
+  const videoPath = path.join(dir, `source${extension}`);
+  await fs.copyFile(sourcePath, videoPath);
+  await assertInsideLibrary(videoPath);
+
+  const updatedProject: DesktopProject = {
+    ...project,
+    title: project.title || fallbackTitle || path.basename(sourcePath, extension),
+    updatedAt: nowIso(),
+    videoPath,
+  };
+  await writeProject(updatedProject);
+  return { project: updatedProject, videoPath };
+}
+
+export async function importLocalVideo(projectId?: string): Promise<DownloadYoutubeResult | null> {
   await fs.mkdir(libraryDir(), { recursive: true });
   const selection = await dialog.showOpenDialog({
     title: "Importer une vidéo",
@@ -883,10 +1102,8 @@ export async function importLocalVideo(): Promise<DownloadYoutubeResult | null> 
   if (selection.canceled || !selection.filePaths[0]) return null;
 
   const sourcePath = selection.filePaths[0];
-  const ffmpeg = await resolveTool("ffmpeg");
-  const streams = await mediaStreams(sourcePath, ffmpeg);
-  if (!streams.video || !streams.audio) {
-    throw new Error("La vidéo importée doit contenir une piste vidéo et une piste audio");
+  if (projectId) {
+    return await copyVideoIntoProject(await readProject(projectId), sourcePath, path.basename(sourcePath, path.extname(sourcePath)));
   }
 
   const extension = path.extname(sourcePath) || ".mp4";
@@ -895,21 +1112,13 @@ export async function importLocalVideo(): Promise<DownloadYoutubeResult | null> 
   if (await pathExists(projectDir(id))) {
     id = slugify(`local_${title}_${Date.now()}`);
   }
-  const dir = projectDir(id);
-  await fs.mkdir(dir, { recursive: true });
-  const videoPath = path.join(dir, `source${extension}`);
-  await fs.copyFile(sourcePath, videoPath);
-  await assertInsideLibrary(videoPath);
-
   const project: DesktopProject = {
     id,
     title,
     createdAt: nowIso(),
     updatedAt: nowIso(),
-    videoPath,
   };
-  await writeProject(project);
-  return { project, videoPath };
+  return await copyVideoIntoProject(project, sourcePath, title);
 }
 
 export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsResult> {
@@ -944,6 +1153,9 @@ export async function downloadYoutube(
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
+  const existingTarget = request.projectId ? await readProject(request.projectId) : null;
+  const sourceUrl = request.url.trim() || existingTarget?.youtubeUrl || "";
+  if (!sourceUrl) throw new Error("Lien YouTube absent");
   emitProgress?.({ projectId: "pending", stage: "metadata", message: "Analyse de la vidéo YouTube..." });
   const metadataText = await runYtdlp(
     ytdlp,
@@ -952,7 +1164,7 @@ export async function downloadYoutube(
       "--ffmpeg-location",
       ffmpeg,
       "-J",
-      request.url,
+      sourceUrl,
     ],
     libraryDir(),
   );
@@ -960,12 +1172,11 @@ export async function downloadYoutube(
   assertYoutubeMetadata(metadata);
   const youtubeId = metadata.id || randomUUID();
   const existingProject = await findProjectByYoutubeId(youtubeId);
-  if (existingProject) {
-    const archiveHint = existingProject.archivedAt ? " Il est actuellement archivé." : "";
-    throw new Error(`Cette vidéo existe déjà dans la bibliothèque: ${existingProject.title}.${archiveHint}`);
+  if (existingProject && existingProject.id !== existingTarget?.id) {
+    throw duplicateProjectError(existingProject);
   }
-  let id = slugify(`youtube_${youtubeId}`);
-  if (await pathExists(projectDir(id))) {
+  let id = existingTarget?.id ?? slugify(`youtube_${youtubeId}`);
+  if (!existingTarget && (await pathExists(projectDir(id)))) {
     id = slugify(`youtube_${youtubeId}_${Date.now()}`);
   }
   const dir = projectDir(id);
@@ -992,7 +1203,7 @@ export async function downloadYoutube(
       "after_move:filepath",
       "-o",
       outputTemplate,
-      request.url,
+      sourceUrl,
     ];
 
   let downloadOutput: string;
@@ -1033,12 +1244,15 @@ export async function downloadYoutube(
   emitProgress?.({ projectId: id, stage: "done", percent: 100, message: "Téléchargement terminé" });
 
   const project: DesktopProject = {
+    ...(existingTarget ?? { id, createdAt: nowIso(), updatedAt: nowIso(), title: id }),
     id,
-    title: request.title?.trim() || metadata.title || id,
-    createdAt: nowIso(),
+    title: request.title?.trim() || metadata.title || existingTarget?.title || id,
+    createdAt: existingTarget?.createdAt ?? nowIso(),
     updatedAt: nowIso(),
-    youtubeUrl: metadata.webpage_url || request.url,
+    youtubeUrl: metadata.webpage_url || existingTarget?.youtubeUrl || sourceUrl,
     youtubeId,
+    youtubeUrlUnverified: undefined,
+    youtubeUrlWarning: undefined,
     videoPath,
     durationSeconds: metadata.duration,
   };

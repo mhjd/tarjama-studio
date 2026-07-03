@@ -431,6 +431,8 @@ function DesktopApp() {
   const [youtubeFormats, setYoutubeFormats] = useState<YoutubeFormatOption[]>([]);
   const [selectedYoutubeFormat, setSelectedYoutubeFormat] = useState("");
   const [youtubeFormatTitle, setYoutubeFormatTitle] = useState("");
+  const [youtubeFormatProjectId, setYoutubeFormatProjectId] = useState("");
+  const [youtubeCreateWarning, setYoutubeCreateWarning] = useState("");
   const [state, setState] = useState("Prêt");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -589,6 +591,10 @@ function DesktopApp() {
   }
 
   function openDesktopProject(projectId: string) {
+    setYoutubeFormats([]);
+    setSelectedYoutubeFormat("");
+    setYoutubeFormatTitle("");
+    setYoutubeFormatProjectId("");
     setSelectedProjectId(projectId);
     setDesktopView("editor");
     window.scrollTo({ top: 0 });
@@ -603,31 +609,55 @@ function DesktopApp() {
     window.scrollTo({ top: 0 });
   }
 
-  async function downloadYoutubeDesktop() {
+  async function createYoutubeProjectDesktop() {
     const url = youtubeUrl.trim();
     if (!url) {
-      setError("Colle un lien YouTube avant de télécharger.");
+      setError("Colle un lien YouTube avant de créer le projet.");
       return;
     }
-    await runDesktopAction("Téléchargement vidéo...", async () => {
-      setDownloadProgress({ projectId: "pending", stage: "metadata", message: "Analyse de la vidéo YouTube..." });
-      const result = await desktop?.downloadYoutube({ url, formatSelector: selectedYoutubeFormat || undefined });
+    await runDesktopAction("Création du projet...", async () => {
+      const result = await desktop?.createYoutubeProject({ url });
+      if (!result) return;
       setYoutubeUrl("");
       setYoutubeFormats([]);
       setSelectedYoutubeFormat("");
       setYoutubeFormatTitle("");
+      setYoutubeFormatProjectId("");
+      setYoutubeCreateWarning(result.warning ?? "");
+      setSelectedProjectId(result.project.id);
+      setDesktopView("editor");
+      setState(result.warning ? "Projet créé avec avertissement" : "Projet créé. Tu peux maintenant ajouter la vidéo.");
+    });
+  }
+
+  async function downloadYoutubeDesktop(project: DesktopProject) {
+    const url = project.youtubeUrl?.trim() ?? "";
+    if (!url) {
+      setError("Ce projet n'a pas de lien YouTube.");
+      return;
+    }
+    await runDesktopAction("Téléchargement vidéo...", async () => {
+      setDownloadProgress({ projectId: project.id, stage: "metadata", message: "Analyse de la vidéo YouTube..." });
+      const result = await desktop?.downloadYoutube({
+        url,
+        projectId: project.id,
+        formatSelector: selectedYoutubeFormat || undefined,
+      });
+      setYoutubeFormats([]);
+      setSelectedYoutubeFormat("");
+      setYoutubeFormatTitle("");
+      setYoutubeFormatProjectId("");
       if (result) {
-        setSelectedProjectId(result.project.id);
-        setDesktopView("editor");
+        applyLoadedProject(await desktop!.loadProject(result.project.id));
         setDownloadProgress({ projectId: result.project.id, stage: "done", percent: 100, message: "Téléchargement terminé" });
       }
     });
   }
 
-  async function analyzeYoutubeFormatsDesktop() {
-    const url = youtubeUrl.trim();
+  async function analyzeYoutubeFormatsDesktop(project: DesktopProject) {
+    const url = project.youtubeUrl?.trim() ?? "";
     if (!url) {
-      setError("Colle un lien YouTube avant d'analyser les formats.");
+      setError("Ce projet n'a pas de lien YouTube.");
       return;
     }
     await runDesktopAction("Analyse des formats...", async () => {
@@ -636,16 +666,18 @@ function DesktopApp() {
       setYoutubeFormats(result.formats);
       setSelectedYoutubeFormat(result.formats[0]?.formatSelector ?? "");
       setYoutubeFormatTitle(result.title);
+      setYoutubeFormatProjectId(project.id);
       setState(`${result.formats.length} format(s) disponible(s)`);
     });
   }
 
-  async function importLocalVideoDesktop() {
+  async function importLocalVideoDesktop(project?: DesktopProject) {
     await runDesktopAction("Import vidéo...", async () => {
-      const result = await desktop?.importLocalVideo();
+      const result = await desktop?.importLocalVideo(project?.id);
       if (result) {
         setSelectedProjectId(result.project.id);
         setDesktopView("editor");
+        if (project) applyLoadedProject(await desktop!.loadProject(result.project.id));
         setState("Vidéo importée. Tu peux maintenant importer une transcription.");
         setDownloadProgress(null);
       }
@@ -1001,6 +1033,22 @@ function DesktopApp() {
     );
   }
 
+  function renderDownloadProgress() {
+    if (!downloadProgress || downloadProgress.stage === "done") return null;
+    return (
+      <div className="download-progress" role="status" aria-live="polite">
+        <div>
+          <span>{downloadProgress.message}</span>
+          {downloadProgress.percent !== undefined && <strong>{downloadProgress.percent.toFixed(1)}%</strong>}
+        </div>
+        <progress value={downloadProgress.percent ?? undefined} max="100" />
+        <small>
+          {[downloadProgress.speed, downloadProgress.eta ? `ETA ${downloadProgress.eta}` : ""].filter(Boolean).join(" · ")}
+        </small>
+      </div>
+    );
+  }
+
   return (
     <main className="desktop-shell">
       <header className={`desktop-header ${desktopView === "editor" ? "desktop-header-editor" : ""}`}>
@@ -1047,22 +1095,16 @@ function DesktopApp() {
                     setYoutubeFormats([]);
                     setSelectedYoutubeFormat("");
                     setYoutubeFormatTitle("");
+                    setYoutubeFormatProjectId("");
+                    setYoutubeCreateWarning("");
                   }}
                   placeholder="https://www.youtube.com/watch?v=..."
                 />
               </label>
               <div className="desktop-create-buttons">
-                <button disabled={busy} onClick={() => void analyzeYoutubeFormatsDesktop()}>
-                  <RotateCcw size={16} />
-                  <span>Analyser formats</span>
-                </button>
-                <button disabled={busy} onClick={() => void downloadYoutubeDesktop()}>
-                  <Download size={16} />
-                  <span>Télécharger vidéo</span>
-                </button>
-                <button disabled={busy} onClick={() => void importLocalVideoDesktop()}>
-                  <FileInput size={16} />
-                  <span>Importer vidéo</span>
+                <button disabled={busy} onClick={() => void createYoutubeProjectDesktop()}>
+                  <Plus size={16} />
+                  <span>Créer projet</span>
                 </button>
                 <button disabled={busy} onClick={() => void updateYtdlpDesktop()}>
                   <RotateCcw size={16} />
@@ -1070,33 +1112,9 @@ function DesktopApp() {
                 </button>
               </div>
             </div>
-            {youtubeFormats.length > 0 && (
-              <label className="youtube-format-picker">
-                <span>{youtubeFormatTitle ? `Format pour ${youtubeFormatTitle}` : "Format vidéo"}</span>
-                <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
-                  {youtubeFormats.map((format) => (
-                    <option key={format.id} value={format.formatSelector}>
-                      {format.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+            {youtubeCreateWarning && <p className="warning">{youtubeCreateWarning}</p>}
             <p className="desktop-state">{state}</p>
-            {downloadProgress && downloadProgress.stage !== "done" && (
-              <div className="download-progress" role="status" aria-live="polite">
-                <div>
-                  <span>{downloadProgress.message}</span>
-                  {downloadProgress.percent !== undefined && <strong>{downloadProgress.percent.toFixed(1)}%</strong>}
-                </div>
-                <progress value={downloadProgress.percent ?? undefined} max="100" />
-                <small>
-                  {[downloadProgress.speed, downloadProgress.eta ? `ETA ${downloadProgress.eta}` : ""]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </small>
-              </div>
-            )}
+            {renderDownloadProgress()}
             {downloadProgress?.stage === "done" && (
               <p className="desktop-state">Téléchargement terminé. Le projet a été ajouté à la liste.</p>
             )}
@@ -1163,6 +1181,50 @@ function DesktopApp() {
               <span>{exportingTrack === "translation" ? "Export traduction..." : "Export traduction"}</span>
             </button>
           </div>
+
+          <section className="media-tools">
+            <div>
+              <strong>Vidéo</strong>
+              <span>
+                {loadedProject.videoPath
+                  ? "Vidéo disponible"
+                  : loadedProject.youtubeUrl
+                    ? "Ajoute la vidéo depuis YouTube ou depuis ton ordinateur."
+                    : "Aucune vidéo attachée."}
+              </span>
+            </div>
+            <div className="media-tool-actions">
+              <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)}>
+                <RotateCcw size={16} />
+                <span>Analyser formats</span>
+              </button>
+              <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
+                <Download size={16} />
+                <span>{loadedProject.videoPath ? "Remplacer vidéo" : "Télécharger vidéo"}</span>
+              </button>
+              <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
+                <FileInput size={16} />
+                <span>{loadedProject.videoPath ? "Remplacer par fichier" : "Importer fichier"}</span>
+              </button>
+            </div>
+            {loadedProject.youtubeUrlWarning && <p className="warning">{loadedProject.youtubeUrlWarning}</p>}
+            {youtubeFormats.length > 0 && youtubeFormatProjectId === loadedProject.id && (
+              <label className="youtube-format-picker">
+                <span>{youtubeFormatTitle ? `Format pour ${youtubeFormatTitle}` : "Format vidéo"}</span>
+                <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
+                  {youtubeFormats.map((format) => (
+                    <option key={format.id} value={format.formatSelector}>
+                      {format.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {renderDownloadProgress()}
+            {downloadProgress?.stage === "done" && (
+              <p className="desktop-state">Téléchargement terminé. La vidéo est attachée au projet.</p>
+            )}
+          </section>
 
           {mediaUrl && (
             <section className="player-band">

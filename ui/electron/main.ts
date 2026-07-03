@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  createYoutubeProject,
   createTranscriptSnapshot,
   downloadYoutube,
   exportVideo,
@@ -21,7 +22,13 @@ import {
   trashProject,
   updateYtdlp,
 } from "./library.js";
-import type { DownloadYoutubeRequest, ExportSubtitleTrack, WorkspaceTranscript, WorkspaceTranslation } from "./types.js";
+import type {
+  CreateYoutubeProjectRequest,
+  DownloadYoutubeRequest,
+  ExportSubtitleTrack,
+  WorkspaceTranscript,
+  WorkspaceTranslation,
+} from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,7 +81,10 @@ function registerIpc(): void {
   ipcMain.handle("video:export", async (_event, projectId: string, track: ExportSubtitleTrack) =>
     exportVideo(projectId, track),
   );
-  ipcMain.handle("video:import-local", async () => importLocalVideo());
+  ipcMain.handle("video:import-local", async (_event, projectId?: string) => importLocalVideo(projectId));
+  ipcMain.handle("youtube:create-project", async (_event, request: CreateYoutubeProjectRequest) =>
+    createYoutubeProject(request),
+  );
   ipcMain.handle("youtube:list-formats", async (_event, url: string) => listYoutubeFormats(url));
   ipcMain.handle("youtube:download", async (event, request: DownloadYoutubeRequest) =>
     downloadYoutube(request, (progress) => event.sender.send("youtube:progress", progress)),

@@ -5,6 +5,8 @@ export type DesktopProject = {
   updatedAt: string;
   youtubeUrl?: string;
   youtubeId?: string;
+  youtubeUrlUnverified?: boolean;
+  youtubeUrlWarning?: string;
   videoPath?: string;
   transcriptPath?: string;
   translationPath?: string;
@@ -53,6 +55,7 @@ export type DownloadProgress = {
 
 export type DownloadYoutubeRequest = {
   url: string;
+  projectId?: string;
   title?: string;
   formatSelector?: string;
 };
@@ -60,6 +63,16 @@ export type DownloadYoutubeRequest = {
 export type DownloadYoutubeResult = {
   project: DesktopProject;
   videoPath: string;
+};
+
+export type CreateYoutubeProjectRequest = {
+  url: string;
+  title?: string;
+};
+
+export type CreateYoutubeProjectResult = {
+  project: DesktopProject;
+  warning?: string;
 };
 
 export type YoutubeFormatOption = {

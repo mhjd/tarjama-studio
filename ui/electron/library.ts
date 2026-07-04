@@ -31,7 +31,8 @@ const PROJECT_FILE = "project.json";
 const TRANSCRIPT_FILE = "transcript.json";
 const CURRENT_FILE = "current.json";
 const TRANSLATION_FILE = "translation.json";
-const SUBTITLE_FONT_NAME = "Noto Naskh Arabic";
+const ARABIC_SUBTITLE_FONT_NAME = "Noto Naskh Arabic";
+const LATIN_SUBTITLE_FONT_NAME = "Arial";
 
 export function libraryDir(): string {
   return path.join(app.getPath("userData"), "projects");
@@ -1606,13 +1607,19 @@ type SubtitleCue = {
   text: string;
 };
 
-async function writeAssSubtitles(filePath: string, cues: SubtitleCue[], style: ExportSubtitleStyle): Promise<void> {
+async function writeAssSubtitles(
+  filePath: string,
+  cues: SubtitleCue[],
+  style: ExportSubtitleStyle,
+  track: ExportSubtitleTrack,
+): Promise<void> {
   const usable = cues.filter((cue) => cue.text.trim() && cue.end > cue.start);
   if (!usable.length) throw new Error("Aucun sous-titre non vide à exporter");
+  const fontName = track === "translation" ? LATIN_SUBTITLE_FONT_NAME : ARABIC_SUBTITLE_FONT_NAME;
   const defaultStyle =
     style === "black-band"
-      ? `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1`
-      : `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`;
+      ? `Style: Default,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1`
+      : `Style: Default,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`;
   const lines = [
     "[Script Info]",
     "Title: Ashrafent export",
@@ -1690,7 +1697,7 @@ export async function exportVideo(
   const outDir = exportsDir(projectId);
   const stem = `${filenameTimestamp()}_${createHash("sha1").update(selection.filePath).digest("hex").slice(0, 8)}`;
   const assPath = path.join(outDir, `${stem}.ass`);
-  await writeAssSubtitles(assPath, cues, subtitleStyle);
+  await writeAssSubtitles(assPath, cues, subtitleStyle, track);
   const ffmpeg = await resolveTool("ffmpeg");
   const durationForProgress = Math.max(project.durationSeconds ?? 0, ...cues.map((cue) => cue.end));
   emitProgress?.({

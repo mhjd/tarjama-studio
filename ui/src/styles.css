@@ -503,15 +503,84 @@ input {
   padding: 0.75rem 1rem 0;
 }
 
+.document-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
 .document-strip .state,
 .document-strip .error {
   margin: 0;
 }
 
-.subtitle-style-picker {
+.action-menu {
+  position: relative;
+}
+
+.action-menu summary {
   align-items: center;
+  background: var(--field);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
   display: inline-flex;
+  font-weight: 600;
   gap: 0.45rem;
+  min-height: 2.35rem;
+  padding: 0 0.8rem;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.action-menu summary::after {
+  color: var(--muted);
+  content: "▾";
+  font-size: 0.8rem;
+}
+
+.action-menu summary::marker,
+.action-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.action-menu[open] summary {
+  border-color: var(--accent);
+}
+
+.action-menu-content {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+  display: grid;
+  gap: 0.45rem;
+  left: 0;
+  min-width: 15rem;
+  padding: 0.6rem;
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  z-index: 24;
+}
+
+.action-menu-export .action-menu-content {
+  left: auto;
+  min-width: 17rem;
+  right: 0;
+}
+
+.action-menu-content button {
+  justify-content: start;
+  width: 100%;
+}
+
+.subtitle-style-picker {
+  display: grid;
+  gap: 0.35rem;
 }
 
 .subtitle-style-picker span {
@@ -523,7 +592,7 @@ input {
 
 .subtitle-style-picker select {
   min-height: 2.35rem;
-  min-width: 8.5rem;
+  width: 100%;
 }
 
 .translation-tools {
@@ -1020,9 +1089,30 @@ input:disabled {
 
   .document-strip,
   .video-meta,
+  .document-actions,
   .subtitle-style-picker {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .document-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .document-actions > button,
+  .action-menu,
+  .action-menu summary {
+    width: 100%;
+  }
+
+  .action-menu-content,
+  .action-menu-export .action-menu-content {
+    left: 0;
+    min-width: 0;
+    position: static;
+    right: auto;
+    width: 100%;
   }
 
   .subtitle-style-picker select {

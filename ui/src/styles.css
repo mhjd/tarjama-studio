@@ -521,7 +521,7 @@ input {
   position: relative;
 }
 
-.action-menu summary {
+.action-menu-trigger {
   align-items: center;
   background: var(--field);
   border: 1px solid var(--border-soft);
@@ -537,18 +537,13 @@ input {
   white-space: nowrap;
 }
 
-.action-menu summary::after {
+.action-menu-trigger::after {
   color: var(--muted);
   content: "▾";
   font-size: 0.8rem;
 }
 
-.action-menu summary::marker,
-.action-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.action-menu[open] summary {
+.action-menu.open .action-menu-trigger {
   border-color: var(--accent);
 }
 
@@ -576,6 +571,17 @@ input {
 .action-menu-content button {
   justify-content: start;
   width: 100%;
+}
+
+.youtube-download-choice {
+  align-items: end;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: minmax(16rem, 1fr) auto;
+}
+
+.youtube-download-choice button {
+  white-space: nowrap;
 }
 
 .subtitle-style-picker {
@@ -1102,7 +1108,7 @@ input:disabled {
 
   .document-actions > button,
   .action-menu,
-  .action-menu summary {
+  .action-menu-trigger {
     width: 100%;
   }
 
@@ -1113,6 +1119,10 @@ input:disabled {
     position: static;
     right: auto;
     width: 100%;
+  }
+
+  .youtube-download-choice {
+    grid-template-columns: 1fr;
   }
 
   .subtitle-style-picker select {

@@ -112,6 +112,7 @@ type Translation = {
 type ExportTrack = "arabic" | "translation";
 type ExportSubtitleStyle = "black-band" | "outline";
 type DesktopView = "library" | "editor";
+type DesktopActionMenu = "transcription" | "translation" | "export" | null;
 
 type ExportJob = {
   id: string;
@@ -452,12 +453,14 @@ function DesktopApp() {
   const [copyState, setCopyState] = useState("Copier prompt");
   const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
   const [exportSubtitleStyle, setExportSubtitleStyle] = useState<ExportSubtitleStyle>("black-band");
+  const [openActionMenu, setOpenActionMenu] = useState<DesktopActionMenu>(null);
   const [saveState, setSaveState] = useState("Sauvegarder");
   const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
   const [focusedSegmentId, setFocusedSegmentId] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const autosaveTimer = useRef<number | null>(null);
   const segmentRefs = useRef(new Map<string, HTMLElement>());
+  const actionMenusRef = useRef<HTMLDivElement | null>(null);
 
   const activeProjects = useMemo(
     () => library?.projects.filter((project) => !project.archivedAt) ?? [],
@@ -503,6 +506,24 @@ function DesktopApp() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    if (!openActionMenu) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!actionMenusRef.current?.contains(event.target as Node)) {
+        setOpenActionMenu(null);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpenActionMenu(null);
+    }
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openActionMenu]);
 
   const applyLoadedProject = useCallback((loaded: DesktopProjectLoad) => {
     setLoadedProject(loaded.project);
@@ -1179,89 +1200,140 @@ function DesktopApp() {
               <strong>{loadedProject.title}</strong>
               <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
             </div>
-            <div className="document-actions">
+            <div className="document-actions" ref={actionMenusRef}>
               <button disabled={!transcript || editorLocked} onClick={() => void createSavePointDesktop()}>
                 <Save size={16} />
                 <span>{saveState}</span>
               </button>
-              <button disabled={!transcript || editorLocked} onClick={() => void copyTranslationPromptDesktop()}>
-                <Copy size={16} />
-                <span>{copyState}</span>
-              </button>
 
-              <details className="action-menu">
-                <summary>Transcription</summary>
-                <div className="action-menu-content">
-                  <button disabled={busy || isHistoryPreview || !loadedProjectHasVideo} onClick={() => void importTranscriptDesktop(loadedProject)}>
-                    <Upload size={16} />
-                    <span>{loadedProject.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
-                  </button>
-                </div>
-              </details>
-
-              <details className="action-menu">
-                <summary>Traduction</summary>
-                <div className="action-menu-content">
-                  <button disabled={!transcript || editorLocked || !loadedProjectHasVideo} onClick={() => setPasteImportOpen(true)}>
-                    <ClipboardPaste size={16} />
-                    <span>Coller traduction</span>
-                  </button>
-                  <button disabled={!transcript || editorLocked || !loadedProjectHasVideo} onClick={() => void importTranslationFileDesktop()}>
-                    <Upload size={16} />
-                    <span>{attachedTranslation ? "Remplacer traduction" : "Importer traduction"}</span>
-                  </button>
-                </div>
-              </details>
-
-              <details className="action-menu">
-                <summary>Vidéo</summary>
-                <div className="action-menu-content">
-                  <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)}>
-                    <RotateCcw size={16} />
-                    <span>Choisir la qualité YouTube</span>
-                  </button>
-                  <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
-                    <Download size={16} />
-                    <span>{loadedProject.videoPath ? "Remplacer depuis YouTube" : "Télécharger depuis YouTube"}</span>
-                  </button>
-                  <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
-                    <FileInput size={16} />
-                    <span>{loadedProject.videoPath ? "Remplacer par une vidéo locale" : "Importer une vidéo locale"}</span>
-                  </button>
-                </div>
-              </details>
-
-              <details className="action-menu action-menu-export">
-                <summary>Exporter</summary>
-                <div className="action-menu-content">
-                  <label className="subtitle-style-picker">
-                    <span>Style sous-titres</span>
-                    <select
-                      value={exportSubtitleStyle}
-                      onChange={(event) => setExportSubtitleStyle(event.target.value as ExportSubtitleStyle)}
+              <div className={`action-menu ${openActionMenu === "transcription" ? "open" : ""}`}>
+                <button
+                  className="action-menu-trigger"
+                  onClick={() => setOpenActionMenu((value) => (value === "transcription" ? null : "transcription"))}
+                >
+                  <span>Transcription</span>
+                </button>
+                {openActionMenu === "transcription" && (
+                  <div className="action-menu-content">
+                    <button
+                      disabled={busy || isHistoryPreview || !loadedProjectHasVideo}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void importTranscriptDesktop(loadedProject);
+                      }}
                     >
-                      <option value="black-band">Fond noir</option>
-                      <option value="outline">Texte seul</option>
-                    </select>
-                  </label>
-                  <button disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic")}>
-                    <Download size={16} />
-                    <span>{exportingTrack === "arabic" ? "Export arabe..." : "Export arabe"}</span>
-                  </button>
-                  <button disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic", true)}>
-                    <ExternalLink size={16} />
-                    <span>{exportingTrack === "arabic" ? "Ouverture..." : "Export+ouvrir arabe"}</span>
-                  </button>
-                  <button disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation")}>
-                    <Download size={16} />
-                    <span>{exportingTrack === "translation" ? "Export traduction..." : "Export traduction"}</span>
-                  </button>
-                  <button disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("translation", true)}>
-                    <ExternalLink size={16} />
-                    <span>{exportingTrack === "translation" ? "Ouverture..." : "Export+ouvrir traduction"}</span>
-                  </button>
-                </div>
-              </details>
+                      <Upload size={16} />
+                      <span>{loadedProject.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className={`action-menu ${openActionMenu === "translation" ? "open" : ""}`}>
+                <button
+                  className="action-menu-trigger"
+                  onClick={() => setOpenActionMenu((value) => (value === "translation" ? null : "translation"))}
+                >
+                  <span>Traduction</span>
+                </button>
+                {openActionMenu === "translation" && (
+                  <div className="action-menu-content">
+                    <button
+                      disabled={!transcript || editorLocked}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void copyTranslationPromptDesktop();
+                      }}
+                    >
+                      <Copy size={16} />
+                      <span>{copyState}</span>
+                    </button>
+                    <button
+                      disabled={!transcript || editorLocked || !loadedProjectHasVideo}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        setPasteImportOpen(true);
+                      }}
+                    >
+                      <ClipboardPaste size={16} />
+                      <span>Coller traduction</span>
+                    </button>
+                    <button
+                      disabled={!transcript || editorLocked || !loadedProjectHasVideo}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void importTranslationFileDesktop();
+                      }}
+                    >
+                    <Upload size={16} />
+                      <span>{attachedTranslation ? "Remplacer traduction" : "Importer traduction"}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className={`action-menu action-menu-export ${openActionMenu === "export" ? "open" : ""}`}>
+                <button
+                  className="action-menu-trigger"
+                  onClick={() => setOpenActionMenu((value) => (value === "export" ? null : "export"))}
+                >
+                  <span>Exporter</span>
+                </button>
+                {openActionMenu === "export" && (
+                  <div className="action-menu-content">
+                    <label className="subtitle-style-picker">
+                      <span>Style sous-titres</span>
+                      <select
+                        value={exportSubtitleStyle}
+                        onChange={(event) => setExportSubtitleStyle(event.target.value as ExportSubtitleStyle)}
+                      >
+                        <option value="black-band">Fond noir</option>
+                        <option value="outline">Texte seul</option>
+                      </select>
+                    </label>
+                    <button
+                      disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void exportVideoDesktop("arabic");
+                      }}
+                    >
+                      <Download size={16} />
+                      <span>{exportingTrack === "arabic" ? "Export arabe..." : "Export arabe"}</span>
+                    </button>
+                    <button
+                      disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void exportVideoDesktop("arabic", true);
+                      }}
+                    >
+                      <ExternalLink size={16} />
+                      <span>{exportingTrack === "arabic" ? "Ouverture..." : "Export+ouvrir arabe"}</span>
+                    </button>
+                    <button
+                      disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void exportVideoDesktop("translation");
+                      }}
+                    >
+                      <Download size={16} />
+                      <span>{exportingTrack === "translation" ? "Export traduction..." : "Export traduction"}</span>
+                    </button>
+                    <button
+                      disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void exportVideoDesktop("translation", true);
+                      }}
+                    >
+                      <ExternalLink size={16} />
+                      <span>{exportingTrack === "translation" ? "Ouverture..." : "Export+ouvrir traduction"}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1276,19 +1348,36 @@ function DesktopApp() {
                     : "Importe une vidéo avant transcription, traduction ou export."}
               </span>
             </div>
+            <div className="media-tool-actions">
+              <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)}>
+                <RotateCcw size={16} />
+                <span>Choisir la qualité à télécharger</span>
+              </button>
+              <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
+                <FileInput size={16} />
+                <span>{loadedProject.videoPath ? "Remplacer par une vidéo locale" : "Importer une vidéo locale"}</span>
+              </button>
+            </div>
             {loadedProject.youtubeUrlWarning && <p className="warning">{loadedProject.youtubeUrlWarning}</p>}
             {youtubeFormats.length > 0 && youtubeFormatProjectId === loadedProject.id && (
-              <label className="youtube-format-picker">
-                <span>{youtubeFormatTitle ? `Format pour ${youtubeFormatTitle}` : "Format vidéo"}</span>
-                <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
-                  {youtubeFormats.map((format) => (
-                    <option key={format.id} value={format.formatSelector}>
-                      {format.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="youtube-download-choice">
+                <label className="youtube-format-picker">
+                  <span>{youtubeFormatTitle ? `Qualité à télécharger pour ${youtubeFormatTitle}` : "Qualité à télécharger"}</span>
+                  <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
+                    {youtubeFormats.map((format) => (
+                      <option key={format.id} value={format.formatSelector}>
+                        {format.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button disabled={busy || !selectedYoutubeFormat} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
+                  <Download size={16} />
+                  <span>{loadedProject.videoPath ? "Remplacer depuis YouTube" : "Télécharger depuis YouTube"}</span>
+                </button>
+              </div>
             )}
+            {busy && <p className="desktop-state">{state}</p>}
             {renderDownloadProgress()}
             {downloadProgress?.stage === "done" && (
               <p className="desktop-state">Téléchargement terminé. La vidéo est attachée au projet.</p>

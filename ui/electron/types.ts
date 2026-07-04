@@ -148,3 +148,5 @@ export type DesktopExportResult = {
 };
 
 export type ExportSubtitleTrack = "arabic" | "translation";
+
+export type ExportSubtitleStyle = "black-band" | "outline";

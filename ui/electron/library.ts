@@ -12,6 +12,7 @@ import type {
   DesktopProject,
   DesktopProjectLoad,
   DesktopSnapshotInfo,
+  ExportSubtitleStyle,
   ExportSubtitleTrack,
   DownloadProgress,
   DownloadYoutubeRequest,
@@ -1537,7 +1538,7 @@ type SubtitleCue = {
   text: string;
 };
 
-async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise<void> {
+async function writeAssSubtitles(filePath: string, cues: SubtitleCue[], style: ExportSubtitleStyle): Promise<void> {
   const usable = cues.filter((cue) => cue.text.trim() && cue.end > cue.start);
   if (!usable.length) throw new Error("Aucun sous-titre non vide à exporter");
   const lines = [
@@ -1558,9 +1559,11 @@ async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
   for (const cue of usable) {
-    lines.push(
-      `Dialogue: 0,${assTimestamp(cue.start)},${assTimestamp(cue.end)},SubtitleBackground,,0,0,0,,{\\an2\\pos(640,720)\\p1\\c&H000000&\\alpha&H20&}m -640 -132 l 640 -132 l 640 0 l -640 0 l -640 -132`,
-    );
+    if (style === "black-band") {
+      lines.push(
+        `Dialogue: 0,${assTimestamp(cue.start)},${assTimestamp(cue.end)},SubtitleBackground,,0,0,0,,{\\an2\\pos(640,720)\\p1\\c&H000000&\\alpha&H20&}m -640 -132 l 640 -132 l 640 0 l -640 0 l -640 -132`,
+      );
+    }
     lines.push(`Dialogue: 1,${assTimestamp(cue.start)},${assTimestamp(cue.end)},Default,,0,0,0,,${assText(cue.text)}`);
   }
   await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -1582,7 +1585,9 @@ export async function exportVideo(
   projectId: string,
   track: ExportSubtitleTrack,
   openAfter = false,
+  style: ExportSubtitleStyle = "black-band",
 ): Promise<DesktopExportResult | null> {
+  const subtitleStyle: ExportSubtitleStyle = style === "outline" ? "outline" : "black-band";
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
   if (!transcript) throw new Error("Transcription absente");
@@ -1618,7 +1623,7 @@ export async function exportVideo(
   const outDir = exportsDir(projectId);
   const stem = `${filenameTimestamp()}_${createHash("sha1").update(selection.filePath).digest("hex").slice(0, 8)}`;
   const assPath = path.join(outDir, `${stem}.ass`);
-  await writeAssSubtitles(assPath, cues);
+  await writeAssSubtitles(assPath, cues, subtitleStyle);
   const ffmpeg = await resolveTool("ffmpeg");
   await runTool(
     ffmpeg,

@@ -148,6 +148,7 @@ type DesktopExportResult = {
 };
 
 type DesktopExportSubtitleTrack = "arabic" | "translation";
+type DesktopExportSubtitleStyle = "black-band" | "outline";
 
 interface Window {
   ashrafentDesktop?: {
@@ -166,7 +167,12 @@ interface Window {
       replace: boolean
     ): Promise<ImportTranslationResult>;
     saveTranslation(projectId: string, translation: DesktopTranslation): Promise<DesktopProjectLoad>;
-    exportVideo(projectId: string, track: DesktopExportSubtitleTrack, openAfter?: boolean): Promise<DesktopExportResult | null>;
+    exportVideo(
+      projectId: string,
+      track: DesktopExportSubtitleTrack,
+      openAfter?: boolean,
+      style?: DesktopExportSubtitleStyle
+    ): Promise<DesktopExportResult | null>;
     importLocalVideo(projectId?: string): Promise<DownloadYoutubeResult | null>;
     createYoutubeProject(request: CreateYoutubeProjectRequest): Promise<CreateYoutubeProjectResult>;
     listYoutubeFormats(url: string): Promise<YoutubeFormatsResult>;

@@ -3,6 +3,7 @@ import type {
   CreateYoutubeProjectRequest,
   CreateYoutubeProjectResult,
   DesktopLibraryInfo,
+  ExportSubtitleStyle,
   ExportSubtitleTrack,
   DesktopProject,
   DesktopProjectLoad,
@@ -45,8 +46,12 @@ const api = {
   ): Promise<ImportTranslationResult> => ipcRenderer.invoke("translation:import-content", projectId, content, filename, replace),
   saveTranslation: (projectId: string, translation: WorkspaceTranslation): Promise<DesktopProjectLoad> =>
     ipcRenderer.invoke("translation:save", projectId, translation),
-  exportVideo: (projectId: string, track: ExportSubtitleTrack, openAfter?: boolean): Promise<DesktopExportResult | null> =>
-    ipcRenderer.invoke("video:export", projectId, track, openAfter),
+  exportVideo: (
+    projectId: string,
+    track: ExportSubtitleTrack,
+    openAfter?: boolean,
+    style?: ExportSubtitleStyle,
+  ): Promise<DesktopExportResult | null> => ipcRenderer.invoke("video:export", projectId, track, openAfter, style),
   importLocalVideo: (projectId?: string): Promise<DownloadYoutubeResult | null> =>
     ipcRenderer.invoke("video:import-local", projectId),
   createYoutubeProject: (request: CreateYoutubeProjectRequest): Promise<CreateYoutubeProjectResult> =>

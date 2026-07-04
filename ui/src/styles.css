@@ -508,6 +508,24 @@ input {
   margin: 0;
 }
 
+.subtitle-style-picker {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.45rem;
+}
+
+.subtitle-style-picker span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.subtitle-style-picker select {
+  min-height: 2.35rem;
+  min-width: 8.5rem;
+}
+
 .translation-tools {
   align-items: center;
   display: inline-flex;
@@ -1001,9 +1019,14 @@ input:disabled {
   }
 
   .document-strip,
-  .video-meta {
+  .video-meta,
+  .subtitle-style-picker {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .subtitle-style-picker select {
+    width: 100%;
   }
 
   .undo-button {

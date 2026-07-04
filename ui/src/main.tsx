@@ -110,6 +110,7 @@ type Translation = {
 };
 
 type ExportTrack = "arabic" | "translation";
+type ExportSubtitleStyle = "black-band" | "outline";
 type DesktopView = "library" | "editor";
 
 type ExportJob = {
@@ -450,6 +451,7 @@ function DesktopApp() {
   const [pastedTranslation, setPastedTranslation] = useState("");
   const [copyState, setCopyState] = useState("Copier prompt");
   const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
+  const [exportSubtitleStyle, setExportSubtitleStyle] = useState<ExportSubtitleStyle>("black-band");
   const [saveState, setSaveState] = useState("Sauvegarder");
   const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
   const [focusedSegmentId, setFocusedSegmentId] = useState("");
@@ -974,7 +976,7 @@ function DesktopApp() {
         await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
       }
       setState("Choisis l'emplacement du fichier exporté...");
-      const result = await desktop.exportVideo(selectedProjectId, track, openAfter);
+      const result = await desktop.exportVideo(selectedProjectId, track, openAfter, exportSubtitleStyle);
       if (result) {
         setState(result.opened ? `Export créé et ouvert: ${result.outputPath}` : `Export créé: ${result.outputPath}`);
       } else {
@@ -1197,6 +1199,16 @@ function DesktopApp() {
               <Upload size={16} />
               <span>{attachedTranslation ? "Remplacer traduction" : "Importer traduction"}</span>
             </button>
+            <label className="subtitle-style-picker">
+              <span>Style sous-titres</span>
+              <select
+                value={exportSubtitleStyle}
+                onChange={(event) => setExportSubtitleStyle(event.target.value as ExportSubtitleStyle)}
+              >
+                <option value="black-band">Fond noir</option>
+                <option value="outline">Texte seul</option>
+              </select>
+            </label>
             <button disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)} onClick={() => void exportVideoDesktop("arabic")}>
               <Download size={16} />
               <span>{exportingTrack === "arabic" ? "Export arabe..." : "Export arabe"}</span>

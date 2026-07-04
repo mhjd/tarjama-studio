@@ -150,6 +150,15 @@ type DesktopExportResult = {
 type DesktopExportSubtitleTrack = "arabic" | "translation";
 type DesktopExportSubtitleStyle = "black-band" | "outline";
 
+type ExportProgress = {
+  projectId: string;
+  track: DesktopExportSubtitleTrack;
+  stage: "render" | "done";
+  message: string;
+  percent?: number;
+  eta?: string;
+};
+
 interface Window {
   ashrafentDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
@@ -179,6 +188,7 @@ interface Window {
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;
     updateYtdlp(): Promise<UpdateToolResult>;
     onDownloadProgress(callback: (progress: DownloadProgress) => void): () => void;
+    onExportProgress(callback: (progress: ExportProgress) => void): () => void;
     setProjectArchived(projectId: string, archived: boolean): Promise<DesktopProject>;
     openProjectFolder(projectId: string): Promise<void>;
     trashProject(projectId: string): Promise<void>;

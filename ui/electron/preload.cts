@@ -3,6 +3,7 @@ import type {
   CreateYoutubeProjectRequest,
   CreateYoutubeProjectResult,
   DesktopLibraryInfo,
+  ExportProgress,
   ExportSubtitleStyle,
   ExportSubtitleTrack,
   DesktopProject,
@@ -64,6 +65,11 @@ const api = {
     const listener = (_event: Electron.IpcRendererEvent, progress: DownloadProgress) => callback(progress);
     ipcRenderer.on("youtube:progress", listener);
     return () => ipcRenderer.removeListener("youtube:progress", listener);
+  },
+  onExportProgress: (callback: (progress: ExportProgress) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: ExportProgress) => callback(progress);
+    ipcRenderer.on("video:export-progress", listener);
+    return () => ipcRenderer.removeListener("video:export-progress", listener);
   },
   setProjectArchived: (projectId: string, archived: boolean): Promise<DesktopProject> =>
     ipcRenderer.invoke("project:archive", projectId, archived),

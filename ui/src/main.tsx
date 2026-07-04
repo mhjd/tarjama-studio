@@ -441,6 +441,7 @@ function DesktopApp() {
   const [busy, setBusy] = useState(false);
   const [copiedProjectId, setCopiedProjectId] = useState("");
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -502,6 +503,15 @@ function DesktopApp() {
       setState(progress.message);
     });
   }, [desktop]);
+
+  useEffect(() => {
+    if (!desktop) return;
+    return desktop.onExportProgress((progress) => {
+      if (selectedProjectId && progress.projectId !== selectedProjectId) return;
+      setExportProgress(progress);
+      setState(progress.message);
+    });
+  }, [desktop, selectedProjectId]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -989,6 +999,7 @@ function DesktopApp() {
       return;
     }
     setExportingTrack(track);
+    setExportProgress(null);
     setError("");
     setState(track === "arabic" ? "Préparation de l'export arabe..." : "Préparation de l'export traduction...");
     try {
@@ -1000,12 +1011,15 @@ function DesktopApp() {
       const result = await desktop.exportVideo(selectedProjectId, track, openAfter, exportSubtitleStyle);
       if (result) {
         setState(result.opened ? `Export créé et ouvert: ${result.outputPath}` : `Export créé: ${result.outputPath}`);
+        setExportProgress(null);
       } else {
         setState("Export annulé.");
+        setExportProgress(null);
       }
     } catch (err) {
       setState("Export échoué.");
       setError(err instanceof Error ? err.message : "Export impossible");
+      setExportProgress(null);
     } finally {
       setExportingTrack(null);
     }
@@ -1093,6 +1107,20 @@ function DesktopApp() {
         <small>
           {[downloadProgress.speed, downloadProgress.eta ? `ETA ${downloadProgress.eta}` : ""].filter(Boolean).join(" · ")}
         </small>
+      </div>
+    );
+  }
+
+  function renderExportProgress() {
+    if (!exportProgress || exportProgress.stage === "done") return null;
+    return (
+      <div className="download-progress export-progress" role="status" aria-live="polite">
+        <div>
+          <span>{exportProgress.message}</span>
+          {exportProgress.percent !== undefined && <strong>{exportProgress.percent.toFixed(1)}%</strong>}
+        </div>
+        <progress value={exportProgress.percent ?? undefined} max="100" />
+        <small>{exportProgress.eta ? `ETA ${exportProgress.eta}` : "Rendu en cours..."}</small>
       </div>
     );
   }
@@ -1287,7 +1315,7 @@ function DesktopApp() {
                         value={exportSubtitleStyle}
                         onChange={(event) => setExportSubtitleStyle(event.target.value as ExportSubtitleStyle)}
                       >
-                        <option value="black-band">Fond noir</option>
+                        <option value="black-band">Bande noire</option>
                         <option value="outline">Texte seul</option>
                       </select>
                     </label>
@@ -1336,6 +1364,7 @@ function DesktopApp() {
               </div>
             </div>
           </div>
+          {renderExportProgress()}
 
           <section className="media-tools">
             <div>

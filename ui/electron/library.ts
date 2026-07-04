@@ -12,6 +12,7 @@ import type {
   DesktopProject,
   DesktopProjectLoad,
   DesktopSnapshotInfo,
+  ExportProgress,
   ExportSubtitleStyle,
   ExportSubtitleTrack,
   DownloadProgress,
@@ -994,6 +995,73 @@ function handleYtdlpProgressChunk(
   }
 }
 
+function formatEtaSeconds(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  const secs = total % 60;
+  const minutes = Math.floor(total / 60) % 60;
+  const hours = Math.floor(total / 3600);
+  if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+function parseFfmpegOutTime(line: string): number | null {
+  const trimmed = line.trim();
+  const milliseconds = trimmed.match(/^out_time_ms=(-?\d+)$/);
+  if (milliseconds) {
+    const value = Number(milliseconds[1]);
+    if (Number.isFinite(value) && value >= 0) return value / 1_000_000;
+  }
+  const timestamp = trimmed.match(/^out_time=(\d+):(\d+):(\d+(?:\.\d+)?)$/);
+  if (timestamp) {
+    const [, hours, minutes, seconds] = timestamp;
+    return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+  }
+  return null;
+}
+
+function createFfmpegExportProgressHandler(
+  projectId: string,
+  track: ExportSubtitleTrack,
+  durationSeconds: number,
+  emit?: (progress: ExportProgress) => void,
+): (chunk: string) => void {
+  let buffer = "";
+  const startedAt = Date.now();
+  return (chunk: string) => {
+    if (!emit) return;
+    buffer += chunk;
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const outTime = parseFfmpegOutTime(line);
+      if (outTime !== null && durationSeconds > 0) {
+        const percent = Math.max(0, Math.min(99.9, (outTime / durationSeconds) * 100));
+        const elapsed = (Date.now() - startedAt) / 1000;
+        const remaining = percent > 0 ? (elapsed * (100 - percent)) / percent : 0;
+        emit({
+          projectId,
+          track,
+          stage: "render",
+          percent,
+          eta: percent > 0 ? formatEtaSeconds(remaining) : undefined,
+          message: `Export ${track === "arabic" ? "arabe" : "traduction"} en cours`,
+        });
+        continue;
+      }
+      if (line.trim() === "progress=end") {
+        emit({
+          projectId,
+          track,
+          stage: "done",
+          percent: 100,
+          eta: "00:00",
+          message: "Export terminé",
+        });
+      }
+    }
+  };
+}
+
 async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: boolean; video: boolean }> {
   const output = await new Promise<string>((resolve, reject) => {
     const child = spawn(ffmpeg, ["-hide_banner", "-i", filePath], { windowsHide: true });
@@ -1538,13 +1606,9 @@ type SubtitleCue = {
   text: string;
 };
 
-async function writeAssSubtitles(filePath: string, cues: SubtitleCue[], style: ExportSubtitleStyle): Promise<void> {
+async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise<void> {
   const usable = cues.filter((cue) => cue.text.trim() && cue.end > cue.start);
   if (!usable.length) throw new Error("Aucun sous-titre non vide à exporter");
-  const defaultStyle =
-    style === "black-band"
-      ? `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,4,0,2,80,80,42,1`
-      : `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`;
   const lines = [
     "[Script Info]",
     "Title: Ashrafent export",
@@ -1556,7 +1620,7 @@ async function writeAssSubtitles(filePath: string, cues: SubtitleCue[], style: E
     "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    defaultStyle,
+    `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -1572,11 +1636,40 @@ function ffmpegFilterPath(filePath: string): string {
   return filePath.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
 }
 
-async function subtitleFilter(assPath: string): Promise<string> {
+function filterNumber(value: number): string {
+  return value.toFixed(3).replace(/\.?0+$/, "");
+}
+
+function subtitleActivityExpression(cues: SubtitleCue[]): string {
+  const intervals = cues
+    .filter((cue) => cue.text.trim() && cue.end > cue.start)
+    .map((cue) => ({ start: Math.max(0, cue.start), end: Math.max(0, cue.end) }))
+    .sort((left, right) => left.start - right.start);
+  const merged: Array<{ start: number; end: number }> = [];
+  for (const interval of intervals) {
+    const previous = merged.at(-1);
+    if (previous && interval.start <= previous.end + 0.15) {
+      previous.end = Math.max(previous.end, interval.end);
+    } else {
+      merged.push({ ...interval });
+    }
+  }
+  return merged
+    .map((interval) => `between(t\\,${filterNumber(interval.start)}\\,${filterNumber(interval.end)})`)
+    .join("+");
+}
+
+async function subtitleFilter(assPath: string, style: ExportSubtitleStyle, cues: SubtitleCue[]): Promise<string> {
   const fontsDir = await resolveDesktopResource(path.join("desktop-bin", "fonts"));
   const base = `subtitles='${ffmpegFilterPath(assPath)}'`;
-  if (!fontsDir) return base;
-  return `${base}:fontsdir='${ffmpegFilterPath(fontsDir)}'`;
+  const subtitles = fontsDir ? `${base}:fontsdir='${ffmpegFilterPath(fontsDir)}'` : base;
+  if (style !== "black-band") return subtitles;
+
+  const active = subtitleActivityExpression(cues);
+  if (!active) return subtitles;
+  const enable = active.length < 18_000 ? `:enable='${active}'` : "";
+  const box = `drawbox=x=0:y=ih-132:w=iw:h=112:color=black@0.86:t=fill${enable}`;
+  return `${box},${subtitles}`;
 }
 
 export async function exportVideo(
@@ -1584,6 +1677,7 @@ export async function exportVideo(
   track: ExportSubtitleTrack,
   openAfter = false,
   style: ExportSubtitleStyle = "black-band",
+  emitProgress?: (progress: ExportProgress) => void,
 ): Promise<DesktopExportResult | null> {
   const subtitleStyle: ExportSubtitleStyle = style === "outline" ? "outline" : "black-band";
   const project = await readProject(projectId);
@@ -1621,19 +1715,30 @@ export async function exportVideo(
   const outDir = exportsDir(projectId);
   const stem = `${filenameTimestamp()}_${createHash("sha1").update(selection.filePath).digest("hex").slice(0, 8)}`;
   const assPath = path.join(outDir, `${stem}.ass`);
-  await writeAssSubtitles(assPath, cues, subtitleStyle);
+  await writeAssSubtitles(assPath, cues);
   const ffmpeg = await resolveTool("ffmpeg");
+  const durationForProgress = Math.max(project.durationSeconds ?? 0, ...cues.map((cue) => cue.end));
+  emitProgress?.({
+    projectId,
+    track,
+    stage: "render",
+    percent: 0,
+    message: `Export ${track === "arabic" ? "arabe" : "traduction"} en cours`,
+  });
   await runTool(
     ffmpeg,
     [
       "-hide_banner",
       "-loglevel",
       "error",
+      "-nostats",
+      "-progress",
+      "pipe:1",
       "-y",
       "-i",
       videoPath,
       "-vf",
-      await subtitleFilter(assPath),
+      await subtitleFilter(assPath, subtitleStyle, cues),
       "-c:v",
       "libx264",
       "-preset",
@@ -1647,7 +1752,16 @@ export async function exportVideo(
       selection.filePath,
     ],
     projectDir(projectId),
+    createFfmpegExportProgressHandler(projectId, track, durationForProgress, emitProgress),
   );
+  emitProgress?.({
+    projectId,
+    track,
+    stage: "done",
+    percent: 100,
+    eta: "00:00",
+    message: "Export terminé",
+  });
   if (!(await pathExists(selection.filePath))) throw new Error("ffmpeg n'a pas produit le fichier attendu");
   if (openAfter) {
     const openError = await shell.openPath(selection.filePath);

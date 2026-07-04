@@ -87,7 +87,9 @@ function registerIpc(): void {
       track: ExportSubtitleTrack,
       openAfter?: boolean,
       style?: ExportSubtitleStyle,
-    ) => exportVideo(projectId, track, Boolean(openAfter), style),
+    ) => exportVideo(projectId, track, Boolean(openAfter), style, (progress) =>
+      _event.sender.send("video:export-progress", progress),
+    ),
   );
   ipcMain.handle("video:import-local", async (_event, projectId?: string) => importLocalVideo(projectId));
   ipcMain.handle("youtube:create-project", async (_event, request: CreateYoutubeProjectRequest) =>

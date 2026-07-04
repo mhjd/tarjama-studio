@@ -53,6 +53,15 @@ export type DownloadProgress = {
   eta?: string;
 };
 
+export type ExportProgress = {
+  projectId: string;
+  track: ExportSubtitleTrack;
+  stage: "render" | "done";
+  message: string;
+  percent?: number;
+  eta?: string;
+};
+
 export type DownloadYoutubeRequest = {
   url: string;
   projectId?: string;

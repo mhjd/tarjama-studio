@@ -888,6 +888,13 @@ input:disabled {
   min-height: 1rem;
 }
 
+.export-progress {
+  margin: 0 auto;
+  max-width: 1280px;
+  padding: 0 1rem;
+  width: 100%;
+}
+
 .warning {
   background: var(--warning);
   border: 1px solid var(--warning-border);

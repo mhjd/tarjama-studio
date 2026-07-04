@@ -1315,7 +1315,7 @@ function DesktopApp() {
                         value={exportSubtitleStyle}
                         onChange={(event) => setExportSubtitleStyle(event.target.value as ExportSubtitleStyle)}
                       >
-                        <option value="black-band">Bande noire</option>
+                        <option value="black-band">Fond noir</option>
                         <option value="outline">Texte seul</option>
                       </select>
                     </label>

@@ -1606,9 +1606,13 @@ type SubtitleCue = {
   text: string;
 };
 
-async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise<void> {
+async function writeAssSubtitles(filePath: string, cues: SubtitleCue[], style: ExportSubtitleStyle): Promise<void> {
   const usable = cues.filter((cue) => cue.text.trim() && cue.end > cue.start);
   if (!usable.length) throw new Error("Aucun sous-titre non vide à exporter");
+  const defaultStyle =
+    style === "black-band"
+      ? `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1`
+      : `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`;
   const lines = [
     "[Script Info]",
     "Title: Ashrafent export",
@@ -1620,7 +1624,7 @@ async function writeAssSubtitles(filePath: string, cues: SubtitleCue[]): Promise
     "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    `Style: Default,${SUBTITLE_FONT_NAME},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`,
+    defaultStyle,
     "",
     "[Events]",
     "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
@@ -1636,40 +1640,11 @@ function ffmpegFilterPath(filePath: string): string {
   return filePath.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
 }
 
-function filterNumber(value: number): string {
-  return value.toFixed(3).replace(/\.?0+$/, "");
-}
-
-function subtitleActivityExpression(cues: SubtitleCue[]): string {
-  const intervals = cues
-    .filter((cue) => cue.text.trim() && cue.end > cue.start)
-    .map((cue) => ({ start: Math.max(0, cue.start), end: Math.max(0, cue.end) }))
-    .sort((left, right) => left.start - right.start);
-  const merged: Array<{ start: number; end: number }> = [];
-  for (const interval of intervals) {
-    const previous = merged.at(-1);
-    if (previous && interval.start <= previous.end + 0.15) {
-      previous.end = Math.max(previous.end, interval.end);
-    } else {
-      merged.push({ ...interval });
-    }
-  }
-  return merged
-    .map((interval) => `between(t\\,${filterNumber(interval.start)}\\,${filterNumber(interval.end)})`)
-    .join("+");
-}
-
-async function subtitleFilter(assPath: string, style: ExportSubtitleStyle, cues: SubtitleCue[]): Promise<string> {
+async function subtitleFilter(assPath: string): Promise<string> {
   const fontsDir = await resolveDesktopResource(path.join("desktop-bin", "fonts"));
   const base = `subtitles='${ffmpegFilterPath(assPath)}'`;
-  const subtitles = fontsDir ? `${base}:fontsdir='${ffmpegFilterPath(fontsDir)}'` : base;
-  if (style !== "black-band") return subtitles;
-
-  const active = subtitleActivityExpression(cues);
-  if (!active) return subtitles;
-  const enable = active.length < 18_000 ? `:enable='${active}'` : "";
-  const box = `drawbox=x=0:y=ih-132:w=iw:h=112:color=black@0.86:t=fill${enable}`;
-  return `${box},${subtitles}`;
+  if (!fontsDir) return base;
+  return `${base}:fontsdir='${ffmpegFilterPath(fontsDir)}'`;
 }
 
 export async function exportVideo(
@@ -1715,7 +1690,7 @@ export async function exportVideo(
   const outDir = exportsDir(projectId);
   const stem = `${filenameTimestamp()}_${createHash("sha1").update(selection.filePath).digest("hex").slice(0, 8)}`;
   const assPath = path.join(outDir, `${stem}.ass`);
-  await writeAssSubtitles(assPath, cues);
+  await writeAssSubtitles(assPath, cues, subtitleStyle);
   const ffmpeg = await resolveTool("ffmpeg");
   const durationForProgress = Math.max(project.durationSeconds ?? 0, ...cues.map((cue) => cue.end));
   emitProgress?.({
@@ -1738,7 +1713,7 @@ export async function exportVideo(
       "-i",
       videoPath,
       "-vf",
-      await subtitleFilter(assPath, subtitleStyle, cues),
+      await subtitleFilter(assPath),
       "-c:v",
       "libx264",
       "-preset",

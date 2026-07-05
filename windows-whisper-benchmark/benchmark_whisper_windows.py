@@ -16,7 +16,6 @@ from typing import Any
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
 WORK_DIR = Path.cwd().resolve()
 DEFAULT_INPUT = "audio.mp3"
 DEFAULT_OUTPUT_DIR = "results"
@@ -52,45 +51,43 @@ class RunLog:
             handle.flush()
 
 
-def resolve_input(path_text: str) -> Path:
+def ensure_inside_work_dir(path: Path, label: str) -> Path:
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(WORK_DIR)
+    except ValueError:
+        raise SystemExit(f"{label} must stay inside the benchmark folder: {WORK_DIR}")
+    return resolved
+
+
+def resolve_work_path(path_text: str, label: str) -> Path:
     path = Path(path_text).expanduser()
     if not path.is_absolute():
         path = WORK_DIR / path
-    return path.resolve()
+    return ensure_inside_work_dir(path, label)
+
+
+def resolve_input(path_text: str) -> Path:
+    return resolve_work_path(path_text, "input")
 
 
 def resolve_output_dir(path_text: str) -> Path:
-    path = Path(path_text).expanduser()
-    if not path.is_absolute():
-        path = WORK_DIR / path
-    return path.resolve()
+    return resolve_work_path(path_text, "output-dir")
+
+
+def resolve_log_path(path_text: str) -> Path:
+    return resolve_work_path(path_text, "log")
 
 
 def resolve_ffmpeg(explicit: str | None = None) -> str:
-    candidates: list[str | None] = [
-        explicit,
-        str(WORK_DIR / "ffmpeg.exe"),
-        str(WORK_DIR / "ffmpeg/ffmpeg.exe"),
-        str(WORK_DIR / "ffmpeg"),
-        str(SCRIPT_DIR / "ffmpeg.exe"),
-        str(SCRIPT_DIR / "ffmpeg/ffmpeg.exe"),
-        str(SCRIPT_DIR / "ffmpeg"),
-        shutil.which("ffmpeg"),
-    ]
-    if os.name == "nt":
-        candidates.extend(
-            [
-                str(REPO_ROOT / "ui/desktop-bin/win32-x64/ffmpeg.exe"),
-                str(REPO_ROOT / "ui/release/win-unpacked/resources/desktop-bin/win32-x64/ffmpeg.exe"),
-            ]
-        )
-    elif platform.system() == "Darwin":
-        candidates.extend(
-            [
-                str(REPO_ROOT / "ui/desktop-bin/darwin-arm64/ffmpeg"),
-                str(REPO_ROOT / "ui/release/win-unpacked/resources/desktop-bin/darwin-arm64/ffmpeg"),
-            ]
-        )
+    candidates: list[str | None]
+    if explicit:
+        explicit_path = resolve_work_path(explicit, "ffmpeg")
+        if explicit_path.name.lower() not in {"ffmpeg", "ffmpeg.exe"}:
+            raise SystemExit("Explicit ffmpeg path must point to a file named ffmpeg or ffmpeg.exe")
+        candidates = [str(explicit_path)]
+    else:
+        candidates = [shutil.which("ffmpeg")]
     try:
         import imageio_ffmpeg  # type: ignore
 
@@ -118,6 +115,18 @@ def resolve_ffmpeg(explicit: str | None = None) -> str:
             if result.returncode == 0:
                 return candidate
     raise SystemExit("ffmpeg is not available. Install ffmpeg or run the desktop tools preparation first.")
+
+
+def validate_models(models: list[str]) -> None:
+    allowed = set(DEFAULT_MODELS)
+    unknown = [model for model in models if model not in allowed]
+    if unknown:
+        raise SystemExit(
+            "Unsupported model(s): "
+            + ", ".join(unknown)
+            + "\nAllowed models: "
+            + ", ".join(DEFAULT_MODELS)
+        )
 
 
 def make_sample(ffmpeg: str, source: Path, target: Path, seconds: int) -> float:
@@ -308,9 +317,10 @@ def print_summary(results: list[dict[str, Any]], sample_seconds: float) -> None:
 
 
 def parent_main(args: argparse.Namespace) -> None:
-    log = RunLog(resolve_input(args.log))
+    log = RunLog(resolve_log_path(args.log))
     log.write("=== Benchmark started ===")
     log.write(f"Working directory: {WORK_DIR}")
+    validate_models(args.models)
 
     source = resolve_input(args.input)
     log.write(f"Input: {source}")
@@ -318,10 +328,10 @@ def parent_main(args: argparse.Namespace) -> None:
         log.write(f"ERROR input missing: {source}")
         raise SystemExit(f"Input file does not exist: {source}")
 
-    ffmpeg = resolve_ffmpeg(args.ffmpeg)
-    log.write(f"ffmpeg: {ffmpeg}")
     run_dir = resolve_output_dir(args.output_dir) / now_stamp()
     sample_path = run_dir / f"sample_{args.sample_seconds}s.wav"
+    ffmpeg = resolve_ffmpeg(args.ffmpeg)
+    log.write(f"ffmpeg: {ffmpeg}")
     log.write(f"Creating sample: {sample_path}")
     sample_duration = make_sample(ffmpeg, source, sample_path, args.sample_seconds)
     log.write(f"Sample duration: {sample_duration:.1f}s")
@@ -375,14 +385,14 @@ def parent_main(args: argparse.Namespace) -> None:
 
 
 def child_main(args: argparse.Namespace) -> None:
-    log = RunLog(Path(args.log).expanduser().resolve())
+    log = RunLog(resolve_log_path(args.log))
     log.write(f"CHILD import dependencies model={args.model}")
     import torch
     import soundfile as sf
     from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
     log.write(f"CHILD read sample model={args.model} sample={args.sample}")
-    sample_path = Path(args.sample)
+    sample_path = resolve_work_path(args.sample, "sample")
     audio, sample_rate = sf.read(str(sample_path), dtype="float32")
     if getattr(audio, "ndim", 1) > 1:
         audio = audio.mean(axis=1)
@@ -407,13 +417,14 @@ def child_main(args: argparse.Namespace) -> None:
     started = time.monotonic()
     print(f"[load] model={args.model} device={device} dtype={torch_dtype} batch={batch_size}", flush=True)
     log.write(f"CHILD load processor model={args.model}")
-    processor = AutoProcessor.from_pretrained(args.model)
+    processor = AutoProcessor.from_pretrained(args.model, trust_remote_code=False)
     log.write(f"CHILD load model weights model={args.model}")
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         args.model,
         torch_dtype=torch_dtype,
         low_cpu_mem_usage=True,
         use_safetensors=True,
+        trust_remote_code=False,
     )
     log.write(f"CHILD move model to device model={args.model} device={device}")
     model.to(device)
@@ -438,7 +449,7 @@ def child_main(args: argparse.Namespace) -> None:
     text = str(result.get("text", "")).strip()
     log.write(f"CHILD write result model={args.model} chars={len(text)}")
     write_json(
-        Path(args.output),
+        resolve_work_path(args.output, "output"),
         {
             "model": args.model,
             "engine": "transformers",

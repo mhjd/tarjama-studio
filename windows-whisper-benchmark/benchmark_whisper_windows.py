@@ -15,8 +15,12 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT_DIR = ROOT / "data/model_outputs/whisper_windows_benchmark"
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+WORK_DIR = Path.cwd().resolve()
+DEFAULT_INPUT = "audio.mp3"
+DEFAULT_OUTPUT_DIR = "results"
+DEFAULT_LOG = "log.txt"
 DEFAULT_MODELS = [
     "openai/whisper-tiny",
     "openai/whisper-base",
@@ -36,20 +40,55 @@ def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+class RunLog:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    def write(self, message: str) -> None:
+        timestamp = datetime.now().isoformat(timespec="seconds")
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(f"[{timestamp}] {message}\n")
+            handle.flush()
+
+
+def resolve_input(path_text: str) -> Path:
+    path = Path(path_text).expanduser()
+    if not path.is_absolute():
+        path = WORK_DIR / path
+    return path.resolve()
+
+
+def resolve_output_dir(path_text: str) -> Path:
+    path = Path(path_text).expanduser()
+    if not path.is_absolute():
+        path = WORK_DIR / path
+    return path.resolve()
+
+
 def resolve_ffmpeg(explicit: str | None = None) -> str:
-    candidates: list[str | None] = [explicit, shutil.which("ffmpeg")]
+    candidates: list[str | None] = [
+        explicit,
+        str(WORK_DIR / "ffmpeg.exe"),
+        str(WORK_DIR / "ffmpeg/ffmpeg.exe"),
+        str(WORK_DIR / "ffmpeg"),
+        str(SCRIPT_DIR / "ffmpeg.exe"),
+        str(SCRIPT_DIR / "ffmpeg/ffmpeg.exe"),
+        str(SCRIPT_DIR / "ffmpeg"),
+        shutil.which("ffmpeg"),
+    ]
     if os.name == "nt":
         candidates.extend(
             [
-                str(ROOT / "ui/desktop-bin/win32-x64/ffmpeg.exe"),
-                str(ROOT / "ui/release/win-unpacked/resources/desktop-bin/win32-x64/ffmpeg.exe"),
+                str(REPO_ROOT / "ui/desktop-bin/win32-x64/ffmpeg.exe"),
+                str(REPO_ROOT / "ui/release/win-unpacked/resources/desktop-bin/win32-x64/ffmpeg.exe"),
             ]
         )
     elif platform.system() == "Darwin":
         candidates.extend(
             [
-                str(ROOT / "ui/desktop-bin/darwin-arm64/ffmpeg"),
-                str(ROOT / "ui/release/win-unpacked/resources/desktop-bin/darwin-arm64/ffmpeg"),
+                str(REPO_ROOT / "ui/desktop-bin/darwin-arm64/ffmpeg"),
+                str(REPO_ROOT / "ui/release/win-unpacked/resources/desktop-bin/darwin-arm64/ffmpeg"),
             ]
         )
     try:
@@ -69,7 +108,7 @@ def resolve_ffmpeg(explicit: str | None = None) -> str:
             try:
                 result = subprocess.run(
                     [candidate, "-version"],
-                    cwd=ROOT,
+                    cwd=WORK_DIR,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     check=False,
@@ -99,7 +138,7 @@ def make_sample(ffmpeg: str, source: Path, target: Path, seconds: int) -> float:
         "16000",
         str(target),
     ]
-    result = subprocess.run(command, cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    result = subprocess.run(command, cwd=WORK_DIR, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     if result.returncode != 0:
         raise SystemExit(f"Could not create benchmark sample with ffmpeg:\n{result.stderr.strip()}")
 
@@ -134,6 +173,7 @@ def run_one_model(
     task: str,
     batch_size: int,
     chunk_length_s: int,
+    log: RunLog,
 ) -> dict[str, Any]:
     safe_name = (
         model.replace("/", "__")
@@ -165,13 +205,16 @@ def run_one_model(
         str(batch_size),
         "--chunk-length-s",
         str(chunk_length_s),
+        "--log",
+        str(log.path),
     ]
 
     started = time.monotonic()
+    log.write(f"START model={model}")
     with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open("w", encoding="utf-8") as stderr:
         process = subprocess.Popen(
             command,
-            cwd=ROOT,
+            cwd=WORK_DIR,
             text=True,
             stdout=stdout,
             stderr=stderr,
@@ -182,6 +225,7 @@ def run_one_model(
         except subprocess.TimeoutExpired:
             kill_process_tree(process)
             elapsed = time.monotonic() - started
+            log.write(f"TIMEOUT model={model} elapsed={elapsed:.1f}s")
             return {
                 "model": model,
                 "status": "timeout",
@@ -197,6 +241,7 @@ def run_one_model(
         stderr_tail = ""
         if stderr_path.exists():
             stderr_tail = stderr_path.read_text(encoding="utf-8", errors="replace")[-4000:]
+        log.write(f"FAILED model={model} returncode={returncode} elapsed={elapsed:.1f}s")
         return {
             "model": model,
             "status": "failed",
@@ -209,6 +254,7 @@ def run_one_model(
         }
 
     if not result_path.exists():
+        log.write(f"FAILED model={model} elapsed={elapsed:.1f}s missing result.json")
         return {
             "model": model,
             "status": "failed",
@@ -221,6 +267,7 @@ def run_one_model(
         }
 
     payload = json.loads(result_path.read_text(encoding="utf-8"))
+    log.write(f"OK model={model} elapsed={elapsed:.1f}s")
     payload.update(
         {
             "model": model,
@@ -261,14 +308,23 @@ def print_summary(results: list[dict[str, Any]], sample_seconds: float) -> None:
 
 
 def parent_main(args: argparse.Namespace) -> None:
-    source = Path(args.input).expanduser().resolve()
+    log = RunLog(resolve_input(args.log))
+    log.write("=== Benchmark started ===")
+    log.write(f"Working directory: {WORK_DIR}")
+
+    source = resolve_input(args.input)
+    log.write(f"Input: {source}")
     if not source.exists():
+        log.write(f"ERROR input missing: {source}")
         raise SystemExit(f"Input file does not exist: {source}")
 
     ffmpeg = resolve_ffmpeg(args.ffmpeg)
-    run_dir = Path(args.output_dir).expanduser().resolve() / now_stamp()
+    log.write(f"ffmpeg: {ffmpeg}")
+    run_dir = resolve_output_dir(args.output_dir) / now_stamp()
     sample_path = run_dir / f"sample_{args.sample_seconds}s.wav"
+    log.write(f"Creating sample: {sample_path}")
     sample_duration = make_sample(ffmpeg, source, sample_path, args.sample_seconds)
+    log.write(f"Sample duration: {sample_duration:.1f}s")
 
     results: list[dict[str, Any]] = []
     metadata = {
@@ -283,6 +339,7 @@ def parent_main(args: argparse.Namespace) -> None:
         "python": sys.executable,
     }
     write_json(run_dir / "metadata.json", metadata)
+    log.write(f"Metadata written: {run_dir / 'metadata.json'}")
 
     print(f"[sample] {sample_path}")
     for model in args.models:
@@ -296,27 +353,35 @@ def parent_main(args: argparse.Namespace) -> None:
             task=args.task,
             batch_size=args.batch_size,
             chunk_length_s=args.chunk_length_s,
+            log=log,
         )
         result["realtime_factor"] = (
             float(result.get("elapsed_seconds") or 0) / sample_duration if sample_duration > 0 else None
         )
         results.append(result)
         write_json(run_dir / "summary.json", {"metadata": metadata, "results": results})
+        log.write(f"Summary updated: {run_dir / 'summary.json'}")
 
         if result["status"] != "ok" and not args.continue_after_failure:
             print(f"[stop] {model} ended with status={result['status']}; not trying larger models.")
+            log.write(f"STOP after model={model} status={result['status']}")
             break
 
     print_summary(results, sample_duration)
     print("")
     print(f"Full report: {run_dir / 'summary.json'}")
+    log.write(f"Full report: {run_dir / 'summary.json'}")
+    log.write("=== Benchmark finished ===")
 
 
 def child_main(args: argparse.Namespace) -> None:
+    log = RunLog(Path(args.log).expanduser().resolve())
+    log.write(f"CHILD import dependencies model={args.model}")
     import torch
     import soundfile as sf
     from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
+    log.write(f"CHILD read sample model={args.model} sample={args.sample}")
     sample_path = Path(args.sample)
     audio, sample_rate = sf.read(str(sample_path), dtype="float32")
     if getattr(audio, "ndim", 1) > 1:
@@ -341,15 +406,19 @@ def child_main(args: argparse.Namespace) -> None:
 
     started = time.monotonic()
     print(f"[load] model={args.model} device={device} dtype={torch_dtype} batch={batch_size}", flush=True)
+    log.write(f"CHILD load processor model={args.model}")
     processor = AutoProcessor.from_pretrained(args.model)
+    log.write(f"CHILD load model weights model={args.model}")
     model = AutoModelForSpeechSeq2Seq.from_pretrained(
         args.model,
         torch_dtype=torch_dtype,
         low_cpu_mem_usage=True,
         use_safetensors=True,
     )
+    log.write(f"CHILD move model to device model={args.model} device={device}")
     model.to(device)
 
+    log.write(f"CHILD build pipeline model={args.model}")
     asr = pipeline(
         "automatic-speech-recognition",
         model=model,
@@ -362,10 +431,12 @@ def child_main(args: argparse.Namespace) -> None:
         return_timestamps=True,
     )
     loaded_at = time.monotonic()
+    log.write(f"CHILD transcribe start model={args.model}")
     result = asr({"array": audio, "sampling_rate": sample_rate}, generate_kwargs={"language": args.language, "task": args.task})
     finished_at = time.monotonic()
 
     text = str(result.get("text", "")).strip()
+    log.write(f"CHILD write result model={args.model} chars={len(text)}")
     write_json(
         Path(args.output),
         {
@@ -385,20 +456,22 @@ def child_main(args: argparse.Namespace) -> None:
             "chunks_count": len(result.get("chunks", [])),
         },
     )
+    log.write(f"CHILD done model={args.model} elapsed={finished_at - started:.1f}s")
     print(f"[done] chars={len(text)} elapsed={finished_at - started:.1f}s", flush=True)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Benchmark Whisper model sizes on a Windows machine using a 2-minute sample.",
+        description="Benchmark Whisper model sizes on a machine using audio.mp3 from the current folder.",
     )
     sub = parser.add_subparsers(dest="command")
 
     run = sub.add_parser("run", help="Run the benchmark")
-    run.add_argument("--input", required=True, help="Path to a video or audio file")
-    run.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
+    run.add_argument("--input", default=DEFAULT_INPUT, help="Path to an audio/video file. Default: ./audio.mp3")
+    run.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
+    run.add_argument("--log", default=DEFAULT_LOG, help="Incremental log file. Default: ./log.txt")
     run.add_argument("--ffmpeg", default=None, help="Optional explicit ffmpeg executable path")
-    run.add_argument("--sample-seconds", type=int, default=120)
+    run.add_argument("--sample-seconds", type=int, default=60)
     run.add_argument("--timeout-seconds", type=int, default=600)
     run.add_argument("--models", nargs="+", default=DEFAULT_MODELS)
     run.add_argument("--language", default="arabic")
@@ -420,6 +493,7 @@ def build_parser() -> argparse.ArgumentParser:
     child.add_argument("--task", default="transcribe")
     child.add_argument("--batch-size", type=int, default=0)
     child.add_argument("--chunk-length-s", type=int, default=30)
+    child.add_argument("--log", required=True)
     child.set_defaults(func=child_main)
     return parser
 

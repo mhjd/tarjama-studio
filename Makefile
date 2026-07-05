@@ -7,7 +7,7 @@ tui:
 	.venv-asr/bin/python scripts/ashrafent_cli.py tui
 
 whisper-benchmark:
-	.venv-asr/bin/python scripts/benchmark_whisper_windows.py $(ARGS)
+	cd windows-whisper-benchmark && ../.venv-asr/bin/python benchmark_whisper_windows.py $(ARGS)
 
 dev-api:
 	.venv-app/bin/python scripts/serve_mvp.py

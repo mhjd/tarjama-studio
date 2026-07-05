@@ -22,3 +22,7 @@ data/raw/
 data/model_outputs/
 data/workspaces/
 exports/
+
+windows-whisper-benchmark/log.txt
+windows-whisper-benchmark/RAPPORT.md
+windows-whisper-benchmark/results/

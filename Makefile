@@ -1,10 +1,13 @@
-.PHONY: cli tui dev-api dev-api-reload dev-ui build-ui electron-build desktop-tools desktop-build desktop-package desktop-dist desktop-win-portable windows-test-package desktop-dev npm-audit
+.PHONY: cli tui whisper-benchmark dev-api dev-api-reload dev-ui build-ui electron-build desktop-tools desktop-build desktop-package desktop-dist desktop-win-portable windows-test-package desktop-dev npm-audit
 
 cli:
 	.venv-asr/bin/python scripts/ashrafent_cli.py $(ARGS)
 
 tui:
 	.venv-asr/bin/python scripts/ashrafent_cli.py tui
+
+whisper-benchmark:
+	.venv-asr/bin/python scripts/benchmark_whisper_windows.py $(ARGS)
 
 dev-api:
 	.venv-app/bin/python scripts/serve_mvp.py

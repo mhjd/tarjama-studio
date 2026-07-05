@@ -20,3 +20,4 @@ Règles :
 - Considérer un timeout ou un crash comme une limite de la machine, sauf bug évident d’installation.
 - Corriger seulement les problèmes d’environnement utiles au benchmark : Python, dépendances, ffmpeg, PyTorch/CUDA.
 - À la fin, écrire `RAPPORT.md` dans ce dossier avec : modèle recommandé, temps par modèle, erreurs/timeouts, et chemin de `results/.../summary.json`.
+- Si le script a dû être modifié pour fonctionner sur Windows, documenter chaque modification dans `RAPPORT.md` : problème observé, fichier/zone corrigée, raison de la correction, et impact pour les prochains ordinateurs sans agent.

@@ -10,6 +10,8 @@ import {
   importTranslationContent,
   importTranslationFile,
   importTranscript,
+  importCleanedTranscriptContent,
+  importCleanedTranscriptFile,
   listYoutubeFormats,
   loadProject,
   loadSnapshot,
@@ -24,6 +26,8 @@ import {
   projectForTranscription,
   resolveTool,
   saveGeneratedTranscript,
+  renderCleanupPrompt,
+  openCleanupPromptFile,
 } from "./library.js";
 import { clearGroqApiKey, groqKeyStatus, saveGroqApiKey, transcribeWithGroq } from "./groq.js";
 import type {
@@ -74,6 +78,16 @@ function registerIpc(): void {
     restoreSnapshot(projectId, snapshotId),
   );
   ipcMain.handle("transcript:import", async (_event, projectId: string) => importTranscript(projectId));
+  ipcMain.handle("transcript:cleanup-prompt", async (_event, projectId: string, transcript: WorkspaceTranscript) =>
+    renderCleanupPrompt(projectId, transcript),
+  );
+  ipcMain.handle("transcript:open-cleanup-prompt", async () => openCleanupPromptFile());
+  ipcMain.handle("transcript:import-cleaned-file", async (_event, projectId: string) =>
+    importCleanedTranscriptFile(projectId),
+  );
+  ipcMain.handle("transcript:import-cleaned-content", async (_event, projectId: string, content: string) =>
+    importCleanedTranscriptContent(projectId, content),
+  );
   ipcMain.handle("translation:import-file", async (_event, projectId: string) => importTranslationFile(projectId));
   ipcMain.handle(
     "translation:import-content",

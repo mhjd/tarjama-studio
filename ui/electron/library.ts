@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import type {
   CreateYoutubeProjectRequest,
   CreateYoutubeProjectResult,
+  CleanedTranscriptImportResult,
   DesktopExportResult,
   DesktopLibraryInfo,
   DesktopProject,
@@ -184,6 +185,50 @@ function validateTranscript(payload: unknown): WorkspaceTranscript {
     }
   });
   return transcript;
+}
+
+function validateCleanedTranscript(
+  current: WorkspaceTranscript,
+  payload: unknown,
+): { transcript: WorkspaceTranscript; summary: Omit<CleanedTranscriptImportResult, "loaded"> } {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("La transcription nettoyée doit être un objet JSON");
+  }
+  const cleaned = payload as WorkspaceTranscript;
+  const currentKeys = Object.keys(current).sort();
+  const cleanedKeys = Object.keys(cleaned).sort();
+  if (JSON.stringify(currentKeys) !== JSON.stringify(cleanedKeys)) {
+    const missing = currentKeys.filter((key) => !cleanedKeys.includes(key));
+    const extra = cleanedKeys.filter((key) => !currentKeys.includes(key));
+    throw new Error(`Les clés principales ont changé. Manquantes: ${missing.join(", ") || "aucune"}; ajoutées: ${extra.join(", ") || "aucune"}`);
+  }
+  for (const key of ["corpus_id", "audio_path", "source_transcript", "source_model", "project_instructions", "created_at", "updated_at"] as const) {
+    if (key in current && cleaned[key] !== current[key]) {
+      throw new Error(`Le champ protégé ${key} a été modifié`);
+    }
+  }
+  const transcript = validateTranscript(cleaned);
+  const requiredSegmentKeys = ["end", "id", "start", "text", "translation"];
+  transcript.segments.forEach((segment, index) => {
+    const keys = Object.keys(segment).sort();
+    if (JSON.stringify(keys) !== JSON.stringify(requiredSegmentKeys)) {
+      throw new Error(`Les clés du segment ${index} ont changé`);
+    }
+    if (!segment.text.trim()) throw new Error(`Le segment ${index} est vide`);
+  });
+  const beforeById = new Map(current.segments.map((segment) => [String(segment.id), segment]));
+  const afterById = new Map(transcript.segments.map((segment) => [String(segment.id), segment]));
+  const keptIds = [...beforeById.keys()].filter((id) => afterById.has(id));
+  return {
+    transcript,
+    summary: {
+      before: current.segments.length,
+      after: transcript.segments.length,
+      added: [...afterById.keys()].filter((id) => !beforeById.has(id)).length,
+      removed: [...beforeById.keys()].filter((id) => !afterById.has(id)).length,
+      changed: keptIds.filter((id) => beforeById.get(id)?.text !== afterById.get(id)?.text).length,
+    },
+  };
 }
 
 function transcriptComparable(transcript: WorkspaceTranscript | null): string {
@@ -1219,6 +1264,103 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
   };
   await writeProject(updatedProject);
   return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
+}
+
+async function cleanupPromptFile(): Promise<string> {
+  const target = path.join(app.getPath("userData"), "prompts", "transcript_cleanup.md");
+  if (await pathExists(target)) return target;
+  const bundled = await resolveDesktopResource(path.join("prompts", "transcript_cleanup.md"));
+  if (!bundled) throw new Error("Le modèle de prompt de nettoyage est introuvable");
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.copyFile(bundled, target);
+  return target;
+}
+
+export async function renderCleanupPrompt(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+): Promise<string> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const clean = transcriptWithoutSegmentTranslations(validateTranscript(transcript));
+  clean.corpus_id = projectId;
+  const template = await fs.readFile(await cleanupPromptFile(), "utf8");
+  return template
+    .replaceAll("{{corpus_id}}", projectId)
+    .replaceAll("{{title}}", project.title)
+    .replace("{{transcript_json}}", JSON.stringify(clean, null, 2));
+}
+
+export async function openCleanupPromptFile(): Promise<void> {
+  const error = await shell.openPath(await cleanupPromptFile());
+  if (error) throw new Error(`Impossible d'ouvrir le prompt: ${error}`);
+}
+
+async function importCleanedTranscriptPayload(
+  projectId: string,
+  payload: unknown,
+): Promise<CleanedTranscriptImportResult> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const current = await loadSavedTranscript(projectId);
+  if (!current) throw new Error("Aucune transcription à nettoyer dans ce projet");
+  const { transcript, summary } = validateCleanedTranscript(current, payload);
+  const clean = transcriptWithoutSegmentTranslations(transcript);
+  clean.corpus_id = projectId;
+  clean.updated_at = nowIso();
+  await writeSnapshot(projectId, current, "pre_cleanup");
+
+  let translationPath = project.translationPath;
+  const existingTranslationPath = translationFile(projectId);
+  if (await pathExists(existingTranslationPath)) {
+    const translation = await readJson<WorkspaceTranslation>(existingTranslationPath);
+    try {
+      assertTranslationAlignment(clean, translation);
+    } catch {
+      await writeTranslationSnapshot(projectId, translation, "pre_cleanup");
+      await fs.rm(existingTranslationPath, { force: true });
+      translationPath = undefined;
+    }
+  }
+
+  await writeJson(transcriptFile(projectId), clean);
+  await writeJson(currentFile(projectId), clean);
+  await writeSnapshot(projectId, clean, "cleaned");
+  await writeProject({
+    ...project,
+    updatedAt: nowIso(),
+    transcriptPath: transcriptFile(projectId),
+    translationPath,
+  });
+  return { loaded: await loadProject(projectId), ...summary };
+}
+
+export async function importCleanedTranscriptContent(
+  projectId: string,
+  content: string,
+): Promise<CleanedTranscriptImportResult> {
+  if (!content.trim()) throw new Error("La transcription nettoyée est vide");
+  let payload: unknown;
+  try {
+    payload = JSON.parse(content);
+  } catch (error) {
+    throw new Error(`JSON de transcription invalide: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return await importCleanedTranscriptPayload(projectId, payload);
+}
+
+export async function importCleanedTranscriptFile(
+  projectId: string,
+): Promise<CleanedTranscriptImportResult | null> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const selection = await dialog.showOpenDialog({
+    title: `Importer la transcription nettoyée pour ${project.title}`,
+    properties: ["openFile"],
+    filters: [{ name: "Transcription JSON", extensions: ["json"] }],
+  });
+  if (selection.canceled || !selection.filePaths[0]) return null;
+  return await importCleanedTranscriptContent(projectId, await fs.readFile(selection.filePaths[0], "utf8"));
 }
 
 async function copyVideoIntoProject(

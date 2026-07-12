@@ -271,6 +271,30 @@ function shortText(value: string, max = 140): string {
   return `${compact.slice(0, max - 1)}…`;
 }
 
+function cleanupPastePreview(content: string): { valid: boolean; lines: string[] } {
+  if (!content.trim()) return { valid: false, lines: [] };
+  try {
+    const payload = JSON.parse(content) as { corpus_id?: unknown; segments?: unknown };
+    if (!payload || typeof payload !== "object" || !Array.isArray(payload.segments) || !payload.segments.length) {
+      return { valid: false, lines: ["Le JSON doit contenir un tableau segments non vide."] };
+    }
+    const segments = payload.segments as Array<{ start?: unknown; end?: unknown; text?: unknown }>;
+    const first = segments[0];
+    const last = segments.at(-1)!;
+    return {
+      valid: true,
+      lines: [
+        `corpus_id: ${String(payload.corpus_id ?? "absent")}`,
+        `${segments.length} segment(s)`,
+        `Premier: ${String(first.start ?? "?")} → ${String(first.end ?? "?")} · ${shortText(String(first.text ?? ""), 90)}`,
+        `Dernier: ${String(last.start ?? "?")} → ${String(last.end ?? "?")} · ${shortText(String(last.text ?? ""), 90)}`,
+      ],
+    };
+  } catch (error) {
+    return { valid: false, lines: [`JSON invalide: ${error instanceof Error ? error.message : String(error)}`] };
+  }
+}
+
 function projectStatusLabel(project: DesktopProject): string {
   if (!project.videoPath) return "Vidéo absente";
   if (!project.transcriptPath) return "À transcrire";
@@ -457,6 +481,9 @@ function DesktopApp() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [pasteImportOpen, setPasteImportOpen] = useState(false);
   const [pastedTranslation, setPastedTranslation] = useState("");
+  const [cleanupImportOpen, setCleanupImportOpen] = useState(false);
+  const [pastedCleanupTranscript, setPastedCleanupTranscript] = useState("");
+  const [cleanupCopyState, setCleanupCopyState] = useState("Copier le prompt de nettoyage");
   const [copyState, setCopyState] = useState("Copier prompt");
   const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
   const [exportSubtitleStyle, setExportSubtitleStyle] = useState<ExportSubtitleStyle>("black-band");
@@ -481,6 +508,10 @@ function DesktopApp() {
   const isHistoryPreview = Boolean(previewTranscript);
   const displayedTranscript = previewTranscript ?? transcript;
   const editorLocked = isHistoryPreview || busy;
+  const cleanedPasteReview = useMemo(
+    () => cleanupPastePreview(pastedCleanupTranscript),
+    [pastedCleanupTranscript],
+  );
   const currentSaveSnapshot = useMemo(
     () => [...snapshots].reverse().find((snapshot) => snapshot.matches_current) ?? null,
     [snapshots]
@@ -687,6 +718,61 @@ function DesktopApp() {
     if (!desktop) return;
     setGroqKeyStatus(await desktop.clearGroqApiKey());
     setGroqApiKey("");
+  }
+
+  async function copyCleanupPromptDesktop() {
+    if (!desktop || !selectedProjectId || !transcript) return;
+    try {
+      const saved = await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
+      if (!saved.transcript) throw new Error("La transcription courante n'a pas pu être enregistrée");
+      const prompt = await desktop.cleanupTranscriptPrompt(selectedProjectId, saved.transcript);
+      await navigator.clipboard.writeText(prompt);
+      setCleanupCopyState("Prompt copié");
+      setError("");
+      window.setTimeout(() => setCleanupCopyState("Copier le prompt de nettoyage"), 1800);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Copie du prompt impossible");
+    }
+  }
+
+  function applyCleanedTranscriptResult(result: CleanedTranscriptImportResult) {
+    applyLoadedProject(result.loaded);
+    setState(
+      `Nettoyage importé: ${result.changed} modifié(s), ${result.added} ajouté(s), ${result.removed} supprimé(s)`,
+    );
+  }
+
+  async function importCleanedTranscriptFileDesktop() {
+    if (!desktop || !selectedProjectId) return;
+    await runDesktopAction("Import du nettoyage...", async () => {
+      const result = await desktop.importCleanedTranscriptFile(selectedProjectId);
+      if (result) applyCleanedTranscriptResult(result);
+    });
+  }
+
+  async function importCleanedTranscriptContentDesktop() {
+    if (!desktop || !selectedProjectId || !pastedCleanupTranscript.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await desktop.importCleanedTranscriptContent(selectedProjectId, pastedCleanupTranscript);
+      applyCleanedTranscriptResult(result);
+      setPastedCleanupTranscript("");
+      setCleanupImportOpen(false);
+      await refreshLibrary();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Import du nettoyage impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openCleanupPromptDesktop() {
+    try {
+      await desktop?.openCleanupTranscriptPrompt();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Prompt impossible à ouvrir");
+    }
   }
 
   function openDesktopProject(projectId: string) {
@@ -1342,6 +1428,36 @@ function DesktopApp() {
                       <span>Transcrire avec Groq</span>
                     </button>
                     <button
+                      disabled={busy || isHistoryPreview || !transcript}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void copyCleanupPromptDesktop();
+                      }}
+                    >
+                      <Copy size={16} />
+                      <span>{cleanupCopyState}</span>
+                    </button>
+                    <button
+                      disabled={busy || isHistoryPreview || !transcript}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        setCleanupImportOpen(true);
+                      }}
+                    >
+                      <ClipboardPaste size={16} />
+                      <span>Coller le JSON nettoyé</span>
+                    </button>
+                    <button
+                      disabled={busy || isHistoryPreview || !transcript}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void importCleanedTranscriptFileDesktop();
+                      }}
+                    >
+                      <Upload size={16} />
+                      <span>Importer le JSON nettoyé</span>
+                    </button>
+                    <button
                       disabled={busy}
                       onClick={() => {
                         setOpenActionMenu(null);
@@ -1350,6 +1466,16 @@ function DesktopApp() {
                     >
                       <KeyRound size={16} />
                       <span>Clé API Groq</span>
+                    </button>
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void openCleanupPromptDesktop();
+                      }}
+                    >
+                      <FileInput size={16} />
+                      <span>Personnaliser le prompt</span>
                     </button>
                   </div>
                 )}
@@ -1726,6 +1852,37 @@ function DesktopApp() {
               <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()}>
                 <Check size={16} />
                 <span>Importer</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {cleanupImportOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal paste-modal" role="dialog" aria-modal="true">
+            <h2>Importer la transcription nettoyée</h2>
+            <p>
+              Colle uniquement l’objet JSON complet renvoyé par le LLM. Sa structure, ses métadonnées et ses timestamps seront contrôlés avant tout remplacement.
+            </p>
+            <textarea
+              value={pastedCleanupTranscript}
+              onChange={(event) => setPastedCleanupTranscript(event.target.value)}
+              placeholder='{ "corpus_id": "...", "segments": [ ... ] }'
+            />
+            {cleanedPasteReview.lines.length > 0 && (
+              <div className={`import-preview ${cleanedPasteReview.valid ? "valid" : "invalid"}`}>
+                {cleanedPasteReview.lines.map((line) => <span key={line}>{line}</span>)}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button disabled={busy} onClick={() => setCleanupImportOpen(false)}>Annuler</button>
+              <button
+                disabled={busy || !cleanedPasteReview.valid}
+                onClick={() => void importCleanedTranscriptContentDesktop()}
+              >
+                <Check size={16} />
+                <span>Valider et importer</span>
               </button>
             </div>
           </section>

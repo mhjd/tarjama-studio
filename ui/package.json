@@ -1,7 +1,7 @@
 {
   "name": "ashrafent-ui",
   "private": true,
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Local-first Arabic transcription and translation reviewer",
   "author": "Ashrafent",
   "type": "module",
@@ -32,6 +32,10 @@
       {
         "from": "desktop-bin",
         "to": "desktop-bin"
+      },
+      {
+        "from": "../prompts",
+        "to": "prompts"
       }
     ],
     "mac": {

@@ -21,6 +21,7 @@ import type {
   YoutubeFormatsResult,
   GroqKeyStatus,
   GroqTranscriptionProgress,
+  CleanedTranscriptImportResult,
 } from "./types.js";
 
 const api = {
@@ -39,6 +40,13 @@ const api = {
     ipcRenderer.invoke("project:restore-snapshot", projectId, snapshotId),
   importTranscript: (projectId: string): Promise<ImportTranscriptResult | null> =>
     ipcRenderer.invoke("transcript:import", projectId),
+  cleanupTranscriptPrompt: (projectId: string, transcript: WorkspaceTranscript): Promise<string> =>
+    ipcRenderer.invoke("transcript:cleanup-prompt", projectId, transcript),
+  openCleanupTranscriptPrompt: (): Promise<void> => ipcRenderer.invoke("transcript:open-cleanup-prompt"),
+  importCleanedTranscriptFile: (projectId: string): Promise<CleanedTranscriptImportResult | null> =>
+    ipcRenderer.invoke("transcript:import-cleaned-file", projectId),
+  importCleanedTranscriptContent: (projectId: string, content: string): Promise<CleanedTranscriptImportResult> =>
+    ipcRenderer.invoke("transcript:import-cleaned-content", projectId, content),
   importTranslationFile: (projectId: string): Promise<ImportTranslationResult | null> =>
     ipcRenderer.invoke("translation:import-file", projectId),
   importTranslationContent: (

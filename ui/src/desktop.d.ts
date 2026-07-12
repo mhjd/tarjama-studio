@@ -173,6 +173,15 @@ type GroqTranscriptionProgress = {
   chunkCount?: number;
 };
 
+type CleanedTranscriptImportResult = {
+  loaded: DesktopProjectLoad;
+  before: number;
+  after: number;
+  changed: number;
+  added: number;
+  removed: number;
+};
+
 interface Window {
   ashrafentDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
@@ -182,6 +191,10 @@ interface Window {
     loadSnapshot(projectId: string, snapshotId: string): Promise<{ snapshot: DesktopSnapshotInfo; transcript: DesktopTranscript }>;
     restoreSnapshot(projectId: string, snapshotId?: string): Promise<DesktopProjectLoad>;
     importTranscript(projectId: string): Promise<ImportTranscriptResult | null>;
+    cleanupTranscriptPrompt(projectId: string, transcript: DesktopTranscript): Promise<string>;
+    openCleanupTranscriptPrompt(): Promise<void>;
+    importCleanedTranscriptFile(projectId: string): Promise<CleanedTranscriptImportResult | null>;
+    importCleanedTranscriptContent(projectId: string, content: string): Promise<CleanedTranscriptImportResult>;
     importTranslationFile(projectId: string): Promise<ImportTranslationResult | null>;
     importTranslationContent(
       projectId: string,

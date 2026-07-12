@@ -173,3 +173,12 @@ export type GroqTranscriptionProgress = {
   chunkIndex?: number;
   chunkCount?: number;
 };
+
+export type CleanedTranscriptImportResult = {
+  loaded: DesktopProjectLoad;
+  before: number;
+  after: number;
+  changed: number;
+  added: number;
+  removed: number;
+};

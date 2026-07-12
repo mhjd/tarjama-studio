@@ -2108,7 +2108,7 @@ function DesktopApp() {
                   </button>
                   <button onClick={() => seekBy(3)}>+3s</button>
                   <button onClick={() => seekBy(10)}>+10s</button>
-                  <button onClick={returnToInterval} title="Revenir au début de l’intervalle">
+                  <button className="interval-return" onClick={returnToInterval} title="Revenir au début de l’intervalle">
                     <RotateCcw size={16} />
                     <span>Retour intervalle</span>
                   </button>

@@ -239,7 +239,7 @@ input {
   align-items: center;
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: 4.6rem 4.6rem 6rem 5.4rem 4.6rem 4.6rem 6.4rem;
+  grid-template-columns: 4.6rem 4.6rem 6rem 4.6rem 4.6rem 8.8rem;
   justify-content: center;
 }
 
@@ -276,6 +276,10 @@ input {
 .player-nav button {
   min-width: 0;
   width: 100%;
+}
+
+.audio-controls .interval-return {
+  white-space: nowrap;
 }
 
 .player-nav {

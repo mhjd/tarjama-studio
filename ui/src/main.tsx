@@ -471,12 +471,17 @@ function DesktopApp() {
   const [previewTranscript, setPreviewTranscript] = useState<Transcript | null>(null);
   const [previewSnapshot, setPreviewSnapshot] = useState<DesktopSnapshotInfo | null>(null);
   const [showArchives, setShowArchives] = useState(false);
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectMode, setNewProjectMode] = useState<"youtube" | "local">("youtube");
+  const [newYoutubeUrl, setNewYoutubeUrl] = useState("");
+  const [newProjectTitle, setNewProjectTitle] = useState("");
+  const [newYoutubeFormats, setNewYoutubeFormats] = useState<YoutubeFormatOption[]>([]);
+  const [newSelectedYoutubeFormat, setNewSelectedYoutubeFormat] = useState("");
+  const [newYoutubeTitle, setNewYoutubeTitle] = useState("");
   const [youtubeFormats, setYoutubeFormats] = useState<YoutubeFormatOption[]>([]);
   const [selectedYoutubeFormat, setSelectedYoutubeFormat] = useState("");
   const [youtubeFormatTitle, setYoutubeFormatTitle] = useState("");
   const [youtubeFormatProjectId, setYoutubeFormatProjectId] = useState("");
-  const [youtubeCreateWarning, setYoutubeCreateWarning] = useState("");
   const [state, setState] = useState("Prêt");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -880,24 +885,97 @@ function DesktopApp() {
     window.scrollTo({ top: 0 });
   }
 
-  async function createYoutubeProjectDesktop() {
-    const url = youtubeUrl.trim();
-    if (!url) {
-      setError("Colle un lien YouTube avant de créer le projet.");
+  function resetNewProject() {
+    setNewProjectMode("youtube");
+    setNewYoutubeUrl("");
+    setNewProjectTitle("");
+    setNewYoutubeFormats([]);
+    setNewSelectedYoutubeFormat("");
+    setNewYoutubeTitle("");
+  }
+
+  function openNewProject(mode: "youtube" | "local" = "youtube") {
+    setError("");
+    resetNewProject();
+    setNewProjectMode(mode);
+    setNewProjectOpen(true);
+  }
+
+  function closeNewProject() {
+    if (busy) return;
+    setNewProjectOpen(false);
+    resetNewProject();
+    setError("");
+  }
+
+  async function analyzeNewYoutubeProject() {
+    const url = newYoutubeUrl.trim();
+    if (!desktop || !url) {
+      setError("Colle un lien YouTube avant de l’analyser.");
+      return;
+    }
+    setBusy(true);
+    setState("Analyse de la vidéo YouTube...");
+    setError("");
+    try {
+      const result = await desktop.listYoutubeFormats(url);
+      setNewYoutubeFormats(result.formats);
+      setNewSelectedYoutubeFormat(result.formats[0]?.formatSelector ?? "");
+      setNewYoutubeTitle(result.title);
+      setState(`${result.formats.length} format(s) disponible(s)`);
+    } catch (err) {
+      setState("Erreur");
+      setError(err instanceof Error ? err.message : "Analyse de la vidéo impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadNewYoutubeProject() {
+    const url = newYoutubeUrl.trim();
+    if (!desktop || !url || !newSelectedYoutubeFormat) return;
+    await runDesktopAction("Téléchargement vidéo...", async () => {
+      setDownloadProgress({ projectId: "pending", stage: "metadata", message: "Préparation du projet YouTube..." });
+      const result = await desktop.downloadYoutube({ url, formatSelector: newSelectedYoutubeFormat });
+      setSelectedProjectId(result.project.id);
+      setDesktopView("editor");
+      applyLoadedProject(await desktop.loadProject(result.project.id));
+      setDownloadProgress({ projectId: result.project.id, stage: "done", percent: 100, message: "Téléchargement terminé" });
+      setNewProjectOpen(false);
+      resetNewProject();
+    });
+  }
+
+  async function importNewLocalProjectVideo() {
+    const title = newProjectTitle.trim();
+    if (!desktop || !title) {
+      setError("Donne un titre au projet avant de choisir la vidéo.");
+      return;
+    }
+    await runDesktopAction("Choix de la vidéo...", async () => {
+      const result = await desktop.importLocalVideo(undefined, title);
+      if (!result) return;
+      setSelectedProjectId(result.project.id);
+      setDesktopView("editor");
+      applyLoadedProject(await desktop.loadProject(result.project.id));
+      setNewProjectOpen(false);
+      resetNewProject();
+    });
+  }
+
+  async function createNewLocalProjectWithoutVideo() {
+    const title = newProjectTitle.trim();
+    if (!desktop || !title) {
+      setError("Donne un titre au projet avant de le créer.");
       return;
     }
     await runDesktopAction("Création du projet...", async () => {
-      const result = await desktop?.createYoutubeProject({ url });
-      if (!result) return;
-      setYoutubeUrl("");
-      setYoutubeFormats([]);
-      setSelectedYoutubeFormat("");
-      setYoutubeFormatTitle("");
-      setYoutubeFormatProjectId("");
-      setYoutubeCreateWarning(result.warning ?? "");
+      const result = await desktop.createLocalProject(title);
       setSelectedProjectId(result.project.id);
       setDesktopView("editor");
-      setState(result.warning ? "Projet créé avec avertissement" : "Projet créé. Tu peux maintenant ajouter la vidéo.");
+      applyLoadedProject(await desktop.loadProject(result.project.id));
+      setNewProjectOpen(false);
+      resetNewProject();
     });
   }
 
@@ -1437,7 +1515,11 @@ function DesktopApp() {
           </div>
         )}
         {desktopView === "library" && (
-          <>
+          <div className="desktop-header-actions">
+            <button onClick={() => openNewProject()}>
+              <Plus size={16} />
+              <span>Nouveau projet</span>
+            </button>
             <button disabled={busy} onClick={() => void refreshLibrary()}>
               <RotateCcw size={16} />
               <span>Actualiser</span>
@@ -1446,49 +1528,23 @@ function DesktopApp() {
               <Settings size={16} />
               <span>Options</span>
             </button>
-          </>
+          </div>
         )}
       </header>
 
       {desktopView === "library" && (
         <>
-          <section className="desktop-panel">
-            <h1>Créer un projet</h1>
-            <div className="desktop-actions">
-              <label>
-                <span>Lien YouTube</span>
-                <input
-                  value={youtubeUrl}
-                  onChange={(event) => {
-                    setYoutubeUrl(event.target.value);
-                    setYoutubeFormats([]);
-                    setSelectedYoutubeFormat("");
-                    setYoutubeFormatTitle("");
-                    setYoutubeFormatProjectId("");
-                    setYoutubeCreateWarning("");
-                  }}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                />
-              </label>
-              <div className="desktop-create-buttons">
-                <button disabled={busy} onClick={() => void createYoutubeProjectDesktop()}>
-                  <Plus size={16} />
-                  <span>Créer projet</span>
-                </button>
-              </div>
-            </div>
-            {youtubeCreateWarning && <p className="warning">{youtubeCreateWarning}</p>}
-            <p className="desktop-state">{state}</p>
-            {renderDownloadProgress()}
-            {downloadProgress?.stage === "done" && (
-              <p className="desktop-state">Téléchargement terminé. Le projet a été ajouté à la liste.</p>
-            )}
-            {error && <p className="error">{error}</p>}
-            {library && <p className="desktop-path">{library.libraryDir}</p>}
-          </section>
-
           <section className="desktop-projects">
-            <h2>Projets</h2>
+            <div className="library-heading">
+              <div>
+                <h1>Projets</h1>
+                <p>Bibliothèque locale</p>
+              </div>
+              <button onClick={() => openNewProject()}>
+                <Plus size={16} />
+                <span>Nouveau projet</span>
+              </button>
+            </div>
             {!activeProjects.length && <p className="state">Aucun projet actif.</p>}
             {activeProjects.map(renderProject)}
             {archivedProjects.length > 0 && (
@@ -1499,6 +1555,8 @@ function DesktopApp() {
                 {showArchives && archivedProjects.map(renderProject)}
               </>
             )}
+            {error && <pre className="error import-error">{error}</pre>}
+            {library && <p className="desktop-path">{library.libraryDir}</p>}
           </section>
         </>
       )}
@@ -2060,6 +2118,141 @@ function DesktopApp() {
             </section>
           )}
         </section>
+      )}
+
+      {newProjectOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={closeNewProject}>
+          <section
+            className="modal new-project-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-project-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="modal-heading">
+              <div>
+                <h2 id="new-project-title">Nouveau projet</h2>
+                <p>Choisis d’abord la source de la vidéo.</p>
+              </div>
+              <button className="icon-button" disabled={busy} onClick={closeNewProject} title="Fermer">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="creation-tabs" role="tablist" aria-label="Source de la vidéo">
+              <button
+                aria-selected={newProjectMode === "youtube"}
+                className={newProjectMode === "youtube" ? "selected" : ""}
+                role="tab"
+                onClick={() => {
+                  setNewProjectMode("youtube");
+                  setError("");
+                }}
+              >
+                <span>YouTube</span>
+              </button>
+              <button
+                aria-selected={newProjectMode === "local"}
+                className={newProjectMode === "local" ? "selected" : ""}
+                role="tab"
+                onClick={() => {
+                  setNewProjectMode("local");
+                  setError("");
+                }}
+              >
+                <span>Fichier local</span>
+              </button>
+            </div>
+
+            {newProjectMode === "youtube" ? (
+              <section className="creation-content" role="tabpanel">
+                <label>
+                  <span>Lien YouTube</span>
+                  <input
+                    autoFocus
+                    value={newYoutubeUrl}
+                    onChange={(event) => {
+                      setNewYoutubeUrl(event.target.value);
+                      setNewYoutubeFormats([]);
+                      setNewSelectedYoutubeFormat("");
+                      setNewYoutubeTitle("");
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </label>
+                {!newYoutubeFormats.length ? (
+                  <div className="modal-actions">
+                    <button disabled={busy} onClick={closeNewProject}>Annuler</button>
+                    <button disabled={busy || !newYoutubeUrl.trim()} onClick={() => void analyzeNewYoutubeProject()}>
+                      <RotateCcw size={16} />
+                      <span>{busy ? "Analyse..." : "Analyser la vidéo"}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="youtube-analysis-summary">
+                      <strong dir="auto">{newYoutubeTitle || "Vidéo YouTube"}</strong>
+                      <span>Choisis la qualité à télécharger. Le projet sera créé avec cette vidéo.</span>
+                    </div>
+                    <label className="youtube-format-picker">
+                      <span>Qualité à télécharger</span>
+                      <select value={newSelectedYoutubeFormat} onChange={(event) => setNewSelectedYoutubeFormat(event.target.value)}>
+                        {newYoutubeFormats.map((format) => (
+                          <option key={format.id} value={format.formatSelector}>{format.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="modal-actions">
+                      <button disabled={busy} onClick={() => {
+                        setNewYoutubeFormats([]);
+                        setNewSelectedYoutubeFormat("");
+                        setNewYoutubeTitle("");
+                      }}>Modifier le lien</button>
+                      <button disabled={busy || !newSelectedYoutubeFormat} onClick={() => void downloadNewYoutubeProject()}>
+                        <Download size={16} />
+                        <span>{busy ? "Téléchargement..." : "Télécharger et créer"}</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+                {busy && <p className="desktop-state">{state}</p>}
+                {renderDownloadProgress()}
+              </section>
+            ) : (
+              <section className="creation-content" role="tabpanel">
+                <label>
+                  <span>Titre du projet</span>
+                  <input
+                    autoFocus
+                    maxLength={200}
+                    value={newProjectTitle}
+                    onChange={(event) => setNewProjectTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") closeNewProject();
+                    }}
+                    placeholder="Ex. Cours sur la généalogie du Prophète"
+                  />
+                </label>
+                <p className="creation-help">La vidéo choisie sera copiée dans la bibliothèque, puis le projet s’ouvrira directement.</p>
+                <div className="modal-actions">
+                  <button disabled={busy} onClick={closeNewProject}>Annuler</button>
+                  <button disabled={busy || !newProjectTitle.trim()} onClick={() => void importNewLocalProjectVideo()}>
+                    <FileInput size={16} />
+                    <span>Choisir une vidéo</span>
+                  </button>
+                </div>
+                <button
+                  className="text-button"
+                  disabled={busy || !newProjectTitle.trim()}
+                  onClick={() => void createNewLocalProjectWithoutVideo()}
+                >
+                  Créer sans vidéo
+                </button>
+              </section>
+            )}
+            {error && <pre className="error import-error">{error}</pre>}
+          </section>
+        </div>
       )}
 
       {pasteImportOpen && (

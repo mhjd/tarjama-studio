@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type {
   CreateYoutubeProjectRequest,
   CreateYoutubeProjectResult,
+  CreateLocalProjectResult,
   CleanedTranscriptImportResult,
   DesktopPromptSettings,
   DesktopExportResult,
@@ -1393,6 +1394,24 @@ export async function createYoutubeProject(
   return { project, warning: parsed.warning };
 }
 
+export async function createLocalProject(title: string): Promise<CreateLocalProjectResult> {
+  const cleanTitle = title.replace(/\s+/g, " ").trim();
+  if (!cleanTitle) throw new Error("Le titre du projet ne peut pas être vide");
+  if (cleanTitle.length > 200) throw new Error("Le titre du projet ne peut pas dépasser 200 caractères");
+  await fs.mkdir(libraryDir(), { recursive: true });
+  let id = slugify(`local_${cleanTitle}`);
+  if (await pathExists(projectDir(id))) id = slugify(`local_${cleanTitle}_${Date.now()}`);
+  const project: DesktopProject = {
+    id,
+    title: cleanTitle,
+    titleCustomizedAt: nowIso(),
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+  await writeProject(project);
+  return { project };
+}
+
 export async function importTranscript(projectId: string): Promise<ImportTranscriptResult | null> {
   const projectPath = projectFile(projectId);
   if (!(await pathExists(projectPath))) {
@@ -1653,7 +1672,7 @@ async function copyVideoIntoProject(
   return { project: updatedProject, videoPath };
 }
 
-export async function importLocalVideo(projectId?: string): Promise<DownloadYoutubeResult | null> {
+export async function importLocalVideo(projectId?: string, title?: string): Promise<DownloadYoutubeResult | null> {
   await fs.mkdir(libraryDir(), { recursive: true });
   const selection = await dialog.showOpenDialog({
     title: "Importer une vidéo",
@@ -1671,18 +1690,20 @@ export async function importLocalVideo(projectId?: string): Promise<DownloadYout
   }
 
   const extension = path.extname(sourcePath) || ".mp4";
-  const title = path.basename(sourcePath, extension);
-  let id = slugify(`local_${title}`);
+  const fallbackTitle = path.basename(sourcePath, extension);
+  const projectTitle = title?.replace(/\s+/g, " ").trim() || fallbackTitle;
+  let id = slugify(`local_${projectTitle}`);
   if (await pathExists(projectDir(id))) {
-    id = slugify(`local_${title}_${Date.now()}`);
+    id = slugify(`local_${projectTitle}_${Date.now()}`);
   }
   const project: DesktopProject = {
     id,
-    title,
+    title: projectTitle,
+    titleCustomizedAt: title?.trim() ? nowIso() : undefined,
     createdAt: nowIso(),
     updatedAt: nowIso(),
   };
-  return await copyVideoIntoProject(project, sourcePath, title);
+  return await copyVideoIntoProject(project, sourcePath, projectTitle);
 }
 
 export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsResult> {

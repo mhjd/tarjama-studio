@@ -86,6 +86,10 @@ export type CreateYoutubeProjectResult = {
   warning?: string;
 };
 
+export type CreateLocalProjectResult = {
+  project: DesktopProject;
+};
+
 export type YoutubeFormatOption = {
   id: string;
   label: string;

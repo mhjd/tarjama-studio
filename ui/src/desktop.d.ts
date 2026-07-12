@@ -49,6 +49,10 @@ type CreateYoutubeProjectResult = {
   warning?: string;
 };
 
+type CreateLocalProjectResult = {
+  project: DesktopProject;
+};
+
 type UpdateToolResult = {
   path: string;
   version: string;
@@ -224,7 +228,8 @@ interface Window {
       openAfter?: boolean,
       style?: DesktopExportSubtitleStyle
     ): Promise<DesktopExportResult | null>;
-    importLocalVideo(projectId?: string): Promise<DownloadYoutubeResult | null>;
+    importLocalVideo(projectId?: string, title?: string): Promise<DownloadYoutubeResult | null>;
+    createLocalProject(title: string): Promise<CreateLocalProjectResult>;
     createYoutubeProject(request: CreateYoutubeProjectRequest): Promise<CreateYoutubeProjectResult>;
     listYoutubeFormats(url: string): Promise<YoutubeFormatsResult>;
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;

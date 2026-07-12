@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   createYoutubeProject,
+  createLocalProject,
   createTranscriptSnapshot,
   downloadYoutube,
   exportVideo,
@@ -121,7 +122,8 @@ function registerIpc(): void {
       _event.sender.send("video:export-progress", progress),
     ),
   );
-  ipcMain.handle("video:import-local", async (_event, projectId?: string) => importLocalVideo(projectId));
+  ipcMain.handle("video:import-local", async (_event, projectId?: string, title?: string) => importLocalVideo(projectId, title));
+  ipcMain.handle("project:create-local", async (_event, title: string) => createLocalProject(title));
   ipcMain.handle("youtube:create-project", async (_event, request: CreateYoutubeProjectRequest) =>
     createYoutubeProject(request),
   );

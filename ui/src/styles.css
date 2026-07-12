@@ -478,6 +478,83 @@ input {
   margin: 0;
 }
 
+.modal-heading {
+  align-items: start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.icon-button {
+  padding: 0;
+  width: 2.35rem;
+}
+
+.new-project-modal {
+  max-width: 46rem;
+}
+
+.creation-tabs {
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  gap: 0.4rem;
+}
+
+.creation-tabs button {
+  background: transparent;
+  border-color: transparent;
+  border-radius: 6px 6px 0 0;
+  color: var(--muted);
+}
+
+.creation-tabs button.selected {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+.creation-content {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.creation-content > label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.creation-content > label > span,
+.creation-help {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.creation-help {
+  line-height: 1.45;
+  margin: 0;
+}
+
+.youtube-analysis-summary {
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+}
+
+.youtube-analysis-summary span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.text-button {
+  justify-self: start;
+  padding-left: 0;
+  padding-right: 0;
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
 .modal p {
   color: var(--muted);
   line-height: 1.45;
@@ -803,11 +880,19 @@ input:disabled {
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
+.desktop-header-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 .desktop-header > button {
   flex: 0 0 auto;
 }
 
-.desktop-header div {
+.desktop-header > div:not(.desktop-header-actions) {
   display: grid;
   gap: 0.25rem;
   min-width: 0;
@@ -847,7 +932,8 @@ input:disabled {
 }
 
 .desktop-panel h1,
-.desktop-projects h2 {
+.desktop-projects h2,
+.library-heading h1 {
   font-size: 1.2rem;
   margin: 0;
 }
@@ -1027,6 +1113,24 @@ input:disabled {
 .desktop-projects {
   display: grid;
   gap: 0.75rem;
+}
+
+.library-heading {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.library-heading > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.library-heading p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
 }
 
 .desktop-project {

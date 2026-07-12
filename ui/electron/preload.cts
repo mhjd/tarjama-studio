@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   CreateYoutubeProjectRequest,
   CreateYoutubeProjectResult,
+  CreateLocalProjectResult,
   DesktopLibraryInfo,
   ExportProgress,
   ExportSubtitleStyle,
@@ -73,8 +74,10 @@ const api = {
     openAfter?: boolean,
     style?: ExportSubtitleStyle,
   ): Promise<DesktopExportResult | null> => ipcRenderer.invoke("video:export", projectId, track, openAfter, style),
-  importLocalVideo: (projectId?: string): Promise<DownloadYoutubeResult | null> =>
-    ipcRenderer.invoke("video:import-local", projectId),
+  importLocalVideo: (projectId?: string, title?: string): Promise<DownloadYoutubeResult | null> =>
+    ipcRenderer.invoke("video:import-local", projectId, title),
+  createLocalProject: (title: string): Promise<CreateLocalProjectResult> =>
+    ipcRenderer.invoke("project:create-local", title),
   createYoutubeProject: (request: CreateYoutubeProjectRequest): Promise<CreateYoutubeProjectResult> =>
     ipcRenderer.invoke("youtube:create-project", request),
   listYoutubeFormats: (url: string): Promise<YoutubeFormatsResult> => ipcRenderer.invoke("youtube:list-formats", url),

@@ -243,13 +243,13 @@ function cleanedTranscriptFromMarkdown(
   const { sections } = parseTimestampedMarkdown(content);
   if (!sections.length) throw new Error("La transcription nettoyée ne contient aucun bloc Markdown horodaté");
   const sourceByTimestamp = new Map(
-    current.segments.map((segment, index) => [`${segment.start.toFixed(3)}:${segment.end.toFixed(3)}`, { segment, index }]),
+    current.segments.map((segment, index) => [timestampKey(segment.start, segment.end), { segment, index }]),
   );
   const usedSourceIds = new Set<string>();
   const mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }> = [];
   let previousSourceIndex = -1;
   const segments = sections.map((section, sectionIndex) => {
-    const source = sourceByTimestamp.get(`${section.start.toFixed(3)}:${section.end.toFixed(3)}`);
+    const source = sourceByTimestamp.get(timestampKey(section.start, section.end));
     if (!source || usedSourceIds.has(String(source.segment.id))) {
       mismatches.push({ index: source?.index ?? sectionIndex, received: section });
       return null;
@@ -496,7 +496,15 @@ function parseTimecode(value: string): number {
 }
 
 function sameTime(left: number, right: number): boolean {
-  return Number(left.toFixed(3)) === Number(right.toFixed(3));
+  return timestampMilliseconds(left) === timestampMilliseconds(right);
+}
+
+function timestampMilliseconds(seconds: number): number {
+  return Math.round(Number(seconds) * 1000);
+}
+
+function timestampKey(start: number, end: number): string {
+  return `${timestampMilliseconds(start)}:${timestampMilliseconds(end)}`;
 }
 
 type MarkdownSection = { start: number; end: number; text: string; headingLine: number };

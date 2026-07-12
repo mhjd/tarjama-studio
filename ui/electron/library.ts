@@ -2085,6 +2085,23 @@ function displayTimecode(seconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
+function exportFilenameTitle(title: string): string {
+  const clean = title
+    .normalize("NFC")
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/[. ]+$/g, "")
+    .trim();
+  if (!clean) return "Ashrafent";
+  const usable = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(clean) ? `${clean} - vidéo` : clean;
+  const maximumLength = 110;
+  if (usable.length <= maximumLength) return usable;
+  const cut = usable.slice(0, maximumLength - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  const compact = lastSpace >= Math.floor(maximumLength * 0.6) ? cut.slice(0, lastSpace) : cut;
+  return `${compact.trimEnd()}…`;
+}
+
 type SubtitleCue = {
   start: number;
   end: number;
@@ -2169,8 +2186,8 @@ export async function exportVideo(
           }));
         })();
 
-  const suffix = track === "arabic" ? "arabe" : "traduction";
-  const defaultName = `${slugify(project.title)}_${suffix}.mp4`;
+  const language = track === "arabic" ? "AR" : "FR";
+  const defaultName = `${exportFilenameTitle(project.title)} [${language}].mp4`;
   const selection = await dialog.showSaveDialog({
     title: track === "arabic" ? "Exporter la vidéo sous-titrée en arabe" : "Exporter la vidéo avec traduction",
     defaultPath: defaultName,

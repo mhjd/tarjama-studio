@@ -1706,6 +1706,8 @@ function DesktopApp() {
                 <span>
                   {groqKeyStatus.source === "stored"
                     ? "Une clé personnelle est enregistrée localement sur cette machine."
+                    : groqKeyStatus.source === "bundled-default"
+                      ? "La clé Groq par défaut de l’application est utilisée."
                     : groqKeyStatus.source === "development-env"
                       ? "La clé de développement du fichier .env est utilisée."
                       : "Aucune clé configurée."}

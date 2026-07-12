@@ -167,7 +167,7 @@ type ExportProgress = {
 
 type GroqKeyStatus = {
   configured: boolean;
-  source: "stored" | "development-env" | "none";
+  source: "stored" | "bundled-default" | "development-env" | "none";
 };
 
 type GroqTranscriptionProgress = {

@@ -1,6 +1,7 @@
 import { app } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { BUNDLED_GROQ_API_KEY } from "./generated_defaults.js";
 import type { GroqKeyStatus, GroqTranscriptionProgress, WorkspaceTranscript } from "./types.js";
 
 const API_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
@@ -98,6 +99,10 @@ async function developmentEnvKey(): Promise<string> {
   return "";
 }
 
+function bundledApiKey(): string {
+  return BUNDLED_GROQ_API_KEY.trim();
+}
+
 async function storedApiKey(): Promise<string> {
   const settings = await readStoredSettings();
   return settings.apiKey?.trim() ?? "";
@@ -105,6 +110,7 @@ async function storedApiKey(): Promise<string> {
 
 export async function groqKeyStatus(): Promise<GroqKeyStatus> {
   if (await storedApiKey()) return { configured: true, source: "stored" };
+  if (bundledApiKey()) return { configured: true, source: "bundled-default" };
   if (await developmentEnvKey()) return { configured: true, source: "development-env" };
   return { configured: false, source: "none" };
 }
@@ -122,7 +128,7 @@ export async function clearGroqApiKey(): Promise<GroqKeyStatus> {
 }
 
 async function apiKey(): Promise<string> {
-  const key = (await storedApiKey()) || (await developmentEnvKey());
+  const key = (await storedApiKey()) || bundledApiKey() || (await developmentEnvKey());
   if (!key) throw new Error("Aucune clé Groq configurée. Ajoute ta clé dans les réglages de transcription.");
   return key;
 }

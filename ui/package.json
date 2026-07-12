@@ -1,7 +1,7 @@
 {
   "name": "ashrafent-ui",
   "private": true,
-  "version": "0.1.25",
+  "version": "0.1.26",
   "description": "Local-first Arabic transcription and translation reviewer",
   "author": "Ashrafent",
   "type": "module",
@@ -12,8 +12,9 @@
     "preview": "vite preview --host 127.0.0.1",
     "electron:build": "tsc -p tsconfig.electron.json",
     "desktop:tools": "python3 ../scripts/prepare_desktop_tools.py",
-    "desktop:build": "npm run build && npm run electron:build",
-    "desktop:dev": "npm run desktop:tools && npm run electron:build && electron dist-electron/main.js",
+    "desktop:prepare": "python3 ../scripts/prepare_desktop_config.py",
+    "desktop:build": "npm run desktop:prepare && npm run build && npm run electron:build",
+    "desktop:dev": "npm run desktop:tools && npm run desktop:prepare && npm run electron:build && electron dist-electron/main.js",
     "desktop:package": "npm run desktop:tools && npm run desktop:build && electron-builder --dir",
     "desktop:dist": "npm run desktop:tools && npm run desktop:build && electron-builder"
   },

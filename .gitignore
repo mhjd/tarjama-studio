@@ -19,6 +19,7 @@ ui/dist/
 ui/dist-electron/
 ui/desktop-bin/
 ui/release/
+ui/electron/generated_defaults.ts
 ui/tsconfig.tsbuildinfo
 
 data/raw/

@@ -29,6 +29,7 @@ import {
   renderCleanupPrompt,
   renderTranslationPrompt,
   readPromptSettings,
+  renameProject,
   resetPromptOverride,
   savePromptOverride,
 } from "./library.js";
@@ -146,6 +147,7 @@ function registerIpc(): void {
   ipcMain.handle("project:archive", async (_event, projectId: string, archived: boolean) =>
     setProjectArchived(projectId, archived),
   );
+  ipcMain.handle("project:rename", async (_event, projectId: string, title: string) => renameProject(projectId, title));
   ipcMain.handle("project:open-folder", async (_event, projectId: string) => openProjectFolder(projectId));
   ipcMain.handle("project:trash", async (_event, projectId: string) => trashProject(projectId));
 }

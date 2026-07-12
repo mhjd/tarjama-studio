@@ -12,6 +12,8 @@ type DesktopProject = {
   translationPath?: string;
   durationSeconds?: number;
   archivedAt?: string;
+  groqTranscribedAt?: string;
+  titleCustomizedAt?: string;
 };
 
 type DesktopLibraryInfo = {
@@ -195,6 +197,7 @@ interface Window {
   ashrafentDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
     loadProject(projectId: string): Promise<DesktopProjectLoad>;
+    renameProject(projectId: string, title: string): Promise<DesktopProject>;
     saveCurrentTranscript(projectId: string, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;
     createTranscriptSnapshot(projectId: string, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;
     loadSnapshot(projectId: string, snapshotId: string): Promise<{ snapshot: DesktopSnapshotInfo; transcript: DesktopTranscript }>;

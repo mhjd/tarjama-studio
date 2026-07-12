@@ -12,6 +12,8 @@ export type DesktopProject = {
   translationPath?: string;
   durationSeconds?: number;
   archivedAt?: string;
+  groqTranscribedAt?: string;
+  titleCustomizedAt?: string;
 };
 
 export type DesktopLibraryInfo = {

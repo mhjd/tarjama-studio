@@ -29,6 +29,8 @@ import type {
 const api = {
   readLibrary: (): Promise<DesktopLibraryInfo> => ipcRenderer.invoke("library:read"),
   loadProject: (projectId: string): Promise<DesktopProjectLoad> => ipcRenderer.invoke("project:load", projectId),
+  renameProject: (projectId: string, title: string): Promise<DesktopProject> =>
+    ipcRenderer.invoke("project:rename", projectId, title),
   saveCurrentTranscript: (projectId: string, transcript: WorkspaceTranscript): Promise<DesktopProjectLoad> =>
     ipcRenderer.invoke("project:save-current", projectId, transcript),
   createTranscriptSnapshot: (projectId: string, transcript: WorkspaceTranscript): Promise<DesktopProjectLoad> =>

@@ -1645,7 +1645,9 @@ export async function downloadYoutube(
   const project: DesktopProject = {
     ...(existingTarget ?? { id, createdAt: nowIso(), updatedAt: nowIso(), title: id }),
     id,
-    title: request.title?.trim() || metadata.title || existingTarget?.title || id,
+    title: existingTarget?.titleCustomizedAt
+      ? existingTarget.title
+      : request.title?.trim() || metadata.title || existingTarget?.title || id,
     createdAt: existingTarget?.createdAt ?? nowIso(),
     updatedAt: nowIso(),
     youtubeUrl: metadata.webpage_url || existingTarget?.youtubeUrl || sourceUrl,
@@ -1659,9 +1661,17 @@ export async function downloadYoutube(
   return { project, videoPath };
 }
 
+function transcriptCameFromGroq(transcript: WorkspaceTranscript | null): boolean {
+  return transcript?.source_transcript === "groq-cloud";
+}
+
 export async function loadProject(projectId: string): Promise<DesktopProjectLoad> {
-  const project = await readProject(projectId);
+  let project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
+  if (!project.groqTranscribedAt && transcriptCameFromGroq(transcript)) {
+    project = { ...project, groqTranscribedAt: transcript?.created_at || nowIso() };
+    await writeProject(project);
+  }
   const translationPath = translationFile(projectId);
   const translation = (await pathExists(translationPath))
     ? await readJson<WorkspaceTranslation>(translationPath)
@@ -1681,6 +1691,10 @@ export async function loadProject(projectId: string): Promise<DesktopProjectLoad
 
 export async function projectForTranscription(projectId: string): Promise<DesktopProject> {
   const project = await readProject(projectId);
+  const existingTranscript = project.groqTranscribedAt ? null : await loadSavedTranscript(projectId);
+  if (project.groqTranscribedAt || transcriptCameFromGroq(existingTranscript)) {
+    throw new Error("Ce projet a déjà été transcrit avec Groq. Un second appel est bloqué pour éviter une dépense inutile.");
+  }
   const videoPath = await requireProjectVideo(project);
   if (project.durationSeconds && project.durationSeconds > 0) return project;
   const streams = await mediaStreams(videoPath, await resolveTool("ffmpeg"));
@@ -1716,6 +1730,7 @@ export async function saveGeneratedTranscript(
     updatedAt: nowIso(),
     transcriptPath: transcriptFile(projectId),
     translationPath: undefined,
+    groqTranscribedAt: nowIso(),
   });
   return await loadProject(projectId);
 }
@@ -2042,6 +2057,16 @@ export async function setProjectArchived(projectId: string, archived: boolean): 
     updatedAt: nowIso(),
     archivedAt: archived ? nowIso() : undefined,
   };
+  await writeProject(updated);
+  return updated;
+}
+
+export async function renameProject(projectId: string, title: string): Promise<DesktopProject> {
+  const clean = title.replace(/\s+/g, " ").trim();
+  if (!clean) throw new Error("Le titre du projet ne peut pas être vide");
+  if (clean.length > 200) throw new Error("Le titre du projet ne peut pas dépasser 200 caractères");
+  const project = await readProject(projectId);
+  const updated = { ...project, title: clean, titleCustomizedAt: nowIso(), updatedAt: nowIso() };
   await writeProject(updated);
   return updated;
 }

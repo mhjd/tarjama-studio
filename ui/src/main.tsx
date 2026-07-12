@@ -17,6 +17,7 @@ import {
   LocateFixed,
   Moon,
   Pause,
+  Pencil,
   Plus,
   Play,
   RotateCcw,
@@ -489,6 +490,8 @@ function DesktopApp() {
   const [cleanupImportOpen, setCleanupImportOpen] = useState(false);
   const [pastedCleanupTranscript, setPastedCleanupTranscript] = useState("");
   const [cleanupCopyState, setCleanupCopyState] = useState("Copier le prompt de nettoyage");
+  const [renameProjectOpen, setRenameProjectOpen] = useState(false);
+  const [projectTitleDraft, setProjectTitleDraft] = useState("");
   const [copyState, setCopyState] = useState("Copier prompt");
   const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
   const [exportSubtitleStyle, setExportSubtitleStyle] = useState<ExportSubtitleStyle>("black-band");
@@ -705,6 +708,10 @@ function DesktopApp() {
   async function transcribeGroqDesktop(project: DesktopProject) {
     if (!desktop || !project.videoPath) {
       setError("Ajoute d'abord une vidéo avant de lancer la transcription.");
+      return;
+    }
+    if (project.groqTranscribedAt) {
+      setError("Ce projet a déjà été transcrit avec Groq. La transcription reste disponible dans ce projet.");
       return;
     }
     if (!groqKeyStatus.configured) {
@@ -978,6 +985,29 @@ function DesktopApp() {
     await runDesktopAction("Suppression...", async () => {
       await desktop?.trashProject(project.id);
     });
+  }
+
+  function openRenameProject() {
+    if (!loadedProject) return;
+    setProjectTitleDraft(loadedProject.title);
+    setRenameProjectOpen(true);
+  }
+
+  async function renameProjectDesktop() {
+    if (!desktop || !loadedProject || !projectTitleDraft.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      const updated = await desktop.renameProject(loadedProject.id, projectTitleDraft);
+      setLoadedProject(updated);
+      setRenameProjectOpen(false);
+      setState("Projet renommé");
+      await refreshLibrary();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Projet impossible à renommer");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function seekTo(seconds: number) {
@@ -1370,6 +1400,10 @@ function DesktopApp() {
               <strong dir="auto">{loadedProject?.title ?? "Projet"}</strong>
               <span>{loadedProject ? projectStatusLabel(loadedProject) : "Chargement"}</span>
             </div>
+            <button disabled={!loadedProject || busy} onClick={openRenameProject} title="Renommer le projet">
+              <Pencil size={16} />
+              <span>Renommer</span>
+            </button>
           </>
         ) : desktopView === "options" ? (
           <>
@@ -1614,14 +1648,14 @@ function DesktopApp() {
                       <span>{loadedProject.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
                     </button>
                     <button
-                      disabled={busy || isHistoryPreview || !loadedProjectHasVideo}
+                      disabled={busy || isHistoryPreview || !loadedProjectHasVideo || Boolean(loadedProject.groqTranscribedAt)}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void transcribeGroqDesktop(loadedProject);
                       }}
                     >
                       <Cloud size={16} />
-                      <span>Transcrire avec Groq</span>
+                      <span>{loadedProject.groqTranscribedAt ? "Déjà transcrit avec Groq" : "Transcrire avec Groq"}</span>
                     </button>
                     <button
                       disabled={busy || isHistoryPreview || !transcript}
@@ -2059,6 +2093,41 @@ function DesktopApp() {
               >
                 <Check size={16} />
                 <span>Valider et importer</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {renameProjectOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setRenameProjectOpen(false)}>
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-project-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <h2 id="rename-project-title">Renommer le projet</h2>
+            <p>Ce titre sert uniquement à identifier le projet dans ta bibliothèque.</p>
+            <input
+              autoFocus
+              maxLength={200}
+              value={projectTitleDraft}
+              onChange={(event) => setProjectTitleDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setRenameProjectOpen(false);
+                if (event.key === "Enter" && projectTitleDraft.trim()) void renameProjectDesktop();
+              }}
+            />
+            <div className="modal-actions">
+              <button disabled={busy} onClick={() => setRenameProjectOpen(false)}>Annuler</button>
+              <button
+                disabled={busy || !projectTitleDraft.trim() || projectTitleDraft.trim() === loadedProject?.title}
+                onClick={() => void renameProjectDesktop()}
+              >
+                <Check size={16} />
+                <span>Renommer</span>
               </button>
             </div>
           </section>

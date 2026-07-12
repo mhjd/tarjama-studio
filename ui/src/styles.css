@@ -1133,6 +1133,21 @@ input:disabled {
   margin: 0;
 }
 
+.primary-action {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  min-height: 2.7rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.primary-action:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
 .desktop-project {
   align-items: start;
   display: grid;

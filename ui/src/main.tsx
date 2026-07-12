@@ -1516,10 +1516,6 @@ function DesktopApp() {
         )}
         {desktopView === "library" && (
           <div className="desktop-header-actions">
-            <button onClick={() => openNewProject()}>
-              <Plus size={16} />
-              <span>Nouveau projet</span>
-            </button>
             <button disabled={busy} onClick={() => void refreshLibrary()}>
               <RotateCcw size={16} />
               <span>Actualiser</span>
@@ -1540,7 +1536,7 @@ function DesktopApp() {
                 <h1>Projets</h1>
                 <p>Bibliothèque locale</p>
               </div>
-              <button onClick={() => openNewProject()}>
+              <button className="primary-action" onClick={() => openNewProject()}>
                 <Plus size={16} />
                 <span>Nouveau projet</span>
               </button>

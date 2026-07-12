@@ -2088,18 +2088,16 @@ function displayTimecode(seconds: number): string {
 function exportFilenameTitle(title: string): string {
   const clean = title
     .normalize("NFC")
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/[. ]+$/g, "")
-    .trim();
+    .replace(/[^\p{L}\p{N}]+/gu, "_")
+    .replace(/^_+|_+$/g, "");
   if (!clean) return "Ashrafent";
-  const usable = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(clean) ? `${clean} - vidéo` : clean;
-  const maximumLength = 110;
+  const usable = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(clean) ? `${clean}_video` : clean;
+  const maximumLength = 100;
   if (usable.length <= maximumLength) return usable;
   const cut = usable.slice(0, maximumLength - 1);
-  const lastSpace = cut.lastIndexOf(" ");
-  const compact = lastSpace >= Math.floor(maximumLength * 0.6) ? cut.slice(0, lastSpace) : cut;
-  return `${compact.trimEnd()}…`;
+  const lastSeparator = cut.lastIndexOf("_");
+  const compact = lastSeparator >= Math.floor(maximumLength * 0.6) ? cut.slice(0, lastSeparator) : cut;
+  return compact.replace(/_+$/g, "");
 }
 
 type SubtitleCue = {
@@ -2186,8 +2184,8 @@ export async function exportVideo(
           }));
         })();
 
-  const language = track === "arabic" ? "AR" : "FR";
-  const defaultName = `${exportFilenameTitle(project.title)} [${language}].mp4`;
+  const language = track === "arabic" ? "ar" : "fr";
+  const defaultName = `${exportFilenameTitle(project.title)}_${language}.mp4`;
   const selection = await dialog.showSaveDialog({
     title: track === "arabic" ? "Exporter la vidéo sous-titrée en arabe" : "Exporter la vidéo avec traduction",
     defaultPath: defaultName,

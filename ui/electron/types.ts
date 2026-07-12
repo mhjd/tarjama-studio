@@ -159,3 +159,17 @@ export type DesktopExportResult = {
 export type ExportSubtitleTrack = "arabic" | "translation";
 
 export type ExportSubtitleStyle = "black-band" | "outline";
+
+export type GroqKeyStatus = {
+  configured: boolean;
+  source: "stored" | "development-env" | "none";
+};
+
+export type GroqTranscriptionProgress = {
+  projectId: string;
+  stage: "preparing" | "uploading" | "merging" | "done";
+  message: string;
+  percent?: number;
+  chunkIndex?: number;
+  chunkCount?: number;
+};

@@ -19,6 +19,8 @@ import type {
   WorkspaceTranslation,
   DesktopExportResult,
   YoutubeFormatsResult,
+  GroqKeyStatus,
+  GroqTranscriptionProgress,
 } from "./types.js";
 
 const api = {
@@ -61,6 +63,15 @@ const api = {
   downloadYoutube: (request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult> =>
     ipcRenderer.invoke("youtube:download", request),
   updateYtdlp: (): Promise<UpdateToolResult> => ipcRenderer.invoke("tools:update-ytdlp"),
+  groqKeyStatus: (): Promise<GroqKeyStatus> => ipcRenderer.invoke("groq:key-status"),
+  saveGroqApiKey: (apiKey: string): Promise<GroqKeyStatus> => ipcRenderer.invoke("groq:save-key", apiKey),
+  clearGroqApiKey: (): Promise<GroqKeyStatus> => ipcRenderer.invoke("groq:clear-key"),
+  transcribeWithGroq: (projectId: string): Promise<DesktopProjectLoad> => ipcRenderer.invoke("groq:transcribe", projectId),
+  onGroqTranscriptionProgress: (callback: (progress: GroqTranscriptionProgress) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: GroqTranscriptionProgress) => callback(progress);
+    ipcRenderer.on("groq:progress", listener);
+    return () => ipcRenderer.removeListener("groq:progress", listener);
+  },
   onDownloadProgress: (callback: (progress: DownloadProgress) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: DownloadProgress) => callback(progress);
     ipcRenderer.on("youtube:progress", listener);

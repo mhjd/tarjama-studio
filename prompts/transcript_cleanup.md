@@ -13,6 +13,7 @@ Erreurs typiques observees dans nos sorties Whisper:
 - repetitions absurdes dues au modele, par exemple un mot ou une expression repete trop longtemps;
 - ponctuation absente ou mal placee;
 - segmentation imparfaite, sans que les timestamps puissent etre recalcules;
+- doublons ou formulations legerement divergentes autour des frontieres de morceaux audio Groq qui se chevauchent;
 - confusion entre formules religieuses proches, versets, hadiths ou citations poetiques.
 
 Exemples concrets deja observes:
@@ -29,6 +30,7 @@ Contraintes imperatives:
 - Tu peux supprimer un segment seulement s'il est entierement inutile: repetition parasite, hallucination evidente, bruit de modele, ou fragment vide/non exploitable.
 - Supprime obligatoirement les segments dont "text" est vide ou uniquement compose d'espaces.
 - Supprime obligatoirement les segments vides a duree nulle ou micro-duree issus de Whisper.
+- Si deux segments voisins couvrent manifestement le meme passage a cause du chevauchement entre morceaux Groq, conserve la version la plus coherente et supprime le doublon. Ne fusionne pas des passages distincts simplement parce que leurs timestamps se chevauchent legerement.
 - Ne laisse aucun segment vide dans le JSON final.
 - Tu peux remplacer ou ajouter un segment seulement si cela preserve un JSON sain: id unique, timestamps numeriques, end >= start, ordre chronologique. Pour un nouveau segment non vide, prefere end > start.
 - Modifie principalement les champs "text" des segments.

@@ -159,6 +159,20 @@ type ExportProgress = {
   eta?: string;
 };
 
+type GroqKeyStatus = {
+  configured: boolean;
+  source: "stored" | "development-env" | "none";
+};
+
+type GroqTranscriptionProgress = {
+  projectId: string;
+  stage: "preparing" | "uploading" | "merging" | "done";
+  message: string;
+  percent?: number;
+  chunkIndex?: number;
+  chunkCount?: number;
+};
+
 interface Window {
   ashrafentDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
@@ -187,6 +201,11 @@ interface Window {
     listYoutubeFormats(url: string): Promise<YoutubeFormatsResult>;
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;
     updateYtdlp(): Promise<UpdateToolResult>;
+    groqKeyStatus(): Promise<GroqKeyStatus>;
+    saveGroqApiKey(apiKey: string): Promise<GroqKeyStatus>;
+    clearGroqApiKey(): Promise<GroqKeyStatus>;
+    transcribeWithGroq(projectId: string): Promise<DesktopProjectLoad>;
+    onGroqTranscriptionProgress(callback: (progress: GroqTranscriptionProgress) => void): () => void;
     onDownloadProgress(callback: (progress: DownloadProgress) => void): () => void;
     onExportProgress(callback: (progress: ExportProgress) => void): () => void;
     setProjectArchived(projectId: string, archived: boolean): Promise<DesktopProject>;

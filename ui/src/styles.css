@@ -484,6 +484,11 @@ input {
   margin: 0;
 }
 
+.modal > input {
+  min-height: 42px;
+  width: 100%;
+}
+
 .modal-actions {
   display: flex;
   gap: 0.55rem;

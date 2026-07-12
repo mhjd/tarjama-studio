@@ -21,7 +21,11 @@ import {
   setProjectArchived,
   trashProject,
   updateYtdlp,
+  projectForTranscription,
+  resolveTool,
+  saveGeneratedTranscript,
 } from "./library.js";
+import { clearGroqApiKey, groqKeyStatus, saveGroqApiKey, transcribeWithGroq } from "./groq.js";
 import type {
   CreateYoutubeProjectRequest,
   DownloadYoutubeRequest,
@@ -100,6 +104,20 @@ function registerIpc(): void {
     downloadYoutube(request, (progress) => event.sender.send("youtube:progress", progress)),
   );
   ipcMain.handle("tools:update-ytdlp", async () => updateYtdlp());
+  ipcMain.handle("groq:key-status", async () => groqKeyStatus());
+  ipcMain.handle("groq:save-key", async (_event, apiKey: string) => saveGroqApiKey(apiKey));
+  ipcMain.handle("groq:clear-key", async () => clearGroqApiKey());
+  ipcMain.handle("groq:transcribe", async (event, projectId: string) => {
+    const project = await projectForTranscription(projectId);
+    const transcript = await transcribeWithGroq(
+      projectId,
+      project.videoPath!,
+      project.durationSeconds ?? 0,
+      await resolveTool("ffmpeg"),
+      (progress) => event.sender.send("groq:progress", progress),
+    );
+    return await saveGeneratedTranscript(projectId, transcript);
+  });
   ipcMain.handle("project:archive", async (_event, projectId: string, archived: boolean) =>
     setProjectArchived(projectId, archived),
   );

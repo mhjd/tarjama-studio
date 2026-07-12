@@ -1063,7 +1063,7 @@ function createFfmpegExportProgressHandler(
   };
 }
 
-async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: boolean; video: boolean }> {
+async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: boolean; video: boolean; duration?: number }> {
   const output = await new Promise<string>((resolve, reject) => {
     const child = spawn(ffmpeg, ["-hide_banner", "-i", filePath], { windowsHide: true });
     let combined = "";
@@ -1076,10 +1076,14 @@ async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: 
     child.on("error", reject);
     child.on("close", () => resolve(combined));
   });
-  return { audio: output.includes(" Audio:"), video: output.includes(" Video:") };
+  const durationMatch = output.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+  const duration = durationMatch
+    ? Number(durationMatch[1]) * 3600 + Number(durationMatch[2]) * 60 + Number(durationMatch[3])
+    : undefined;
+  return { audio: output.includes(" Audio:"), video: output.includes(" Video:"), duration };
 }
 
-async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
+export async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
   const extension = executableExtension();
   const key = platformKey();
   const candidates = [
@@ -1241,6 +1245,7 @@ async function copyVideoIntoProject(
     title: project.title || fallbackTitle || path.basename(sourcePath, extension),
     updatedAt: nowIso(),
     videoPath,
+    durationSeconds: streams.duration,
   };
   await writeProject(updatedProject);
   return { project: updatedProject, videoPath };
@@ -1435,6 +1440,47 @@ export async function loadProject(projectId: string): Promise<DesktopProjectLoad
     snapshots: await listSnapshotInfo(projectId, snapshotCurrent),
     recovery: await recoveryState(projectId),
   };
+}
+
+export async function projectForTranscription(projectId: string): Promise<DesktopProject> {
+  const project = await readProject(projectId);
+  const videoPath = await requireProjectVideo(project);
+  if (project.durationSeconds && project.durationSeconds > 0) return project;
+  const streams = await mediaStreams(videoPath, await resolveTool("ffmpeg"));
+  if (!streams.duration) throw new Error("Durée de la vidéo impossible à déterminer");
+  const updated = { ...project, durationSeconds: streams.duration, updatedAt: nowIso() };
+  await writeProject(updated);
+  return updated;
+}
+
+export async function saveGeneratedTranscript(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+): Promise<DesktopProjectLoad> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const clean = transcriptWithoutSegmentTranslations(validateTranscript(transcript));
+  const previousTranscript = await loadSavedTranscript(projectId);
+  if (previousTranscript) await writeSnapshot(projectId, previousTranscript, "pre_groq");
+  const previousTranslationPath = translationFile(projectId);
+  if (await pathExists(previousTranslationPath)) {
+    const previousTranslation = await readJson<WorkspaceTranslation>(previousTranslationPath);
+    await writeTranslationSnapshot(projectId, previousTranslation, "pre_groq");
+    await fs.rm(previousTranslationPath, { force: true });
+  }
+  clean.corpus_id = projectId;
+  clean.created_at = clean.created_at || nowIso();
+  clean.updated_at = nowIso();
+  await writeJson(transcriptFile(projectId), clean);
+  await writeJson(currentFile(projectId), clean);
+  await writeSnapshot(projectId, clean, "generated");
+  await writeProject({
+    ...project,
+    updatedAt: nowIso(),
+    transcriptPath: transcriptFile(projectId),
+    translationPath: undefined,
+  });
+  return await loadProject(projectId);
 }
 
 export async function saveCurrentTranscript(projectId: string, transcript: WorkspaceTranscript): Promise<DesktopProjectLoad> {

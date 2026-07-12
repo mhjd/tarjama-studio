@@ -6,6 +6,7 @@ import {
   ArrowUpToLine,
   Check,
   ClipboardPaste,
+  Cloud,
   Combine,
   Copy,
   Download,
@@ -13,6 +14,7 @@ import {
   FileInput,
   GitCompare,
   History,
+  KeyRound,
   LocateFixed,
   Moon,
   Pause,
@@ -442,6 +444,10 @@ function DesktopApp() {
   const [copiedProjectId, setCopiedProjectId] = useState("");
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+  const [groqProgress, setGroqProgress] = useState<GroqTranscriptionProgress | null>(null);
+  const [groqKeyStatus, setGroqKeyStatus] = useState<GroqKeyStatus>({ configured: false, source: "none" });
+  const [groqSettingsOpen, setGroqSettingsOpen] = useState(false);
+  const [groqApiKey, setGroqApiKey] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -494,6 +500,7 @@ function DesktopApp() {
 
   useEffect(() => {
     void refreshLibrary().catch((err) => setError(err instanceof Error ? err.message : "Bibliothèque impossible à charger"));
+    void desktop?.groqKeyStatus().then(setGroqKeyStatus).catch(() => undefined);
   }, [refreshLibrary]);
 
   useEffect(() => {
@@ -509,6 +516,15 @@ function DesktopApp() {
     return desktop.onExportProgress((progress) => {
       if (selectedProjectId && progress.projectId !== selectedProjectId) return;
       setExportProgress(progress);
+      setState(progress.message);
+    });
+  }, [desktop, selectedProjectId]);
+
+  useEffect(() => {
+    if (!desktop) return;
+    return desktop.onGroqTranscriptionProgress((progress) => {
+      if (selectedProjectId && progress.projectId !== selectedProjectId) return;
+      setGroqProgress(progress);
       setState(progress.message);
     });
   }, [desktop, selectedProjectId]);
@@ -627,6 +643,50 @@ function DesktopApp() {
         await loadDesktopProject(project.id);
       }
     });
+  }
+
+  async function transcribeGroqDesktop(project: DesktopProject) {
+    if (!desktop || !project.videoPath) {
+      setError("Ajoute d'abord une vidéo avant de lancer la transcription.");
+      return;
+    }
+    if (!groqKeyStatus.configured) {
+      setGroqSettingsOpen(true);
+      return;
+    }
+    if (
+      project.transcriptPath &&
+      !window.confirm(
+        attachedTranslation
+          ? "Une transcription et une traduction existent déjà. Elles seront conservées dans l’historique, puis la traduction sera détachée car ses timestamps ne correspondront plus. Continuer ?"
+          : "Une transcription existe déjà. Elle sera conservée dans l’historique puis remplacée par la sortie Groq. Continuer ?",
+      )
+    ) return;
+    setGroqProgress({ projectId: project.id, stage: "preparing", percent: 0, message: "Préparation de la transcription Groq" });
+    await runDesktopAction("Transcription Groq...", async () => {
+      const loaded = await desktop.transcribeWithGroq(project.id);
+      applyLoadedProject(loaded);
+      setGroqProgress({ projectId: project.id, stage: "done", percent: 100, message: "Transcription Groq terminée" });
+    });
+  }
+
+  async function saveGroqKeyDesktop() {
+    if (!desktop || !groqApiKey.trim()) return;
+    try {
+      const status = await desktop.saveGroqApiKey(groqApiKey);
+      setGroqKeyStatus(status);
+      setGroqApiKey("");
+      setGroqSettingsOpen(false);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Clé Groq impossible à enregistrer");
+    }
+  }
+
+  async function clearGroqKeyDesktop() {
+    if (!desktop) return;
+    setGroqKeyStatus(await desktop.clearGroqApiKey());
+    setGroqApiKey("");
   }
 
   function openDesktopProject(projectId: string) {
@@ -1125,6 +1185,24 @@ function DesktopApp() {
     );
   }
 
+  function renderGroqProgress() {
+    if (!groqProgress || groqProgress.stage === "done") return null;
+    return (
+      <div className="download-progress" role="status" aria-live="polite">
+        <div>
+          <span>{groqProgress.message}</span>
+          {groqProgress.percent !== undefined && <strong>{groqProgress.percent.toFixed(1)}%</strong>}
+        </div>
+        <progress value={groqProgress.percent ?? undefined} max="100" />
+        <small>
+          {groqProgress.chunkIndex && groqProgress.chunkCount
+            ? `Morceau ${groqProgress.chunkIndex} sur ${groqProgress.chunkCount}`
+            : "Préparation de l'audio..."}
+        </small>
+      </div>
+    );
+  }
+
   return (
     <main className="desktop-shell">
       <header className={`desktop-header ${desktopView === "editor" ? "desktop-header-editor" : ""}`}>
@@ -1253,6 +1331,26 @@ function DesktopApp() {
                       <Upload size={16} />
                       <span>{loadedProject.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
                     </button>
+                    <button
+                      disabled={busy || isHistoryPreview || !loadedProjectHasVideo}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void transcribeGroqDesktop(loadedProject);
+                      }}
+                    >
+                      <Cloud size={16} />
+                      <span>Transcrire avec Groq</span>
+                    </button>
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        setGroqSettingsOpen(true);
+                      }}
+                    >
+                      <KeyRound size={16} />
+                      <span>Clé API Groq</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -1365,6 +1463,7 @@ function DesktopApp() {
             </div>
           </div>
           {renderExportProgress()}
+          {renderGroqProgress()}
 
           <section className="media-tools">
             <div>
@@ -1627,6 +1726,36 @@ function DesktopApp() {
               <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()}>
                 <Check size={16} />
                 <span>Importer</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {groqSettingsOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="modal" role="dialog" aria-modal="true">
+            <h2>Clé API Groq</h2>
+            <p>
+              {groqKeyStatus.source === "stored"
+                ? "Une clé personnelle est enregistrée dans le coffre chiffré du système."
+                : groqKeyStatus.source === "development-env"
+                  ? "La clé de développement du fichier .env est utilisée."
+                  : "Ajoute une clé personnelle pour transcrire avec Groq."}
+            </p>
+            <input
+              type="password"
+              autoComplete="off"
+              value={groqApiKey}
+              onChange={(event) => setGroqApiKey(event.target.value)}
+              placeholder="gsk_..."
+            />
+            <div className="modal-actions">
+              {groqKeyStatus.source === "stored" && <button onClick={() => void clearGroqKeyDesktop()}>Effacer la clé</button>}
+              <button onClick={() => setGroqSettingsOpen(false)}>Annuler</button>
+              <button disabled={!groqApiKey.trim()} onClick={() => void saveGroqKeyDesktop()}>
+                <Check size={16} />
+                <span>Enregistrer</span>
               </button>
             </div>
           </section>

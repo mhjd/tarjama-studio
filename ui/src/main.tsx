@@ -505,6 +505,7 @@ function DesktopApp() {
   const [rangeStart, setRangeStart] = useState("00:00");
   const [rangeEnd, setRangeEnd] = useState("00:00");
   const [loopEnabled, setLoopEnabled] = useState(false);
+  const [rangePlaybackActive, setRangePlaybackActive] = useState(false);
   const [playbackRate, setPlaybackRate] = useState<number>(() => {
     const stored = Number(localStorage.getItem("ashrafent-playback-rate"));
     return PLAYBACK_RATES.includes(stored as (typeof PLAYBACK_RATES)[number]) ? stored : 1;
@@ -638,6 +639,14 @@ function DesktopApp() {
         setShortcutsOpen(true);
         return;
       }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setRangeStart("00:00");
+        setRangeEnd("00:00");
+        setLoopEnabled(false);
+        setRangePlaybackActive(false);
+        return;
+      }
       if (event.code === "Space") {
         event.preventDefault();
         togglePlay();
@@ -675,7 +684,7 @@ function DesktopApp() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [desktopView, mediaUrl, rangeEnd, rangeStart, displayedTranscript]);
+  }, [desktopView, mediaUrl, rangeEnd, rangePlaybackActive, rangeStart, displayedTranscript]);
 
   useEffect(() => {
     if (!openActionMenu) return;
@@ -1167,11 +1176,20 @@ function DesktopApp() {
     }
   }
 
-  function seekTo(seconds: number) {
+  function isInsidePlaybackRange(seconds: number) {
+    const start = parseTime(rangeStart) ?? 0;
+    const end = parseTime(rangeEnd);
+    return end !== null && end > start && seconds >= start && seconds < end;
+  }
+
+  function seekTo(seconds: number, preserveRangePlayback = false) {
     const audio = audioRef.current;
     if (!audio) return;
     audio.currentTime = Math.max(0, Math.min(seconds, duration || seconds));
     setCurrentTime(audio.currentTime);
+    if (!preserveRangePlayback && !isInsidePlaybackRange(audio.currentTime)) {
+      setRangePlaybackActive(false);
+    }
   }
 
   function seekBy(delta: number) {
@@ -1184,17 +1202,34 @@ function DesktopApp() {
     audio.playbackRate = playbackRate;
     const start = parseTime(rangeStart) ?? 0;
     const end = parseTime(rangeEnd);
-    if (audio.paused && end !== null && end > start && audio.currentTime >= end - 0.05) {
+    const hasRange = end !== null && end > start;
+    if (audio.paused && rangePlaybackActive && hasRange && audio.currentTime >= end - 0.05) {
       audio.currentTime = start;
       setCurrentTime(start);
     }
-    if (audio.paused) void audio.play();
-    else audio.pause();
+    if (audio.paused) {
+      setRangePlaybackActive(hasRange && (rangePlaybackActive || isInsidePlaybackRange(audio.currentTime)));
+      void audio.play();
+    } else {
+      audio.pause();
+    }
   }
 
   function stopAudio() {
     audioRef.current?.pause();
-    seekTo(parseTime(rangeStart) ?? 0);
+  }
+
+  function returnToInterval() {
+    const start = parseTime(rangeStart) ?? 0;
+    seekTo(start, true);
+    setRangePlaybackActive(true);
+  }
+
+  function clearInterval() {
+    setRangeStart("00:00");
+    setRangeEnd("00:00");
+    setLoopEnabled(false);
+    setRangePlaybackActive(false);
   }
 
   function onTimeUpdate() {
@@ -1204,12 +1239,12 @@ function DesktopApp() {
     setCurrentTime(nextTime);
     const end = parseTime(rangeEnd);
     const start = parseTime(rangeStart) ?? 0;
-    if (loopEnabled && end !== null && end > start && nextTime >= end) {
+    if (rangePlaybackActive && loopEnabled && end !== null && end > start && nextTime >= end) {
       audio.currentTime = start;
       void audio.play();
       return;
     }
-    if (!loopEnabled && end !== null && end > start && nextTime >= end) {
+    if (rangePlaybackActive && !loopEnabled && end !== null && end > start && nextTime >= end) {
       audio.pause();
       audio.currentTime = end;
       setCurrentTime(end);
@@ -2020,6 +2055,10 @@ function DesktopApp() {
                   <input checked={loopEnabled} type="checkbox" onChange={(event) => setLoopEnabled(event.target.checked)} />
                   <span>Boucle</span>
                 </label>
+                <button className="interval-clear" onClick={clearInterval} title="Effacer l’intervalle (Échap)">
+                  <X size={16} />
+                  <span>Effacer</span>
+                </button>
               </div>
               <div
                 className="timeline-wrap"
@@ -2059,9 +2098,9 @@ function DesktopApp() {
                   </button>
                   <button onClick={() => seekBy(3)}>+3s</button>
                   <button onClick={() => seekBy(10)}>+10s</button>
-                  <button onClick={() => seekTo(parseTime(rangeStart) ?? 0)} title="Retour au début de l'intervalle">
+                  <button onClick={returnToInterval} title="Revenir au début de l’intervalle">
                     <RotateCcw size={16} />
-                    <span>Début</span>
+                    <span>Retour intervalle</span>
                   </button>
                 </div>
                 <label className="playback-rate">
@@ -2358,6 +2397,7 @@ function DesktopApp() {
               <div><dt>D</dt><dd>Définir le début de l’intervalle</dd></div>
               <div><dt>F</dt><dd>Définir la fin de l’intervalle</dd></div>
               <div><dt>B</dt><dd>Activer ou désactiver la boucle</dd></div>
+              <div><dt>Échap</dt><dd>Effacer l’intervalle</dd></div>
               <div><dt>S</dt><dd>Aller au segment du temps courant</dd></div>
               <div><dt>?</dt><dd>Ouvrir cette aide</dd></div>
             </dl>

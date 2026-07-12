@@ -581,7 +581,6 @@ function DesktopApp() {
 
   useEffect(() => {
     void refreshLibrary().catch((err) => setError(err instanceof Error ? err.message : "Bibliothèque impossible à charger"));
-    void desktop?.groqKeyStatus().then(setGroqKeyStatus).catch(() => undefined);
   }, [refreshLibrary]);
 
   useEffect(() => {
@@ -817,7 +816,9 @@ function DesktopApp() {
       setError("Ce projet a déjà été transcrit avec Groq. La transcription reste disponible dans ce projet.");
       return;
     }
-    if (!groqKeyStatus.configured) {
+    const keyStatus = await desktop.groqKeyStatus();
+    setGroqKeyStatus(keyStatus);
+    if (!keyStatus.configured) {
       setDesktopView("options");
       setOptionsState("Ajoute une clé Groq avant de lancer la transcription.");
       return;
@@ -1704,7 +1705,7 @@ function DesktopApp() {
                 <h1>Clé API Groq</h1>
                 <span>
                   {groqKeyStatus.source === "stored"
-                    ? "Une clé personnelle est enregistrée dans le coffre chiffré du système."
+                    ? "Une clé personnelle est enregistrée localement sur cette machine."
                     : groqKeyStatus.source === "development-env"
                       ? "La clé de développement du fichier .env est utilisée."
                       : "Aucune clé configurée."}

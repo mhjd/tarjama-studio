@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -46,8 +47,46 @@ import type {
 } from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+let startupLogFile = "";
+
+function errorText(error: unknown): string {
+  return error instanceof Error && error.stack ? error.stack : String(error);
+}
+
+function writeStartupLog(message: string): void {
+  const line = `${new Date().toISOString()} ${message}\n`;
+  console.log(line.trim());
+  if (!startupLogFile) return;
+  try {
+    fs.appendFileSync(startupLogFile, line, "utf8");
+  } catch {
+    // Logging must never prevent the application from opening.
+  }
+}
+
+function initializeStartupLog(): void {
+  const directory = app.getPath("userData");
+  try {
+    fs.mkdirSync(directory, { recursive: true });
+    startupLogFile = path.join(directory, "startup.log");
+    fs.writeFileSync(startupLogFile, "", "utf8");
+    writeStartupLog(`Starting Ashrafent ${app.getVersion()} on ${process.platform}-${process.arch}`);
+  } catch (error) {
+    console.error("Unable to initialize startup log", error);
+  }
+}
+
+function reportStartupFailure(context: string, error: unknown): void {
+  const detail = errorText(error);
+  writeStartupLog(`${context}: ${detail}`);
+  dialog.showErrorBox(
+    "Ashrafent n’a pas pu démarrer",
+    `${context}.\n\nConsulte le fichier startup.log dans :\n${app.getPath("userData")}\n\n${detail}`,
+  );
+}
 
 function createWindow(): void {
+  writeStartupLog("Creating main window");
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -62,10 +101,18 @@ function createWindow(): void {
 
   const devServer = process.env.ASHRAFENT_VITE_DEV_SERVER;
   if (devServer) {
-    void window.loadURL(devServer);
+    void window.loadURL(devServer).catch((error) => reportStartupFailure("Chargement de l’interface impossible", error));
   } else {
-    void window.loadFile(path.join(__dirname, "../dist/index.html"));
+    void window.loadFile(path.join(__dirname, "../dist/index.html")).catch((error) => reportStartupFailure("Chargement de l’interface impossible", error));
   }
+  window.webContents.on("did-finish-load", () => writeStartupLog("Renderer finished loading"));
+  window.webContents.on("did-fail-load", (_event, code, description, validatedUrl) => {
+    writeStartupLog(`Renderer failed to load (${code}): ${description} (${validatedUrl})`);
+  });
+  window.webContents.on("render-process-gone", (_event, details) => {
+    reportStartupFailure(`Le processus d’interface s’est arrêté (${details.reason})`, details.exitCode);
+  });
+  window.on("unresponsive", () => writeStartupLog("Main window is unresponsive"));
 }
 
 function registerIpc(): void {
@@ -154,14 +201,23 @@ function registerIpc(): void {
   ipcMain.handle("project:trash", async (_event, projectId: string) => trashProject(projectId));
 }
 
-registerIpc();
-
 app.whenReady().then(() => {
-  createWindow();
+  initializeStartupLog();
+  try {
+    registerIpc();
+    createWindow();
+  } catch (error) {
+    reportStartupFailure("Initialisation impossible", error);
+  }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+}).catch((error) => {
+  console.error("Ashrafent could not initialize", error);
 });
+
+process.on("uncaughtException", (error) => reportStartupFailure("Erreur interne", error));
+process.on("unhandledRejection", (error) => writeStartupLog(`Promesse non gérée: ${errorText(error)}`));
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

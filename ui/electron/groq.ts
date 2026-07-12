@@ -1,4 +1,4 @@
-import { app, safeStorage } from "electron";
+import { app } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { GroqKeyStatus, GroqTranscriptionProgress, WorkspaceTranscript } from "./types.js";
@@ -11,7 +11,7 @@ const CHUNK_OVERLAP_SECONDS = 20;
 const MIN_CHUNK_SECONDS = 30;
 const SETTINGS_FILE = "groq-settings.json";
 
-type StoredSettings = { encryptedApiKey?: string };
+type StoredSettings = { apiKey?: string };
 type GroqSegment = { start?: unknown; end?: unknown; text?: unknown };
 type GroqWord = { start?: unknown; end?: unknown; word?: unknown };
 type GroqResponse = { segments?: GroqSegment[]; words?: GroqWord[]; text?: string; error?: { message?: string } };
@@ -100,12 +100,7 @@ async function developmentEnvKey(): Promise<string> {
 
 async function storedApiKey(): Promise<string> {
   const settings = await readStoredSettings();
-  if (!settings.encryptedApiKey || !safeStorage.isEncryptionAvailable()) return "";
-  try {
-    return safeStorage.decryptString(Buffer.from(settings.encryptedApiKey, "base64"));
-  } catch {
-    return "";
-  }
+  return settings.apiKey?.trim() ?? "";
 }
 
 export async function groqKeyStatus(): Promise<GroqKeyStatus> {
@@ -117,11 +112,7 @@ export async function groqKeyStatus(): Promise<GroqKeyStatus> {
 export async function saveGroqApiKey(apiKey: string): Promise<GroqKeyStatus> {
   const clean = apiKey.trim();
   if (!clean) throw new Error("La clé API Groq est vide");
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error("Le coffre chiffré du système n'est pas disponible sur cette machine");
-  }
-  const encryptedApiKey = safeStorage.encryptString(clean).toString("base64");
-  await fs.writeFile(settingsPath(), `${JSON.stringify({ encryptedApiKey }, null, 2)}\n`, { mode: 0o600 });
+  await fs.writeFile(settingsPath(), `${JSON.stringify({ apiKey: clean }, null, 2)}\n`, { mode: 0o600 });
   return { configured: true, source: "stored" };
 }
 

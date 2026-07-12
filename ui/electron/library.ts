@@ -23,6 +23,7 @@ import type {
   ImportTranslationResult,
   ImportTranscriptResult,
   PromptKind,
+  TranscriptSegment,
   UpdateToolResult,
   WorkspaceTranscript,
   WorkspaceTranslation,
@@ -234,6 +235,65 @@ function validateCleanedTranscript(
   };
 }
 
+function cleanedTranscriptFromMarkdown(
+  projectId: string,
+  current: WorkspaceTranscript,
+  content: string,
+): { transcript: WorkspaceTranscript; summary: Omit<CleanedTranscriptImportResult, "loaded"> } {
+  const { sections } = parseTimestampedMarkdown(content);
+  if (!sections.length) throw new Error("La transcription nettoyée ne contient aucun bloc Markdown horodaté");
+  const sourceByTimestamp = new Map(
+    current.segments.map((segment, index) => [`${segment.start.toFixed(3)}:${segment.end.toFixed(3)}`, { segment, index }]),
+  );
+  const usedSourceIds = new Set<string>();
+  const mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }> = [];
+  let previousSourceIndex = -1;
+  const segments = sections.map((section, sectionIndex) => {
+    const source = sourceByTimestamp.get(`${section.start.toFixed(3)}:${section.end.toFixed(3)}`);
+    if (!source || usedSourceIds.has(String(source.segment.id))) {
+      mismatches.push({ index: source?.index ?? sectionIndex, received: section });
+      return null;
+    }
+    usedSourceIds.add(String(source.segment.id));
+    if (source.index < previousSourceIndex) {
+      throw new Error(
+        `Les blocs ne sont plus dans l'ordre à la ligne ${section.headingLine}: ## ${timestampRange(section.start, section.end)}`,
+      );
+    }
+    previousSourceIndex = source.index;
+    if (!section.text.trim()) {
+      throw new Error(`Le bloc à la ligne ${section.headingLine} est vide: ## ${timestampRange(section.start, section.end)}`);
+    }
+    return { ...source.segment, text: section.text.trim(), translation: "" };
+  });
+  if (mismatches.length) {
+    throw alignmentError(
+      "Bloc de transcription inconnu ou dupliqué",
+      current,
+      mismatches,
+    );
+  }
+  const transcript = validateTranscript({
+    ...current,
+    corpus_id: projectId,
+    segments: segments.filter((segment): segment is TranscriptSegment => segment !== null),
+    updated_at: nowIso(),
+  });
+  const beforeById = new Map(current.segments.map((segment) => [String(segment.id), segment]));
+  const afterById = new Map(transcript.segments.map((segment) => [String(segment.id), segment]));
+  const keptIds = [...beforeById.keys()].filter((id) => afterById.has(id));
+  return {
+    transcript,
+    summary: {
+      before: current.segments.length,
+      after: transcript.segments.length,
+      added: 0,
+      removed: [...beforeById.keys()].filter((id) => !afterById.has(id)).length,
+      changed: keptIds.filter((id) => beforeById.get(id)?.text !== afterById.get(id)?.text).length,
+    },
+  };
+}
+
 function transcriptComparable(transcript: WorkspaceTranscript | null): string {
   if (!transcript) return "";
   return JSON.stringify(
@@ -387,6 +447,22 @@ async function loadSavedTranscript(projectId: string): Promise<WorkspaceTranscri
   return null;
 }
 
+async function refreshProjectArtifactPaths(project: DesktopProject): Promise<DesktopProject> {
+  const savedTranscript = transcriptFile(project.id);
+  const currentTranscript = currentFile(project.id);
+  const translation = translationFile(project.id);
+  const transcriptPath = (await pathExists(savedTranscript))
+    ? savedTranscript
+    : (await pathExists(currentTranscript))
+      ? currentTranscript
+      : undefined;
+  const translationPath = (await pathExists(translation)) ? translation : undefined;
+  if (project.transcriptPath === transcriptPath && project.translationPath === translationPath) return project;
+  const updated = { ...project, transcriptPath, translationPath };
+  await writeProject(updated);
+  return updated;
+}
+
 async function ensureInitialSnapshot(projectId: string, transcript: WorkspaceTranscript): Promise<void> {
   if ((await snapshotFiles(projectId)).length === 0) {
     await writeSnapshot(projectId, transcript, "initial");
@@ -410,8 +486,12 @@ async function recoveryState(projectId: string): Promise<DesktopProjectLoad["rec
 
 function parseTimecode(value: string): number {
   const parts = value.trim().split(":");
-  if (parts.length === 2) return Number(parts[0]) * 60 + Number(parts[1]);
-  if (parts.length === 3) return Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2]);
+  const numbers = parts.map(Number);
+  if (numbers.some((part) => !Number.isFinite(part) || part < 0)) {
+    throw new Error(`Invalid timecode: ${value}`);
+  }
+  if (parts.length === 2) return numbers[0] * 60 + numbers[1];
+  if (parts.length === 3) return numbers[0] * 3600 + numbers[1] * 60 + numbers[2];
   throw new Error(`Invalid timecode: ${value}`);
 }
 
@@ -419,17 +499,24 @@ function sameTime(left: number, right: number): boolean {
   return Number(left.toFixed(3)) === Number(right.toFixed(3));
 }
 
-function parseTranslationMarkdown(content: string): { metadata: Record<string, string>; sections: Array<{ start: number; end: number; translation: string }> } {
+type MarkdownSection = { start: number; end: number; text: string; headingLine: number };
+
+function parseTimestampedMarkdown(content: string): { metadata: Record<string, string>; sections: MarkdownSection[] } {
   const metadata: Record<string, string> = {};
-  const sections: Array<{ start: number; end: number; translation: string }> = [];
-  let current: { start: number; end: number; lines: string[] } | null = null;
+  const sections: MarkdownSection[] = [];
+  let current: { start: number; end: number; lines: string[]; headingLine: number } | null = null;
   const heading = /^##\s+(.+?)\s+-->\s+(.+?)\s*$/;
-  for (const rawLine of content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n")) {
+  const lines = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  for (const [index, rawLine] of lines.entries()) {
     const line = rawLine.trimEnd();
     const match = line.match(heading);
     if (match) {
-      if (current) sections.push({ start: current.start, end: current.end, translation: current.lines.join("\n").trim() });
-      current = { start: parseTimecode(match[1]), end: parseTimecode(match[2]), lines: [] };
+      if (current) sections.push({ start: current.start, end: current.end, text: current.lines.join("\n").trim(), headingLine: current.headingLine });
+      try {
+        current = { start: parseTimecode(match[1]), end: parseTimecode(match[2]), lines: [], headingLine: index + 1 };
+      } catch {
+        throw new Error(`Timestamp invalide à la ligne ${index + 1}: ${line}`);
+      }
       continue;
     }
     if (!current) {
@@ -441,8 +528,44 @@ function parseTranslationMarkdown(content: string): { metadata: Record<string, s
     }
     current.lines.push(line);
   }
-  if (current) sections.push({ start: current.start, end: current.end, translation: current.lines.join("\n").trim() });
+  if (current) sections.push({ start: current.start, end: current.end, text: current.lines.join("\n").trim(), headingLine: current.headingLine });
   return { metadata, sections };
+}
+
+function timestampRange(start: number, end: number): string {
+  return `${formatPromptTime(start)} --> ${formatPromptTime(end)}`;
+}
+
+function alignmentError(
+  title: string,
+  transcript: WorkspaceTranscript,
+  mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }>,
+): Error {
+  const details = mismatches.slice(0, 8).map(({ index, received }) => {
+    const expected = transcript.segments[index];
+    const expectedLine = expected
+      ? `attendu: ## ${timestampRange(expected.start, expected.end)}\n  arabe: ${expected.text.trim() || "(vide)"}`
+      : "attendu: aucun bloc supplémentaire";
+    const receivedLine = received
+      ? `reçu: ## ${timestampRange(received.start, received.end)}\n  texte: ${received.text.trim() || "(vide)"}`
+      : "reçu: bloc absent";
+    return `Bloc ${index + 1}\n  ${expectedLine}\n  ${receivedLine}`;
+  });
+  const suffix = mismatches.length > 8 ? `\n… et ${mismatches.length - 8} autre(s) bloc(s).` : "";
+  return new Error(`${title}. Chaque titre doit reprendre exactement le timestamp de la transcription.\n${details.join("\n\n")}${suffix}`);
+}
+
+function segmentCountError(label: string, transcript: WorkspaceTranscript, sections: MarkdownSection[]): Error {
+  const index = Math.min(sections.length, transcript.segments.length - 1);
+  const expected = transcript.segments[index];
+  const received = sections[index];
+  const expectedLine = expected
+    ? `attendu autour du bloc ${index + 1}: ## ${timestampRange(expected.start, expected.end)}\n  arabe: ${expected.text.trim() || "(vide)"}`
+    : "attendu: aucun bloc supplémentaire";
+  const receivedLine = received
+    ? `reçu autour du bloc ${index + 1}: ## ${timestampRange(received.start, received.end)}\n  texte: ${received.text.trim() || "(vide)"}`
+    : "reçu: bloc absent";
+  return new Error(`${label} contient ${sections.length} bloc(s); attendu: ${transcript.segments.length}.\n${expectedLine}\n${receivedLine}`);
 }
 
 function translationFromJson(
@@ -495,25 +618,25 @@ function translationFromMarkdown(
   content: string,
   filename: string,
 ): WorkspaceTranslation {
-  const { metadata, sections } = parseTranslationMarkdown(content);
+  const { metadata, sections } = parseTimestampedMarkdown(content);
   if (sections.length !== transcript.segments.length) {
-    throw new Error(`La traduction contient ${sections.length} segment(s); attendu: ${transcript.segments.length}`);
+    throw segmentCountError("La traduction", transcript, sections);
   }
-  const mismatches: number[] = [];
+  const mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }> = [];
   const segments = transcript.segments.map((source, index) => {
     const translated = sections[index];
     if (!sameTime(source.start, translated.start) || !sameTime(source.end, translated.end)) {
-      mismatches.push(index + 1);
+      mismatches.push({ index, received: translated });
     }
     return {
       id: String(source.id),
       start: source.start,
       end: source.end,
-      translation: translated.translation,
+      translation: translated.text,
     };
   });
   if (mismatches.length) {
-    throw new Error(`Timestamp non aligné dans le(s) bloc(s): ${mismatches.slice(0, 8).join(", ")}`);
+    throw alignmentError("Timestamps non alignés", transcript, mismatches);
   }
   return {
     corpus_id: projectId,
@@ -550,9 +673,15 @@ function translationFromImportContent(
 
 function assertTranslationAlignment(transcript: WorkspaceTranscript, translation: WorkspaceTranslation): void {
   if (translation.segments.length !== transcript.segments.length) {
-    throw new Error(`La traduction contient ${translation.segments.length} segment(s); attendu: ${transcript.segments.length}`);
+    const sections = translation.segments.map((segment, index) => ({
+      start: segment.start,
+      end: segment.end,
+      text: segment.translation,
+      headingLine: index + 1,
+    }));
+    throw segmentCountError("La traduction", transcript, sections);
   }
-  const mismatches: number[] = [];
+  const mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }> = [];
   transcript.segments.forEach((source, index) => {
     const translated = translation.segments[index];
     if (
@@ -560,11 +689,14 @@ function assertTranslationAlignment(transcript: WorkspaceTranscript, translation
       !sameTime(source.start, translated.start) ||
       !sameTime(source.end, translated.end)
     ) {
-      mismatches.push(index + 1);
+      mismatches.push({
+        index,
+        received: { start: translated.start, end: translated.end, text: translated.translation },
+      });
     }
   });
   if (mismatches.length) {
-    throw new Error(`Traduction non alignée dans le(s) segment(s): ${mismatches.slice(0, 8).join(", ")}`);
+    throw alignmentError("Traduction non alignée", transcript, mismatches);
   }
 }
 
@@ -1189,7 +1321,7 @@ export async function readLibrary(): Promise<DesktopLibraryInfo> {
     if (!entry.isDirectory()) continue;
     const filePath = path.join(root, entry.name, PROJECT_FILE);
     if (!(await pathExists(filePath))) continue;
-    projects.push(await readJson<DesktopProject>(filePath));
+    projects.push(await refreshProjectArtifactPaths(await readJson<DesktopProject>(filePath)));
   }
   projects.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   return { libraryDir: root, projects };
@@ -1318,7 +1450,7 @@ async function promptValue(kind: PromptKind): Promise<{ content: string; customi
 function validatePromptTemplate(kind: PromptKind, content: string): void {
   if (!content.trim()) throw new Error("Le prompt ne peut pas être vide");
   const required = kind === "transcript_cleanup"
-    ? ["{{corpus_id}}", "{{title}}", "{{transcript_json}}"]
+    ? ["{{corpus_id}}", "{{title}}", "{{source_blocks}}"]
     : ["{{corpus_id}}", "{{source_blocks}}", "{{project_instructions_block}}"];
   const missing = required.filter((placeholder) => !content.includes(placeholder));
   if (missing.length) throw new Error(`Placeholder(s) obligatoire(s) manquant(s): ${missing.join(", ")}`);
@@ -1355,12 +1487,15 @@ export async function renderCleanupPrompt(
   const project = await readProject(projectId);
   await requireProjectVideo(project);
   const clean = transcriptWithoutSegmentTranslations(validateTranscript(transcript));
-  clean.corpus_id = projectId;
+  const sourceBlocks = clean.segments
+    .map((segment) => `## ${formatPromptTime(segment.start)} --> ${formatPromptTime(segment.end)}\n${segment.text.trim()}`)
+    .join("\n\n");
   const template = (await promptValue("transcript_cleanup")).content;
+  validatePromptTemplate("transcript_cleanup", template);
   return template
     .replaceAll("{{corpus_id}}", projectId)
     .replaceAll("{{title}}", project.title)
-    .replace("{{transcript_json}}", JSON.stringify(clean, null, 2));
+    .replace("{{source_blocks}}", sourceBlocks);
 }
 
 function formatPromptTime(seconds: number): string {
@@ -1391,15 +1526,13 @@ export async function renderTranslationPrompt(
     .replace("{{source_blocks}}", sourceBlocks);
 }
 
-async function importCleanedTranscriptPayload(
+async function saveCleanedTranscript(
   projectId: string,
-  payload: unknown,
+  current: WorkspaceTranscript,
+  transcript: WorkspaceTranscript,
+  summary: Omit<CleanedTranscriptImportResult, "loaded">,
 ): Promise<CleanedTranscriptImportResult> {
   const project = await readProject(projectId);
-  await requireProjectVideo(project);
-  const current = await loadSavedTranscript(projectId);
-  if (!current) throw new Error("Aucune transcription à nettoyer dans ce projet");
-  const { transcript, summary } = validateCleanedTranscript(current, payload);
   const clean = transcriptWithoutSegmentTranslations(transcript);
   clean.corpus_id = projectId;
   clean.updated_at = nowIso();
@@ -1430,18 +1563,38 @@ async function importCleanedTranscriptPayload(
   return { loaded: await loadProject(projectId), ...summary };
 }
 
+async function importCleanedTranscriptPayload(
+  projectId: string,
+  payload: unknown,
+): Promise<CleanedTranscriptImportResult> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const current = await loadSavedTranscript(projectId);
+  if (!current) throw new Error("Aucune transcription à nettoyer dans ce projet");
+  const { transcript, summary } = validateCleanedTranscript(current, payload);
+  return await saveCleanedTranscript(projectId, current, transcript, summary);
+}
+
 export async function importCleanedTranscriptContent(
   projectId: string,
   content: string,
 ): Promise<CleanedTranscriptImportResult> {
   if (!content.trim()) throw new Error("La transcription nettoyée est vide");
-  let payload: unknown;
-  try {
-    payload = JSON.parse(content);
-  } catch (error) {
-    throw new Error(`JSON de transcription invalide: ${error instanceof Error ? error.message : String(error)}`);
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const current = await loadSavedTranscript(projectId);
+  if (!current) throw new Error("Aucune transcription à nettoyer dans ce projet");
+  const trimmed = content.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      return await importCleanedTranscriptPayload(projectId, JSON.parse(trimmed));
+    } catch (error) {
+      if (error instanceof SyntaxError) throw new Error(`JSON de transcription invalide: ${error.message}`);
+      throw error;
+    }
   }
-  return await importCleanedTranscriptPayload(projectId, payload);
+  const { transcript, summary } = cleanedTranscriptFromMarkdown(projectId, current, content);
+  return await saveCleanedTranscript(projectId, current, transcript, summary);
 }
 
 export async function importCleanedTranscriptFile(
@@ -1452,7 +1605,11 @@ export async function importCleanedTranscriptFile(
   const selection = await dialog.showOpenDialog({
     title: `Importer la transcription nettoyée pour ${project.title}`,
     properties: ["openFile"],
-    filters: [{ name: "Transcription JSON", extensions: ["json"] }],
+    filters: [
+      { name: "Transcription Markdown", extensions: ["md", "markdown", "txt"] },
+      { name: "Transcription JSON (ancien format)", extensions: ["json"] },
+      { name: "Tous les fichiers", extensions: ["*"] },
+    ],
   });
   if (selection.canceled || !selection.filePaths[0]) return null;
   return await importCleanedTranscriptContent(projectId, await fs.readFile(selection.filePaths[0], "utf8"));
@@ -1666,7 +1823,7 @@ function transcriptCameFromGroq(transcript: WorkspaceTranscript | null): boolean
 }
 
 export async function loadProject(projectId: string): Promise<DesktopProjectLoad> {
-  let project = await readProject(projectId);
+  let project = await refreshProjectArtifactPaths(await readProject(projectId));
   const transcript = await loadSavedTranscript(projectId);
   if (!project.groqTranscribedAt && transcriptCameFromGroq(transcript)) {
     project = { ...project, groqTranscribedAt: transcript?.created_at || nowIso() };

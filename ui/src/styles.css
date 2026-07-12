@@ -660,6 +660,16 @@ input {
   margin: 0;
 }
 
+.import-error {
+  background: color-mix(in srgb, var(--danger) 9%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border-soft));
+  border-radius: 6px;
+  max-height: 16rem;
+  overflow: auto;
+  padding: 0.7rem;
+  white-space: pre-wrap;
+}
+
 .undo-button {
   margin-left: 0;
 }

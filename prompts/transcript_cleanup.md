@@ -12,30 +12,24 @@ Erreurs typiques observees dans nos sorties Whisper:
 - mots inventes ou deformes quand le passage est difficile;
 - repetitions absurdes dues au modele, par exemple un mot ou une expression repete trop longtemps;
 - ponctuation absente ou mal placee;
-- segmentation imparfaite, sans que les timestamps puissent etre recalcules;
+- segmentation imparfaite;
 - doublons ou formulations legerement divergentes autour des frontieres de morceaux audio Groq qui se chevauchent;
 - confusion entre formules religieuses proches, versets, hadiths ou citations poetiques.
 
 Exemples concrets deja observes:
 - repetition parasite: "و و و و و", "العمل العمل العمل", "العقبة العقبة العقبة";
 - mot plausible mais faux dans le contexte: "عمر الله" au lieu de "أمر الله", "تذيق به" au lieu de "تثق به";
-- noms/expressions savantes deformes: "مريئ القيس" au lieu de "امرئ القيس";
-- passage manifestement incoherent au debut d'un segment long, a corriger seulement si le contexte proche rend la correction probable.
+- noms/expressions savantes deformes: "مريئ القيس" au lieu de "امرئ القيس".
 
 Contraintes imperatives:
-- Reponds uniquement avec le JSON complet corrige, sans Markdown, sans commentaire avant ou apres.
-- Conserve exactement la meme structure JSON et les memes cles.
-- Conserve exactement corpus_id, audio_path, source_transcript, source_model, project_instructions, created_at et updated_at.
-- Conserve autant que possible les segments existants, leurs id, start et end.
-- Tu peux supprimer un segment seulement s'il est entierement inutile: repetition parasite, hallucination evidente, bruit de modele, ou fragment vide/non exploitable.
-- Supprime obligatoirement les segments dont "text" est vide ou uniquement compose d'espaces.
-- Supprime obligatoirement les segments vides a duree nulle ou micro-duree issus de Whisper.
-- Si deux segments voisins couvrent manifestement le meme passage a cause du chevauchement entre morceaux Groq, conserve la version la plus coherente et supprime le doublon. Ne fusionne pas des passages distincts simplement parce que leurs timestamps se chevauchent legerement.
-- Ne laisse aucun segment vide dans le JSON final.
-- Tu peux remplacer ou ajouter un segment seulement si cela preserve un JSON sain: id unique, timestamps numeriques, end >= start, ordre chronologique. Pour un nouveau segment non vide, prefere end > start.
-- Modifie principalement les champs "text" des segments.
-- Laisse tous les champs "translation" inchanges.
-- Ne recalcule pas librement les timestamps. Si tu conserves un segment existant, garde ses timestamps.
+- Reponds uniquement avec le document Markdown corrige, sans commentaire avant ou apres.
+- Chaque bloc commence exactement par une ligne `## début --> fin`.
+- Conserve exactement chaque titre de bloc que tu gardes, timestamps compris. Ne modifie jamais un timestamp, ne fusionne jamais et ne divise jamais un bloc.
+- Conserve tous les blocs utiles, dans le meme ordre.
+- Tu peux supprimer un bloc uniquement s'il est entierement inutile: repetition parasite, hallucination evidente, bruit de modele, ou fragment vide/non exploitable.
+- Ne laisse aucun bloc vide.
+- Ne cree aucun nouveau bloc. L'ajout ou la modification de timestamps est interdit.
+- Modifie principalement le texte sous les titres.
 - Ne transforme pas la transcription en texte litteraire; garde une transcription orale propre.
 - Ne rajoute pas de contenu absent de l'audio probable.
 - Si une correction est incertaine, prefere une correction minimale ou conserve le texte existant.
@@ -46,8 +40,21 @@ Ce que tu peux corriger:
 - noms propres et termes religieux manifestement mal transcrits;
 - repetitions accidentelles;
 - ponctuation arabe/francaise utile a la lisibilite;
-- espaces, retours a la ligne et lisibilite interne du champ "text".
+- espaces, retours a la ligne et lisibilite interne du texte.
 
-Transcription JSON a nettoyer:
+Format de sortie attendu:
 
-{{transcript_json}}
+# Transcription nettoyee
+
+source_corpus_id: {{corpus_id}}
+
+## 00:00.000 --> 00:03.440
+النص العربي المصحح.
+
+Transcription a nettoyer:
+
+# Source
+
+source_corpus_id: {{corpus_id}}
+
+{{source_blocks}}

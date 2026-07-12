@@ -274,6 +274,19 @@ function shortText(value: string, max = 140): string {
 
 function cleanupPastePreview(content: string): { valid: boolean; lines: string[] } {
   if (!content.trim()) return { valid: false, lines: [] };
+  const markdownHeadings = [...content.matchAll(/^##\s+(.+?)\s+-->\s+(.+?)\s*$/gm)];
+  if (markdownHeadings.length) {
+    const first = markdownHeadings[0];
+    const last = markdownHeadings.at(-1)!;
+    return {
+      valid: true,
+      lines: [
+        `Markdown horodaté: ${markdownHeadings.length} bloc(s)`,
+        `Premier: ${first[1]} → ${first[2]}`,
+        `Dernier: ${last[1]} → ${last[2]}`,
+      ],
+    };
+  }
   try {
     const payload = JSON.parse(content) as { corpus_id?: unknown; segments?: unknown };
     if (!payload || typeof payload !== "object" || !Array.isArray(payload.segments) || !payload.segments.length) {
@@ -285,6 +298,7 @@ function cleanupPastePreview(content: string): { valid: boolean; lines: string[]
     return {
       valid: true,
       lines: [
+        "JSON détecté: ancien format encore accepté.",
         `corpus_id: ${String(payload.corpus_id ?? "absent")}`,
         `${segments.length} segment(s)`,
         `Premier: ${String(first.start ?? "?")} → ${String(first.end ?? "?")} · ${shortText(String(first.text ?? ""), 90)}`,
@@ -1218,7 +1232,7 @@ function DesktopApp() {
     }
     setError("");
     try {
-      const result = await desktop.importTranslationContent(selectedProjectId, pastedTranslation, "pasted-translation.json", true);
+      const result = await desktop.importTranslationContent(selectedProjectId, pastedTranslation, "pasted-translation.md", true);
       setAttachedTranslation(result.translation);
       if (transcript) setTranscript(applyTranslation(transcript, result.translation));
       setPastedTranslation("");
@@ -1675,7 +1689,7 @@ function DesktopApp() {
                       }}
                     >
                       <ClipboardPaste size={16} />
-                      <span>Coller le JSON nettoyé</span>
+                      <span>Coller transcription nettoyée</span>
                     </button>
                     <button
                       disabled={busy || isHistoryPreview || !transcript}
@@ -1685,7 +1699,7 @@ function DesktopApp() {
                       }}
                     >
                       <Upload size={16} />
-                      <span>Importer le JSON nettoyé</span>
+                      <span>Importer transcription nettoyée</span>
                     </button>
                   </div>
                 )}
@@ -1800,6 +1814,7 @@ function DesktopApp() {
           </div>
           {renderExportProgress()}
           {renderGroqProgress()}
+          {error && <pre className="error import-error">{error}</pre>}
 
           <section className="media-tools">
             <div>
@@ -2051,12 +2066,13 @@ function DesktopApp() {
         <div className="modal-backdrop" role="presentation">
           <section className="modal paste-modal" role="dialog" aria-modal="true">
             <h2>Importer une traduction collée</h2>
-            <p>Colle une traduction Ashrafent en JSON ou en Markdown. Les timestamps seront validés avant remplacement.</p>
+            <p>Colle une traduction Ashrafent en Markdown. Les timestamps seront validés avant remplacement.</p>
             <textarea
               value={pastedTranslation}
               onChange={(event) => setPastedTranslation(event.target.value)}
-              placeholder='{ "segments": [ ... ] }'
+              placeholder={'## 00:00.000 --> 00:03.440\nTraduction française.'}
             />
+            {error && <pre className="error import-error">{error}</pre>}
             <div className="modal-actions">
               <button onClick={() => setPasteImportOpen(false)}>Annuler</button>
               <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()}>
@@ -2073,18 +2089,19 @@ function DesktopApp() {
           <section className="modal paste-modal" role="dialog" aria-modal="true">
             <h2>Importer la transcription nettoyée</h2>
             <p>
-              Colle uniquement l’objet JSON complet renvoyé par le LLM. Sa structure, ses métadonnées et ses timestamps seront contrôlés avant tout remplacement.
+              Colle le Markdown horodaté renvoyé par le LLM. Les titres de blocs doivent reprendre exactement les timestamps source; seuls les textes peuvent être corrigés ou les blocs inutiles supprimés.
             </p>
             <textarea
               value={pastedCleanupTranscript}
               onChange={(event) => setPastedCleanupTranscript(event.target.value)}
-              placeholder='{ "corpus_id": "...", "segments": [ ... ] }'
+              placeholder={'## 00:00.000 --> 00:03.440\nالنص العربي المصحح.'}
             />
             {cleanedPasteReview.lines.length > 0 && (
               <div className={`import-preview ${cleanedPasteReview.valid ? "valid" : "invalid"}`}>
                 {cleanedPasteReview.lines.map((line) => <span key={line}>{line}</span>)}
               </div>
             )}
+            {error && <pre className="error import-error">{error}</pre>}
             <div className="modal-actions">
               <button disabled={busy} onClick={() => setCleanupImportOpen(false)}>Annuler</button>
               <button

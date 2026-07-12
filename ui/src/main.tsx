@@ -677,6 +677,16 @@ function DesktopApp() {
         setLoopEnabled((enabled) => !enabled);
         return;
       }
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        adjustPlaybackRate(-1);
+        return;
+      }
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        adjustPlaybackRate(1);
+        return;
+      }
       if (event.key.toLowerCase() === "s") {
         event.preventDefault();
         scrollToCurrentSegment();
@@ -1196,6 +1206,14 @@ function DesktopApp() {
     seekTo((audioRef.current?.currentTime ?? 0) + delta);
   }
 
+  function adjustPlaybackRate(direction: -1 | 1) {
+    setPlaybackRate((rate) => {
+      const currentIndex = PLAYBACK_RATES.indexOf(rate as (typeof PLAYBACK_RATES)[number]);
+      const nextIndex = Math.max(0, Math.min(PLAYBACK_RATES.length - 1, currentIndex + direction));
+      return PLAYBACK_RATES[nextIndex];
+    });
+  }
+
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
@@ -1213,10 +1231,6 @@ function DesktopApp() {
     } else {
       audio.pause();
     }
-  }
-
-  function stopAudio() {
-    audioRef.current?.pause();
   }
 
   function returnToInterval() {
@@ -2092,10 +2106,6 @@ function DesktopApp() {
                     {isPlaying ? <Pause size={18} /> : <Play size={18} />}
                     <span>{isPlaying ? "Pause" : "Lire"}</span>
                   </button>
-                  <button onClick={stopAudio}>
-                    <Square size={16} />
-                    <span>Stop</span>
-                  </button>
                   <button onClick={() => seekBy(3)}>+3s</button>
                   <button onClick={() => seekBy(10)}>+10s</button>
                   <button onClick={returnToInterval} title="Revenir au début de l’intervalle">
@@ -2398,6 +2408,7 @@ function DesktopApp() {
               <div><dt>F</dt><dd>Définir la fin de l’intervalle</dd></div>
               <div><dt>B</dt><dd>Activer ou désactiver la boucle</dd></div>
               <div><dt>Échap</dt><dd>Effacer l’intervalle</dd></div>
+              <div><dt>− / +</dt><dd>Réduire ou augmenter la vitesse</dd></div>
               <div><dt>S</dt><dd>Aller au segment du temps courant</dd></div>
               <div><dt>?</dt><dd>Ouvrir cette aide</dd></div>
             </dl>

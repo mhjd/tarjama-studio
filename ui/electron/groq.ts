@@ -6,7 +6,7 @@ import type { GroqKeyStatus, GroqTranscriptionProgress, WorkspaceTranscript } fr
 const API_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 const MODEL = "whisper-large-v3";
 const MAX_CHUNK_BYTES = 23 * 1024 * 1024;
-const TARGET_CHUNK_SECONDS = 5 * 60;
+const TARGET_CHUNK_SECONDS = 10 * 60;
 const CHUNK_OVERLAP_SECONDS = 20;
 const MIN_CHUNK_SECONDS = 30;
 const SETTINGS_FILE = "groq-settings.json";

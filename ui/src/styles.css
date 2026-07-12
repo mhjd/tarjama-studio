@@ -147,7 +147,7 @@ input {
 
 .player-band > .interval-row,
 .player-band > .timeline-wrap,
-.player-band > .audio-controls,
+.player-band > .player-control-row,
 .player-band > .player-nav {
   margin: 0 auto;
   max-width: 1180px;
@@ -241,6 +241,35 @@ input {
   gap: 0.5rem;
   grid-template-columns: 4.6rem 4.6rem 6rem 5.4rem 4.6rem 4.6rem 6.4rem;
   justify-content: center;
+}
+
+.player-control-row {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+}
+
+.player-control-row .audio-controls {
+  grid-column: 2;
+}
+
+.playback-rate {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.45rem;
+  grid-column: 3;
+  justify-self: end;
+}
+
+.playback-rate span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.playback-rate select {
+  font-variant-numeric: tabular-nums;
+  min-width: 4.6rem;
 }
 
 .audio-controls button,
@@ -553,6 +582,39 @@ input {
   padding-right: 0;
   text-decoration: underline;
   text-underline-offset: 0.18rem;
+}
+
+.shortcuts-modal {
+  max-width: 34rem;
+}
+
+.shortcuts-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.shortcuts-list > div {
+  align-items: center;
+  border-bottom: 1px solid var(--border-soft);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 9rem 1fr;
+  padding: 0.55rem 0;
+}
+
+.shortcuts-list > div:last-child {
+  border-bottom: 0;
+}
+
+.shortcuts-list dt {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-weight: 700;
+}
+
+.shortcuts-list dd {
+  color: var(--muted);
+  margin: 0;
 }
 
 .modal p {
@@ -888,11 +950,19 @@ input:disabled {
   justify-content: flex-end;
 }
 
+.desktop-header .editor-header-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 .desktop-header > button {
   flex: 0 0 auto;
 }
 
-.desktop-header > div:not(.desktop-header-actions) {
+.desktop-header > div:not(.desktop-header-actions):not(.editor-header-actions) {
   display: grid;
   gap: 0.25rem;
   min-width: 0;
@@ -1407,6 +1477,25 @@ input:disabled {
 
   .audio-controls,
   .player-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .player-control-row {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .player-control-row .audio-controls,
+  .playback-rate {
+    grid-column: 1;
+  }
+
+  .playback-rate {
+    justify-self: center;
+  }
+
+  .shortcuts-list > div {
+    gap: 0.3rem;
     grid-template-columns: 1fr;
   }
 

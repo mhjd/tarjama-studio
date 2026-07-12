@@ -1,7 +1,7 @@
 {
   "name": "ashrafent-ui",
   "private": true,
-  "version": "0.1.22",
+  "version": "0.1.23",
   "description": "Local-first Arabic transcription and translation reviewer",
   "author": "Ashrafent",
   "type": "module",

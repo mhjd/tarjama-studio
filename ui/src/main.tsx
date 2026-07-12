@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowUpToLine,
   Check,
+  CircleHelp,
   ClipboardPaste,
   Cloud,
   Combine,
@@ -116,6 +117,7 @@ type ExportTrack = "arabic" | "translation";
 type ExportSubtitleStyle = "black-band" | "outline";
 type DesktopView = "library" | "editor" | "options";
 type DesktopActionMenu = "transcription" | "translation" | "export" | null;
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
 type ExportJob = {
   id: string;
@@ -503,7 +505,12 @@ function DesktopApp() {
   const [rangeStart, setRangeStart] = useState("00:00");
   const [rangeEnd, setRangeEnd] = useState("00:00");
   const [loopEnabled, setLoopEnabled] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState<number>(() => {
+    const stored = Number(localStorage.getItem("ashrafent-playback-rate"));
+    return PLAYBACK_RATES.includes(stored as (typeof PLAYBACK_RATES)[number]) ? stored : 1;
+  });
   const [isPlaying, setIsPlaying] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [pasteImportOpen, setPasteImportOpen] = useState(false);
   const [pastedTranslation, setPastedTranslation] = useState("");
   const [cleanupImportOpen, setCleanupImportOpen] = useState(false);
@@ -611,6 +618,64 @@ function DesktopApp() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("ashrafent-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("ashrafent-playback-rate", String(playbackRate));
+    if (audioRef.current) audioRef.current.playbackRate = playbackRate;
+  }, [playbackRate]);
+
+  useEffect(() => {
+    if (desktopView !== "editor" || !mediaUrl) return;
+    function targetIsEditable(target: EventTarget | null): boolean {
+      return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (targetIsEditable(event.target) || event.metaKey || event.ctrlKey || event.altKey) return;
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (event.key === "?") {
+        event.preventDefault();
+        setShortcutsOpen(true);
+        return;
+      }
+      if (event.code === "Space") {
+        event.preventDefault();
+        togglePlay();
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        seekBy(event.shiftKey ? -10 : -3);
+        return;
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        seekBy(event.shiftKey ? 10 : 3);
+        return;
+      }
+      if (event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        setRangeStart(formatTime(audio.currentTime));
+        return;
+      }
+      if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setRangeEnd(formatTime(audio.currentTime));
+        return;
+      }
+      if (event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        setLoopEnabled((enabled) => !enabled);
+        return;
+      }
+      if (event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        scrollToCurrentSegment();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [desktopView, mediaUrl, rangeEnd, rangeStart, displayedTranscript]);
 
   useEffect(() => {
     if (!openActionMenu) return;
@@ -1116,6 +1181,7 @@ function DesktopApp() {
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
+    audio.playbackRate = playbackRate;
     const start = parseTime(rangeStart) ?? 0;
     const end = parseTime(rangeEnd);
     if (audio.paused && end !== null && end > start && audio.currentTime >= end - 0.05) {
@@ -1492,10 +1558,15 @@ function DesktopApp() {
               <strong dir="auto">{loadedProject?.title ?? "Projet"}</strong>
               <span>{loadedProject ? projectStatusLabel(loadedProject) : "Chargement"}</span>
             </div>
-            <button disabled={!loadedProject || busy} onClick={openRenameProject} title="Renommer le projet">
-              <Pencil size={16} />
-              <span>Renommer</span>
-            </button>
+            <div className="editor-header-actions">
+              <button disabled={!loadedProject || busy} onClick={openRenameProject} title="Renommer le projet">
+                <Pencil size={16} />
+                <span>Renommer</span>
+              </button>
+              <button className="icon-button" onClick={() => setShortcutsOpen(true)} title="Raccourcis clavier">
+                <CircleHelp size={18} />
+              </button>
+            </div>
           </>
         ) : desktopView === "options" ? (
           <>
@@ -1925,7 +1996,10 @@ function DesktopApp() {
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 onTimeUpdate={onTimeUpdate}
-                onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? loadedProject.durationSeconds ?? 0)}
+                onLoadedMetadata={() => {
+                  if (audioRef.current) audioRef.current.playbackRate = playbackRate;
+                  setDuration(audioRef.current?.duration ?? loadedProject.durationSeconds ?? 0);
+                }}
               />
               <div className="interval-row">
                 <label>
@@ -1971,23 +2045,31 @@ function DesktopApp() {
                   <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
                 </div>
               </div>
-              <div className="audio-controls">
-                <button onClick={() => seekBy(-10)}>-10s</button>
-                <button onClick={() => seekBy(-3)}>-3s</button>
-                <button className="primary-control" onClick={togglePlay}>
-                  {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-                  <span>{isPlaying ? "Pause" : "Lire"}</span>
-                </button>
-                <button onClick={stopAudio}>
-                  <Square size={16} />
-                  <span>Stop</span>
-                </button>
-                <button onClick={() => seekBy(3)}>+3s</button>
-                <button onClick={() => seekBy(10)}>+10s</button>
-                <button onClick={() => seekTo(parseTime(rangeStart) ?? 0)} title="Retour au début de l'intervalle">
-                  <RotateCcw size={16} />
-                  <span>Début</span>
-                </button>
+              <div className="player-control-row">
+                <div className="audio-controls">
+                  <button onClick={() => seekBy(-10)}>-10s</button>
+                  <button onClick={() => seekBy(-3)}>-3s</button>
+                  <button className="primary-control" onClick={togglePlay}>
+                    {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+                    <span>{isPlaying ? "Pause" : "Lire"}</span>
+                  </button>
+                  <button onClick={stopAudio}>
+                    <Square size={16} />
+                    <span>Stop</span>
+                  </button>
+                  <button onClick={() => seekBy(3)}>+3s</button>
+                  <button onClick={() => seekBy(10)}>+10s</button>
+                  <button onClick={() => seekTo(parseTime(rangeStart) ?? 0)} title="Retour au début de l'intervalle">
+                    <RotateCcw size={16} />
+                    <span>Début</span>
+                  </button>
+                </div>
+                <label className="playback-rate">
+                  <span>Vitesse</span>
+                  <select value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
+                    {PLAYBACK_RATES.map((rate) => <option key={rate} value={rate}>{String(rate).replace(".", ",")}×</option>)}
+                  </select>
+                </label>
               </div>
               <div className="player-nav">
                 <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant">
@@ -2247,6 +2329,41 @@ function DesktopApp() {
               </section>
             )}
             {error && <pre className="error import-error">{error}</pre>}
+          </section>
+        </div>
+      )}
+
+      {shortcutsOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setShortcutsOpen(false)}>
+          <section
+            className="modal shortcuts-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shortcuts-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="modal-heading">
+              <div>
+                <h2 id="shortcuts-title">Raccourcis de lecture</h2>
+                <p>Actifs hors des champs de texte.</p>
+              </div>
+              <button className="icon-button" onClick={() => setShortcutsOpen(false)} title="Fermer">
+                <X size={18} />
+              </button>
+            </div>
+            <dl className="shortcuts-list">
+              <div><dt>Espace</dt><dd>Lire ou mettre en pause</dd></div>
+              <div><dt>← / →</dt><dd>Reculer ou avancer de 3 secondes</dd></div>
+              <div><dt>Maj + ← / →</dt><dd>Reculer ou avancer de 10 secondes</dd></div>
+              <div><dt>D</dt><dd>Définir le début de l’intervalle</dd></div>
+              <div><dt>F</dt><dd>Définir la fin de l’intervalle</dd></div>
+              <div><dt>B</dt><dd>Activer ou désactiver la boucle</dd></div>
+              <div><dt>S</dt><dd>Aller au segment du temps courant</dd></div>
+              <div><dt>?</dt><dd>Ouvrir cette aide</dd></div>
+            </dl>
+            <div className="modal-actions">
+              <button onClick={() => setShortcutsOpen(false)}>Fermer</button>
+            </div>
           </section>
         </div>
       )}

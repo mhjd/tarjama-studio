@@ -22,6 +22,8 @@ import type {
   GroqKeyStatus,
   GroqTranscriptionProgress,
   CleanedTranscriptImportResult,
+  DesktopPromptSettings,
+  PromptKind,
 } from "./types.js";
 
 const api = {
@@ -42,7 +44,13 @@ const api = {
     ipcRenderer.invoke("transcript:import", projectId),
   cleanupTranscriptPrompt: (projectId: string, transcript: WorkspaceTranscript): Promise<string> =>
     ipcRenderer.invoke("transcript:cleanup-prompt", projectId, transcript),
-  openCleanupTranscriptPrompt: (): Promise<void> => ipcRenderer.invoke("transcript:open-cleanup-prompt"),
+  translationPrompt: (projectId: string, transcript: WorkspaceTranscript): Promise<string> =>
+    ipcRenderer.invoke("translation:prompt", projectId, transcript),
+  readPromptSettings: (): Promise<DesktopPromptSettings> => ipcRenderer.invoke("settings:prompts"),
+  savePrompt: (kind: PromptKind, content: string): Promise<DesktopPromptSettings> =>
+    ipcRenderer.invoke("settings:save-prompt", kind, content),
+  resetPrompt: (kind: PromptKind): Promise<DesktopPromptSettings> =>
+    ipcRenderer.invoke("settings:reset-prompt", kind),
   importCleanedTranscriptFile: (projectId: string): Promise<CleanedTranscriptImportResult | null> =>
     ipcRenderer.invoke("transcript:import-cleaned-file", projectId),
   importCleanedTranscriptContent: (projectId: string, content: string): Promise<CleanedTranscriptImportResult> =>

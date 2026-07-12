@@ -8,6 +8,7 @@ import type {
   CreateYoutubeProjectRequest,
   CreateYoutubeProjectResult,
   CleanedTranscriptImportResult,
+  DesktopPromptSettings,
   DesktopExportResult,
   DesktopLibraryInfo,
   DesktopProject,
@@ -21,6 +22,7 @@ import type {
   DownloadYoutubeResult,
   ImportTranslationResult,
   ImportTranscriptResult,
+  PromptKind,
   UpdateToolResult,
   WorkspaceTranscript,
   WorkspaceTranslation,
@@ -1162,6 +1164,22 @@ async function resolveDesktopResource(relativePath: string): Promise<string | nu
   return null;
 }
 
+async function resolveBundledDesktopResource(relativePath: string): Promise<string | null> {
+  const candidates = [
+    path.join(process.resourcesPath, relativePath),
+    path.join(MODULE_DIR, relativePath),
+    path.join(MODULE_DIR, "..", relativePath),
+    path.join(MODULE_DIR, "..", "..", relativePath),
+    path.join(app.getAppPath(), relativePath),
+    path.join(app.getAppPath(), "..", relativePath),
+    path.join(process.cwd(), relativePath),
+  ];
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return null;
+}
+
 export async function readLibrary(): Promise<DesktopLibraryInfo> {
   const root = libraryDir();
   await fs.mkdir(root, { recursive: true });
@@ -1270,14 +1288,64 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
   return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
 }
 
-async function cleanupPromptFile(): Promise<string> {
-  const target = path.join(app.getPath("userData"), "prompts", "transcript_cleanup.md");
-  if (await pathExists(target)) return target;
-  const bundled = await resolveDesktopResource(path.join("prompts", "transcript_cleanup.md"));
-  if (!bundled) throw new Error("Le modèle de prompt de nettoyage est introuvable");
+const PROMPT_FILENAMES: Record<PromptKind, string> = {
+  transcript_cleanup: "transcript_cleanup.md",
+  translation: "translation.md",
+};
+
+function promptOverridePath(kind: PromptKind): string {
+  return path.join(app.getPath("userData"), "prompts", PROMPT_FILENAMES[kind]);
+}
+
+async function defaultPrompt(kind: PromptKind): Promise<string> {
+  const bundled = await resolveBundledDesktopResource(path.join("prompts", PROMPT_FILENAMES[kind]));
+  if (!bundled) throw new Error(`Le prompt par défaut ${kind} est introuvable`);
+  return await fs.readFile(bundled, "utf8");
+}
+
+async function promptValue(kind: PromptKind): Promise<{ content: string; customized: boolean }> {
+  const fallback = await defaultPrompt(kind);
+  const override = promptOverridePath(kind);
+  if (!(await pathExists(override))) return { content: fallback, customized: false };
+  const content = await fs.readFile(override, "utf8");
+  if (content === fallback) {
+    await fs.rm(override, { force: true });
+    return { content: fallback, customized: false };
+  }
+  return { content, customized: true };
+}
+
+function validatePromptTemplate(kind: PromptKind, content: string): void {
+  if (!content.trim()) throw new Error("Le prompt ne peut pas être vide");
+  const required = kind === "transcript_cleanup"
+    ? ["{{corpus_id}}", "{{title}}", "{{transcript_json}}"]
+    : ["{{corpus_id}}", "{{source_blocks}}", "{{project_instructions_block}}"];
+  const missing = required.filter((placeholder) => !content.includes(placeholder));
+  if (missing.length) throw new Error(`Placeholder(s) obligatoire(s) manquant(s): ${missing.join(", ")}`);
+}
+
+export async function readPromptSettings(): Promise<DesktopPromptSettings> {
+  const cleanup = await promptValue("transcript_cleanup");
+  const translation = await promptValue("translation");
+  return {
+    transcriptCleanup: cleanup.content,
+    translation: translation.content,
+    transcriptCleanupCustomized: cleanup.customized,
+    translationCustomized: translation.customized,
+  };
+}
+
+export async function savePromptOverride(kind: PromptKind, content: string): Promise<DesktopPromptSettings> {
+  validatePromptTemplate(kind, content);
+  const target = promptOverridePath(kind);
   await fs.mkdir(path.dirname(target), { recursive: true });
-  await fs.copyFile(bundled, target);
-  return target;
+  await fs.writeFile(target, content, "utf8");
+  return await readPromptSettings();
+}
+
+export async function resetPromptOverride(kind: PromptKind): Promise<DesktopPromptSettings> {
+  await fs.rm(promptOverridePath(kind), { force: true });
+  return await readPromptSettings();
 }
 
 export async function renderCleanupPrompt(
@@ -1288,16 +1356,39 @@ export async function renderCleanupPrompt(
   await requireProjectVideo(project);
   const clean = transcriptWithoutSegmentTranslations(validateTranscript(transcript));
   clean.corpus_id = projectId;
-  const template = await fs.readFile(await cleanupPromptFile(), "utf8");
+  const template = (await promptValue("transcript_cleanup")).content;
   return template
     .replaceAll("{{corpus_id}}", projectId)
     .replaceAll("{{title}}", project.title)
     .replace("{{transcript_json}}", JSON.stringify(clean, null, 2));
 }
 
-export async function openCleanupPromptFile(): Promise<void> {
-  const error = await shell.openPath(await cleanupPromptFile());
-  if (error) throw new Error(`Impossible d'ouvrir le prompt: ${error}`);
+function formatPromptTime(seconds: number): string {
+  const milliseconds = Math.max(0, Math.round(seconds * 1000));
+  const hours = Math.floor(milliseconds / 3_600_000);
+  const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
+  const secs = Math.floor((milliseconds % 60_000) / 1000);
+  const millis = milliseconds % 1000;
+  const base = hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  return `${base}.${String(millis).padStart(3, "0")}`;
+}
+
+export async function renderTranslationPrompt(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+): Promise<string> {
+  const clean = validateTranscript(transcript);
+  const sourceBlocks = clean.segments
+    .map((segment) => `## ${formatPromptTime(segment.start)} --> ${formatPromptTime(segment.end)}\n${segment.text.trim()}`)
+    .join("\n\n");
+  const instructions = clean.project_instructions?.trim();
+  const instructionsBlock = instructions ? `\nInstructions propres à ce projet:\n${instructions}\n` : "";
+  return (await promptValue("translation")).content
+    .replaceAll("{{corpus_id}}", projectId)
+    .replace("{{project_instructions_block}}", instructionsBlock)
+    .replace("{{source_blocks}}", sourceBlocks);
 }
 
 async function importCleanedTranscriptPayload(

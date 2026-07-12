@@ -182,3 +182,12 @@ export type CleanedTranscriptImportResult = {
   added: number;
   removed: number;
 };
+
+export type PromptKind = "transcript_cleanup" | "translation";
+
+export type DesktopPromptSettings = {
+  transcriptCleanup: string;
+  translation: string;
+  transcriptCleanupCustomized: boolean;
+  translationCustomized: boolean;
+};

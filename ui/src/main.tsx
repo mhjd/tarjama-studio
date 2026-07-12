@@ -14,7 +14,6 @@ import {
   FileInput,
   GitCompare,
   History,
-  KeyRound,
   LocateFixed,
   Moon,
   Pause,
@@ -23,6 +22,7 @@ import {
   RotateCcw,
   Save,
   Scissors,
+  Settings,
   Square,
   Sun,
   Trash2,
@@ -113,7 +113,7 @@ type Translation = {
 
 type ExportTrack = "arabic" | "translation";
 type ExportSubtitleStyle = "black-band" | "outline";
-type DesktopView = "library" | "editor";
+type DesktopView = "library" | "editor" | "options";
 type DesktopActionMenu = "transcription" | "translation" | "export" | null;
 
 type ExportJob = {
@@ -470,9 +470,14 @@ function DesktopApp() {
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [groqProgress, setGroqProgress] = useState<GroqTranscriptionProgress | null>(null);
   const [groqKeyStatus, setGroqKeyStatus] = useState<GroqKeyStatus>({ configured: false, source: "none" });
-  const [groqSettingsOpen, setGroqSettingsOpen] = useState(false);
   const [groqApiKey, setGroqApiKey] = useState("");
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [promptSettings, setPromptSettings] = useState<DesktopPromptSettings | null>(null);
+  const [cleanupPromptDraft, setCleanupPromptDraft] = useState("");
+  const [translationPromptDraft, setTranslationPromptDraft] = useState("");
+  const [optionsState, setOptionsState] = useState("Prêt");
+  const [theme, setTheme] = useState<"light" | "dark">(
+    () => (localStorage.getItem("ashrafent-theme") === "light" ? "light" : "dark"),
+  );
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [rangeStart, setRangeStart] = useState("00:00");
@@ -512,6 +517,8 @@ function DesktopApp() {
     () => cleanupPastePreview(pastedCleanupTranscript),
     [pastedCleanupTranscript],
   );
+  const cleanupPromptChanged = Boolean(promptSettings && cleanupPromptDraft !== promptSettings.transcriptCleanup);
+  const translationPromptChanged = Boolean(promptSettings && translationPromptDraft !== promptSettings.translation);
   const currentSaveSnapshot = useMemo(
     () => [...snapshots].reverse().find((snapshot) => snapshot.matches_current) ?? null,
     [snapshots]
@@ -529,10 +536,28 @@ function DesktopApp() {
     setLibrary(await desktop.readLibrary());
   }, [desktop]);
 
+  const applyPromptSettings = useCallback((settings: DesktopPromptSettings) => {
+    setPromptSettings(settings);
+    setCleanupPromptDraft(settings.transcriptCleanup);
+    setTranslationPromptDraft(settings.translation);
+  }, []);
+
+  const loadOptions = useCallback(async () => {
+    if (!desktop) return;
+    const [prompts, keyStatus] = await Promise.all([desktop.readPromptSettings(), desktop.groqKeyStatus()]);
+    applyPromptSettings(prompts);
+    setGroqKeyStatus(keyStatus);
+  }, [applyPromptSettings, desktop]);
+
   useEffect(() => {
     void refreshLibrary().catch((err) => setError(err instanceof Error ? err.message : "Bibliothèque impossible à charger"));
     void desktop?.groqKeyStatus().then(setGroqKeyStatus).catch(() => undefined);
   }, [refreshLibrary]);
+
+  useEffect(() => {
+    if (desktopView !== "options") return;
+    void loadOptions().catch((err) => setError(err instanceof Error ? err.message : "Options impossibles à charger"));
+  }, [desktopView, loadOptions]);
 
   useEffect(() => {
     if (!desktop) return;
@@ -562,6 +587,7 @@ function DesktopApp() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    localStorage.setItem("ashrafent-theme", theme);
   }, [theme]);
 
   useEffect(() => {
@@ -682,7 +708,8 @@ function DesktopApp() {
       return;
     }
     if (!groqKeyStatus.configured) {
-      setGroqSettingsOpen(true);
+      setDesktopView("options");
+      setOptionsState("Ajoute une clé Groq avant de lancer la transcription.");
       return;
     }
     if (
@@ -707,7 +734,7 @@ function DesktopApp() {
       const status = await desktop.saveGroqApiKey(groqApiKey);
       setGroqKeyStatus(status);
       setGroqApiKey("");
-      setGroqSettingsOpen(false);
+      setOptionsState("Clé Groq enregistrée dans le coffre chiffré du système.");
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Clé Groq impossible à enregistrer");
@@ -716,8 +743,14 @@ function DesktopApp() {
 
   async function clearGroqKeyDesktop() {
     if (!desktop) return;
-    setGroqKeyStatus(await desktop.clearGroqApiKey());
-    setGroqApiKey("");
+    if (!window.confirm("Supprimer la clé Groq personnelle enregistrée sur cet ordinateur ?")) return;
+    try {
+      setGroqKeyStatus(await desktop.clearGroqApiKey());
+      setGroqApiKey("");
+      setOptionsState("Clé Groq supprimée.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Clé Groq impossible à supprimer");
+    }
   }
 
   async function copyCleanupPromptDesktop() {
@@ -767,11 +800,38 @@ function DesktopApp() {
     }
   }
 
-  async function openCleanupPromptDesktop() {
+  async function savePromptDesktop(kind: DesktopPromptKind) {
+    if (!desktop) return;
+    const content = kind === "transcript_cleanup" ? cleanupPromptDraft : translationPromptDraft;
+    setOptionsState("Enregistrement du prompt...");
+    setError("");
     try {
-      await desktop?.openCleanupTranscriptPrompt();
+      const settings = await desktop.savePrompt(kind, content);
+      setPromptSettings(settings);
+      if (kind === "transcript_cleanup") setCleanupPromptDraft(settings.transcriptCleanup);
+      else setTranslationPromptDraft(settings.translation);
+      setOptionsState("Prompt personnalisé enregistré.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Prompt impossible à ouvrir");
+      setOptionsState("Erreur");
+      setError(err instanceof Error ? err.message : "Prompt impossible à enregistrer");
+    }
+  }
+
+  async function resetPromptDesktop(kind: DesktopPromptKind) {
+    if (!desktop) return;
+    const label = kind === "transcript_cleanup" ? "correction de transcription" : "traduction";
+    if (!window.confirm(`Êtes-vous sûr de vouloir revenir au prompt par défaut de ${label} ? Le prompt personnalisé sera supprimé et cette suppression ne pourra pas être annulée.`)) return;
+    setOptionsState("Restauration du prompt par défaut...");
+    setError("");
+    try {
+      const settings = await desktop.resetPrompt(kind);
+      setPromptSettings(settings);
+      if (kind === "transcript_cleanup") setCleanupPromptDraft(settings.transcriptCleanup);
+      else setTranslationPromptDraft(settings.translation);
+      setOptionsState("Prompt par défaut restauré.");
+    } catch (err) {
+      setOptionsState("Erreur");
+      setError(err instanceof Error ? err.message : "Prompt par défaut impossible à restaurer");
     }
   }
 
@@ -786,6 +846,11 @@ function DesktopApp() {
   }
 
   function returnToLibrary() {
+    if (
+      desktopView === "options" &&
+      (cleanupPromptChanged || translationPromptChanged) &&
+      !window.confirm("Des modifications de prompt ne sont pas enregistrées. Quitter Options et les abandonner ?")
+    ) return;
     audioRef.current?.pause();
     setDesktopView("library");
     setPreviewTranscript(null);
@@ -870,10 +935,12 @@ function DesktopApp() {
   }
 
   async function updateYtdlpDesktop() {
+    setOptionsState("Mise à jour de yt-dlp...");
     await runDesktopAction("Mise à jour yt-dlp...", async () => {
       const result = await desktop?.updateYtdlp();
       if (result) {
         setState(`yt-dlp mis à jour: ${result.version}`);
+        setOptionsState(`yt-dlp mis à jour: ${result.version}`);
       }
     });
   }
@@ -1083,9 +1150,10 @@ function DesktopApp() {
   }
 
   async function copyTranslationPromptDesktop() {
-    if (!transcript) return;
+    if (!desktop || !selectedProjectId || !transcript) return;
     try {
-      await navigator.clipboard.writeText(translationPromptFromTranscript(transcript));
+      const prompt = await desktop.translationPrompt(selectedProjectId, transcriptWithoutTranslations(transcript));
+      await navigator.clipboard.writeText(prompt);
       setCopyState("Copié");
       window.setTimeout(() => setCopyState("Copier prompt"), 1600);
     } catch (err) {
@@ -1291,7 +1359,7 @@ function DesktopApp() {
 
   return (
     <main className="desktop-shell">
-      <header className={`desktop-header ${desktopView === "editor" ? "desktop-header-editor" : ""}`}>
+      <header className={`desktop-header ${desktopView !== "library" ? "desktop-header-editor" : ""}`}>
         {desktopView === "editor" ? (
           <>
             <button className="back-button" onClick={returnToLibrary}>
@@ -1303,6 +1371,17 @@ function DesktopApp() {
               <span>{loadedProject ? projectStatusLabel(loadedProject) : "Chargement"}</span>
             </div>
           </>
+        ) : desktopView === "options" ? (
+          <>
+            <button className="back-button" onClick={returnToLibrary}>
+              <ArrowLeft size={16} />
+              <span>Projets</span>
+            </button>
+            <div>
+              <strong>Options</strong>
+              <span>Réglages de l’application</span>
+            </div>
+          </>
         ) : (
           <div>
             <strong>Ashrafent Reviewer</strong>
@@ -1310,15 +1389,17 @@ function DesktopApp() {
           </div>
         )}
         {desktopView === "library" && (
-          <button disabled={busy} onClick={() => void refreshLibrary()}>
-            <RotateCcw size={16} />
-            <span>Actualiser</span>
-          </button>
+          <>
+            <button disabled={busy} onClick={() => void refreshLibrary()}>
+              <RotateCcw size={16} />
+              <span>Actualiser</span>
+            </button>
+            <button onClick={() => setDesktopView("options")}>
+              <Settings size={16} />
+              <span>Options</span>
+            </button>
+          </>
         )}
-        <button onClick={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}>
-          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          <span>{theme === "dark" ? "Clair" : "Sombre"}</span>
-        </button>
       </header>
 
       {desktopView === "library" && (
@@ -1346,10 +1427,6 @@ function DesktopApp() {
                   <Plus size={16} />
                   <span>Créer projet</span>
                 </button>
-                <button disabled={busy} onClick={() => void updateYtdlpDesktop()}>
-                  <RotateCcw size={16} />
-                  <span>Mettre à jour yt-dlp</span>
-                </button>
               </div>
             </div>
             {youtubeCreateWarning && <p className="warning">{youtubeCreateWarning}</p>}
@@ -1376,6 +1453,125 @@ function DesktopApp() {
             )}
           </section>
         </>
+      )}
+
+      {desktopView === "options" && (
+        <section className="options-page">
+          <section className="options-section">
+            <div className="options-section-heading">
+              <div>
+                <h1>Apparence</h1>
+                <span>Thème utilisé au prochain démarrage inclus.</span>
+              </div>
+            </div>
+            <div className="theme-options" role="group" aria-label="Thème de l’application">
+              <button className={theme === "dark" ? "selected" : ""} onClick={() => setTheme("dark")}>
+                <Moon size={16} />
+                <span>Sombre</span>
+              </button>
+              <button className={theme === "light" ? "selected" : ""} onClick={() => setTheme("light")}>
+                <Sun size={16} />
+                <span>Clair</span>
+              </button>
+            </div>
+          </section>
+
+          <section className="options-section">
+            <div className="options-section-heading">
+              <div>
+                <h1>Clé API Groq</h1>
+                <span>
+                  {groqKeyStatus.source === "stored"
+                    ? "Une clé personnelle est enregistrée dans le coffre chiffré du système."
+                    : groqKeyStatus.source === "development-env"
+                      ? "La clé de développement du fichier .env est utilisée."
+                      : "Aucune clé configurée."}
+                </span>
+              </div>
+            </div>
+            <div className="option-inline-form">
+              <input
+                type="password"
+                autoComplete="off"
+                value={groqApiKey}
+                onChange={(event) => setGroqApiKey(event.target.value)}
+                placeholder="gsk_..."
+              />
+              <button disabled={!groqApiKey.trim()} onClick={() => void saveGroqKeyDesktop()}>
+                <Save size={16} />
+                <span>Enregistrer</span>
+              </button>
+              {groqKeyStatus.source === "stored" && (
+                <button className="danger-button" onClick={() => void clearGroqKeyDesktop()}>
+                  <Trash2 size={16} />
+                  <span>Supprimer</span>
+                </button>
+              )}
+            </div>
+          </section>
+
+          <section className="options-section">
+            <div className="options-section-heading">
+              <div>
+                <h1>Outils vidéo</h1>
+                <span>Met à jour le téléchargeur YouTube embarqué sans réinstaller l’application.</span>
+              </div>
+              <button disabled={busy} onClick={() => void updateYtdlpDesktop()}>
+                <RotateCcw size={16} />
+                <span>Mettre à jour yt-dlp</span>
+              </button>
+            </div>
+          </section>
+
+          <section className="options-section prompt-option">
+            <div className="options-section-heading">
+              <div>
+                <h1>Prompt de correction</h1>
+                <span>{promptSettings?.transcriptCleanupCustomized ? "Version personnalisée" : "Version par défaut"}</span>
+              </div>
+              <div className="options-actions">
+                <button
+                  disabled={!promptSettings?.transcriptCleanupCustomized && !cleanupPromptChanged}
+                  onClick={() => void resetPromptDesktop("transcript_cleanup")}
+                >
+                  <RotateCcw size={16} />
+                  <span>Revenir au défaut</span>
+                </button>
+                <button disabled={!cleanupPromptDraft.trim() || !cleanupPromptChanged} onClick={() => void savePromptDesktop("transcript_cleanup")}>
+                  <Save size={16} />
+                  <span>Enregistrer</span>
+                </button>
+              </div>
+            </div>
+            <textarea value={cleanupPromptDraft} onChange={(event) => setCleanupPromptDraft(event.target.value)} />
+          </section>
+
+          <section className="options-section prompt-option">
+            <div className="options-section-heading">
+              <div>
+                <h1>Prompt de traduction</h1>
+                <span>{promptSettings?.translationCustomized ? "Version personnalisée" : "Version par défaut"}</span>
+              </div>
+              <div className="options-actions">
+                <button
+                  disabled={!promptSettings?.translationCustomized && !translationPromptChanged}
+                  onClick={() => void resetPromptDesktop("translation")}
+                >
+                  <RotateCcw size={16} />
+                  <span>Revenir au défaut</span>
+                </button>
+                <button disabled={!translationPromptDraft.trim() || !translationPromptChanged} onClick={() => void savePromptDesktop("translation")}>
+                  <Save size={16} />
+                  <span>Enregistrer</span>
+                </button>
+              </div>
+            </div>
+            <textarea value={translationPromptDraft} onChange={(event) => setTranslationPromptDraft(event.target.value)} />
+          </section>
+
+          <p className="desktop-state">{optionsState}</p>
+          {error && <p className="error">{error}</p>}
+        </section>
       )}
 
       {desktopView === "editor" && !loadedProject && (
@@ -1456,26 +1652,6 @@ function DesktopApp() {
                     >
                       <Upload size={16} />
                       <span>Importer le JSON nettoyé</span>
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={() => {
-                        setOpenActionMenu(null);
-                        setGroqSettingsOpen(true);
-                      }}
-                    >
-                      <KeyRound size={16} />
-                      <span>Clé API Groq</span>
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={() => {
-                        setOpenActionMenu(null);
-                        void openCleanupPromptDesktop();
-                      }}
-                    >
-                      <FileInput size={16} />
-                      <span>Personnaliser le prompt</span>
                     </button>
                   </div>
                 )}
@@ -1889,35 +2065,6 @@ function DesktopApp() {
         </div>
       )}
 
-      {groqSettingsOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <section className="modal" role="dialog" aria-modal="true">
-            <h2>Clé API Groq</h2>
-            <p>
-              {groqKeyStatus.source === "stored"
-                ? "Une clé personnelle est enregistrée dans le coffre chiffré du système."
-                : groqKeyStatus.source === "development-env"
-                  ? "La clé de développement du fichier .env est utilisée."
-                  : "Ajoute une clé personnelle pour transcrire avec Groq."}
-            </p>
-            <input
-              type="password"
-              autoComplete="off"
-              value={groqApiKey}
-              onChange={(event) => setGroqApiKey(event.target.value)}
-              placeholder="gsk_..."
-            />
-            <div className="modal-actions">
-              {groqKeyStatus.source === "stored" && <button onClick={() => void clearGroqKeyDesktop()}>Effacer la clé</button>}
-              <button onClick={() => setGroqSettingsOpen(false)}>Annuler</button>
-              <button disabled={!groqApiKey.trim()} onClick={() => void saveGroqKeyDesktop()}>
-                <Check size={16} />
-                <span>Enregistrer</span>
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
     </main>
   );
 }

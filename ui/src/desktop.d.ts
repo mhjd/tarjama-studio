@@ -182,6 +182,15 @@ type CleanedTranscriptImportResult = {
   removed: number;
 };
 
+type DesktopPromptKind = "transcript_cleanup" | "translation";
+
+type DesktopPromptSettings = {
+  transcriptCleanup: string;
+  translation: string;
+  transcriptCleanupCustomized: boolean;
+  translationCustomized: boolean;
+};
+
 interface Window {
   ashrafentDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
@@ -192,7 +201,10 @@ interface Window {
     restoreSnapshot(projectId: string, snapshotId?: string): Promise<DesktopProjectLoad>;
     importTranscript(projectId: string): Promise<ImportTranscriptResult | null>;
     cleanupTranscriptPrompt(projectId: string, transcript: DesktopTranscript): Promise<string>;
-    openCleanupTranscriptPrompt(): Promise<void>;
+    translationPrompt(projectId: string, transcript: DesktopTranscript): Promise<string>;
+    readPromptSettings(): Promise<DesktopPromptSettings>;
+    savePrompt(kind: DesktopPromptKind, content: string): Promise<DesktopPromptSettings>;
+    resetPrompt(kind: DesktopPromptKind): Promise<DesktopPromptSettings>;
     importCleanedTranscriptFile(projectId: string): Promise<CleanedTranscriptImportResult | null>;
     importCleanedTranscriptContent(projectId: string, content: string): Promise<CleanedTranscriptImportResult>;
     importTranslationFile(projectId: string): Promise<ImportTranslationResult | null>;

@@ -27,7 +27,10 @@ import {
   resolveTool,
   saveGeneratedTranscript,
   renderCleanupPrompt,
-  openCleanupPromptFile,
+  renderTranslationPrompt,
+  readPromptSettings,
+  resetPromptOverride,
+  savePromptOverride,
 } from "./library.js";
 import { clearGroqApiKey, groqKeyStatus, saveGroqApiKey, transcribeWithGroq } from "./groq.js";
 import type {
@@ -35,6 +38,7 @@ import type {
   DownloadYoutubeRequest,
   ExportSubtitleStyle,
   ExportSubtitleTrack,
+  PromptKind,
   WorkspaceTranscript,
   WorkspaceTranslation,
 } from "./types.js";
@@ -81,7 +85,14 @@ function registerIpc(): void {
   ipcMain.handle("transcript:cleanup-prompt", async (_event, projectId: string, transcript: WorkspaceTranscript) =>
     renderCleanupPrompt(projectId, transcript),
   );
-  ipcMain.handle("transcript:open-cleanup-prompt", async () => openCleanupPromptFile());
+  ipcMain.handle("translation:prompt", async (_event, projectId: string, transcript: WorkspaceTranscript) =>
+    renderTranslationPrompt(projectId, transcript),
+  );
+  ipcMain.handle("settings:prompts", async () => readPromptSettings());
+  ipcMain.handle("settings:save-prompt", async (_event, kind: PromptKind, content: string) =>
+    savePromptOverride(kind, content),
+  );
+  ipcMain.handle("settings:reset-prompt", async (_event, kind: PromptKind) => resetPromptOverride(kind));
   ipcMain.handle("transcript:import-cleaned-file", async (_event, projectId: string) =>
     importCleanedTranscriptFile(projectId),
   );

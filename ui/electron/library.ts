@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type {
   CreateYoutubeProjectRequest,
   CreateYoutubeProjectResult,
@@ -34,6 +34,7 @@ const CURRENT_FILE = "current.json";
 const TRANSLATION_FILE = "translation.json";
 const ARABIC_SUBTITLE_FONT_NAME = "Noto Naskh Arabic";
 const LATIN_SUBTITLE_FONT_NAME = "Arial";
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 export function libraryDir(): string {
   return path.join(app.getPath("userData"), "projects");
@@ -1148,6 +1149,9 @@ async function resolveDesktopResource(relativePath: string): Promise<string | nu
   const candidates = [
     path.join(app.getPath("userData"), relativePath),
     path.join(process.resourcesPath, relativePath),
+    path.join(MODULE_DIR, relativePath),
+    path.join(MODULE_DIR, "..", relativePath),
+    path.join(MODULE_DIR, "..", "..", relativePath),
     path.join(app.getAppPath(), relativePath),
     path.join(app.getAppPath(), "..", relativePath),
     path.join(process.cwd(), relativePath),

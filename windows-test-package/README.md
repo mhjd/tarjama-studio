@@ -1,4 +1,4 @@
-# Test Windows Ashrafent
+# Test Windows Tarjama Studio
 
 Video YouTube :
 https://www.youtube.com/watch?v=hM_hCQ6RUcc
@@ -7,12 +7,12 @@ Titre :
 من هم أهل السنة ؟ وهل الأشاعرة والماتريدية منهم؟ || فضيلة الشيخ محمد الحسن الددو
 
 Fichiers fournis :
-- `Ashrafent-0.1.12-windows-portable.exe` : application Windows portable a lancer sur la machine de test.
+- L’exécutable Windows courant est distribué depuis la branche `desktop`.
 - `transcription_amelioree_gpt.json` : transcription arabe nettoyee/corrigee, 384 segments.
 - `traduction_fr.json` : traduction francaise alignee sur les memes timestamps, 384 segments.
 
 Test rapide dans l'app :
-1. Lancer `Ashrafent-0.1.12-windows-portable.exe`.
+1. Récupérer le paquet de test de la branche `desktop`.
 2. Creer un projet avec le lien YouTube ci-dessus.
 3. Telecharger la video, ou importer une video locale equivalente.
 4. Importer `transcription_amelioree_gpt.json`.

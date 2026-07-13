@@ -59,7 +59,7 @@ def download(url: str, target: Path, executable: bool = True) -> None:
 def prepare_ytdlp(bin_dir: Path, key: str) -> None:
     extension = ".exe" if key.startswith("win32-") else ""
     target = bin_dir / f"yt-dlp{extension}"
-    override = os.environ.get("ASHRAFENT_YTDLP")
+    override = os.environ.get("TARJAMA_YTDLP")
     if override:
         copy_file(Path(override), target)
         return
@@ -78,7 +78,7 @@ def prepare_ytdlp(bin_dir: Path, key: str) -> None:
 def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
     extension = ".exe" if key.startswith("win32-") else ""
     target = bin_dir / f"ffmpeg{extension}"
-    override = os.environ.get("ASHRAFENT_FFMPEG")
+    override = os.environ.get("TARJAMA_FFMPEG")
     if override:
         copy_file(Path(override), target)
         return
@@ -94,7 +94,7 @@ def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
         return
 
     raise SystemExit(
-        "ffmpeg is missing. Install ffmpeg or set ASHRAFENT_FFMPEG=/path/to/ffmpeg before packaging."
+        "ffmpeg is missing. Install ffmpeg or set TARJAMA_FFMPEG=/path/to/ffmpeg before packaging."
     )
 
 

@@ -46,7 +46,7 @@ function createWindow(): void {
     },
   });
 
-  const devServer = process.env.ASHRAFENT_VITE_DEV_SERVER;
+  const devServer = process.env.TARJAMA_VITE_DEV_SERVER;
   if (devServer) {
     void window.loadURL(devServer);
   } else {

@@ -6,7 +6,7 @@ L'application doit permettre de partir d'un audio/vidéo, générer ou charger u
 
 ## Flux actuel
 
-- La génération de transcriptions est pilotée par la CLI locale `scripts/ashrafent_cli.py`.
+- La génération de transcriptions est pilotée par la CLI locale `scripts/tarjama_cli.py`.
 - L'interface web est spécialisée dans l'édition d'une transcription segmentée déjà existante.
 - Une vidéo sans transcription doit afficher qu'elle doit être transcrite via la CLI, pas lancer Whisper depuis le navigateur.
 - Une app desktop Electron est en cours d'introduction pour les utilisateurs non techniciens: pas de backend FastAPI à lancer, bibliothèque locale gérée automatiquement, import de transcription, téléchargement YouTube et export vidéo local.
@@ -39,16 +39,16 @@ Dans le TUI, l'action principale est `Nouvelle vidéo complète: télécharger -
 
 Commande directe équivalente:
 
-- `python scripts/ashrafent_cli.py youtube-pipeline <youtube_url>`
+- `python scripts/tarjama_cli.py youtube-pipeline <youtube_url>`
 
 Commandes secondaires/deprecated, gardées pour maintenance:
 
-- `python scripts/ashrafent_cli.py list-missing`
-- `python scripts/ashrafent_cli.py transcribe <corpus_id>`
-- `python scripts/ashrafent_cli.py transcribe-missing`
-- `python scripts/ashrafent_cli.py download <youtube_url> --transcribe`
-- `python scripts/ashrafent_cli.py copy-cleanup-prompt <corpus_id>`
-- `python scripts/ashrafent_cli.py import-cleaned-transcript <corpus_id>`
+- `python scripts/tarjama_cli.py list-missing`
+- `python scripts/tarjama_cli.py transcribe <corpus_id>`
+- `python scripts/tarjama_cli.py transcribe-missing`
+- `python scripts/tarjama_cli.py download <youtube_url> --transcribe`
+- `python scripts/tarjama_cli.py copy-cleanup-prompt <corpus_id>`
+- `python scripts/tarjama_cli.py import-cleaned-transcript <corpus_id>`
 
 La CLI télécharge les vidéos YouTube dans `data/raw/videos/youtube/`, extrait un WAV mono 16 kHz dans `data/raw/audio/youtube/`, ajoute une ligne au manifest, lance Whisper local si demandé, puis crée le workspace d'édition. Elle dépose aussi la transcription courante dans `exports/transcriptions/<corpus_id>__<label_court>/transcript_import.json`, uniquement pour faciliter le bouton Electron `Importer transcription`; elle ne crée pas de projet Electron. Le TUI demande `label_court` avec une translittération courte proposée par défaut.
 
@@ -62,4 +62,4 @@ L'app Electron peut créer un projet soit par téléchargement YouTube, soit par
 - Manifest principal: `data/manifests/dedew_manifest.jsonl`
 - Scripts ASR/eval: `scripts/`
 - MVP local: backend FastAPI dans `server/`, frontend React/Vite dans `ui/`, lancement backend via `scripts/serve_mvp.py`.
-- Desktop reviewer: `ui/electron/`, build via `cd ui && npm run desktop:build`. Le mode desktop expose une API IPC limitée via `window.ashrafentDesktop`; toute suppression doit rester bornée à la bibliothèque Electron et passer par la corbeille.
+- Desktop reviewer: `ui/electron/`, build via `cd ui && npm run desktop:build`. Le mode desktop expose une API IPC limitée via `window.tarjamaDesktop`; toute suppression doit rester bornée à la bibliothèque Electron et passer par la corbeille.

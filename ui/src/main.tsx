@@ -401,7 +401,7 @@ Format de sortie attendu:
 
 source_corpus_id: ${transcript.corpus_id}
 language: fr
-format: ashrafent-translation-v1
+format: tarjama-translation-v1
 
 ## 00:00.000 --> 00:03.440
 Traduction française du bloc.
@@ -417,7 +417,7 @@ ${sourceBlocks}
 }
 
 function DesktopApp() {
-  const desktop = window.ashrafentDesktop;
+  const desktop = window.tarjamaDesktop;
   const [library, setLibrary] = useState<DesktopLibraryInfo | null>(null);
   const [desktopView, setDesktopView] = useState<DesktopView>("library");
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -1141,7 +1141,7 @@ function DesktopApp() {
           </>
         ) : (
           <div>
-            <strong>Ashrafent Reviewer</strong>
+            <strong>Tarjama Studio</strong>
             <span>Bibliothèque locale</span>
           </div>
         )}
@@ -1616,7 +1616,7 @@ function DesktopApp() {
         <div className="modal-backdrop" role="presentation">
           <section className="modal paste-modal" role="dialog" aria-modal="true">
             <h2>Importer une traduction collée</h2>
-            <p>Colle une traduction Ashrafent en JSON ou en Markdown. Les timestamps seront validés avant remplacement.</p>
+            <p>Colle une traduction Tarjama Studio en JSON ou en Markdown. Les timestamps seront validés avant remplacement.</p>
             <textarea
               value={pastedTranslation}
               onChange={(event) => setPastedTranslation(event.target.value)}
@@ -2212,7 +2212,7 @@ function App() {
     <main>
       <header className="topbar">
         <div className="project-title">
-          <span>Ashrafent</span>
+          <span>Tarjama Studio</span>
           <small>{selectedVideo?.series ?? "Corpus"}</small>
         </div>
 
@@ -2662,7 +2662,7 @@ function App() {
 }
 
 function Root() {
-  if (window.ashrafentDesktop) return <DesktopApp />;
+  if (window.tarjamaDesktop) return <DesktopApp />;
   if (navigator.userAgent.includes("Electron")) {
     return (
       <main className="desktop-shell">

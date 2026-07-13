@@ -160,7 +160,7 @@ type ExportProgress = {
 };
 
 interface Window {
-  ashrafentDesktop?: {
+  tarjamaDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
     loadProject(projectId: string): Promise<DesktopProjectLoad>;
     saveCurrentTranscript(projectId: string, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;

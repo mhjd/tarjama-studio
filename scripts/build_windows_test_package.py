@@ -68,10 +68,9 @@ def replace_package_exe(version: str) -> Path:
     WINDOWS_PACKAGE_DIR.mkdir(parents=True, exist_ok=True)
     destination = WINDOWS_PACKAGE_DIR / f"Tarjama-Studio-{version}-windows-portable.exe"
 
-    for pattern in ("Tarjama-Studio-*-windows-portable.exe", "Ashrafent-*-windows-portable.exe"):
-        for old_exe in WINDOWS_PACKAGE_DIR.glob(pattern):
-            if old_exe != destination:
-                old_exe.unlink()
+    for old_exe in WINDOWS_PACKAGE_DIR.glob("Tarjama-Studio-*-windows-portable.exe"):
+        if old_exe != destination:
+            old_exe.unlink()
 
     shutil.copy2(source, destination)
     return destination

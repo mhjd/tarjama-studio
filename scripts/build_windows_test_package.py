@@ -54,23 +54,24 @@ def sha256(path: Path) -> str:
 
 def update_readme(version: str) -> None:
     readme = WINDOWS_PACKAGE_DIR / "README.md"
-    target_name = f"Ashrafent-{version}-windows-portable.exe"
+    target_name = f"Tarjama-Studio-{version}-windows-portable.exe"
     content = readme.read_text(encoding="utf-8")
-    content = re.sub(r"Ashrafent-\d+\.\d+\.\d+-windows-portable\.exe", target_name, content)
+    content = re.sub(r"Tarjama-Studio-\d+\.\d+\.\d+-windows-portable\.exe", target_name, content)
     readme.write_text(content, encoding="utf-8")
 
 
 def replace_package_exe(version: str) -> Path:
-    source = UI_DIR / "release" / f"Ashrafent {version}.exe"
+    source = UI_DIR / "release" / f"Tarjama Studio {version}.exe"
     if not source.exists():
         raise SystemExit(f"Build artifact missing: {source}")
 
     WINDOWS_PACKAGE_DIR.mkdir(parents=True, exist_ok=True)
-    destination = WINDOWS_PACKAGE_DIR / f"Ashrafent-{version}-windows-portable.exe"
+    destination = WINDOWS_PACKAGE_DIR / f"Tarjama-Studio-{version}-windows-portable.exe"
 
-    for old_exe in WINDOWS_PACKAGE_DIR.glob("Ashrafent-*-windows-portable.exe"):
-        if old_exe != destination:
-            old_exe.unlink()
+    for pattern in ("Tarjama-Studio-*-windows-portable.exe", "Ashrafent-*-windows-portable.exe"):
+        for old_exe in WINDOWS_PACKAGE_DIR.glob(pattern):
+            if old_exe != destination:
+                old_exe.unlink()
 
     shutil.copy2(source, destination)
     return destination

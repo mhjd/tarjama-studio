@@ -198,7 +198,7 @@ type DesktopPromptSettings = {
 };
 
 interface Window {
-  ashrafentDesktop?: {
+  tarjamaDesktop?: {
     readLibrary(): Promise<DesktopLibraryInfo>;
     loadProject(projectId: string): Promise<DesktopProjectLoad>;
     renameProject(projectId: string, title: string): Promise<DesktopProject>;

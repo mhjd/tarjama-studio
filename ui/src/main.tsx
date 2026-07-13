@@ -444,7 +444,7 @@ Format de sortie attendu:
 
 source_corpus_id: ${transcript.corpus_id}
 language: fr
-format: ashrafent-translation-v1
+format: tarjama-translation-v1
 
 ## 00:00.000 --> 00:03.440
 Traduction française du bloc.
@@ -460,7 +460,7 @@ ${sourceBlocks}
 }
 
 function DesktopApp() {
-  const desktop = window.ashrafentDesktop;
+  const desktop = window.tarjamaDesktop;
   const [library, setLibrary] = useState<DesktopLibraryInfo | null>(null);
   const [desktopView, setDesktopView] = useState<DesktopView>("library");
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -498,7 +498,7 @@ function DesktopApp() {
   const [translationPromptDraft, setTranslationPromptDraft] = useState("");
   const [optionsState, setOptionsState] = useState("Prêt");
   const [theme, setTheme] = useState<"light" | "dark">(
-    () => (localStorage.getItem("ashrafent-theme") === "light" ? "light" : "dark"),
+    () => (localStorage.getItem("tarjama-theme") === "light" ? "light" : "dark"),
   );
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -507,7 +507,7 @@ function DesktopApp() {
   const [loopEnabled, setLoopEnabled] = useState(false);
   const [rangePlaybackActive, setRangePlaybackActive] = useState(false);
   const [playbackRate, setPlaybackRate] = useState<number>(() => {
-    const stored = Number(localStorage.getItem("ashrafent-playback-rate"));
+    const stored = Number(localStorage.getItem("tarjama-playback-rate"));
     return PLAYBACK_RATES.includes(stored as (typeof PLAYBACK_RATES)[number]) ? stored : 1;
   });
   const [isPlaying, setIsPlaying] = useState(false);
@@ -616,11 +616,11 @@ function DesktopApp() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem("ashrafent-theme", theme);
+    localStorage.setItem("tarjama-theme", theme);
   }, [theme]);
 
   useEffect(() => {
-    localStorage.setItem("ashrafent-playback-rate", String(playbackRate));
+    localStorage.setItem("tarjama-playback-rate", String(playbackRate));
     if (audioRef.current) audioRef.current.playbackRate = playbackRate;
   }, [playbackRate]);
 
@@ -1631,7 +1631,7 @@ function DesktopApp() {
           </>
         ) : (
           <div>
-            <strong>Ashrafent Reviewer</strong>
+            <strong>Tarjama Studio</strong>
             <span>Bibliothèque locale</span>
           </div>
         )}
@@ -2426,7 +2426,7 @@ function DesktopApp() {
         <div className="modal-backdrop" role="presentation">
           <section className="modal paste-modal" role="dialog" aria-modal="true">
             <h2>Importer une traduction collée</h2>
-            <p>Colle une traduction Ashrafent en Markdown. Les timestamps seront validés avant remplacement.</p>
+            <p>Colle une traduction Tarjama Studio en Markdown. Les timestamps seront validés avant remplacement.</p>
             <textarea
               value={pastedTranslation}
               onChange={(event) => setPastedTranslation(event.target.value)}
@@ -3091,7 +3091,7 @@ function App() {
     <main>
       <header className="topbar">
         <div className="project-title">
-          <span>Ashrafent</span>
+          <span>Tarjama Studio</span>
           <small>{selectedVideo?.series ?? "Corpus"}</small>
         </div>
 
@@ -3541,7 +3541,7 @@ function App() {
 }
 
 function Root() {
-  if (window.ashrafentDesktop) return <DesktopApp />;
+  if (window.tarjamaDesktop) return <DesktopApp />;
   if (navigator.userAgent.includes("Electron")) {
     return (
       <main className="desktop-shell">

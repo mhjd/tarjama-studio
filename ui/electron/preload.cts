@@ -109,4 +109,4 @@ const api = {
   trashProject: (projectId: string): Promise<void> => ipcRenderer.invoke("project:trash", projectId),
 };
 
-contextBridge.exposeInMainWorld("ashrafentDesktop", api);
+contextBridge.exposeInMainWorld("tarjamaDesktop", api);

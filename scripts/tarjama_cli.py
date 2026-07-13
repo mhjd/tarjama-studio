@@ -119,7 +119,7 @@ def export_transcript_for_electron(
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (out_dir / "README.txt").write_text(
-        "Transcription prête pour Ashrafent Electron.\n"
+        "Transcription prête pour Tarjama Studio.\n"
         "Dans le projet vidéo correspondant, utilise Importer transcription puis choisis transcript_import.json.\n"
         "transcript_whisper.json est la sortie brute locale si disponible; transcript_cleaned.json est la version nettoyée si disponible.\n",
         encoding="utf-8",
@@ -880,7 +880,7 @@ def run_tui(_: argparse.Namespace) -> None:
         while True:
             action = tui_choice(
                 stdscr,
-                "Ashrafent CLI",
+                "Tarjama Studio CLI",
                 [
                     ("Nouvelle vidéo complète: télécharger -> transcrire -> nettoyer", "guided_youtube"),
                     ("Deprecated · Lister les vidéos sans transcription", "missing"),
@@ -1153,7 +1153,7 @@ def download_youtube(args: argparse.Namespace) -> dict[str, Any]:
         "transcript_txt_path": None,
         "transcript_source_url": None,
         "transcript_type": "generated_whisper_local",
-        "validation_note": "Downloaded from YouTube via ashrafent CLI; local Whisper transcription may be generated separately.",
+        "validation_note": "Downloaded from YouTube via Tarjama Studio CLI; local Whisper transcription may be generated separately.",
     }
     append_manifest(row)
     row = ensure_row_has_playable_video(row)
@@ -1168,7 +1168,7 @@ def download_command(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Ashrafent local transcription CLI")
+    parser = argparse.ArgumentParser(description="Tarjama Studio local transcription CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
     missing = sub.add_parser("list-missing", help="List manifest videos without a local transcript/workspace")

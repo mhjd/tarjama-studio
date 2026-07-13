@@ -49,6 +49,31 @@ import type {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let startupLogFile = "";
 
+function migrateLegacyLibrary(): void {
+  const userData = app.getPath("userData");
+  const projects = path.join(userData, "projects");
+  if (fs.existsSync(projects)) return;
+
+  for (const legacyName of ["Ashrafent", "Electron"]) {
+    const legacyDirectory = path.join(app.getPath("appData"), legacyName);
+    const legacyProjects = path.join(legacyDirectory, "projects");
+    if (!fs.existsSync(legacyProjects)) continue;
+    try {
+      fs.mkdirSync(userData, { recursive: true });
+      fs.cpSync(legacyProjects, projects, { recursive: true, errorOnExist: true });
+      for (const filename of ["prompt-overrides.json", "groq-settings.json"]) {
+        const source = path.join(legacyDirectory, filename);
+        const target = path.join(userData, filename);
+        if (fs.existsSync(source) && !fs.existsSync(target)) fs.copyFileSync(source, target);
+      }
+      console.log(`Migrated local library from ${legacyName}`);
+      return;
+    } catch (error) {
+      console.error(`Unable to migrate local library from ${legacyName}`, error);
+    }
+  }
+}
+
 function errorText(error: unknown): string {
   return error instanceof Error && error.stack ? error.stack : String(error);
 }
@@ -70,7 +95,7 @@ function initializeStartupLog(): void {
     fs.mkdirSync(directory, { recursive: true });
     startupLogFile = path.join(directory, "startup.log");
     fs.writeFileSync(startupLogFile, "", "utf8");
-    writeStartupLog(`Starting Ashrafent ${app.getVersion()} on ${process.platform}-${process.arch}`);
+    writeStartupLog(`Starting Tarjama Studio ${app.getVersion()} on ${process.platform}-${process.arch}`);
   } catch (error) {
     console.error("Unable to initialize startup log", error);
   }
@@ -80,7 +105,7 @@ function reportStartupFailure(context: string, error: unknown): void {
   const detail = errorText(error);
   writeStartupLog(`${context}: ${detail}`);
   dialog.showErrorBox(
-    "Ashrafent n’a pas pu démarrer",
+    "Tarjama Studio n’a pas pu démarrer",
     `${context}.\n\nConsulte le fichier startup.log dans :\n${app.getPath("userData")}\n\n${detail}`,
   );
 }
@@ -99,7 +124,7 @@ function createWindow(): void {
     },
   });
 
-  const devServer = process.env.ASHRAFENT_VITE_DEV_SERVER;
+  const devServer = process.env.TARJAMA_VITE_DEV_SERVER;
   if (devServer) {
     void window.loadURL(devServer).catch((error) => reportStartupFailure("Chargement de l’interface impossible", error));
   } else {
@@ -201,7 +226,10 @@ function registerIpc(): void {
   ipcMain.handle("project:trash", async (_event, projectId: string) => trashProject(projectId));
 }
 
+app.setName("Tarjama Studio");
+
 app.whenReady().then(() => {
+  migrateLegacyLibrary();
   initializeStartupLog();
   try {
     registerIpc();
@@ -213,7 +241,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 }).catch((error) => {
-  console.error("Ashrafent could not initialize", error);
+  console.error("Tarjama Studio could not initialize", error);
 });
 
 process.on("uncaughtException", (error) => reportStartupFailure("Erreur interne", error));

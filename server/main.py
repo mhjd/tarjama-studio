@@ -24,7 +24,7 @@ EXPORTS = ROOT / "exports"
 IMAGEIO_FFMPEG = ROOT / ".venv/lib/python3.14/site-packages/imageio_ffmpeg/binaries/ffmpeg-macos-aarch64-v7.1"
 EXPORT_JOBS: dict[str, dict[str, Any]] = {}
 
-app = FastAPI(title="Ashrafent Local MVP")
+app = FastAPI(title="Tarjama Studio Local MVP")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -450,7 +450,7 @@ def translation_from_markdown(
     return {
         "corpus_id": corpus_id,
         "language": metadata.get("language") or language,
-        "format": metadata.get("format") or "ashrafent-translation-v1",
+        "format": metadata.get("format") or "tarjama-translation-v1",
         "source_corpus_id": metadata.get("source_corpus_id") or corpus_id,
         "source_transcript_fingerprint": transcript_alignment_fingerprint(transcript),
         "imported_from": filename,

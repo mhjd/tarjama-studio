@@ -68,8 +68,8 @@ def main() -> None:
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://localhost/ashrafent",
-            "X-Title": "ashrafent-arabic-asr-benchmark",
+            "HTTP-Referer": "https://localhost/tarjama-studio",
+            "X-Title": "tarjama-studio-arabic-asr-benchmark",
         },
         json=payload,
         timeout=600,

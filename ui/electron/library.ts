@@ -84,7 +84,7 @@ async function assertInsideLibrary(targetPath: string): Promise<void> {
   const target = await realOrResolved(targetPath);
   const relative = path.relative(root, target);
   if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
-    throw new Error("Refusing to operate outside Ashrafent library");
+    throw new Error("Refusing to operate outside Tarjama Studio library");
   }
 }
 
@@ -350,7 +350,7 @@ function translationFromTranscriptSnapshot(
   return {
     corpus_id: projectId,
     language: "fr",
-    format: "ashrafent-translation-v1",
+    format: "tarjama-translation-v1",
     source_transcript_fingerprint: transcriptAlignmentFingerprint(transcript),
     imported_from: "snapshot",
     segments: transcript.segments.map((segment) => ({
@@ -593,7 +593,7 @@ function translationFromJson(
   const translation: WorkspaceTranslation = {
     corpus_id: projectId,
     language: typeof source.language === "string" && source.language.trim() ? source.language.trim() : "fr",
-    format: typeof source.format === "string" && source.format.trim() ? source.format.trim() : "ashrafent-translation-v1",
+    format: typeof source.format === "string" && source.format.trim() ? source.format.trim() : "tarjama-translation-v1",
     source_transcript_fingerprint: transcriptAlignmentFingerprint(transcript),
     imported_from: filename,
     segments: source.segments.map((segment, index) => {
@@ -650,7 +650,7 @@ function translationFromMarkdown(
   return {
     corpus_id: projectId,
     language: metadata.language || "fr",
-    format: metadata.format || "ashrafent-translation-v1",
+    format: metadata.format || "tarjama-translation-v1",
     source_transcript_fingerprint: transcriptAlignmentFingerprint(transcript),
     imported_from: filename,
     segments,
@@ -972,7 +972,7 @@ function parseYoutubeUrl(rawUrl: string): ParsedYoutubeUrl {
     inputUrl,
     canonicalUrl: parsed.toString(),
     unverified: true,
-    warning: "Format YouTube inhabituel. Le projet est créé quand même, mais Ashrafent ne peut pas garantir la détection des doublons avant téléchargement.",
+    warning: "Format YouTube inhabituel. Le projet est créé quand même, mais Tarjama Studio ne peut pas garantir la détection des doublons avant téléchargement.",
   };
 }
 
@@ -2003,7 +2003,7 @@ export async function importTranslationFile(projectId: string): Promise<ImportTr
     title: `Importer une traduction pour ${project.title}`,
     properties: ["openFile"],
     filters: [
-      { name: "Traduction Ashrafent", extensions: ["json", "md", "markdown", "txt"] },
+      { name: "Traduction Tarjama Studio", extensions: ["json", "md", "markdown", "txt"] },
       { name: "JSON", extensions: ["json"] },
       { name: "Markdown ou texte", extensions: ["md", "markdown", "txt"] },
       { name: "Tous les fichiers", extensions: ["*"] },
@@ -2090,7 +2090,7 @@ function exportFilenameTitle(title: string): string {
     .normalize("NFC")
     .replace(/[^\p{L}\p{N}]+/gu, "_")
     .replace(/^_+|_+$/g, "");
-  if (!clean) return "Ashrafent";
+  if (!clean) return "Tarjama_Studio";
   const usable = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(clean) ? `${clean}_video` : clean;
   const maximumLength = 100;
   if (usable.length <= maximumLength) return usable;
@@ -2121,7 +2121,7 @@ async function writeAssSubtitles(
       : `Style: Default,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`;
   const lines = [
     "[Script Info]",
-    "Title: Ashrafent export",
+    "Title: Tarjama Studio export",
     "ScriptType: v4.00+",
     "ScaledBorderAndShadow: yes",
     "PlayResX: 1280",

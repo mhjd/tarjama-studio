@@ -1,9 +1,9 @@
 {
-  "name": "ashrafent-ui",
+  "name": "tarjama-studio-ui",
   "private": true,
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "Local-first Arabic transcription and translation reviewer",
-  "author": "Ashrafent",
+  "author": "Tarjama Studio",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -19,8 +19,8 @@
     "desktop:dist": "npm run desktop:tools && npm run desktop:build && electron-builder"
   },
   "build": {
-    "appId": "org.ashrafent.reviewer",
-    "productName": "Ashrafent",
+    "appId": "studio.tarjama.reviewer",
+    "productName": "Tarjama Studio",
     "directories": {
       "output": "release"
     },

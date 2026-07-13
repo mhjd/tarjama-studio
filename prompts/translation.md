@@ -29,7 +29,7 @@ Format de sortie attendu:
 
 source_corpus_id: {{corpus_id}}
 language: fr
-format: ashrafent-translation-v1
+format: tarjama-translation-v1
 
 ## 00:00.000 --> 00:03.440
 Traduction française du bloc.

@@ -212,7 +212,7 @@ export async function transcribeWithGroq(
     throw new Error("Durée de la vidéo inconnue; impossible de préparer les morceaux audio");
   }
   const key = await apiKey();
-  const tempDir = await fs.mkdtemp(path.join(app.getPath("temp"), "ashrafent-groq-"));
+  const tempDir = await fs.mkdtemp(path.join(app.getPath("temp"), "tarjama-groq-"));
   const runId = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const auditDir = path.join(
     app.getPath("userData"),

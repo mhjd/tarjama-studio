@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import os
+import hashlib
 import platform
 import shutil
 import stat
 import sys
+import tarfile
+import tempfile
 import urllib.request
 from pathlib import Path
 
@@ -41,19 +44,41 @@ def copy_file(source: Path, target: Path) -> None:
     if not source.exists():
         raise SystemExit(f"Missing source binary: {source}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
-    make_executable(target)
+    temporary = target.with_suffix(target.suffix + ".tmp")
+    temporary.unlink(missing_ok=True)
+    shutil.copy2(source, temporary)
+    make_executable(temporary)
+    temporary.replace(target)
 
 
-def download(url: str, target: Path, executable: bool = True) -> None:
+def download(url: str, target: Path, executable: bool = True, expected_sha256: str | None = None) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".tmp")
     print(f"Downloading {url}")
     with urllib.request.urlopen(url, timeout=120) as response:
-        tmp.write_bytes(response.read())
+        content = response.read(100 * 1024 * 1024 + 1)
+    if len(content) > 100 * 1024 * 1024:
+        raise SystemExit(f"Downloaded file is unexpectedly large: {url}")
+    if expected_sha256 and hashlib.sha256(content).hexdigest() != expected_sha256:
+        raise SystemExit(f"Checksum verification failed: {url}")
+    tmp.write_bytes(content)
     tmp.replace(target)
     if executable:
         make_executable(target)
+
+
+def download_file(url: str, target: Path, expected_sha256: str, maximum_bytes: int) -> None:
+    digest = hashlib.sha256()
+    written = 0
+    with urllib.request.urlopen(url, timeout=120) as response, target.open("wb") as output:
+        while chunk := response.read(1024 * 1024):
+            written += len(chunk)
+            if written > maximum_bytes:
+                raise SystemExit(f"Downloaded file is unexpectedly large: {url}")
+            digest.update(chunk)
+            output.write(chunk)
+    if digest.hexdigest() != expected_sha256:
+        raise SystemExit(f"Checksum verification failed: {url}")
 
 
 def prepare_ytdlp(bin_dir: Path, key: str) -> None:
@@ -63,16 +88,26 @@ def prepare_ytdlp(bin_dir: Path, key: str) -> None:
     if override:
         copy_file(Path(override), target)
         return
-    if key.startswith("darwin-"):
-        download("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos", target)
-        return
-    if key.startswith("win32-"):
-        download("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe", target)
-        return
-    if key.startswith("linux-"):
-        download("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp", target)
-        return
-    raise SystemExit(f"No yt-dlp package rule for {key}")
+    asset = (
+        "yt-dlp_macos" if key.startswith("darwin-")
+        else "yt-dlp.exe" if key.startswith("win32-")
+        else "yt-dlp" if key.startswith("linux-")
+        else None
+    )
+    if not asset:
+        raise SystemExit(f"No yt-dlp package rule for {key}")
+    base_url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
+    with urllib.request.urlopen(f"{base_url}/SHA2-256SUMS", timeout=120) as response:
+        checksum_lines = response.read().decode("utf-8").splitlines()
+    checksum = None
+    for line in checksum_lines:
+        fields = line.split()
+        if len(fields) >= 2 and fields[-1].lstrip("*") == asset:
+            checksum = fields[0].lower()
+            break
+    if not checksum or len(checksum) != 64:
+        raise SystemExit(f"Missing yt-dlp checksum for {asset}")
+    download(f"{base_url}/{asset}", target, expected_sha256=checksum)
 
 
 def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
@@ -83,9 +118,36 @@ def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
         copy_file(Path(override), target)
         return
 
-    mac_imageio = ROOT / ".venv/lib/python3.14/site-packages/imageio_ffmpeg/binaries/ffmpeg-macos-aarch64-v7.1"
-    if key == "darwin-arm64" and mac_imageio.exists():
-        copy_file(mac_imageio, target)
+    if key == "linux-x64":
+        asset = "ffmpeg-master-latest-linux64-gpl.tar.xz"
+        base_url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
+        with urllib.request.urlopen(f"{base_url}/checksums.sha256", timeout=120) as response:
+            checksum_lines = response.read().decode("utf-8").splitlines()
+        checksum = None
+        for line in checksum_lines:
+            fields = line.split()
+            if len(fields) >= 2 and fields[-1].lstrip("*") == asset:
+                checksum = fields[0].lower()
+                break
+        if not checksum or len(checksum) != 64:
+            raise SystemExit(f"Missing FFmpeg checksum for {asset}")
+        with tempfile.TemporaryDirectory(prefix="tarjama-ffmpeg-") as temp_dir:
+            archive = Path(temp_dir) / asset
+            download_file(f"{base_url}/{asset}", archive, checksum, 300 * 1024 * 1024)
+            with tarfile.open(archive, "r:xz") as bundle:
+                member = next(
+                    (item for item in bundle.getmembers() if item.isfile() and item.name.endswith("/bin/ffmpeg")),
+                    None,
+                )
+                if member is None:
+                    raise SystemExit("FFmpeg archive does not contain bin/ffmpeg")
+                source = bundle.extractfile(member)
+                if source is None:
+                    raise SystemExit("Unable to read FFmpeg from archive")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with target.open("wb") as output:
+                    shutil.copyfileobj(source, output)
+                make_executable(target)
         return
 
     resolved = shutil.which("ffmpeg")

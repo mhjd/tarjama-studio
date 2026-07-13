@@ -1157,8 +1157,6 @@ function DesktopApp() {
   }
 
   async function trashProjectDesktop(project: DesktopProject) {
-    const confirmed = window.confirm(`Déplacer le projet "${project.title}" à la corbeille ?`);
-    if (!confirmed) return;
     await runDesktopAction("Suppression...", async () => {
       await desktop?.trashProject(project.id);
     });

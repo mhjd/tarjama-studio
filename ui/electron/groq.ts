@@ -11,6 +11,7 @@ const TARGET_CHUNK_SECONDS = 10 * 60;
 const CHUNK_OVERLAP_SECONDS = 20;
 const MIN_CHUNK_SECONDS = 30;
 const SETTINGS_FILE = "groq-settings.json";
+const MAX_FFMPEG_ERROR_BYTES = 2 * 1024 * 1024;
 
 type StoredSettings = { apiKey?: string };
 type GroqSegment = { start?: unknown; end?: unknown; text?: unknown };
@@ -118,6 +119,7 @@ export async function groqKeyStatus(): Promise<GroqKeyStatus> {
 export async function saveGroqApiKey(apiKey: string): Promise<GroqKeyStatus> {
   const clean = apiKey.trim();
   if (!clean) throw new Error("La clé API Groq est vide");
+  if (clean.length > 4096 || /[\r\n]/.test(clean)) throw new Error("La clé API Groq est invalide");
   await fs.writeFile(settingsPath(), `${JSON.stringify({ apiKey: clean }, null, 2)}\n`, { mode: 0o600 });
   return { configured: true, source: "stored" };
 }
@@ -138,9 +140,23 @@ async function runFfmpeg(command: string, args: string[], cwd: string): Promise<
   await new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, { cwd, windowsHide: true });
     let stderr = "";
-    child.stderr.on("data", (chunk) => { stderr += String(chunk); });
-    child.on("error", reject);
+    let settled = false;
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+      if (Buffer.byteLength(stderr, "utf8") > MAX_FFMPEG_ERROR_BYTES && !settled) {
+        settled = true;
+        child.kill();
+        reject(new Error("Extraction audio interrompue: sortie ffmpeg anormalement volumineuse"));
+      }
+    });
+    child.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    });
     child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
       if (code === 0) resolve();
       else reject(new Error(`Extraction audio impossible (ffmpeg ${code}): ${stderr.trim().slice(-1200)}`));
     });

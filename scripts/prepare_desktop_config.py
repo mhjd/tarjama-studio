@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -14,6 +15,9 @@ OUTPUT = ROOT / "ui" / "electron" / "generated_defaults.ts"
 
 
 def groq_api_key() -> str:
+    environment_key = os.environ.get("GROQ_API_KEY", "").strip()
+    if environment_key:
+        return environment_key
     if not ENV_FILE.exists():
         return ""
     for line in ENV_FILE.read_text(encoding="utf-8").splitlines():

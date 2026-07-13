@@ -1,9 +1,10 @@
 {
   "name": "tarjama-studio-ui",
   "private": true,
-  "version": "0.1.27",
+  "version": "0.1.28",
   "description": "Local-first Arabic transcription and translation reviewer",
   "author": "Tarjama Studio",
+  "desktopName": "tarjama-studio",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -11,16 +12,28 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "electron:build": "tsc -p tsconfig.electron.json",
+    "security:test": "npm run electron:build && node --test tests/security.test.mjs",
     "desktop:tools": "python3 ../scripts/prepare_desktop_tools.py",
     "desktop:prepare": "python3 ../scripts/prepare_desktop_config.py",
     "desktop:build": "npm run desktop:prepare && npm run build && npm run electron:build",
     "desktop:dev": "npm run desktop:tools && npm run desktop:prepare && npm run electron:build && electron dist-electron/main.js",
     "desktop:package": "npm run desktop:tools && npm run desktop:build && electron-builder --dir",
-    "desktop:dist": "npm run desktop:tools && npm run desktop:build && electron-builder"
+    "desktop:dist": "npm run desktop:tools && npm run desktop:build && electron-builder",
+    "desktop:linux-appimage": "npm run desktop:tools && npm run desktop:build && electron-builder --linux AppImage --x64 --publish never"
   },
   "build": {
     "appId": "studio.tarjama.reviewer",
     "productName": "Tarjama Studio",
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
     "directories": {
       "output": "release"
     },
@@ -31,8 +44,8 @@
     ],
     "extraResources": [
       {
-        "from": "desktop-bin",
-        "to": "desktop-bin"
+        "from": "desktop-bin/fonts",
+        "to": "desktop-bin/fonts"
       },
       {
         "from": "../prompts",
@@ -41,14 +54,41 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
+      "extraResources": [
+        {
+          "from": "desktop-bin/darwin-${arch}",
+          "to": "desktop-bin/darwin-${arch}"
+        }
+      ],
       "target": [
         "dir"
       ]
     },
     "win": {
+      "extraResources": [
+        {
+          "from": "desktop-bin/win32-${arch}",
+          "to": "desktop-bin/win32-${arch}"
+        }
+      ],
       "target": [
         "dir"
       ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "AudioVideo",
+      "executableName": "tarjama-studio",
+      "extraResources": [
+        {
+          "from": "desktop-bin/linux-${arch}",
+          "to": "desktop-bin/linux-${arch}"
+        }
+      ],
+      "syncDesktopName": true,
+      "artifactName": "Tarjama-Studio-${version}-linux-${arch}.${ext}"
     }
   },
   "dependencies": {

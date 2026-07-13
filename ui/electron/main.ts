@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain as rawIpcMain, net, protocol, session } from "electron";
+import type { IpcMainInvokeEvent } from "electron";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   createYoutubeProject,
   createLocalProject,
@@ -32,10 +33,12 @@ import {
   renderTranslationPrompt,
   readPromptSettings,
   renameProject,
+  resolveProjectMediaPath,
   resetPromptOverride,
   savePromptOverride,
 } from "./library.js";
 import { clearGroqApiKey, groqKeyStatus, saveGroqApiKey, transcribeWithGroq } from "./groq.js";
+import { isLoopbackDevServer, mediaProjectIdFromPath, safeRendererAssetPath } from "./security.js";
 import type {
   CreateYoutubeProjectRequest,
   DownloadYoutubeRequest,
@@ -47,7 +50,43 @@ import type {
 } from "./types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const APP_ORIGIN = "tarjama://app";
 let startupLogFile = "";
+let mainWindow: BrowserWindow | null = null;
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "tarjama",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      codeCache: true,
+    },
+  },
+]);
+
+type IpcHandler = (event: IpcMainInvokeEvent, ...args: any[]) => any;
+
+function assertTrustedIpcSender(event: IpcMainInvokeEvent): void {
+  if (
+    !mainWindow ||
+    event.sender !== mainWindow.webContents ||
+    event.senderFrame !== mainWindow.webContents.mainFrame
+  ) {
+    throw new Error("IPC request rejected: untrusted renderer");
+  }
+}
+
+const ipcMain = {
+  handle(channel: string, handler: IpcHandler): void {
+    rawIpcMain.handle(channel, (event, ...args) => {
+      assertTrustedIpcSender(event);
+      return handler(event, ...args);
+    });
+  },
+};
 
 function migrateLegacyLibrary(): void {
   const userData = app.getPath("userData");
@@ -120,16 +159,31 @@ function createWindow(): void {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      devTools: !app.isPackaged,
       preload: path.join(__dirname, "preload.cjs"),
     },
   });
+  mainWindow = window;
 
   const devServer = process.env.TARJAMA_VITE_DEV_SERVER;
   if (devServer) {
+    if (!isLoopbackDevServer(devServer)) {
+      reportStartupFailure("Serveur de développement refusé", new Error("TARJAMA_VITE_DEV_SERVER doit être local"));
+      window.close();
+      return;
+    }
     void window.loadURL(devServer).catch((error) => reportStartupFailure("Chargement de l’interface impossible", error));
   } else {
-    void window.loadFile(path.join(__dirname, "../dist/index.html")).catch((error) => reportStartupFailure("Chargement de l’interface impossible", error));
+    void window.loadURL(`${APP_ORIGIN}/index.html`).catch((error) => reportStartupFailure("Chargement de l’interface impossible", error));
   }
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event, targetUrl) => {
+    if (targetUrl !== window.webContents.getURL()) event.preventDefault();
+  });
+  window.webContents.on("will-attach-webview", (event) => event.preventDefault());
   window.webContents.on("did-finish-load", () => writeStartupLog("Renderer finished loading"));
   window.webContents.on("did-fail-load", (_event, code, description, validatedUrl) => {
     writeStartupLog(`Renderer failed to load (${code}): ${description} (${validatedUrl})`);
@@ -138,6 +192,36 @@ function createWindow(): void {
     reportStartupFailure(`Le processus d’interface s’est arrêté (${details.reason})`, details.exitCode);
   });
   window.on("unresponsive", () => writeStartupLog("Main window is unresponsive"));
+  window.on("closed", () => {
+    if (mainWindow === window) mainWindow = null;
+  });
+}
+
+function localFileResponse(filePath: string, request: Request): Promise<Response> {
+  return net.fetch(pathToFileURL(filePath).toString(), {
+    method: request.method,
+    headers: request.headers,
+  });
+}
+
+function registerLocalProtocol(): void {
+  const rendererRoot = path.resolve(__dirname, "../dist");
+  protocol.handle("tarjama", async (request) => {
+    try {
+      const url = new URL(request.url);
+      if (url.host !== "app") return new Response("Not found", { status: 404 });
+      const decodedPath = decodeURIComponent(url.pathname);
+      if (decodedPath.startsWith("/media/")) {
+        const projectId = mediaProjectIdFromPath(decodedPath);
+        if (!projectId) return new Response("Not found", { status: 404 });
+        return await localFileResponse(await resolveProjectMediaPath(projectId), request);
+      }
+
+      return await localFileResponse(safeRendererAssetPath(rendererRoot, decodedPath), request);
+    } catch {
+      return new Response("Not found", { status: 404 });
+    }
+  });
 }
 
 function registerIpc(): void {
@@ -227,11 +311,15 @@ function registerIpc(): void {
 }
 
 app.setName("Tarjama Studio");
+app.enableSandbox();
 
 app.whenReady().then(() => {
   migrateLegacyLibrary();
   initializeStartupLog();
   try {
+    session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+    session.defaultSession.setPermissionCheckHandler(() => false);
+    registerLocalProtocol();
     registerIpc();
     createWindow();
   } catch (error) {

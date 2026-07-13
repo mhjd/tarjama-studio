@@ -31,6 +31,7 @@ import type {
   YoutubeFormatOption,
   YoutubeFormatsResult,
 } from "./types.js";
+import { assertSafeProjectId, assertSafeSnapshotId, safeFormatSelector, safeRemoteUrl } from "./security.js";
 
 const PROJECT_FILE = "project.json";
 const TRANSCRIPT_FILE = "transcript.json";
@@ -39,6 +40,11 @@ const TRANSLATION_FILE = "translation.json";
 const ARABIC_SUBTITLE_FONT_NAME = "Noto Naskh Arabic";
 const LATIN_SUBTITLE_FONT_NAME = "Arial";
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const MAX_TEXT_IMPORT_BYTES = 25 * 1024 * 1024;
+const MAX_PROMPT_BYTES = 512 * 1024;
+const MAX_TRANSCRIPT_SEGMENTS = 100_000;
+const MAX_SEGMENT_TEXT_LENGTH = 1_000_000;
+const MAX_TOOL_OUTPUT_BYTES = 20 * 1024 * 1024;
 
 export function libraryDir(): string {
   return path.join(app.getPath("userData"), "projects");
@@ -104,6 +110,7 @@ async function removeGeneratedSourceFiles(dir: string): Promise<void> {
 }
 
 function projectDir(projectId: string): string {
+  assertSafeProjectId(projectId);
   return path.join(libraryDir(), projectId);
 }
 
@@ -135,8 +142,27 @@ function exportsDir(projectId: string): string {
   return path.join(projectDir(projectId), "exports");
 }
 
+function projectMediaUrl(projectId: string): string {
+  assertSafeProjectId(projectId);
+  return `tarjama://app/media/${encodeURIComponent(projectId)}`;
+}
+
 async function readJson<T>(filePath: string): Promise<T> {
   return JSON.parse(await fs.readFile(filePath, "utf8")) as T;
+}
+
+function assertTextSize(content: string, maximumBytes = MAX_TEXT_IMPORT_BYTES): void {
+  if (Buffer.byteLength(content, "utf8") > maximumBytes) {
+    throw new Error(`Le fichier texte dépasse la limite de ${Math.floor(maximumBytes / 1024 / 1024)} Mo`);
+  }
+}
+
+async function readTextFileLimited(filePath: string, maximumBytes = MAX_TEXT_IMPORT_BYTES): Promise<string> {
+  const metadata = await fs.stat(filePath);
+  if (!metadata.isFile() || metadata.size > maximumBytes) {
+    throw new Error(`Le fichier sélectionné dépasse la limite de ${Math.floor(maximumBytes / 1024 / 1024)} Mo`);
+  }
+  return await fs.readFile(filePath, "utf8");
 }
 
 async function writeJson(filePath: string, payload: unknown): Promise<void> {
@@ -152,6 +178,7 @@ async function requireProjectVideo(project: DesktopProject): Promise<string> {
   if (!project.videoPath || !(await pathExists(project.videoPath))) {
     throw new Error("Ajoute d'abord une vidéo au projet");
   }
+  await assertInsideLibrary(project.videoPath);
   return project.videoPath;
 }
 
@@ -162,6 +189,9 @@ function validateTranscript(payload: unknown): WorkspaceTranscript {
   const transcript = payload as WorkspaceTranscript;
   if (!Array.isArray(transcript.segments) || transcript.segments.length === 0) {
     throw new Error("Transcript must contain at least one segment");
+  }
+  if (transcript.segments.length > MAX_TRANSCRIPT_SEGMENTS) {
+    throw new Error(`Transcript contains too many segments (maximum ${MAX_TRANSCRIPT_SEGMENTS})`);
   }
   let previousStart = -1;
   const ids = new Set<string>();
@@ -187,6 +217,9 @@ function validateTranscript(payload: unknown): WorkspaceTranscript {
     }
     if (typeof segment.translation !== "string") {
       throw new Error(`Segment ${index} translation must be a string`);
+    }
+    if (segment.text.length > MAX_SEGMENT_TEXT_LENGTH || segment.translation.length > MAX_SEGMENT_TEXT_LENGTH) {
+      throw new Error(`Segment ${index} text is unreasonably large`);
     }
   });
   return transcript;
@@ -448,6 +481,14 @@ async function loadSavedTranscript(projectId: string): Promise<WorkspaceTranscri
   return null;
 }
 
+async function storedProjectVideo(projectId: string): Promise<string | undefined> {
+  const dir = projectDir(projectId);
+  if (!(await pathExists(dir))) return undefined;
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const source = entries.find((entry) => entry.isFile() && entry.name.startsWith("source."));
+  return source ? path.join(dir, source.name) : undefined;
+}
+
 async function refreshProjectArtifactPaths(project: DesktopProject): Promise<DesktopProject> {
   const savedTranscript = transcriptFile(project.id);
   const currentTranscript = currentFile(project.id);
@@ -458,8 +499,22 @@ async function refreshProjectArtifactPaths(project: DesktopProject): Promise<Des
       ? currentTranscript
       : undefined;
   const translationPath = (await pathExists(translation)) ? translation : undefined;
-  if (project.transcriptPath === transcriptPath && project.translationPath === translationPath) return project;
-  const updated = { ...project, transcriptPath, translationPath };
+  let videoPath = project.videoPath;
+  if (videoPath) {
+    try {
+      await assertInsideLibrary(videoPath);
+      if (!(await pathExists(videoPath))) videoPath = undefined;
+    } catch {
+      videoPath = undefined;
+    }
+  }
+  videoPath ??= await storedProjectVideo(project.id);
+  if (
+    project.transcriptPath === transcriptPath &&
+    project.translationPath === translationPath &&
+    project.videoPath === videoPath
+  ) return project;
+  const updated = { ...project, videoPath, transcriptPath, translationPath };
   await writeProject(updated);
   return updated;
 }
@@ -735,20 +790,37 @@ async function runTool(
     const child = spawn(command, args, { cwd, windowsHide: true });
     let stdout = "";
     let stderr = "";
-    child.stdout.on("data", (chunk) => {
+    let outputBytes = 0;
+    let settled = false;
+    const rejectOnce = (error: ToolError) => {
+      if (settled) return;
+      settled = true;
+      child.kill();
+      reject(error);
+    };
+    const appendOutput = (target: "stdout" | "stderr", chunk: unknown) => {
       const value = String(chunk);
-      stdout += value;
+      outputBytes += Buffer.byteLength(value, "utf8");
+      if (outputBytes > MAX_TOOL_OUTPUT_BYTES) {
+        rejectOnce(new ToolError(`${path.basename(command)} produced too much output`, stdout, stderr, null));
+        return;
+      }
+      if (target === "stdout") stdout += value;
+      else stderr += value;
       onOutput?.(value);
+    };
+    child.stdout.on("data", (chunk) => {
+      appendOutput("stdout", chunk);
     });
     child.stderr.on("data", (chunk) => {
-      const value = String(chunk);
-      stderr += value;
-      onOutput?.(value);
+      appendOutput("stderr", chunk);
     });
     child.on("error", (error) => {
-      reject(new ToolError(`${path.basename(command)} could not be started at ${command}\n${error.message}`, stdout, stderr, null));
+      rejectOnce(new ToolError(`${path.basename(command)} could not be started at ${command}\n${error.message}`, stdout, stderr, null));
     });
     child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
       if (code === 0) {
         resolve(stdout);
       } else {
@@ -773,29 +845,57 @@ async function makeExecutable(filePath: string): Promise<void> {
   }
 }
 
-function ytdlpDownloadUrl(): string {
-  if (process.platform === "darwin") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos";
-  if (process.platform === "win32") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
-  if (process.platform === "linux") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+function ytdlpAssetName(): string {
+  if (process.platform === "darwin") return "yt-dlp_macos";
+  if (process.platform === "win32") return "yt-dlp.exe";
+  if (process.platform === "linux") return "yt-dlp";
   throw new Error(`Unsupported platform for yt-dlp update: ${process.platform}`);
 }
 
-async function downloadFile(url: string, targetPath: string): Promise<void> {
+function ytdlpDownloadUrl(assetName: string): string {
+  return `https://github.com/yt-dlp/yt-dlp/releases/latest/download/${assetName}`;
+}
+
+async function expectedYtdlpChecksum(assetName: string): Promise<string> {
+  const response = await fetch(ytdlpDownloadUrl("SHA2-256SUMS"));
+  if (!response.ok) throw new Error(`Checksum download failed: HTTP ${response.status}`);
+  const line = (await response.text())
+    .split(/\r?\n/)
+    .find((candidate) => candidate.trim().split(/\s+/).at(-1)?.replace(/^\*/, "") === assetName);
+  const checksum = line?.trim().split(/\s+/)[0];
+  if (!checksum || !/^[a-f0-9]{64}$/i.test(checksum)) {
+    throw new Error(`Checksum missing for ${assetName}`);
+  }
+  return checksum.toLowerCase();
+}
+
+async function downloadFile(url: string, targetPath: string, expectedChecksum: string): Promise<void> {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Download failed: HTTP ${response.status}`);
   }
+  const contentLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > 100 * 1024 * 1024) {
+    throw new Error("Downloaded tool is unexpectedly large");
+  }
+  const content = Buffer.from(await response.arrayBuffer());
+  if (content.length > 100 * 1024 * 1024) throw new Error("Downloaded tool is unexpectedly large");
+  const checksum = createHash("sha256").update(content).digest("hex");
+  if (checksum !== expectedChecksum) {
+    throw new Error("yt-dlp checksum verification failed; the existing version was preserved");
+  }
   const tmpPath = `${targetPath}.tmp`;
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  await fs.writeFile(tmpPath, Buffer.from(await response.arrayBuffer()));
+  await fs.writeFile(tmpPath, content, { mode: 0o755 });
   await makeExecutable(tmpPath);
   await fs.rm(targetPath, { force: true }).catch(() => undefined);
   await fs.rename(tmpPath, targetPath);
 }
 
 export async function updateYtdlp(): Promise<UpdateToolResult> {
+  const assetName = ytdlpAssetName();
   const targetPath = path.join(app.getPath("userData"), "bin", platformKey(), `yt-dlp${executableExtension()}`);
-  await downloadFile(ytdlpDownloadUrl(), targetPath);
+  await downloadFile(ytdlpDownloadUrl(assetName), targetPath, await expectedYtdlpChecksum(assetName));
   const version = (await runTool(targetPath, ["--version"], app.getPath("userData"))).trim();
   return { path: targetPath, version };
 }
@@ -918,6 +1018,7 @@ function youtubeIdFromUrl(url: URL, depth = 0): string | undefined {
 function parseYoutubeUrl(rawUrl: string): ParsedYoutubeUrl {
   const inputUrl = rawUrl.trim();
   if (!inputUrl) throw new Error("Colle un lien YouTube avant de créer le projet.");
+  if (inputUrl.length > 4096) throw new Error("Le lien vidéo est anormalement long");
 
   if (YOUTUBE_ID_PATTERN.test(inputUrl)) {
     return {
@@ -1258,9 +1359,11 @@ async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: 
     let combined = "";
     child.stdout.on("data", (chunk) => {
       combined += String(chunk);
+      if (Buffer.byteLength(combined, "utf8") > MAX_TOOL_OUTPUT_BYTES) child.kill();
     });
     child.stderr.on("data", (chunk) => {
       combined += String(chunk);
+      if (Buffer.byteLength(combined, "utf8") > MAX_TOOL_OUTPUT_BYTES) child.kill();
     });
     child.on("error", reject);
     child.on("close", () => resolve(combined));
@@ -1276,11 +1379,15 @@ export async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
   const extension = executableExtension();
   const key = platformKey();
   const candidates = [
-    path.join(app.getPath("userData"), "bin", key, `${name}${extension}`),
+    ...(name === "yt-dlp" ? [path.join(app.getPath("userData"), "bin", key, `${name}${extension}`)] : []),
     path.join(process.resourcesPath, "desktop-bin", key, `${name}${extension}`),
-    path.join(app.getAppPath(), "desktop-bin", key, `${name}${extension}`),
-    path.join(app.getAppPath(), "..", "desktop-bin", key, `${name}${extension}`),
-    path.join(process.cwd(), "desktop-bin", key, `${name}${extension}`),
+    ...(!app.isPackaged
+      ? [
+          path.join(app.getAppPath(), "desktop-bin", key, `${name}${extension}`),
+          path.join(app.getAppPath(), "..", "desktop-bin", key, `${name}${extension}`),
+          path.join(process.cwd(), "desktop-bin", key, `${name}${extension}`),
+        ]
+      : []),
   ];
   for (const candidate of candidates) {
     if (await pathExists(candidate)) return candidate;
@@ -1290,14 +1397,17 @@ export async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
 
 async function resolveDesktopResource(relativePath: string): Promise<string | null> {
   const candidates = [
-    path.join(app.getPath("userData"), relativePath),
     path.join(process.resourcesPath, relativePath),
-    path.join(MODULE_DIR, relativePath),
-    path.join(MODULE_DIR, "..", relativePath),
-    path.join(MODULE_DIR, "..", "..", relativePath),
-    path.join(app.getAppPath(), relativePath),
-    path.join(app.getAppPath(), "..", relativePath),
-    path.join(process.cwd(), relativePath),
+    ...(!app.isPackaged
+      ? [
+          path.join(MODULE_DIR, relativePath),
+          path.join(MODULE_DIR, "..", relativePath),
+          path.join(MODULE_DIR, "..", "..", relativePath),
+          path.join(app.getAppPath(), relativePath),
+          path.join(app.getAppPath(), "..", relativePath),
+          path.join(process.cwd(), relativePath),
+        ]
+      : []),
   ];
   for (const candidate of candidates) {
     if (await pathExists(candidate)) return candidate;
@@ -1308,12 +1418,16 @@ async function resolveDesktopResource(relativePath: string): Promise<string | nu
 async function resolveBundledDesktopResource(relativePath: string): Promise<string | null> {
   const candidates = [
     path.join(process.resourcesPath, relativePath),
-    path.join(MODULE_DIR, relativePath),
-    path.join(MODULE_DIR, "..", relativePath),
-    path.join(MODULE_DIR, "..", "..", relativePath),
-    path.join(app.getAppPath(), relativePath),
-    path.join(app.getAppPath(), "..", relativePath),
-    path.join(process.cwd(), relativePath),
+    ...(!app.isPackaged
+      ? [
+          path.join(MODULE_DIR, relativePath),
+          path.join(MODULE_DIR, "..", relativePath),
+          path.join(MODULE_DIR, "..", "..", relativePath),
+          path.join(app.getAppPath(), relativePath),
+          path.join(app.getAppPath(), "..", relativePath),
+          path.join(process.cwd(), relativePath),
+        ]
+      : []),
   ];
   for (const candidate of candidates) {
     if (await pathExists(candidate)) return candidate;
@@ -1328,9 +1442,16 @@ export async function readLibrary(): Promise<DesktopLibraryInfo> {
   const projects: DesktopProject[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
+    try {
+      assertSafeProjectId(entry.name);
+    } catch {
+      continue;
+    }
     const filePath = path.join(root, entry.name, PROJECT_FILE);
     if (!(await pathExists(filePath))) continue;
-    projects.push(await refreshProjectArtifactPaths(await readJson<DesktopProject>(filePath)));
+    const project = await readJson<DesktopProject>(filePath);
+    if (project.id !== entry.name) continue;
+    projects.push(await refreshProjectArtifactPaths(project));
   }
   projects.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   return { libraryDir: root, projects };
@@ -1339,7 +1460,9 @@ export async function readLibrary(): Promise<DesktopLibraryInfo> {
 async function readProject(projectId: string): Promise<DesktopProject> {
   const filePath = projectFile(projectId);
   if (!(await pathExists(filePath))) throw new Error("Project not found");
-  return await readJson<DesktopProject>(filePath);
+  const project = await readJson<DesktopProject>(filePath);
+  if (project.id !== projectId) throw new Error("Le projet ne correspond pas à son dossier");
+  return await refreshProjectArtifactPaths(project);
 }
 
 async function findProjectByYoutubeId(youtubeId: string): Promise<DesktopProject | null> {
@@ -1380,6 +1503,7 @@ export async function createYoutubeProject(
   const title =
     request.title?.trim() ||
     (parsed.youtubeId ? `YouTube ${parsed.youtubeId}` : `Lien YouTube ${shortHash(parsed.canonicalUrl).slice(0, 6)}`);
+  if (title.length > 200) throw new Error("Le titre du projet ne peut pas dépasser 200 caractères");
   const project: DesktopProject = {
     id,
     title,
@@ -1426,7 +1550,7 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
   });
   if (selection.canceled || !selection.filePaths[0]) return null;
 
-  const transcript = validateTranscript(JSON.parse(await fs.readFile(selection.filePaths[0], "utf8")));
+  const transcript = validateTranscript(JSON.parse(await readTextFileLimited(selection.filePaths[0])));
   const dir = projectDir(project.id);
   await fs.mkdir(dir, { recursive: true });
 
@@ -1452,7 +1576,14 @@ const PROMPT_FILENAMES: Record<PromptKind, string> = {
   translation: "translation.md",
 };
 
+function assertPromptKind(kind: unknown): asserts kind is PromptKind {
+  if (kind !== "transcript_cleanup" && kind !== "translation") {
+    throw new Error("Type de prompt invalide");
+  }
+}
+
 function promptOverridePath(kind: PromptKind): string {
+  assertPromptKind(kind);
   return path.join(app.getPath("userData"), "prompts", PROMPT_FILENAMES[kind]);
 }
 
@@ -1475,6 +1606,8 @@ async function promptValue(kind: PromptKind): Promise<{ content: string; customi
 }
 
 function validatePromptTemplate(kind: PromptKind, content: string): void {
+  assertPromptKind(kind);
+  assertTextSize(content, MAX_PROMPT_BYTES);
   if (!content.trim()) throw new Error("Le prompt ne peut pas être vide");
   const required = kind === "transcript_cleanup"
     ? ["{{corpus_id}}", "{{title}}", "{{source_blocks}}"]
@@ -1606,6 +1739,7 @@ export async function importCleanedTranscriptContent(
   projectId: string,
   content: string,
 ): Promise<CleanedTranscriptImportResult> {
+  assertTextSize(content);
   if (!content.trim()) throw new Error("La transcription nettoyée est vide");
   const project = await readProject(projectId);
   await requireProjectVideo(project);
@@ -1639,7 +1773,7 @@ export async function importCleanedTranscriptFile(
     ],
   });
   if (selection.canceled || !selection.filePaths[0]) return null;
-  return await importCleanedTranscriptContent(projectId, await fs.readFile(selection.filePaths[0], "utf8"));
+  return await importCleanedTranscriptContent(projectId, await readTextFileLimited(selection.filePaths[0]));
 }
 
 async function copyVideoIntoProject(
@@ -1710,6 +1844,7 @@ export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsRes
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
+  const sourceUrl = safeRemoteUrl(url);
   const metadataText = await runYtdlp(
     ytdlp,
     [
@@ -1717,7 +1852,8 @@ export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsRes
       "--ffmpeg-location",
       ffmpeg,
       "-J",
-      url,
+      "--",
+      sourceUrl,
     ],
     libraryDir(),
   );
@@ -1739,8 +1875,7 @@ export async function downloadYoutube(
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
   const existingTarget = request.projectId ? await readProject(request.projectId) : null;
-  const sourceUrl = request.url.trim() || existingTarget?.youtubeUrl || "";
-  if (!sourceUrl) throw new Error("Lien YouTube absent");
+  const sourceUrl = safeRemoteUrl(request.url.trim() || existingTarget?.youtubeUrl || "");
   emitProgress?.({ projectId: "pending", stage: "metadata", message: "Analyse de la vidéo YouTube..." });
   const metadataText = await runYtdlp(
     ytdlp,
@@ -1749,6 +1884,7 @@ export async function downloadYoutube(
       "--ffmpeg-location",
       ffmpeg,
       "-J",
+      "--",
       sourceUrl,
     ],
     libraryDir(),
@@ -1769,7 +1905,8 @@ export async function downloadYoutube(
   emitProgress?.({ projectId: id, stage: "download", percent: 0, message: "Téléchargement MP4 compatible..." });
 
   const outputTemplate = path.join(dir, "source.%(ext)s");
-  const selectedFormat = request.formatSelector || BEST_MERGED_FORMAT;
+  const allowedFormats = youtubeFormatOptions(metadata).map((format) => format.formatSelector);
+  const selectedFormat = safeFormatSelector(request.formatSelector, allowedFormats, BEST_MERGED_FORMAT);
   const downloadArgs = (format: string, cleanStart = false): string[] => [
       "--no-warnings",
       "--no-playlist",
@@ -1788,6 +1925,7 @@ export async function downloadYoutube(
       "after_move:filepath",
       "-o",
       outputTemplate,
+      "--",
       sourceUrl,
     ];
 
@@ -1867,12 +2005,16 @@ export async function loadProject(projectId: string): Promise<DesktopProjectLoad
   if (snapshotCurrent) await ensureInitialSnapshot(projectId, snapshotCurrent);
   return {
     project,
-    mediaUrl: project.videoPath ? pathToFileURL(project.videoPath).toString() : undefined,
+    mediaUrl: project.videoPath ? projectMediaUrl(project.id) : undefined,
     transcript,
     translation,
     snapshots: await listSnapshotInfo(projectId, snapshotCurrent),
     recovery: await recoveryState(projectId),
   };
+}
+
+export async function resolveProjectMediaPath(projectId: string): Promise<string> {
+  return await requireProjectVideo(await readProject(projectId));
 }
 
 export async function projectForTranscription(projectId: string): Promise<DesktopProject> {
@@ -1956,6 +2098,7 @@ export async function createTranscriptSnapshot(projectId: string, transcript: Wo
 }
 
 export async function loadSnapshot(projectId: string, snapshotId: string): Promise<{ snapshot: DesktopSnapshotInfo; transcript: WorkspaceTranscript }> {
+  assertSafeSnapshotId(snapshotId);
   const filePath = path.join(snapshotsDir(projectId), snapshotId);
   await assertInsideLibrary(filePath);
   if (!(await pathExists(filePath))) throw new Error("Sauvegarde inconnue");
@@ -1970,6 +2113,7 @@ export async function loadSnapshot(projectId: string, snapshotId: string): Promi
 }
 
 export async function restoreSnapshot(projectId: string, snapshotId?: string): Promise<DesktopProjectLoad> {
+  if (snapshotId) assertSafeSnapshotId(snapshotId);
   const filePath = snapshotId ? path.join(snapshotsDir(projectId), snapshotId) : await latestSnapshot(projectId);
   if (!filePath) throw new Error("Aucune sauvegarde à restaurer");
   await assertInsideLibrary(filePath);
@@ -2010,7 +2154,7 @@ export async function importTranslationFile(projectId: string): Promise<ImportTr
     ],
   });
   if (selection.canceled || !selection.filePaths[0]) return null;
-  return await importTranslationContent(projectId, await fs.readFile(selection.filePaths[0], "utf8"), path.basename(selection.filePaths[0]), true);
+  return await importTranslationContent(projectId, await readTextFileLimited(selection.filePaths[0]), path.basename(selection.filePaths[0]), true);
 }
 
 export async function importTranslationContent(
@@ -2019,6 +2163,7 @@ export async function importTranslationContent(
   filename: string,
   replace: boolean,
 ): Promise<ImportTranslationResult> {
+  assertTextSize(content);
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
   await requireProjectVideo(project);
@@ -2279,7 +2424,19 @@ export async function openProjectFolder(projectId: string): Promise<void> {
 }
 
 export async function trashProject(projectId: string): Promise<void> {
+  const project = await readProject(projectId);
   const dir = projectDir(projectId);
   await assertInsideLibrary(dir);
+  const confirmation = await dialog.showMessageBox({
+    type: "warning",
+    title: "Déplacer le projet à la corbeille",
+    message: `Déplacer « ${project.title} » à la corbeille ?`,
+    detail: "La bibliothèque des autres projets ne sera pas modifiée.",
+    buttons: ["Annuler", "Déplacer à la corbeille"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (confirmation.response !== 1) return;
   await shell.trashItem(dir);
 }

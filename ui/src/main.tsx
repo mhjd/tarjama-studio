@@ -115,9 +115,46 @@ type Translation = {
 
 type ExportTrack = "arabic" | "translation";
 type ExportSubtitleStyle = "black-band" | "outline";
+type ExportSubtitleSize = "compact" | "standard" | "large";
+type ExportVideoQuality = "original" | "mobile-720p" | "compact-480p";
+type ExportCueGrouping = "source" | "automatic" | "minimum-words";
+type ExportVideoOptions = {
+  style: ExportSubtitleStyle;
+  subtitleSize: ExportSubtitleSize;
+  videoQuality: ExportVideoQuality;
+  cueGrouping: ExportCueGrouping;
+  minimumWords?: number;
+};
 type DesktopView = "library" | "editor" | "options";
 type DesktopActionMenu = "transcription" | "translation" | "export" | null;
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+const DEFAULT_EXPORT_OPTIONS: ExportVideoOptions = {
+  style: "black-band",
+  subtitleSize: "standard",
+  videoQuality: "mobile-720p",
+  cueGrouping: "automatic",
+};
+
+function initialExportOptions(): ExportVideoOptions {
+  try {
+    const stored = JSON.parse(localStorage.getItem("tarjama-export-options") ?? "null") as Partial<ExportVideoOptions> | null;
+    return {
+      style: stored?.style === "outline" ? "outline" : "black-band",
+      subtitleSize: ["compact", "standard", "large"].includes(stored?.subtitleSize ?? "")
+        ? stored!.subtitleSize as ExportSubtitleSize
+        : DEFAULT_EXPORT_OPTIONS.subtitleSize,
+      videoQuality: ["original", "mobile-720p", "compact-480p"].includes(stored?.videoQuality ?? "")
+        ? stored!.videoQuality as ExportVideoQuality
+        : DEFAULT_EXPORT_OPTIONS.videoQuality,
+      cueGrouping: ["source", "automatic", "minimum-words"].includes(stored?.cueGrouping ?? "")
+        ? stored!.cueGrouping as ExportCueGrouping
+        : DEFAULT_EXPORT_OPTIONS.cueGrouping,
+      minimumWords: Math.max(2, Math.min(30, Number(stored?.minimumWords) || 10)),
+    };
+  } catch {
+    return { ...DEFAULT_EXPORT_OPTIONS, minimumWords: 10 };
+  }
+}
 
 type ExportJob = {
   id: string;
@@ -521,7 +558,7 @@ function DesktopApp() {
   const [projectTitleDraft, setProjectTitleDraft] = useState("");
   const [copyState, setCopyState] = useState("Copier prompt");
   const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
-  const [exportSubtitleStyle, setExportSubtitleStyle] = useState<ExportSubtitleStyle>("black-band");
+  const [exportOptions, setExportOptions] = useState<ExportVideoOptions>(initialExportOptions);
   const [openActionMenu, setOpenActionMenu] = useState<DesktopActionMenu>(null);
   const [saveState, setSaveState] = useState("Sauvegarder");
   const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
@@ -623,6 +660,10 @@ function DesktopApp() {
     localStorage.setItem("tarjama-playback-rate", String(playbackRate));
     if (audioRef.current) audioRef.current.playbackRate = playbackRate;
   }, [playbackRate]);
+
+  useEffect(() => {
+    localStorage.setItem("tarjama-export-options", JSON.stringify(exportOptions));
+  }, [exportOptions]);
 
   useEffect(() => {
     if (desktopView !== "editor" || !mediaUrl) return;
@@ -1458,7 +1499,7 @@ function DesktopApp() {
         await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
       }
       setState("Choisis l'emplacement du fichier exporté...");
-      const result = await desktop.exportVideo(selectedProjectId, track, openAfter, exportSubtitleStyle);
+      const result = await desktop.exportVideo(selectedProjectId, track, openAfter, exportOptions);
       if (result) {
         setState(result.opened ? `Export créé et ouvert: ${result.outputPath}` : `Export créé: ${result.outputPath}`);
         setExportProgress(null);
@@ -1932,16 +1973,76 @@ function DesktopApp() {
                 </button>
                 {openActionMenu === "export" && (
                   <div className="action-menu-content">
-                    <label className="subtitle-style-picker">
+                    <label className="export-option">
                       <span>Style sous-titres</span>
                       <select
-                        value={exportSubtitleStyle}
-                        onChange={(event) => setExportSubtitleStyle(event.target.value as ExportSubtitleStyle)}
+                        value={exportOptions.style}
+                        onChange={(event) => setExportOptions((value) => ({
+                          ...value,
+                          style: event.target.value as ExportSubtitleStyle,
+                        }))}
                       >
                         <option value="black-band">Fond noir</option>
                         <option value="outline">Texte seul</option>
                       </select>
                     </label>
+                    <label className="export-option">
+                      <span>Taille du texte</span>
+                      <select
+                        value={exportOptions.subtitleSize}
+                        onChange={(event) => setExportOptions((value) => ({
+                          ...value,
+                          subtitleSize: event.target.value as ExportSubtitleSize,
+                        }))}
+                      >
+                        <option value="compact">Compacte</option>
+                        <option value="standard">Standard (recommandée)</option>
+                        <option value="large">Grande lisibilité</option>
+                      </select>
+                    </label>
+                    <label className="export-option">
+                      <span>Qualité vidéo</span>
+                      <select
+                        value={exportOptions.videoQuality}
+                        onChange={(event) => setExportOptions((value) => ({
+                          ...value,
+                          videoQuality: event.target.value as ExportVideoQuality,
+                        }))}
+                      >
+                        <option value="original">Résolution originale</option>
+                        <option value="mobile-720p">Mobile 720p (recommandée)</option>
+                        <option value="compact-480p">Très légère 480p</option>
+                      </select>
+                    </label>
+                    <label className="export-option">
+                      <span>Regroupement</span>
+                      <select
+                        value={exportOptions.cueGrouping}
+                        onChange={(event) => setExportOptions((value) => ({
+                          ...value,
+                          cueGrouping: event.target.value as ExportCueGrouping,
+                        }))}
+                      >
+                        <option value="automatic">Automatique (recommandé)</option>
+                        <option value="source">Conserver les segments</option>
+                        <option value="minimum-words">Minimum de mots</option>
+                      </select>
+                    </label>
+                    {exportOptions.cueGrouping === "minimum-words" && (
+                      <label className="export-option export-minimum-words">
+                        <span>Mots minimum</span>
+                        <input
+                          type="number"
+                          min="2"
+                          max="30"
+                          value={exportOptions.minimumWords ?? 10}
+                          onChange={(event) => setExportOptions((value) => ({
+                            ...value,
+                            minimumWords: Math.max(2, Math.min(30, Number(event.target.value) || 2)),
+                          }))}
+                        />
+                      </label>
+                    )}
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
                       onClick={() => {

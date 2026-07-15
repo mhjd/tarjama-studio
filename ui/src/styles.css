@@ -727,7 +727,9 @@ input {
 
 .action-menu-export .action-menu-content {
   left: auto;
-  min-width: 17rem;
+  max-height: min(72vh, 38rem);
+  min-width: 20rem;
+  overflow-y: auto;
   right: 0;
 }
 
@@ -747,21 +749,29 @@ input {
   white-space: nowrap;
 }
 
-.subtitle-style-picker {
+.subtitle-style-picker,
+.export-option {
   display: grid;
   gap: 0.35rem;
 }
 
-.subtitle-style-picker span {
+.subtitle-style-picker span,
+.export-option span {
   color: var(--muted);
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.subtitle-style-picker select {
+.subtitle-style-picker select,
+.export-option select,
+.export-option input {
   min-height: 2.35rem;
   width: 100%;
+}
+
+.export-minimum-words input {
+  max-width: none;
 }
 
 .translation-tools {
@@ -1409,7 +1419,8 @@ input:disabled {
   .document-strip,
   .video-meta,
   .document-actions,
-  .subtitle-style-picker {
+  .subtitle-style-picker,
+  .export-option {
     align-items: stretch;
     flex-direction: column;
   }
@@ -1438,7 +1449,9 @@ input:disabled {
     grid-template-columns: 1fr;
   }
 
-  .subtitle-style-picker select {
+  .subtitle-style-picker select,
+  .export-option select,
+  .export-option input {
     width: 100%;
   }
 

@@ -5,8 +5,8 @@ import type {
   CreateLocalProjectResult,
   DesktopLibraryInfo,
   ExportProgress,
-  ExportSubtitleStyle,
   ExportSubtitleTrack,
+  ExportVideoOptions,
   DesktopProject,
   DesktopProjectLoad,
   DesktopSnapshotInfo,
@@ -72,8 +72,8 @@ const api = {
     projectId: string,
     track: ExportSubtitleTrack,
     openAfter?: boolean,
-    style?: ExportSubtitleStyle,
-  ): Promise<DesktopExportResult | null> => ipcRenderer.invoke("video:export", projectId, track, openAfter, style),
+    options?: Partial<ExportVideoOptions>,
+  ): Promise<DesktopExportResult | null> => ipcRenderer.invoke("video:export", projectId, track, openAfter, options),
   importLocalVideo: (projectId?: string, title?: string): Promise<DownloadYoutubeResult | null> =>
     ipcRenderer.invoke("video:import-local", projectId, title),
   createLocalProject: (title: string): Promise<CreateLocalProjectResult> =>

@@ -16,6 +16,7 @@ import type {
   DesktopProjectLoad,
   DesktopSnapshotInfo,
   ExportProgress,
+  ExportVideoOptions,
   ExportSubtitleStyle,
   ExportSubtitleTrack,
   DownloadProgress,
@@ -32,6 +33,15 @@ import type {
   YoutubeFormatsResult,
 } from "./types.js";
 import { assertSafeProjectId, assertSafeSnapshotId, safeFormatSelector, safeRemoteUrl } from "./security.js";
+import {
+  groupExportCues,
+  normalizeExportOptions,
+  outputDimensions,
+  subtitleFontSize,
+  videoEncodingArguments,
+  type ExportCue,
+  type VideoDimensions,
+} from "./export-options.js";
 
 const PROJECT_FILE = "project.json";
 const TRANSCRIPT_FILE = "transcript.json";
@@ -1353,7 +1363,15 @@ function createFfmpegExportProgressHandler(
   };
 }
 
-async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: boolean; video: boolean; duration?: number }> {
+type MediaStreams = {
+  audio: boolean;
+  video: boolean;
+  duration?: number;
+  width?: number;
+  height?: number;
+};
+
+async function mediaStreams(filePath: string, ffmpeg: string): Promise<MediaStreams> {
   const output = await new Promise<string>((resolve, reject) => {
     const child = spawn(ffmpeg, ["-hide_banner", "-i", filePath], { windowsHide: true });
     let combined = "";
@@ -1372,7 +1390,16 @@ async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: 
   const duration = durationMatch
     ? Number(durationMatch[1]) * 3600 + Number(durationMatch[2]) * 60 + Number(durationMatch[3])
     : undefined;
-  return { audio: output.includes(" Audio:"), video: output.includes(" Video:"), duration };
+  const videoLine = output.split(/\r?\n/).find((line) => line.includes(" Video:"));
+  const dimensionsMatch = videoLine?.match(/\b(\d{2,5})x(\d{2,5})(?:\s|,|\[)/);
+  let width = dimensionsMatch ? Number(dimensionsMatch[1]) : undefined;
+  let height = dimensionsMatch ? Number(dimensionsMatch[2]) : undefined;
+  const rotationMatch = output.match(/rotation of\s+(-?\d+(?:\.\d+)?)\s+degrees/i)
+    ?? output.match(/rotate\s*:\s*(-?\d+(?:\.\d+)?)/i);
+  if (width && height && rotationMatch && Math.abs(Math.round(Number(rotationMatch[1]) / 90)) % 2 === 1) {
+    [width, height] = [height, width];
+  }
+  return { audio: output.includes(" Audio:"), video: output.includes(" Video:"), duration, width, height };
 }
 
 export async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
@@ -2245,32 +2272,30 @@ function exportFilenameTitle(title: string): string {
   return compact.replace(/_+$/g, "");
 }
 
-type SubtitleCue = {
-  start: number;
-  end: number;
-  text: string;
-};
-
 async function writeAssSubtitles(
   filePath: string,
-  cues: SubtitleCue[],
+  cues: ExportCue[],
   style: ExportSubtitleStyle,
   track: ExportSubtitleTrack,
+  dimensions: VideoDimensions,
+  fontSize: number,
 ): Promise<void> {
   const usable = cues.filter((cue) => cue.text.trim() && cue.end > cue.start);
   if (!usable.length) throw new Error("Aucun sous-titre non vide à exporter");
   const fontName = track === "translation" ? LATIN_SUBTITLE_FONT_NAME : ARABIC_SUBTITLE_FONT_NAME;
+  const horizontalMargin = Math.max(20, Math.round(dimensions.width * 0.05));
+  const verticalMargin = Math.max(18, Math.round(dimensions.height * 0.058));
   const defaultStyle =
     style === "black-band"
-      ? `Style: Default,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1`
-      : `Style: Default,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`;
+      ? `Style: Default,${fontName},${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,${horizontalMargin},${horizontalMargin},${verticalMargin},1`
+      : `Style: Default,${fontName},${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,${horizontalMargin},${horizontalMargin},${verticalMargin},1`;
   const lines = [
     "[Script Info]",
     "Title: Tarjama Studio export",
     "ScriptType: v4.00+",
     "ScaledBorderAndShadow: yes",
-    "PlayResX: 1280",
-    "PlayResY: 720",
+    `PlayResX: ${dimensions.width}`,
+    `PlayResY: ${dimensions.height}`,
     "WrapStyle: 0",
     "",
     "[V4+ Styles]",
@@ -2302,20 +2327,20 @@ export async function exportVideo(
   projectId: string,
   track: ExportSubtitleTrack,
   openAfter = false,
-  style: ExportSubtitleStyle = "black-band",
+  requestedOptions?: Partial<ExportVideoOptions>,
   emitProgress?: (progress: ExportProgress) => void,
 ): Promise<DesktopExportResult | null> {
-  const subtitleStyle: ExportSubtitleStyle = style === "outline" ? "outline" : "black-band";
+  const options = normalizeExportOptions(requestedOptions);
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
   if (!transcript) throw new Error("Transcription absente");
   const videoPath = await requireProjectVideo(project);
-  const cues =
+  const sourceCues =
     track === "arabic"
       ? transcript.segments.map((segment) => ({
           start: segment.start,
           end: segment.end,
-          text: `[${displayTimecode(segment.start)}] ${segment.text}`,
+          text: segment.text,
         }))
       : await (async () => {
           const translationPath = translationFile(projectId);
@@ -2328,6 +2353,10 @@ export async function exportVideo(
             text: segment.translation,
           }));
         })();
+  const groupedCues = groupExportCues(sourceCues, options.cueGrouping, options.minimumWords);
+  const cues = track === "arabic"
+    ? groupedCues.map((cue) => ({ ...cue, text: `[${displayTimecode(cue.start)}] ${cue.text}` }))
+    : groupedCues;
 
   const language = track === "arabic" ? "ar" : "fr";
   const defaultName = `${exportFilenameTitle(project.title)}_${language}.mp4`;
@@ -2341,8 +2370,21 @@ export async function exportVideo(
   const outDir = exportsDir(projectId);
   const stem = `${filenameTimestamp()}_${createHash("sha1").update(selection.filePath).digest("hex").slice(0, 8)}`;
   const assPath = path.join(outDir, `${stem}.ass`);
-  await writeAssSubtitles(assPath, cues, subtitleStyle, track);
   const ffmpeg = await resolveTool("ffmpeg");
+  const streams = await mediaStreams(videoPath, ffmpeg);
+  if (!streams.width || !streams.height) {
+    throw new Error("Les dimensions de la vidéo sont impossibles à déterminer pour calculer des sous-titres lisibles");
+  }
+  const sourceDimensions = { width: streams.width, height: streams.height };
+  const targetDimensions = outputDimensions(sourceDimensions, options.videoQuality);
+  await writeAssSubtitles(
+    assPath,
+    cues,
+    options.style,
+    track,
+    targetDimensions,
+    subtitleFontSize(targetDimensions, options.subtitleSize),
+  );
   const durationForProgress = Math.max(project.durationSeconds ?? 0, ...cues.map((cue) => cue.end));
   emitProgress?.({
     projectId,
@@ -2351,6 +2393,11 @@ export async function exportVideo(
     percent: 0,
     message: `Export ${track === "arabic" ? "arabe" : "traduction"} en cours`,
   });
+  const filters: string[] = [];
+  if (targetDimensions.width !== sourceDimensions.width || targetDimensions.height !== sourceDimensions.height) {
+    filters.push(`scale=${targetDimensions.width}:${targetDimensions.height}:flags=lanczos`);
+  }
+  filters.push(await subtitleFilter(assPath));
   await runTool(
     ffmpeg,
     [
@@ -2364,15 +2411,14 @@ export async function exportVideo(
       "-i",
       videoPath,
       "-vf",
-      await subtitleFilter(assPath),
+      filters.join(","),
       "-c:v",
       "libx264",
       "-preset",
       "superfast",
-      "-crf",
-      "23",
-      "-c:a",
-      "copy",
+      ...videoEncodingArguments(options.videoQuality),
+      "-pix_fmt",
+      "yuv420p",
       "-movflags",
       "+faststart",
       selection.filePath,

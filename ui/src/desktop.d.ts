@@ -155,6 +155,16 @@ type DesktopExportResult = {
 
 type DesktopExportSubtitleTrack = "arabic" | "translation";
 type DesktopExportSubtitleStyle = "black-band" | "outline";
+type DesktopExportSubtitleSize = "compact" | "standard" | "large";
+type DesktopExportVideoQuality = "original" | "mobile-720p" | "compact-480p";
+type DesktopExportCueGrouping = "source" | "automatic" | "minimum-words";
+type DesktopExportVideoOptions = {
+  style: DesktopExportSubtitleStyle;
+  subtitleSize: DesktopExportSubtitleSize;
+  videoQuality: DesktopExportVideoQuality;
+  cueGrouping: DesktopExportCueGrouping;
+  minimumWords?: number;
+};
 
 type ExportProgress = {
   projectId: string;
@@ -226,7 +236,7 @@ interface Window {
       projectId: string,
       track: DesktopExportSubtitleTrack,
       openAfter?: boolean,
-      style?: DesktopExportSubtitleStyle
+      options?: Partial<DesktopExportVideoOptions>
     ): Promise<DesktopExportResult | null>;
     importLocalVideo(projectId?: string, title?: string): Promise<DownloadYoutubeResult | null>;
     createLocalProject(title: string): Promise<CreateLocalProjectResult>;

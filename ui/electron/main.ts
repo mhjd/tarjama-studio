@@ -42,8 +42,8 @@ import { isLoopbackDevServer, mediaProjectIdFromPath, safeRendererAssetPath } fr
 import type {
   CreateYoutubeProjectRequest,
   DownloadYoutubeRequest,
-  ExportSubtitleStyle,
   ExportSubtitleTrack,
+  ExportVideoOptions,
   PromptKind,
   WorkspaceTranscript,
   WorkspaceTranslation,
@@ -273,8 +273,8 @@ function registerIpc(): void {
       projectId: string,
       track: ExportSubtitleTrack,
       openAfter?: boolean,
-      style?: ExportSubtitleStyle,
-    ) => exportVideo(projectId, track, Boolean(openAfter), style, (progress) =>
+      options?: Partial<ExportVideoOptions>,
+    ) => exportVideo(projectId, track, Boolean(openAfter), options, (progress) =>
       _event.sender.send("video:export-progress", progress),
     ),
   );

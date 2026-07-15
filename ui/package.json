@@ -12,7 +12,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "electron:build": "tsc -p tsconfig.electron.json",
-    "security:test": "npm run electron:build && node --test tests/security.test.mjs",
+    "security:test": "npm run electron:build && node --test tests/*.test.mjs",
     "desktop:tools": "python3 ../scripts/prepare_desktop_tools.py",
     "desktop:prepare": "python3 ../scripts/prepare_desktop_config.py",
     "desktop:build": "npm run desktop:prepare && npm run build && npm run electron:build",

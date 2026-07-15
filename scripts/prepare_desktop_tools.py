@@ -6,6 +6,7 @@ import hashlib
 import platform
 import shutil
 import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -115,6 +116,7 @@ def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
     target = bin_dir / f"ffmpeg{extension}"
     override = os.environ.get("TARJAMA_FFMPEG")
     if override:
+        ensure_subtitle_filter(Path(override))
         copy_file(Path(override), target)
         return
 
@@ -148,16 +150,44 @@ def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
                 with target.open("wb") as output:
                     shutil.copyfileobj(source, output)
                 make_executable(target)
+        ensure_subtitle_filter(target)
         return
 
-    resolved = shutil.which("ffmpeg")
+    full_candidates = [
+        Path("/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg"),
+        Path("/usr/local/opt/ffmpeg-full/bin/ffmpeg"),
+    ]
+    resolved = next((str(candidate) for candidate in full_candidates if candidate.exists()), None)
+    resolved = resolved or shutil.which("ffmpeg")
     if resolved:
+        ensure_subtitle_filter(Path(resolved))
         copy_file(Path(resolved), target)
         return
 
     raise SystemExit(
         "ffmpeg is missing. Install ffmpeg or set TARJAMA_FFMPEG=/path/to/ffmpeg before packaging."
     )
+
+
+def ensure_subtitle_filter(ffmpeg: Path) -> None:
+    try:
+        result = subprocess.run(
+            [str(ffmpeg), "-hide_banner", "-filters"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise SystemExit(f"Unable to validate FFmpeg at {ffmpeg}: {error}") from error
+    output = f"{result.stdout}\n{result.stderr}"
+    if result.returncode != 0 or not any(
+        line.split()[1:2] == ["subtitles"] for line in output.splitlines() if line.strip()
+    ):
+        raise SystemExit(
+            f"FFmpeg at {ffmpeg} does not include the libass subtitles filter. "
+            "Install ffmpeg-full or set TARJAMA_FFMPEG to a complete static build."
+        )
 
 
 def prepare_fonts() -> None:

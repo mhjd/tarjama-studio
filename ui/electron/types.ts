@@ -166,6 +166,20 @@ export type ExportSubtitleTrack = "arabic" | "translation";
 
 export type ExportSubtitleStyle = "black-band" | "outline";
 
+export type ExportSubtitleSize = "compact" | "standard" | "large";
+
+export type ExportVideoQuality = "original" | "mobile-720p" | "compact-480p";
+
+export type ExportCueGrouping = "source" | "automatic" | "minimum-words";
+
+export type ExportVideoOptions = {
+  style: ExportSubtitleStyle;
+  subtitleSize: ExportSubtitleSize;
+  videoQuality: ExportVideoQuality;
+  cueGrouping: ExportCueGrouping;
+  minimumWords?: number;
+};
+
 export type GroqKeyStatus = {
   configured: boolean;
   source: "stored" | "bundled-default" | "development-env" | "none";

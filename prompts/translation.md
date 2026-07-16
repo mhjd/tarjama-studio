@@ -22,6 +22,19 @@ Contraintes impératives:
 - Ne fusionne pas et ne divise pas les blocs.
 - Sous chaque titre, remplace le texte arabe par la traduction française du bloc.
 - Si un passage est ambigu, traduis au mieux sans ajouter de note.
+
+Citations coraniques et prophetiques:
+- La transcription nettoyee doit normalement deja contenir le texte arabe canonique et sa reference. Ne supprime jamais cette reference et ne la remplace jamais par une reference supposee.
+- Distingue une citation exacte d'une paraphrase ou d'une allusion. Ne transforme pas une paraphrase du conferencier en citation litterale.
+- Pour toute citation coranique exacte, retrouve le verset sur quran.com et reprends exactement la traduction francaise de Muhammad Hamidullah correspondant au fragment arabe cite. Ne retraduis pas toi-meme ce fragment et ne modernise pas le texte a l'interieur des guillemets.
+- Traduis la reference en francais: `«Traduction de Muhammad Hamidullah» (sourate Al-Baqara, verset 255)`; pour une plage: `(sourate Al-Baqara, versets 255-257)`.
+- Pour une allusion, conserve une formulation telle que `(allusion a la sourate Al-Baqara, verset 255)` sans introduire artificiellement le texte du verset.
+- Pour un hadith, pars de la variante arabe canonique et de la reference deja identifiees dans la transcription. Traduis directement depuis cet arabe; ne traduis jamais depuis la version anglaise de Sunnah.com.
+- Preserve chaque reference principale de Sunnah.com, suffixe de variante compris. Si al-Bukhari et Muslim sont tous deux verifies, conserve les deux numeros separes.
+- Si la transcription precise `واللفظ للبخاري` ou `واللفظ لمسلم`, rends respectivement `version citee: al-Bukhari` ou `version citee: Muslim` dans la parenthese de reference.
+- Ne complete pas un numero manquant et ne remplace pas une variante par une autre. Si la transcription ne contient pas de reference fiable, traduis le passage sans en inventer.
+- Si une citation s'etend sur plusieurs blocs, conserve l'ouverture des guillemets dans le premier bloc, leur fermeture et la reference dans le dernier, sans modifier le nombre de blocs ni les timestamps.
+- Avant de repondre, verifie silencieusement la correspondance entre le texte cite, la traduction retenue, la variante et la reference.
 {{project_instructions_block}}
 Format de sortie attendu:
 

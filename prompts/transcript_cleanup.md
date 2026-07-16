@@ -34,6 +34,23 @@ Contraintes imperatives:
 - Ne rajoute pas de contenu absent de l'audio probable.
 - Si une correction est incertaine, prefere une correction minimale ou conserve le texte existant.
 
+Citations coraniques et prophetiques:
+- Lorsqu'un verset ou un hadith est explicitement recite, identifie la citation avant de la corriger. La transcription automatique peut etre proche du texte sans etre exacte.
+- Distingue strictement une citation d'une paraphrase ou d'une simple allusion. Ne transforme jamais les paroles explicatives du conferencier en citation canonique.
+- Si aucune identification fiable n'est possible, n'invente ni formulation canonique ni reference. Conserve alors une correction minimale du passage.
+- Pour le Coran, verifie le texte arabe sur quran.com. Reproduis uniquement la partie effectivement recitee, avec sa formulation canonique, entre guillemets francais, puis ajoute la reference en arabe: `«النص القرآني» (سورة البقرة، الآية 255)`.
+- Pour plusieurs versets consecutifs, emploie une plage: `(سورة البقرة، الآيات 255-257)`.
+- Pour une paraphrase identifiable, conserve les mots du conferencier et ajoute seulement une mention telle que `(إشارة إلى سورة البقرة، الآية 255)`.
+- Pour un hadith, recherche sur sunnah.com la variante arabe qui correspond reellement aux mots cites. Utilise conjointement le matn, le narrateur mentionne, le contexte et le recueil explicitement indique par le conferencier.
+- Reproduis uniquement le fragment effectivement cite, depuis la variante arabe identifiee, puis ajoute la reference principale affichee par Sunnah.com: `«النص النبوي» (صحيح البخاري، رقم 2898)`.
+- Conserve les suffixes de variante presents dans la reference principale, par exemple `1515a`. N'utilise ni la reference interne `Book ..., Hadith ...`, ni l'ancienne numerotation marquee comme obsolete.
+- Si le conferencier attribue le hadith a al-Bukhari et Muslim, recherche les deux occurrences separement. N'indique les deux numeros que si les deux correspondances sont certaines: `(صحيح البخاري، رقم X؛ صحيح مسلم، رقم Y، واللفظ للبخاري)`.
+- Quand les deux recueils transmettent des variantes, indique avec `واللفظ للبخاري` ou `واللفظ لمسلم` la source de la formulation reproduite. Ne melange jamais plusieurs variantes pour fabriquer un texte composite.
+- Si l'attribution a un recueil est claire mais que la variante ou le numero exact ne peut pas etre determine, conserve l'attribution prononcee sans inventer de numero.
+- Si une citation s'etend sur plusieurs blocs, ouvre les guillemets dans le premier bloc, ferme-les dans le dernier et place la reference une seule fois a la fin. Ne modifie jamais les blocs ou leurs timestamps pour faire tenir la citation.
+- Les guillemets, references et mentions d'allusion sont les seules informations absentes de l'audio que tu peux ajouter.
+- Avant de repondre, verifie silencieusement pour chaque citation: formulation, recueil, variante, numero, placement des guillemets et reference.
+
 Ce que tu peux corriger:
 - fautes evidentes de reconnaissance vocale;
 - mots deformes en mots arabes plausibles dans le contexte;

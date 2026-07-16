@@ -3127,9 +3127,9 @@ function DesktopApp() {
             {error && <ErrorNotice details={error} />}
             <div className="modal-actions">
               <button onClick={() => setPasteImportOpen(false)}>Annuler</button>
-              <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()} title={!pastedTranslation.trim() ? "Colle d’abord une traduction" : "Prévisualiser l’import"}>
+              <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()} title={!pastedTranslation.trim() ? "Colle d’abord une traduction" : "Valider le contenu"}>
                 <Check size={16} />
-                <span>Prévisualiser</span>
+                <span>Valider</span>
               </button>
             </div>
         </AccessibleModal>
@@ -3157,9 +3157,10 @@ function DesktopApp() {
               <button
                 disabled={busy || !cleanedPasteReview.valid}
                 onClick={() => previewPastedImport("cleanup", pastedCleanupTranscript)}
+                title={cleanedPasteReview.valid ? "Valider le contenu" : "Corrige le format avant de valider"}
               >
                 <Check size={16} />
-                <span>Prévisualiser</span>
+                <span>Valider</span>
               </button>
             </div>
         </AccessibleModal>

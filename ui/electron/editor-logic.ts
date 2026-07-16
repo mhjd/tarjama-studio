@@ -22,6 +22,17 @@ export type ProjectWorkflowStep =
   | "translation-review"
   | "export";
 
+const MODEL_CITATION_MARKER = /\uE200(?:cite|filecite)\uE202[^\uE201\r\n]*\uE201[ \t]*/gu;
+const MODEL_CITATION_COMMENT = /<!--\s*\uE200(?:cite|filecite)\uE202[^\uE201\r\n]*\uE201\s*-->[ \t]*(?:\r?\n)?/gu;
+
+export function stripModelCitationMarkers(content: string): string {
+  return content
+    .replace(MODEL_CITATION_COMMENT, "")
+    .replace(MODEL_CITATION_MARKER, "")
+    .replace(/[ \t]+(?=\r?$)/gm, "")
+    .replace(/\n{3,}/g, "\n\n");
+}
+
 export function projectWorkflowStep(state: {
   hasVideo: boolean;
   hasTranscript: boolean;

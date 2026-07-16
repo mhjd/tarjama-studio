@@ -5,6 +5,7 @@ import {
   previewTranscriptJson,
   projectWorkflowStep,
   searchTranscript,
+  stripModelCitationMarkers,
   transcriptFingerprint,
   validateEditorSegments,
 } from "../dist-electron/editor-logic.js";
@@ -65,6 +66,18 @@ test("search counts occurrences in source and translation", () => {
     { segmentId: "1", field: "text", offset: 5 },
     { segmentId: "1", field: "translation", offset: 3 },
   ]);
+});
+
+test("model citation markers are removed without touching readable references", () => {
+  const content = [
+    "<!-- \uE200filecite\uE202turn0file0\uE201 -->",
+    "## 00:00.000 --> 00:03.000",
+    "«النص» (سورة يونس، الآية 16). \uE200cite\uE202turn470137search4\uE201 Chers amis.",
+  ].join("\n");
+  assert.equal(
+    stripModelCitationMarkers(content),
+    "## 00:00.000 --> 00:03.000\n«النص» (سورة يونس، الآية 16). Chers amis.",
+  );
 });
 
 test("markdown preview requires exact source timestamps", () => {

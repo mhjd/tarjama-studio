@@ -44,6 +44,7 @@ import {
   type ExportCue,
   type VideoDimensions,
 } from "./export-options.js";
+import { stripModelCitationMarkers } from "./editor-logic.js";
 
 const PROJECT_FILE = "project.json";
 const TRANSCRIPT_FILE = "transcript.json";
@@ -737,7 +738,8 @@ function translationFromImportContent(
   content: string,
   filename: string,
 ): WorkspaceTranslation {
-  const trimmed = content.trim();
+  const sanitized = stripModelCitationMarkers(content);
+  const trimmed = sanitized.trim();
   if (!trimmed) throw new Error("La traduction est vide");
   if (trimmed.startsWith("{")) {
     try {
@@ -749,7 +751,7 @@ function translationFromImportContent(
       throw err;
     }
   }
-  return translationFromMarkdown(projectId, transcript, content, filename);
+  return translationFromMarkdown(projectId, transcript, sanitized, filename);
 }
 
 function assertTranslationAlignment(transcript: WorkspaceTranscript, translation: WorkspaceTranslation): void {
@@ -1831,12 +1833,13 @@ export async function importCleanedTranscriptContent(
   content: string,
 ): Promise<CleanedTranscriptImportResult> {
   assertTextSize(content);
-  if (!content.trim()) throw new Error("La transcription nettoyée est vide");
+  const sanitized = stripModelCitationMarkers(content);
+  if (!sanitized.trim()) throw new Error("La transcription nettoyée est vide");
   const project = await readProject(projectId);
   await requireProjectVideo(project);
   const current = await loadSavedTranscript(projectId);
   if (!current) throw new Error("Aucune transcription à nettoyer dans ce projet");
-  const trimmed = content.trim();
+  const trimmed = sanitized.trim();
   if (trimmed.startsWith("{")) {
     try {
       return await importCleanedTranscriptPayload(projectId, JSON.parse(trimmed));
@@ -1845,7 +1848,7 @@ export async function importCleanedTranscriptContent(
       throw error;
     }
   }
-  const { transcript, summary } = cleanedTranscriptFromMarkdown(projectId, current, content);
+  const { transcript, summary } = cleanedTranscriptFromMarkdown(projectId, current, sanitized);
   return await saveCleanedTranscript(projectId, current, transcript, summary);
 }
 

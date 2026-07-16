@@ -16,6 +16,7 @@ Exemple de reformulation attendue:
 
 Contraintes impératives:
 - Réponds uniquement avec le document Markdown final, sans commentaire avant ou après.
+- N'insère aucun marqueur technique de citation généré par ChatGPT ou par ses outils, notamment `cite`, `filecite`, `turn...search...`, `turn...file...`, commentaire HTML ou glyphe privé. Les références utiles doivent apparaître uniquement sous une forme lisible par un humain dans le texte final.
 - Conserve exactement les métadonnées source_corpus_id, language et format.
 - Conserve exactement le même nombre de blocs.
 - Conserve exactement chaque ligne de titre "## début --> fin", sans modifier les timestamps.
@@ -35,6 +36,7 @@ Citations coraniques et prophetiques:
 - Ne complete pas un numero manquant et ne remplace pas une variante par une autre. Si la transcription ne contient pas de reference fiable, traduis le passage sans en inventer.
 - Si une citation s'etend sur plusieurs blocs, conserve l'ouverture des guillemets dans le premier bloc, leur fermeture et la reference dans le dernier, sans modifier le nombre de blocs ni les timestamps.
 - Avant de repondre, verifie silencieusement la correspondance entre le texte cite, la traduction retenue, la variante et la reference.
+- Utilise tes recherches uniquement pour vérifier les citations. Ne reproduis jamais dans la sortie les liens, renvois automatiques ou identifiants internes de ces recherches.
 {{project_instructions_block}}
 Format de sortie attendu:
 

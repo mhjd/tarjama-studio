@@ -23,6 +23,7 @@ Exemples concrets deja observes:
 
 Contraintes imperatives:
 - Reponds uniquement avec le document Markdown corrige, sans commentaire avant ou apres.
+- N'insere aucun marqueur technique de citation genere par ChatGPT ou par ses outils, notamment `cite`, `filecite`, `turn...search...`, `turn...file...`, commentaire HTML ou glyphe prive. Les references utiles doivent apparaitre uniquement sous une forme lisible par un humain dans le texte final.
 - Chaque bloc commence exactement par une ligne `## début --> fin`.
 - Conserve exactement chaque titre de bloc que tu gardes, timestamps compris. Ne modifie jamais un timestamp, ne fusionne jamais et ne divise jamais un bloc.
 - Conserve tous les blocs utiles, dans le meme ordre.
@@ -50,6 +51,7 @@ Citations coraniques et prophetiques:
 - Si une citation s'etend sur plusieurs blocs, ouvre les guillemets dans le premier bloc, ferme-les dans le dernier et place la reference une seule fois a la fin. Ne modifie jamais les blocs ou leurs timestamps pour faire tenir la citation.
 - Les guillemets, references et mentions d'allusion sont les seules informations absentes de l'audio que tu peux ajouter.
 - Avant de repondre, verifie silencieusement pour chaque citation: formulation, recueil, variante, numero, placement des guillemets et reference.
+- Utilise tes recherches uniquement pour verifier les citations. Ne reproduis jamais dans la sortie les liens, renvois automatiques ou identifiants internes de ces recherches.
 
 Ce que tu peux corriger:
 - fautes evidentes de reconnaissance vocale;

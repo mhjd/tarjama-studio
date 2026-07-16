@@ -42,6 +42,7 @@ import {
   previewTranscriptJson,
   projectWorkflowStep,
   searchTranscript,
+  stripModelCitationMarkers,
   transcriptFingerprint,
   validateEditorSegments,
   type ImportContentPreview,
@@ -466,6 +467,18 @@ function applyTranslation(transcript: Transcript, translation: Translation | nul
       translation: translations.get(segment.id) ?? segment.translation ?? "",
     })),
   };
+}
+
+function stripCitationMarkersFromTranscript(transcript: Transcript): Transcript {
+  let changed = false;
+  const segments = transcript.segments.map((segment) => {
+    const text = stripModelCitationMarkers(segment.text);
+    const translation = stripModelCitationMarkers(segment.translation ?? "");
+    if (text === segment.text && translation === (segment.translation ?? "")) return segment;
+    changed = true;
+    return { ...segment, text, translation };
+  });
+  return changed ? { ...transcript, segments } : transcript;
 }
 
 function translationFromTranscript(transcript: Transcript, base: Translation): Translation {
@@ -900,7 +913,9 @@ function DesktopApp() {
     setLoadedProject(loaded.project);
     setProjectReview(loaded.review);
     setMediaUrl(loaded.mediaUrl ?? "");
-    const nextTranscript = loaded.transcript ? applyTranslation(loaded.transcript, loaded.translation) : null;
+    const combinedTranscript = loaded.transcript ? applyTranslation(loaded.transcript, loaded.translation) : null;
+    const nextTranscript = combinedTranscript ? stripCitationMarkersFromTranscript(combinedTranscript) : null;
+    const removedCitationMarkers = Boolean(combinedTranscript && nextTranscript !== combinedTranscript);
     setTranscript(nextTranscript);
     setAttachedTranslation(loaded.translation);
     setSnapshots(loaded.snapshots);
@@ -909,7 +924,9 @@ function DesktopApp() {
     setPreviewSnapshot(null);
     setUndoStack([]);
     setUndoVisible(false);
-    const matchesSavedSnapshot = Boolean(loaded.transcript && loaded.snapshots.some((snapshot) => snapshot.matches_current));
+    const matchesSavedSnapshot = Boolean(
+      loaded.transcript && !removedCitationMarkers && loaded.snapshots.some((snapshot) => snapshot.matches_current),
+    );
     setSavedFingerprint(matchesSavedSnapshot ? transcriptFingerprint(nextTranscript) : "");
     setSaveStatus(loaded.transcript && !matchesSavedSnapshot ? "dirty" : "saved");
     const storedResume = localStorage.getItem(`tarjama-resume-${loaded.project.id}`);
@@ -1095,23 +1112,24 @@ function DesktopApp() {
     if (kind === "transcript") {
       return { projectId, kind, filename, content, preview: previewTranscriptJson(content) };
     }
+    const sanitized = stripModelCitationMarkers(content);
     if (!transcript) {
       return {
         projectId,
         kind,
         filename,
-        content,
+        content: sanitized,
         preview: { valid: false, segmentCount: 0, alignedCount: 0, errors: ["Aucune transcription source dans ce projet"] },
       };
     }
     if (kind === "cleanup") {
-      const review = cleanupPastePreview(content);
-      const segmentCount = (content.match(/^##\s+/gm) ?? []).length;
+      const review = cleanupPastePreview(sanitized);
+      const segmentCount = (sanitized.match(/^##\s+/gm) ?? []).length;
       return {
         projectId,
         kind,
         filename,
-        content,
+        content: sanitized,
         preview: {
           valid: review.valid,
           segmentCount,
@@ -1120,7 +1138,13 @@ function DesktopApp() {
         },
       };
     }
-    return { projectId, kind, filename, content, preview: previewAlignedMarkdown(content, transcriptWithoutTranslations(transcript)) };
+    return {
+      projectId,
+      kind,
+      filename,
+      content: sanitized,
+      preview: previewAlignedMarkdown(sanitized, transcriptWithoutTranslations(transcript)),
+    };
   }
 
   async function chooseImportFile(kind: DesktopImportKind, projectId = selectedProjectId) {
@@ -2723,14 +2747,22 @@ function DesktopApp() {
                   <input disabled={!hasInterval} checked={loopEnabled} type="checkbox" onChange={(event) => setLoopEnabled(event.target.checked)} />
                   <span>Boucle</span>
                 </label>
-                <button disabled={!hasInterval} className="interval-clear" onClick={clearInterval} title={hasInterval ? "Quitter l’intervalle - Échap" : "Aucun intervalle actif"}>
-                  <X size={16} />
-                  <span>Quitter l’intervalle</span>
-                </button>
-              </div>
-              <div className={`playback-mode playback-mode-${playbackMode === "Lecture libre" ? "free" : playbackMode === "Boucle" ? "loop" : "range"}`}>
-                <strong>{playbackMode}</strong>
-                {hasInterval && <span>{rangeStart} → {rangeEnd}</span>}
+                <div className={`playback-mode playback-mode-${playbackMode === "Lecture libre" ? "free" : playbackMode === "Boucle" ? "loop" : "range"}`}>
+                  <strong>{playbackMode}</strong>
+                  {hasInterval && <span>{rangeStart} → {rangeEnd}</span>}
+                </div>
+                {hasInterval && (
+                  <>
+                    <button className="interval-return" onClick={returnToInterval} title="Aller au début de l’intervalle">
+                      <RotateCcw size={16} />
+                      <span>Début de l’intervalle</span>
+                    </button>
+                    <button className="interval-clear" onClick={clearInterval} title="Quitter l’intervalle - Échap">
+                      <X size={16} />
+                      <span>Quitter l’intervalle</span>
+                    </button>
+                  </>
+                )}
               </div>
               <div
                 className="timeline-wrap"
@@ -2756,7 +2788,19 @@ function DesktopApp() {
                   <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
                 </div>
               </div>
-              <div className="player-control-row">
+              <div className="player-toolbar">
+                <div className="player-nav">
+                  <button className="icon-button" disabled={!displayedTranscript} onClick={() => navigateAdjacentSegment(-1)} title="Segment précédent - Alt+Haut" aria-label="Segment précédent">
+                    <ArrowUp size={16} />
+                  </button>
+                  <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant - S">
+                    <LocateFixed size={16} />
+                    <span>Segment</span>
+                  </button>
+                  <button className="icon-button" disabled={!displayedTranscript} onClick={() => navigateAdjacentSegment(1)} title="Segment suivant - Alt+Bas" aria-label="Segment suivant">
+                    <ArrowDown size={16} />
+                  </button>
+                </div>
                 <div className="audio-controls">
                   <button onClick={() => seekBy(-10)} title="Reculer de 10 secondes - Maj+←">-10s</button>
                   <button onClick={() => seekBy(-3)} title="Reculer de 3 secondes - ←">-3s</button>
@@ -2766,43 +2810,29 @@ function DesktopApp() {
                   </button>
                   <button onClick={() => seekBy(3)} title="Avancer de 3 secondes - →">+3s</button>
                   <button onClick={() => seekBy(10)} title="Avancer de 10 secondes - Maj+→">+10s</button>
-                  <button disabled={!hasInterval} className="interval-return" onClick={returnToInterval} title={hasInterval ? "Aller au début de l’intervalle" : "Aucun intervalle actif"}>
-                    <RotateCcw size={16} />
-                    <span>Début de l’intervalle</span>
+                </div>
+                <div className="player-utilities">
+                  <label className="playback-rate">
+                    <span>Vitesse</span>
+                    <select title="Vitesse de lecture - − / +" value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
+                      {PLAYBACK_RATES.map((rate) => <option key={rate} value={rate}>{String(rate).replace(".", ",")}×</option>)}
+                    </select>
+                  </label>
+                  <button
+                    className={`follow-toggle ${autoFollowEnabled ? "active" : ""}`}
+                    disabled={!displayedTranscript}
+                    aria-pressed={autoFollowEnabled}
+                    onClick={() => setAutoFollowEnabled((enabled) => !enabled)}
+                    title={`${autoFollowEnabled ? "Désactiver" : "Activer"} le suivi automatique du segment en cours`}
+                  >
+                    <Captions size={16} />
+                    <span>Suivi</span>
+                  </button>
+                  <button onClick={scrollToTop} title="Remonter en haut de la page">
+                    <ArrowUpToLine size={16} />
+                    <span>Haut</span>
                   </button>
                 </div>
-                <label className="playback-rate">
-                  <span>Vitesse</span>
-                  <select title="Vitesse de lecture - − / +" value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
-                    {PLAYBACK_RATES.map((rate) => <option key={rate} value={rate}>{String(rate).replace(".", ",")}×</option>)}
-                  </select>
-                </label>
-              </div>
-              <div className="player-nav">
-                <button className="icon-button" disabled={!displayedTranscript} onClick={() => navigateAdjacentSegment(-1)} title="Segment précédent - Alt+Haut" aria-label="Segment précédent">
-                  <ArrowUp size={16} />
-                </button>
-                <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant - S">
-                  <LocateFixed size={16} />
-                  <span>Segment</span>
-                </button>
-                <button className="icon-button" disabled={!displayedTranscript} onClick={() => navigateAdjacentSegment(1)} title="Segment suivant - Alt+Bas" aria-label="Segment suivant">
-                  <ArrowDown size={16} />
-                </button>
-                <button onClick={scrollToTop} title="Remonter en haut de la page">
-                  <ArrowUpToLine size={16} />
-                  <span>Haut</span>
-                </button>
-                <button
-                  className={autoFollowEnabled ? "active" : ""}
-                  disabled={!displayedTranscript}
-                  aria-pressed={autoFollowEnabled}
-                  onClick={() => setAutoFollowEnabled((enabled) => !enabled)}
-                  title="Garder automatiquement le segment en cours au centre"
-                >
-                  <Captions size={16} />
-                  <span>{autoFollowEnabled ? "Suivi actif" : "Suivi auto"}</span>
-                </button>
               </div>
               {searchOpen && displayedTranscript && (
                 <section className="document-search" role="search">

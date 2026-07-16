@@ -781,6 +781,21 @@ input {
   color: var(--muted);
 }
 
+.next-action .next-action-controls {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+}
+
+.next-action .next-action-controls button {
+  white-space: nowrap;
+}
+
+.next-action .next-action-controls button span {
+  color: inherit;
+}
+
 .document-strip .state,
 .document-strip .error {
   margin: 0;
@@ -1652,6 +1667,17 @@ input:disabled {
   .resume-prompt {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .next-action .next-action-controls {
+    align-items: stretch;
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-columns: 1fr;
+  }
+
+  .next-action .next-action-controls button {
+    justify-content: center;
   }
 
   .document-search {

@@ -1942,10 +1942,15 @@ function DesktopApp() {
     if (!attachedTranslation) {
       return (
         <section className="next-action" aria-label="Prochaine étape">
-          <div><strong>Prochaine étape</strong><span>Prépare la traduction à partir de la transcription corrigée.</span></div>
-          <button className="primary-action" onClick={() => void copyTranslationPromptDesktop()}>
-            <Copy size={16} /><span>{copyState}</span>
-          </button>
+          <div><strong>Prochaine étape</strong><span>Copie le prompt, puis importe la traduction obtenue.</span></div>
+          <div className="next-action-controls" aria-label="Préparer et importer la traduction">
+            <button onClick={() => void copyTranslationPromptDesktop()}>
+              <Copy size={16} /><span>1. {copyState}</span>
+            </button>
+            <button className="primary-action" onClick={() => setPasteImportOpen(true)}>
+              <ClipboardPaste size={16} /><span>2. Coller le résultat</span>
+            </button>
+          </div>
         </section>
       );
     }

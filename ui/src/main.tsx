@@ -2045,10 +2045,10 @@ function DesktopApp() {
       );
     }
     return (
-      <section className="next-action" aria-label="Prochaine étape">
-        <div><strong>Prochaine étape</strong><span>La traduction est prête à être exportée.</span></div>
-        <button className="primary-action" onClick={() => void exportVideoDesktop("translation")}>
-          <Download size={16} /><span>Exporter la traduction</span>
+      <section className="next-action" aria-label="Workflow terminé">
+        <div><strong>Terminé !</strong><span>La transcription et la traduction sont prêtes à être exportées.</span></div>
+        <button className="primary-action" onClick={() => setOpenActionMenu("export")}>
+          <Settings size={16} /><span>Configurer l’export</span>
         </button>
       </section>
     );

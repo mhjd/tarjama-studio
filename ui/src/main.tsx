@@ -7,6 +7,7 @@ import {
   ArrowUp,
   ArrowUpToLine,
   Check,
+  Captions,
   CircleHelp,
   ClipboardPaste,
   Cloud,
@@ -622,6 +623,7 @@ function DesktopApp() {
   const [undoStack, setUndoStack] = useState<Transcript[]>([]);
   const [undoVisible, setUndoVisible] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [autoFollowEnabled, setAutoFollowEnabled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
   const [resumePoint, setResumePoint] = useState<ResumePoint | null>(null);
@@ -630,10 +632,13 @@ function DesktopApp() {
   const [operationClock, setOperationClock] = useState(Date.now());
   const [cancellingOperation, setCancellingOperation] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerBandRef = useRef<HTMLElement | null>(null);
+  const currentTimeRef = useRef(0);
   const autosaveTimer = useRef<number | null>(null);
   const resumeWriteSecond = useRef(-1);
   const lastActionRef = useRef<(() => Promise<void>) | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const lastAutoFollowSegmentRef = useRef("");
   const segmentRefs = useRef(new Map<string, HTMLElement>());
   const segmentFieldRefs = useRef(new Map<string, HTMLTextAreaElement>());
   const actionMenusRef = useRef<HTMLDivElement | null>(null);
@@ -754,6 +759,12 @@ function DesktopApp() {
   }, [playbackRate]);
 
   useEffect(() => {
+    currentTimeRef.current = 0;
+    setCurrentTime(0);
+    setDuration(0);
+  }, [mediaUrl]);
+
+  useEffect(() => {
     localStorage.setItem("tarjama-export-options", JSON.stringify(exportOptions));
   }, [exportOptions]);
 
@@ -766,6 +777,20 @@ function DesktopApp() {
   useEffect(() => {
     if (searchOpen) window.setTimeout(() => searchInputRef.current?.focus(), 0);
   }, [searchOpen]);
+
+  useEffect(() => {
+    if (!autoFollowEnabled || !activeSegmentId) {
+      lastAutoFollowSegmentRef.current = "";
+      return;
+    }
+    if (lastAutoFollowSegmentRef.current === activeSegmentId) return;
+    lastAutoFollowSegmentRef.current = activeSegmentId;
+    const frame = window.requestAnimationFrame(() => {
+      scrollSegmentToTop(activeSegmentId);
+      setFocusedSegmentId(activeSegmentId);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeSegmentId, autoFollowEnabled]);
 
   useEffect(() => {
     if (saveStatus === "saving" || !transcript || !savedFingerprint) return;
@@ -856,7 +881,7 @@ function DesktopApp() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [anyModalOpen, desktopView, editorLocked, mediaUrl, openActionMenu, saveStatus, searchOpen, displayedTranscript, currentTime]);
+  }, [anyModalOpen, desktopView, editorLocked, focusedSegmentId, mediaUrl, openActionMenu, saveStatus, searchOpen, displayedTranscript, currentTime]);
 
   useEffect(() => {
     if (!openActionMenu) return;
@@ -1465,15 +1490,19 @@ function DesktopApp() {
   function seekTo(seconds: number, preserveRangePlayback = false) {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = Math.max(0, Math.min(seconds, duration || seconds));
-    setCurrentTime(audio.currentTime);
-    if (!preserveRangePlayback && !isInsidePlaybackRange(audio.currentTime)) {
+    const knownDuration = [audio.duration, duration, loadedProject?.durationSeconds]
+      .find((value) => typeof value === "number" && Number.isFinite(value) && value > 0);
+    const target = Math.max(0, knownDuration ? Math.min(seconds, knownDuration) : seconds);
+    currentTimeRef.current = target;
+    setCurrentTime(target);
+    audio.currentTime = target;
+    if (!preserveRangePlayback && !isInsidePlaybackRange(target)) {
       setRangePlaybackActive(false);
     }
   }
 
   function seekBy(delta: number) {
-    seekTo((audioRef.current?.currentTime ?? 0) + delta);
+    seekTo(currentTimeRef.current + delta);
   }
 
   function adjustPlaybackRate(direction: -1 | 1) {
@@ -1493,6 +1522,7 @@ function DesktopApp() {
     const hasRange = end !== null && end > start;
     if (audio.paused && rangePlaybackActive && hasRange && audio.currentTime >= end - 0.05) {
       audio.currentTime = start;
+      currentTimeRef.current = start;
       setCurrentTime(start);
     }
     if (audio.paused) {
@@ -1520,6 +1550,7 @@ function DesktopApp() {
     const audio = audioRef.current;
     if (!audio) return;
     const nextTime = audio.currentTime;
+    currentTimeRef.current = nextTime;
     setCurrentTime(nextTime);
     const wholeSecond = Math.floor(nextTime);
     if (selectedProjectId && wholeSecond % 2 === 0 && wholeSecond !== resumeWriteSecond.current) {
@@ -1534,12 +1565,15 @@ function DesktopApp() {
     const start = parseTime(rangeStart) ?? 0;
     if (rangePlaybackActive && loopEnabled && end !== null && end > start && nextTime >= end) {
       audio.currentTime = start;
+      currentTimeRef.current = start;
+      setCurrentTime(start);
       void audio.play();
       return;
     }
     if (rangePlaybackActive && !loopEnabled && end !== null && end > start && nextTime >= end) {
       audio.pause();
       audio.currentTime = end;
+      currentTimeRef.current = end;
       setCurrentTime(end);
     }
   }
@@ -1570,6 +1604,14 @@ function DesktopApp() {
     window.setTimeout(() => {
       setFocusedSegmentId((current) => (current === target.id ? "" : current));
     }, 1600);
+  }
+
+  function scrollSegmentToTop(segmentId: string) {
+    const element = segmentRefs.current.get(segmentId);
+    if (!element) return;
+    const stickyHeight = playerBandRef.current?.getBoundingClientRect().height ?? 0;
+    const targetTop = window.scrollY + element.getBoundingClientRect().top - stickyHeight - 12;
+    window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
   }
 
   function focusSegment(segmentId: string, seek = true) {
@@ -2637,7 +2679,7 @@ function DesktopApp() {
           </section>
 
           {mediaUrl && (
-            <section className="player-band">
+            <section className="player-band" ref={playerBandRef}>
               {resumePoint && (
                 <div className="resume-prompt" role="status">
                   <span>Dernière écoute à <strong>{formatTime(resumePoint.time)}</strong></span>
@@ -2654,8 +2696,12 @@ function DesktopApp() {
                 onPause={() => setIsPlaying(false)}
                 onTimeUpdate={onTimeUpdate}
                 onLoadedMetadata={() => {
-                  if (audioRef.current) audioRef.current.playbackRate = playbackRate;
-                  setDuration(audioRef.current?.duration ?? loadedProject.durationSeconds ?? 0);
+                  const audio = audioRef.current;
+                  if (!audio) return;
+                  audio.playbackRate = playbackRate;
+                  currentTimeRef.current = audio.currentTime;
+                  setCurrentTime(audio.currentTime);
+                  setDuration(Number.isFinite(audio.duration) ? audio.duration : loadedProject.durationSeconds ?? 0);
                 }}
               />
               <div className="interval-row">
@@ -2747,7 +2793,42 @@ function DesktopApp() {
                   <ArrowUpToLine size={16} />
                   <span>Haut</span>
                 </button>
+                <button
+                  className={autoFollowEnabled ? "active" : ""}
+                  disabled={!displayedTranscript}
+                  aria-pressed={autoFollowEnabled}
+                  onClick={() => setAutoFollowEnabled((enabled) => !enabled)}
+                  title="Garder automatiquement le segment en cours au centre"
+                >
+                  <Captions size={16} />
+                  <span>{autoFollowEnabled ? "Suivi actif" : "Suivi auto"}</span>
+                </button>
               </div>
+              {searchOpen && displayedTranscript && (
+                <section className="document-search" role="search">
+                  <Search size={17} />
+                  <input
+                    ref={searchInputRef}
+                    value={searchQuery}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setSearchIndex(0);
+                    }}
+                    placeholder="Rechercher dans l’arabe et le français"
+                    aria-label="Rechercher dans la transcription"
+                  />
+                  <span>{searchQuery.trim() ? `${searchOccurrenceCount} occurrence(s)` : ""}</span>
+                  <button className="icon-button" disabled={!searchResults.length} onClick={() => navigateSearch(-1)} title="Résultat précédent" aria-label="Résultat précédent">
+                    <ArrowUp size={16} />
+                  </button>
+                  <button className="icon-button" disabled={!searchResults.length} onClick={() => navigateSearch(1)} title="Résultat suivant" aria-label="Résultat suivant">
+                    <ArrowDown size={16} />
+                  </button>
+                  <button className="icon-button" onClick={() => setSearchOpen(false)} title="Fermer la recherche - Échap" aria-label="Fermer la recherche">
+                    <X size={16} />
+                  </button>
+                </section>
+              )}
             </section>
           )}
 
@@ -2787,31 +2868,6 @@ function DesktopApp() {
 
           {!transcript && <p className="state">Vidéo téléchargée. Importe une transcription nettoyée pour commencer l'édition.</p>}
           {isHistoryPreview && <p className="state">Ancienne sauvegarde en lecture seule.</p>}
-          {searchOpen && displayedTranscript && (
-            <section className="document-search" role="search">
-              <Search size={17} />
-              <input
-                ref={searchInputRef}
-                value={searchQuery}
-                onChange={(event) => {
-                  setSearchQuery(event.target.value);
-                  setSearchIndex(0);
-                }}
-                placeholder="Rechercher dans l’arabe et le français"
-                aria-label="Rechercher dans la transcription"
-              />
-              <span>{searchQuery.trim() ? `${searchOccurrenceCount} occurrence(s)` : ""}</span>
-              <button className="icon-button" disabled={!searchResults.length} onClick={() => navigateSearch(-1)} title="Résultat précédent" aria-label="Résultat précédent">
-                <ArrowUp size={16} />
-              </button>
-              <button className="icon-button" disabled={!searchResults.length} onClick={() => navigateSearch(1)} title="Résultat suivant" aria-label="Résultat suivant">
-                <ArrowDown size={16} />
-              </button>
-              <button className="icon-button" onClick={() => setSearchOpen(false)} title="Fermer la recherche - Échap" aria-label="Fermer la recherche">
-                <X size={16} />
-              </button>
-            </section>
-          )}
           {segmentIssues.length > 0 && (
             <section className="validation-summary" role="alert">
               <AlertTriangle size={17} />

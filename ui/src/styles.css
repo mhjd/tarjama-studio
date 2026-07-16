@@ -157,7 +157,8 @@ input {
 .player-band > .interval-row,
 .player-band > .timeline-wrap,
 .player-band > .player-control-row,
-.player-band > .player-nav {
+.player-band > .player-nav,
+.player-band > .document-search {
   margin: 0 auto;
   max-width: 1180px;
   width: 100%;
@@ -989,6 +990,12 @@ input {
   font-size: 0.85rem;
   min-width: 7.5rem;
   text-align: right;
+}
+
+.player-nav button.active {
+  background: color-mix(in srgb, var(--accent) 22%, var(--field));
+  border-color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .validation-summary {

@@ -5,10 +5,21 @@ import {
   assertSafeSnapshotId,
   isLoopbackDevServer,
   mediaProjectIdFromPath,
+  safeByteRange,
   safeFormatSelector,
   safeRemoteUrl,
   safeRendererAssetPath,
 } from "../dist-electron/security.js";
+
+test("local media byte ranges are strict and bounded", () => {
+  assert.deepEqual(safeByteRange("bytes=0-", 1_000), { start: 0, end: 999 });
+  assert.deepEqual(safeByteRange("bytes=100-199", 1_000), { start: 100, end: 199 });
+  assert.deepEqual(safeByteRange("bytes=-100", 1_000), { start: 900, end: 999 });
+  assert.deepEqual(safeByteRange("bytes=950-2000", 1_000), { start: 950, end: 999 });
+  for (const value of ["bytes=", "bytes=200-100", "bytes=1000-", "bytes=0-1,4-5", "items=0-10"]) {
+    assert.equal(safeByteRange(value, 1_000), null);
+  }
+});
 
 test("project identifiers cannot escape the library", () => {
   assert.doesNotThrow(() => assertSafeProjectId("youtube_hm_hcq6rucc"));

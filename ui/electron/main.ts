@@ -41,7 +41,7 @@ import {
   savePromptOverride,
 } from "./library.js";
 import { clearGroqApiKey, groqKeyStatus, saveGroqApiKey, transcribeWithGroq } from "./groq.js";
-import { isLoopbackDevServer, mediaProjectIdFromPath, safeRendererAssetPath } from "./security.js";
+import { isLoopbackDevServer, mediaProjectIdFromPath, safeByteRange, safeRendererAssetPath } from "./security.js";
 import type {
   CreateYoutubeProjectRequest,
   DownloadYoutubeRequest,
@@ -206,11 +206,32 @@ function createWindow(): void {
   });
 }
 
-function localFileResponse(filePath: string, request: Request): Promise<Response> {
-  return net.fetch(pathToFileURL(filePath).toString(), {
+async function localFileResponse(filePath: string, request: Request): Promise<Response> {
+  const rangeHeader = request.headers.get("range");
+  if (!rangeHeader) {
+    return await net.fetch(pathToFileURL(filePath).toString(), {
+      method: request.method,
+      headers: request.headers,
+    });
+  }
+
+  const size = (await fs.promises.stat(filePath)).size;
+  const range = safeByteRange(rangeHeader, size);
+  if (!range) {
+    return new Response(null, {
+      status: 416,
+      headers: { "Accept-Ranges": "bytes", "Content-Range": `bytes */${size}` },
+    });
+  }
+  const upstream = await net.fetch(pathToFileURL(filePath).toString(), {
     method: request.method,
     headers: request.headers,
   });
+  const headers = new Headers(upstream.headers);
+  headers.set("Accept-Ranges", "bytes");
+  headers.set("Content-Length", String(range.end - range.start + 1));
+  headers.set("Content-Range", `bytes ${range.start}-${range.end}/${size}`);
+  return new Response(request.method === "HEAD" ? null : upstream.body, { status: 206, headers });
 }
 
 function registerLocalProtocol(): void {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain as rawIpcMain, net, protocol, session } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain as rawIpcMain, net, protocol, session } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
 import fs from "node:fs";
 import path from "node:path";
@@ -54,6 +54,7 @@ import type {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_ORIGIN = "tarjama://app";
+const MAX_CLIPBOARD_TEXT_BYTES = 16 * 1024 * 1024;
 let startupLogFile = "";
 let mainWindow: BrowserWindow | null = null;
 const operationControllers = new Map<LongOperationKind, AbortController>();
@@ -231,6 +232,13 @@ function registerLocalProtocol(): void {
 }
 
 function registerIpc(): void {
+  ipcMain.handle("clipboard:write-text", async (_event, text: string) => {
+    if (typeof text !== "string") throw new Error("Texte de presse-papiers invalide");
+    if (Buffer.byteLength(text, "utf8") > MAX_CLIPBOARD_TEXT_BYTES) {
+      throw new Error("Le texte à copier dépasse la limite de 16 Mio");
+    }
+    clipboard.writeText(text);
+  });
   ipcMain.handle("library:read", async () => readLibrary());
   ipcMain.handle("project:load", async (_event, projectId: string) => loadProject(projectId));
   ipcMain.handle("project:save-current", async (_event, projectId: string, transcript: WorkspaceTranscript) =>

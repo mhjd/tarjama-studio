@@ -51,6 +51,7 @@ import {
   isTextEntryTarget,
   ModalCloseButton,
   OperationProgress,
+  writeClipboardText,
 } from "./desktop-ux";
 
 type VideoItem = {
@@ -1021,7 +1022,7 @@ function DesktopApp() {
       const saved = await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
       if (!saved.transcript) throw new Error("La transcription courante n'a pas pu être enregistrée");
       const prompt = await desktop.cleanupTranscriptPrompt(selectedProjectId, saved.transcript);
-      await navigator.clipboard.writeText(prompt);
+      await writeClipboardText(prompt);
       setCleanupCopyState("Prompt copié");
       setError("");
       window.setTimeout(() => setCleanupCopyState("Copier le prompt de nettoyage"), 1800);
@@ -1391,7 +1392,7 @@ function DesktopApp() {
   async function copyProjectYoutubeUrl(project: DesktopProject) {
     if (!project.youtubeUrl) return;
     try {
-      await navigator.clipboard.writeText(project.youtubeUrl);
+      await writeClipboardText(project.youtubeUrl);
       setCopiedProjectId(project.id);
       setError("");
       window.setTimeout(() => {
@@ -1709,7 +1710,7 @@ function DesktopApp() {
     if (!desktop || !selectedProjectId || !transcript) return;
     try {
       const prompt = await desktop.translationPrompt(selectedProjectId, transcriptWithoutTranslations(transcript));
-      await navigator.clipboard.writeText(prompt);
+      await writeClipboardText(prompt);
       setCopyState("Copié");
       window.setTimeout(() => setCopyState("Copier prompt"), 1600);
     } catch (err) {
@@ -3538,7 +3539,7 @@ function App() {
   async function copyTranslationPrompt() {
     if (!transcript || editorLocked) return;
     try {
-      await navigator.clipboard.writeText(translationPromptFromTranscript(transcript));
+      await writeClipboardText(translationPromptFromTranscript(transcript));
       setCopyState("Copié");
       setError("");
       window.setTimeout(() => setCopyState("Copier prompt"), 1800);

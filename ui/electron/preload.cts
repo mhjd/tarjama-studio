@@ -30,6 +30,7 @@ import type {
 } from "./types.js";
 
 const api = {
+  copyText: (text: string): Promise<void> => ipcRenderer.invoke("clipboard:write-text", text),
   readLibrary: (): Promise<DesktopLibraryInfo> => ipcRenderer.invoke("library:read"),
   loadProject: (projectId: string): Promise<DesktopProjectLoad> => ipcRenderer.invoke("project:load", projectId),
   renameProject: (projectId: string, title: string): Promise<DesktopProject> =>

@@ -216,6 +216,7 @@ type DesktopPromptSettings = {
 
 interface Window {
   tarjamaDesktop?: {
+    copyText(text: string): Promise<void>;
     readLibrary(): Promise<DesktopLibraryInfo>;
     loadProject(projectId: string): Promise<DesktopProjectLoad>;
     renameProject(projectId: string, title: string): Promise<DesktopProject>;

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Copy, RotateCcw, Square, X } from "lucide-react";
 
 const FOCUSABLE = [
@@ -107,15 +107,24 @@ type ErrorNoticeProps = {
 
 export function ErrorNotice({ details, onRetry, onOptions, onChooseAnother }: ErrorNoticeProps) {
   const firstLine = details.split(/\r?\n/, 1)[0] || "Une erreur est survenue";
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   async function copyDetails() {
-    await navigator.clipboard.writeText(details);
+    try {
+      await writeClipboardText(details);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
   }
   return (
     <section className="error-notice" role="alert">
       <strong>{firstLine}</strong>
       {details !== firstLine && <details><summary>Détails techniques</summary><pre>{details}</pre></details>}
       <div className="error-actions">
-        <button onClick={() => void copyDetails()}><Copy size={15} /><span>Copier les détails</span></button>
+        <button onClick={() => void copyDetails()}>
+          <Copy size={15} />
+          <span>{copyState === "copied" ? "Détails copiés" : copyState === "error" ? "Copie impossible" : "Copier les détails"}</span>
+        </button>
         {onRetry && <button onClick={onRetry}><RotateCcw size={15} /><span>Réessayer</span></button>}
         {onOptions && <button onClick={onOptions}><span>Ouvrir les options</span></button>}
         {onChooseAnother && <button onClick={onChooseAnother}><span>Choisir un autre fichier</span></button>}
@@ -166,4 +175,12 @@ export function formatElapsed(milliseconds: number): string {
 
 export function isTextEntryTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+}
+
+export async function writeClipboardText(text: string): Promise<void> {
+  if (window.tarjamaDesktop) {
+    await window.tarjamaDesktop.copyText(text);
+    return;
+  }
+  await navigator.clipboard.writeText(text);
 }

@@ -25,6 +25,8 @@ import type {
   ImportTranslationResult,
   ImportTranscriptResult,
   PromptKind,
+  ProjectReviewKind,
+  DesktopProjectReview,
   TranscriptSegment,
   UpdateToolResult,
   WorkspaceTranscript,
@@ -357,6 +359,11 @@ function transcriptComparable(transcript: WorkspaceTranscript | null): string {
 
 function transcriptsDiffer(left: WorkspaceTranscript | null, right: WorkspaceTranscript | null): boolean {
   return transcriptComparable(left) !== transcriptComparable(right);
+}
+
+function reviewFingerprint(transcript: WorkspaceTranscript, includeTranslation: boolean): string {
+  const reviewed = includeTranslation ? transcript : transcriptWithoutSegmentTranslations(transcript);
+  return createHash("sha256").update(transcriptComparable(reviewed)).digest("hex");
 }
 
 function transcriptWithoutSegmentTranslations(transcript: WorkspaceTranscript): WorkspaceTranscript {
@@ -1634,6 +1641,11 @@ export async function importTranscriptContent(
     ...project,
     updatedAt: nowIso(),
     transcriptPath,
+    transcriptCleanedAt: undefined,
+    transcriptReviewedAt: undefined,
+    transcriptReviewedFingerprint: undefined,
+    translationReviewedAt: undefined,
+    translationReviewedFingerprint: undefined,
   };
   await writeProject(updatedProject);
   return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
@@ -1793,6 +1805,11 @@ async function saveCleanedTranscript(
     updatedAt: nowIso(),
     transcriptPath: transcriptFile(projectId),
     translationPath,
+    transcriptCleanedAt: nowIso(),
+    transcriptReviewedAt: undefined,
+    transcriptReviewedFingerprint: undefined,
+    translationReviewedAt: undefined,
+    translationReviewedFingerprint: undefined,
   });
   return { loaded: await loadProject(projectId), ...summary };
 }
@@ -2074,6 +2091,25 @@ function transcriptCameFromGroq(transcript: WorkspaceTranscript | null): boolean
   return transcript?.source_transcript === "groq-cloud";
 }
 
+async function projectReviewState(
+  project: DesktopProject,
+  transcript: WorkspaceTranscript | null,
+  translation: WorkspaceTranslation | null,
+): Promise<DesktopProjectReview> {
+  if (!transcript) {
+    return { cleanupImported: false, transcriptConfirmed: false, translationConfirmed: false };
+  }
+  const cleanupImported = Boolean(project.transcriptCleanedAt) ||
+    (await snapshotFiles(project.id)).some((filePath) => path.basename(filePath).startsWith("cleaned_"));
+  const combined = transcriptWithTranslation(transcript, translation)!;
+  return {
+    cleanupImported,
+    transcriptConfirmed: project.transcriptReviewedFingerprint === reviewFingerprint(transcript, false),
+    translationConfirmed: Boolean(translation) &&
+      project.translationReviewedFingerprint === reviewFingerprint(combined, true),
+  };
+}
+
 export async function loadProject(projectId: string): Promise<DesktopProjectLoad> {
   let project = await refreshProjectArtifactPaths(await readProject(projectId));
   const transcript = await loadSavedTranscript(projectId);
@@ -2090,6 +2126,7 @@ export async function loadProject(projectId: string): Promise<DesktopProjectLoad
   if (snapshotCurrent) await ensureInitialSnapshot(projectId, snapshotCurrent);
   return {
     project,
+    review: await projectReviewState(project, transcript, translation),
     mediaUrl: project.videoPath ? projectMediaUrl(project.id) : undefined,
     transcript,
     translation,
@@ -2144,6 +2181,65 @@ export async function saveGeneratedTranscript(
     transcriptPath: transcriptFile(projectId),
     translationPath: undefined,
     groqTranscribedAt: nowIso(),
+    transcriptCleanedAt: undefined,
+    transcriptReviewedAt: undefined,
+    transcriptReviewedFingerprint: undefined,
+    translationReviewedAt: undefined,
+    translationReviewedFingerprint: undefined,
+  });
+  return await loadProject(projectId);
+}
+
+function assertProjectReviewKind(kind: unknown): asserts kind is ProjectReviewKind {
+  if (kind !== "transcript" && kind !== "translation") {
+    throw new Error("Type de relecture invalide");
+  }
+}
+
+export async function confirmProjectReview(
+  projectId: string,
+  kind: ProjectReviewKind,
+  transcript: WorkspaceTranscript,
+): Promise<DesktopProjectLoad> {
+  assertProjectReviewKind(kind);
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const clean = validateTranscript(transcript);
+  clean.corpus_id = projectId;
+  clean.updated_at = nowIso();
+  const plainTranscript = transcriptWithoutSegmentTranslations(clean);
+  await writeJson(currentFile(projectId), plainTranscript);
+  await writeJson(transcriptFile(projectId), plainTranscript);
+
+  if (kind === "transcript") {
+    await writeSnapshot(projectId, plainTranscript, "transcript_reviewed");
+    await writeProject({
+      ...project,
+      updatedAt: nowIso(),
+      transcriptPath: transcriptFile(projectId),
+      transcriptReviewedAt: nowIso(),
+      transcriptReviewedFingerprint: reviewFingerprint(plainTranscript, false),
+      translationReviewedAt: undefined,
+      translationReviewedFingerprint: undefined,
+    });
+    return await loadProject(projectId);
+  }
+
+  const existingTranslationPath = translationFile(projectId);
+  if (!(await pathExists(existingTranslationPath))) {
+    throw new Error("Importe d'abord une traduction");
+  }
+  const translation = translationFromTranscriptSnapshot(projectId, clean);
+  await writeJson(existingTranslationPath, translation);
+  await writeSnapshot(projectId, clean, "translation_reviewed");
+  await writeTranslationSnapshot(projectId, translation, "reviewed");
+  await writeProject({
+    ...project,
+    updatedAt: nowIso(),
+    transcriptPath: transcriptFile(projectId),
+    translationPath: existingTranslationPath,
+    translationReviewedAt: nowIso(),
+    translationReviewedFingerprint: reviewFingerprint(clean, true),
   });
   return await loadProject(projectId);
 }
@@ -2263,7 +2359,13 @@ export async function importTranslationContent(
   const translation = translationFromImportContent(projectId, transcript, content, filename);
   await writeJson(target, translation);
   await writeTranslationSnapshot(projectId, translation, "import");
-  const updatedProject = { ...project, updatedAt: nowIso(), translationPath: target };
+  const updatedProject = {
+    ...project,
+    updatedAt: nowIso(),
+    translationPath: target,
+    translationReviewedAt: undefined,
+    translationReviewedFingerprint: undefined,
+  };
   await writeProject(updatedProject);
   return { project: updatedProject, translation };
 }

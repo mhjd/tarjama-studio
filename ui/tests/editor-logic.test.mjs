@@ -3,10 +3,35 @@ import test from "node:test";
 import {
   previewAlignedMarkdown,
   previewTranscriptJson,
+  projectWorkflowStep,
   searchTranscript,
   transcriptFingerprint,
   validateEditorSegments,
 } from "../dist-electron/editor-logic.js";
+
+test("project workflow requires both manual review confirmations", () => {
+  const state = {
+    hasVideo: false,
+    hasTranscript: false,
+    cleanupImported: false,
+    transcriptConfirmed: false,
+    hasTranslation: false,
+    translationConfirmed: false,
+  };
+  assert.equal(projectWorkflowStep(state), "video");
+  state.hasVideo = true;
+  assert.equal(projectWorkflowStep(state), "transcription");
+  state.hasTranscript = true;
+  assert.equal(projectWorkflowStep(state), "cleanup");
+  state.cleanupImported = true;
+  assert.equal(projectWorkflowStep(state), "transcript-review");
+  state.transcriptConfirmed = true;
+  assert.equal(projectWorkflowStep(state), "translation");
+  state.hasTranslation = true;
+  assert.equal(projectWorkflowStep(state), "translation-review");
+  state.translationConfirmed = true;
+  assert.equal(projectWorkflowStep(state), "export");
+});
 
 function transcript(segments) {
   return { corpus_id: "test", segments };

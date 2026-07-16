@@ -14,6 +14,19 @@ type DesktopProject = {
   archivedAt?: string;
   groqTranscribedAt?: string;
   titleCustomizedAt?: string;
+  transcriptCleanedAt?: string;
+  transcriptReviewedAt?: string;
+  transcriptReviewedFingerprint?: string;
+  translationReviewedAt?: string;
+  translationReviewedFingerprint?: string;
+};
+
+type DesktopProjectReviewKind = "transcript" | "translation";
+
+type DesktopProjectReview = {
+  cleanupImported: boolean;
+  transcriptConfirmed: boolean;
+  translationConfirmed: boolean;
 };
 
 type DesktopLibraryInfo = {
@@ -142,6 +155,7 @@ type DesktopRecoveryState = {
 
 type DesktopProjectLoad = {
   project: DesktopProject;
+  review: DesktopProjectReview;
   mediaUrl?: string;
   transcript: DesktopTranscript | null;
   translation: DesktopTranslation | null;
@@ -220,6 +234,7 @@ interface Window {
     readLibrary(): Promise<DesktopLibraryInfo>;
     loadProject(projectId: string): Promise<DesktopProjectLoad>;
     renameProject(projectId: string, title: string): Promise<DesktopProject>;
+    confirmProjectReview(projectId: string, kind: DesktopProjectReviewKind, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;
     saveCurrentTranscript(projectId: string, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;
     createTranscriptSnapshot(projectId: string, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;
     loadSnapshot(projectId: string, snapshotId: string): Promise<{ snapshot: DesktopSnapshotInfo; transcript: DesktopTranscript }>;

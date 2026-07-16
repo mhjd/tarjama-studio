@@ -39,6 +39,7 @@ import "./styles.css";
 import {
   previewAlignedMarkdown,
   previewTranscriptJson,
+  projectWorkflowStep,
   searchTranscript,
   transcriptFingerprint,
   validateEditorSegments,
@@ -381,11 +382,28 @@ function cleanupPastePreview(content: string): { valid: boolean; lines: string[]
   }
 }
 
-function projectStatusLabel(project: DesktopProject): string {
-  if (!project.videoPath) return "Vidéo absente";
-  if (!project.transcriptPath) return "À transcrire";
-  if (!project.translationPath) return "Transcription sans traduction";
-  return "Prêt à exporter";
+function projectStatusLabel(
+  project: DesktopProject,
+  review: DesktopProjectReview,
+  hasTranslation: boolean,
+): string {
+  const labels: Record<ReturnType<typeof projectWorkflowStep>, string> = {
+    video: "Vidéo absente",
+    transcription: "À transcrire",
+    cleanup: "Transcription à nettoyer",
+    "transcript-review": "Transcription à relire",
+    translation: "Prêt à traduire",
+    "translation-review": "Traduction à relire",
+    export: "Prêt à exporter",
+  };
+  return labels[projectWorkflowStep({
+    hasVideo: Boolean(project.videoPath),
+    hasTranscript: Boolean(project.transcriptPath),
+    cleanupImported: review.cleanupImported,
+    transcriptConfirmed: review.transcriptConfirmed,
+    hasTranslation,
+    translationConfirmed: review.translationConfirmed,
+  })];
 }
 
 function snapshotLabel(snapshot: SnapshotInfo): string {
@@ -534,6 +552,11 @@ function DesktopApp() {
   const [desktopView, setDesktopView] = useState<DesktopView>("library");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [loadedProject, setLoadedProject] = useState<DesktopProject | null>(null);
+  const [projectReview, setProjectReview] = useState<DesktopProjectReview>({
+    cleanupImported: false,
+    transcriptConfirmed: false,
+    translationConfirmed: false,
+  });
   const [mediaUrl, setMediaUrl] = useState("");
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [attachedTranslation, setAttachedTranslation] = useState<Translation | null>(null);
@@ -850,6 +873,7 @@ function DesktopApp() {
 
   const applyLoadedProject = useCallback((loaded: DesktopProjectLoad) => {
     setLoadedProject(loaded.project);
+    setProjectReview(loaded.review);
     setMediaUrl(loaded.mediaUrl ?? "");
     const nextTranscript = loaded.transcript ? applyTranslation(loaded.transcript, loaded.translation) : null;
     setTranscript(nextTranscript);
@@ -1602,6 +1626,11 @@ function DesktopApp() {
       ...transcript,
       segments: transcript.segments.map((segment) => (segment.id === id ? { ...segment, ...patch } : segment)),
     });
+    if ("text" in patch || "start" in patch || "end" in patch) {
+      setProjectReview((review) => ({ ...review, transcriptConfirmed: false, translationConfirmed: false }));
+    } else if ("translation" in patch) {
+      setProjectReview((review) => ({ ...review, translationConfirmed: false }));
+    }
     setSaveStatus("dirty");
   }
 
@@ -1611,6 +1640,7 @@ function DesktopApp() {
     if (nextSegments === transcript.segments) return;
     setUndoStack((stack) => [...stack.slice(-19), structuredClone(transcript)]);
     setTranscript({ ...transcript, segments: nextSegments });
+    setProjectReview((review) => ({ ...review, transcriptConfirmed: false, translationConfirmed: false }));
     setSaveStatus("dirty");
     setUndoVisible(true);
     window.setTimeout(() => setUndoVisible(false), 5000);
@@ -1621,6 +1651,7 @@ function DesktopApp() {
     const previous = undoStack.at(-1)!;
     setUndoStack((stack) => stack.slice(0, -1));
     setTranscript(previous);
+    setProjectReview((review) => ({ ...review, transcriptConfirmed: false, translationConfirmed: false }));
     setSaveStatus("dirty");
     setUndoVisible(false);
   }
@@ -1704,6 +1735,22 @@ function DesktopApp() {
       setSaveStatus("dirty");
       setError(err instanceof Error ? err.message : "Sauvegarde impossible");
     }
+  }
+
+  async function confirmProjectReviewDesktop(kind: DesktopProjectReviewKind) {
+    if (!desktop || !selectedProjectId || !transcript || editorLocked) return;
+    if (segmentIssues.length) {
+      setError("Corrige les erreurs d’horodatage signalées avant de confirmer la relecture.");
+      focusSegment(segmentIssues[0].segmentId, false);
+      return;
+    }
+    if (kind === "translation" && !attachedTranslation) {
+      setError("Importe d’abord une traduction.");
+      return;
+    }
+    await runDesktopAction("Confirmation de la relecture...", async () => {
+      applyLoadedProject(await desktop.confirmProjectReview(selectedProjectId, kind, transcript));
+    });
   }
 
   async function copyTranslationPromptDesktop() {
@@ -1914,7 +1961,15 @@ function DesktopApp() {
 
   function renderNextProjectAction() {
     if (!loadedProject || busy || isHistoryPreview) return null;
-    if (!loadedProjectHasVideo) {
+    const workflowStep = projectWorkflowStep({
+      hasVideo: loadedProjectHasVideo,
+      hasTranscript: Boolean(transcript),
+      cleanupImported: projectReview.cleanupImported,
+      transcriptConfirmed: projectReview.transcriptConfirmed,
+      hasTranslation: Boolean(attachedTranslation),
+      translationConfirmed: projectReview.translationConfirmed,
+    });
+    if (workflowStep === "video") {
       return (
         <section className="next-action" aria-label="Prochaine étape">
           <div><strong>Prochaine étape</strong><span>Ajoute la vidéo au projet.</span></div>
@@ -1924,7 +1979,7 @@ function DesktopApp() {
         </section>
       );
     }
-    if (!transcript) {
+    if (workflowStep === "transcription") {
       return (
         <section className="next-action" aria-label="Prochaine étape">
           <div><strong>Prochaine étape</strong><span>Crée ou importe la transcription.</span></div>
@@ -1939,7 +1994,32 @@ function DesktopApp() {
         </section>
       );
     }
-    if (!attachedTranslation) {
+    if (workflowStep === "cleanup") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Prochaine étape</strong><span>Fais corriger la transcription par le LLM, puis importe le résultat.</span></div>
+          <div className="next-action-controls" aria-label="Faire corriger et importer la transcription">
+            <button onClick={() => void copyCleanupPromptDesktop()}>
+              <Copy size={16} /><span>1. {cleanupCopyState}</span>
+            </button>
+            <button className="primary-action" onClick={() => setCleanupImportOpen(true)}>
+              <ClipboardPaste size={16} /><span>2. Coller le résultat</span>
+            </button>
+          </div>
+        </section>
+      );
+    }
+    if (workflowStep === "transcript-review") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Relecture manuelle</strong><span>Relis et corrige la transcription en écoutant l’audio.</span></div>
+          <button className="primary-action" onClick={() => void confirmProjectReviewDesktop("transcript")}>
+            <Check size={16} /><span>Je confirme la transcription</span>
+          </button>
+        </section>
+      );
+    }
+    if (workflowStep === "translation") {
       return (
         <section className="next-action" aria-label="Prochaine étape">
           <div><strong>Prochaine étape</strong><span>Copie le prompt, puis importe la traduction obtenue.</span></div>
@@ -1951,6 +2031,16 @@ function DesktopApp() {
               <ClipboardPaste size={16} /><span>2. Coller le résultat</span>
             </button>
           </div>
+        </section>
+      );
+    }
+    if (workflowStep === "translation-review") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Relecture manuelle</strong><span>Relis et corrige les choix de traduction en écoutant l’audio.</span></div>
+          <button className="primary-action" onClick={() => void confirmProjectReviewDesktop("translation")}>
+            <Check size={16} /><span>Je confirme la traduction</span>
+          </button>
         </section>
       );
     }
@@ -1975,7 +2065,7 @@ function DesktopApp() {
             </button>
             <div>
               <strong dir="auto">{loadedProject?.title ?? "Projet"}</strong>
-              <span>{loadedProject ? projectStatusLabel(loadedProject) : "Chargement"}</span>
+              <span>{loadedProject ? projectStatusLabel(loadedProject, projectReview, Boolean(attachedTranslation)) : "Chargement"}</span>
             </div>
             <div className="editor-header-actions">
               <button disabled={!loadedProject || busy} onClick={openRenameProject} title="Renommer le projet">

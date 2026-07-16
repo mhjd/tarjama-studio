@@ -7,6 +7,7 @@ import {
   createYoutubeProject,
   createLocalProject,
   createTranscriptSnapshot,
+  confirmProjectReview,
   downloadYoutube,
   exportVideo,
   importLocalVideo,
@@ -48,6 +49,7 @@ import type {
   ExportVideoOptions,
   LongOperationKind,
   PromptKind,
+  ProjectReviewKind,
   WorkspaceTranscript,
   WorkspaceTranslation,
 } from "./types.js";
@@ -246,6 +248,11 @@ function registerIpc(): void {
   );
   ipcMain.handle("project:create-snapshot", async (_event, projectId: string, transcript: WorkspaceTranscript) =>
     createTranscriptSnapshot(projectId, transcript),
+  );
+  ipcMain.handle(
+    "project:confirm-review",
+    async (_event, projectId: string, kind: ProjectReviewKind, transcript: WorkspaceTranscript) =>
+      confirmProjectReview(projectId, kind, transcript),
   );
   ipcMain.handle("project:load-snapshot", async (_event, projectId: string, snapshotId: string) =>
     loadSnapshot(projectId, snapshotId),

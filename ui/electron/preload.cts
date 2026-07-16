@@ -27,6 +27,7 @@ import type {
   CleanedTranscriptImportResult,
   DesktopPromptSettings,
   PromptKind,
+  ProjectReviewKind,
 } from "./types.js";
 
 const api = {
@@ -35,6 +36,11 @@ const api = {
   loadProject: (projectId: string): Promise<DesktopProjectLoad> => ipcRenderer.invoke("project:load", projectId),
   renameProject: (projectId: string, title: string): Promise<DesktopProject> =>
     ipcRenderer.invoke("project:rename", projectId, title),
+  confirmProjectReview: (
+    projectId: string,
+    kind: ProjectReviewKind,
+    transcript: WorkspaceTranscript,
+  ): Promise<DesktopProjectLoad> => ipcRenderer.invoke("project:confirm-review", projectId, kind, transcript),
   saveCurrentTranscript: (projectId: string, transcript: WorkspaceTranscript): Promise<DesktopProjectLoad> =>
     ipcRenderer.invoke("project:save-current", projectId, transcript),
   createTranscriptSnapshot: (projectId: string, transcript: WorkspaceTranscript): Promise<DesktopProjectLoad> =>

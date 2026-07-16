@@ -14,6 +14,19 @@ export type DesktopProject = {
   archivedAt?: string;
   groqTranscribedAt?: string;
   titleCustomizedAt?: string;
+  transcriptCleanedAt?: string;
+  transcriptReviewedAt?: string;
+  transcriptReviewedFingerprint?: string;
+  translationReviewedAt?: string;
+  translationReviewedFingerprint?: string;
+};
+
+export type ProjectReviewKind = "transcript" | "translation";
+
+export type DesktopProjectReview = {
+  cleanupImported: boolean;
+  transcriptConfirmed: boolean;
+  translationConfirmed: boolean;
 };
 
 export type DesktopLibraryInfo = {
@@ -135,6 +148,7 @@ export type DesktopRecoveryState = {
 
 export type DesktopProjectLoad = {
   project: DesktopProject;
+  review: DesktopProjectReview;
   mediaUrl?: string;
   transcript: WorkspaceTranscript | null;
   translation: WorkspaceTranslation | null;

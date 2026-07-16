@@ -13,6 +13,32 @@ export type ImportContentPreview = {
   errors: string[];
 };
 
+export type ProjectWorkflowStep =
+  | "video"
+  | "transcription"
+  | "cleanup"
+  | "transcript-review"
+  | "translation"
+  | "translation-review"
+  | "export";
+
+export function projectWorkflowStep(state: {
+  hasVideo: boolean;
+  hasTranscript: boolean;
+  cleanupImported: boolean;
+  transcriptConfirmed: boolean;
+  hasTranslation: boolean;
+  translationConfirmed: boolean;
+}): ProjectWorkflowStep {
+  if (!state.hasVideo) return "video";
+  if (!state.hasTranscript) return "transcription";
+  if (!state.cleanupImported) return "cleanup";
+  if (!state.transcriptConfirmed) return "transcript-review";
+  if (!state.hasTranslation) return "translation";
+  if (!state.translationConfirmed) return "translation-review";
+  return "export";
+}
+
 const MARKDOWN_TIMESTAMP = /^##\s+(\d{2}:\d{2}(?::\d{2})?\.\d{3})\s+-->\s+(\d{2}:\d{2}(?::\d{2})?\.\d{3})\s*$/;
 
 function roundedTime(value: number): number {

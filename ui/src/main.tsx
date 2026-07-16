@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowDown,
+  ArrowUp,
   ArrowUpToLine,
   Check,
   CircleHelp,
@@ -23,15 +25,33 @@ import {
   Play,
   RotateCcw,
   Save,
+  Search,
   Scissors,
   Settings,
   Square,
   Sun,
   Trash2,
   Upload,
+  Undo2,
   X
 } from "lucide-react";
 import "./styles.css";
+import {
+  previewAlignedMarkdown,
+  previewTranscriptJson,
+  searchTranscript,
+  transcriptFingerprint,
+  validateEditorSegments,
+  type ImportContentPreview,
+} from "../electron/editor-logic";
+import {
+  AccessibleModal,
+  ErrorNotice,
+  formatElapsed,
+  isTextEntryTarget,
+  ModalCloseButton,
+  OperationProgress,
+} from "./desktop-ux";
 
 type VideoItem = {
   corpus_id: string;
@@ -127,6 +147,17 @@ type ExportVideoOptions = {
 };
 type DesktopView = "library" | "editor" | "options";
 type DesktopActionMenu = "transcription" | "translation" | "export" | null;
+type DesktopImportKind = "transcript" | "cleanup" | "translation";
+type DesktopImportPreview = {
+  projectId: string;
+  kind: DesktopImportKind;
+  filename: string;
+  content: string;
+  preview: ImportContentPreview;
+};
+type ResumePoint = { time: number; segmentId?: string };
+type SaveStatus = "saved" | "dirty" | "saving";
+const IMPORT_PREVIEW_CHARACTER_LIMIT = 20_000;
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 const DEFAULT_EXPORT_OPTIONS: ExportVideoOptions = {
   style: "black-band",
@@ -560,12 +591,27 @@ function DesktopApp() {
   const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
   const [exportOptions, setExportOptions] = useState<ExportVideoOptions>(initialExportOptions);
   const [openActionMenu, setOpenActionMenu] = useState<DesktopActionMenu>(null);
-  const [saveState, setSaveState] = useState("Sauvegarder");
   const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
   const [focusedSegmentId, setFocusedSegmentId] = useState("");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [savedFingerprint, setSavedFingerprint] = useState("");
+  const [undoStack, setUndoStack] = useState<Transcript[]>([]);
+  const [undoVisible, setUndoVisible] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [resumePoint, setResumePoint] = useState<ResumePoint | null>(null);
+  const [importPreview, setImportPreview] = useState<DesktopImportPreview | null>(null);
+  const [operationStartedAt, setOperationStartedAt] = useState<number | null>(null);
+  const [operationClock, setOperationClock] = useState(Date.now());
+  const [cancellingOperation, setCancellingOperation] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const autosaveTimer = useRef<number | null>(null);
+  const resumeWriteSecond = useRef(-1);
+  const lastActionRef = useRef<(() => Promise<void>) | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const segmentRefs = useRef(new Map<string, HTMLElement>());
+  const segmentFieldRefs = useRef(new Map<string, HTMLTextAreaElement>());
   const actionMenusRef = useRef<HTMLDivElement | null>(null);
 
   const activeProjects = useMemo(
@@ -597,6 +643,28 @@ function DesktopApp() {
         .sort((left, right) => snapshotSortTime(right) - snapshotSortTime(left)),
     [snapshots]
   );
+  const segmentIssues = useMemo(() => validateEditorSegments(displayedTranscript), [displayedTranscript]);
+  const issuesBySegment = useMemo(() => {
+    const grouped = new Map<string, string[]>();
+    segmentIssues.forEach((issue) => grouped.set(issue.segmentId, [...(grouped.get(issue.segmentId) ?? []), issue.message]));
+    return grouped;
+  }, [segmentIssues]);
+  const searchResults = useMemo(
+    () => searchTranscript(displayedTranscript, searchQuery),
+    [displayedTranscript, searchQuery],
+  );
+  const searchOccurrenceCount = searchResults.length;
+  const activeSegmentId = useMemo(() => {
+    const segments = displayedTranscript?.segments ?? [];
+    return segments.find((segment) => currentTime >= segment.start && currentTime < segment.end)?.id ?? "";
+  }, [currentTime, displayedTranscript]);
+  const hasInterval = useMemo(() => {
+    const start = parseTime(rangeStart) ?? 0;
+    const end = parseTime(rangeEnd);
+    return end !== null && end > start;
+  }, [rangeEnd, rangeStart]);
+  const playbackMode = loopEnabled && hasInterval ? "Boucle" : rangePlaybackActive && hasInterval ? "Intervalle" : "Lecture libre";
+  const anyModalOpen = newProjectOpen || shortcutsOpen || pasteImportOpen || cleanupImportOpen || renameProjectOpen || Boolean(importPreview);
 
   const refreshLibrary = useCallback(async () => {
     if (!desktop) return;
@@ -666,75 +734,105 @@ function DesktopApp() {
   }, [exportOptions]);
 
   useEffect(() => {
-    if (desktopView !== "editor" || !mediaUrl) return;
-    function targetIsEditable(target: EventTarget | null): boolean {
-      return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
-    }
+    if (!operationStartedAt) return;
+    const timer = window.setInterval(() => setOperationClock(Date.now()), 500);
+    return () => window.clearInterval(timer);
+  }, [operationStartedAt]);
+
+  useEffect(() => {
+    if (searchOpen) window.setTimeout(() => searchInputRef.current?.focus(), 0);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (saveStatus === "saving" || !transcript || !savedFingerprint) return;
+    setSaveStatus(transcriptFingerprint(transcript) === savedFingerprint ? "saved" : "dirty");
+  }, [savedFingerprint, saveStatus, transcript]);
+
+  useEffect(() => {
+    if (desktopView !== "editor") return;
     function onKeyDown(event: KeyboardEvent) {
-      if (targetIsEditable(event.target) || event.metaKey || event.ctrlKey || event.altKey) return;
-      const audio = audioRef.current;
-      if (!audio) return;
+      const modifier = event.metaKey || event.ctrlKey;
+      const key = event.key.toLocaleLowerCase();
+      if (anyModalOpen) return;
+      if (openActionMenu && event.key === "Escape") {
+        event.preventDefault();
+        setOpenActionMenu(null);
+        return;
+      }
+      if (modifier && key === "s") {
+        event.preventDefault();
+        if (saveStatus === "dirty" && !editorLocked) void createSavePointDesktop();
+        return;
+      }
+      if (modifier && key === "f") {
+        event.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+      if (modifier && key === "z") {
+        if (isTextEntryTarget(event.target)) return;
+        event.preventDefault();
+        undoLastStructuralEdit();
+        return;
+      }
+      if (isTextEntryTarget(event.target) || event.metaKey || event.ctrlKey) return;
       if (event.key === "?") {
         event.preventDefault();
         setShortcutsOpen(true);
         return;
       }
-      if (event.key === "Escape") {
+      if (event.altKey && event.key === "ArrowUp") {
         event.preventDefault();
-        setRangeStart("00:00");
-        setRangeEnd("00:00");
-        setLoopEnabled(false);
-        setRangePlaybackActive(false);
+        navigateAdjacentSegment(-1);
         return;
       }
+      if (event.altKey && event.key === "ArrowDown") {
+        event.preventDefault();
+        navigateAdjacentSegment(1);
+        return;
+      }
+      if (event.altKey) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (searchOpen) setSearchOpen(false);
+        else clearInterval();
+        return;
+      }
+      if (!mediaUrl) return;
+      const audio = audioRef.current;
+      if (!audio) return;
       if (event.code === "Space") {
         event.preventDefault();
         togglePlay();
-        return;
-      }
-      if (event.key === "ArrowLeft") {
+      } else if (event.key === "ArrowLeft") {
         event.preventDefault();
         seekBy(event.shiftKey ? -10 : -3);
-        return;
-      }
-      if (event.key === "ArrowRight") {
+      } else if (event.key === "ArrowRight") {
         event.preventDefault();
         seekBy(event.shiftKey ? 10 : 3);
-        return;
-      }
-      if (event.key.toLowerCase() === "d") {
+      } else if (key === "d") {
         event.preventDefault();
         setRangeStart(formatTime(audio.currentTime));
-        return;
-      }
-      if (event.key.toLowerCase() === "f") {
+      } else if (key === "f") {
         event.preventDefault();
         setRangeEnd(formatTime(audio.currentTime));
-        return;
-      }
-      if (event.key.toLowerCase() === "b") {
+      } else if (key === "b") {
         event.preventDefault();
         setLoopEnabled((enabled) => !enabled);
-        return;
-      }
-      if (event.key === "-" || event.key === "_") {
+      } else if (event.key === "-" || event.key === "_") {
         event.preventDefault();
         adjustPlaybackRate(-1);
-        return;
-      }
-      if (event.key === "+" || event.key === "=") {
+      } else if (event.key === "+" || event.key === "=") {
         event.preventDefault();
         adjustPlaybackRate(1);
-        return;
-      }
-      if (event.key.toLowerCase() === "s") {
+      } else if (key === "s") {
         event.preventDefault();
         scrollToCurrentSegment();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [desktopView, mediaUrl, rangeEnd, rangePlaybackActive, rangeStart, displayedTranscript]);
+  }, [anyModalOpen, desktopView, editorLocked, mediaUrl, openActionMenu, saveStatus, searchOpen, displayedTranscript, currentTime]);
 
   useEffect(() => {
     if (!openActionMenu) return;
@@ -743,14 +841,9 @@ function DesktopApp() {
         setOpenActionMenu(null);
       }
     }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpenActionMenu(null);
-    }
     window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
     };
   }, [openActionMenu]);
 
@@ -764,6 +857,18 @@ function DesktopApp() {
     setSelectedSnapshotId("");
     setPreviewTranscript(null);
     setPreviewSnapshot(null);
+    setUndoStack([]);
+    setUndoVisible(false);
+    const matchesSavedSnapshot = Boolean(loaded.transcript && loaded.snapshots.some((snapshot) => snapshot.matches_current));
+    setSavedFingerprint(matchesSavedSnapshot ? transcriptFingerprint(nextTranscript) : "");
+    setSaveStatus(loaded.transcript && !matchesSavedSnapshot ? "dirty" : "saved");
+    const storedResume = localStorage.getItem(`tarjama-resume-${loaded.project.id}`);
+    try {
+      const parsed = storedResume ? JSON.parse(storedResume) as ResumePoint : null;
+      setResumePoint(parsed && Number.isFinite(parsed.time) && parsed.time >= 5 ? parsed : null);
+    } catch {
+      setResumePoint(null);
+    }
     setState(
       loaded.transcript
         ? loaded.translation
@@ -817,6 +922,7 @@ function DesktopApp() {
   }, [attachedTranslation, desktop, editorLocked, selectedProjectId, transcript]);
 
   async function runDesktopAction(label: string, action: () => Promise<void>) {
+    lastActionRef.current = async () => runDesktopAction(label, action);
     setBusy(true);
     setState(label);
     setError("");
@@ -825,10 +931,19 @@ function DesktopApp() {
       await refreshLibrary();
       setState("Prêt");
     } catch (err) {
-      setState("Erreur");
-      setError(err instanceof Error ? err.message : "Action impossible");
+      const message = err instanceof Error ? err.message : "Action impossible";
+      if (/annul|abort/i.test(message)) {
+        setState("Opération annulée");
+        setError("");
+        setDownloadProgress(null);
+        setGroqProgress(null);
+      } else {
+        setState("Erreur");
+        setError(message);
+      }
     } finally {
       setBusy(false);
+      setCancellingOperation(false);
     }
   }
 
@@ -837,15 +952,7 @@ function DesktopApp() {
       setError("Ajoute d'abord une vidéo avant d'importer une transcription.");
       return;
     }
-    await runDesktopAction("Import transcription...", async () => {
-      const result = await desktop?.importTranscript(project.id);
-      if (result) {
-        setState(`Transcription importée: ${result.segmentCount} segments`);
-        setSelectedProjectId(project.id);
-        setDesktopView("editor");
-        await loadDesktopProject(project.id);
-      }
-    });
+    await chooseImportFile("transcript", project.id);
   }
 
   async function transcribeGroqDesktop(project: DesktopProject) {
@@ -873,11 +980,14 @@ function DesktopApp() {
       )
     ) return;
     setGroqProgress({ projectId: project.id, stage: "preparing", percent: 0, message: "Préparation de la transcription Groq" });
+    setOperationStartedAt(Date.now());
+    setCancellingOperation(false);
     await runDesktopAction("Transcription Groq...", async () => {
       const loaded = await desktop.transcribeWithGroq(project.id);
       applyLoadedProject(loaded);
       setGroqProgress({ projectId: project.id, stage: "done", percent: 100, message: "Transcription Groq terminée" });
     });
+    setOperationStartedAt(null);
   }
 
   async function saveGroqKeyDesktop() {
@@ -928,25 +1038,91 @@ function DesktopApp() {
   }
 
   async function importCleanedTranscriptFileDesktop() {
-    if (!desktop || !selectedProjectId) return;
-    await runDesktopAction("Import du nettoyage...", async () => {
-      const result = await desktop.importCleanedTranscriptFile(selectedProjectId);
-      if (result) applyCleanedTranscriptResult(result);
-    });
+    await chooseImportFile("cleanup");
   }
 
-  async function importCleanedTranscriptContentDesktop() {
-    if (!desktop || !selectedProjectId || !pastedCleanupTranscript.trim()) return;
+  function buildImportPreview(projectId: string, kind: DesktopImportKind, filename: string, content: string): DesktopImportPreview {
+    if (kind === "transcript") {
+      return { projectId, kind, filename, content, preview: previewTranscriptJson(content) };
+    }
+    if (!transcript) {
+      return {
+        projectId,
+        kind,
+        filename,
+        content,
+        preview: { valid: false, segmentCount: 0, alignedCount: 0, errors: ["Aucune transcription source dans ce projet"] },
+      };
+    }
+    if (kind === "cleanup") {
+      const review = cleanupPastePreview(content);
+      const segmentCount = (content.match(/^##\s+/gm) ?? []).length;
+      return {
+        projectId,
+        kind,
+        filename,
+        content,
+        preview: {
+          valid: review.valid,
+          segmentCount,
+          alignedCount: 0,
+          errors: review.valid ? [] : review.lines,
+        },
+      };
+    }
+    return { projectId, kind, filename, content, preview: previewAlignedMarkdown(content, transcriptWithoutTranslations(transcript)) };
+  }
+
+  async function chooseImportFile(kind: DesktopImportKind, projectId = selectedProjectId) {
+    if (!desktop) return;
+    setError("");
+    try {
+      const selection = await desktop.pickTextImport(kind);
+      if (selection) setImportPreview(buildImportPreview(projectId, kind, selection.filename, selection.content));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fichier impossible à lire");
+    }
+  }
+
+  function previewPastedImport(kind: "cleanup" | "translation", content: string) {
+    if (!content.trim()) return;
+    if (kind === "cleanup") setCleanupImportOpen(false);
+    else setPasteImportOpen(false);
+    setImportPreview(buildImportPreview(selectedProjectId, kind, kind === "cleanup" ? "contenu-collé.md" : "traduction-collée.md", content));
+  }
+
+  async function confirmImportPreview() {
+    if (!desktop || !importPreview?.projectId || !importPreview.preview.valid) return;
     setBusy(true);
     setError("");
     try {
-      const result = await desktop.importCleanedTranscriptContent(selectedProjectId, pastedCleanupTranscript);
-      applyCleanedTranscriptResult(result);
-      setPastedCleanupTranscript("");
-      setCleanupImportOpen(false);
+      if (importPreview.kind === "transcript") {
+        const result = await desktop.importTranscriptContent(importPreview.projectId, importPreview.content, importPreview.filename);
+        setState(`Transcription importée: ${result.segmentCount} segments`);
+        setSelectedProjectId(importPreview.projectId);
+        setDesktopView("editor");
+        await loadDesktopProject(importPreview.projectId);
+      } else if (importPreview.kind === "cleanup") {
+        applyCleanedTranscriptResult(await desktop.importCleanedTranscriptContent(importPreview.projectId, importPreview.content));
+        setPastedCleanupTranscript("");
+        setCleanupImportOpen(false);
+      } else {
+        const result = await desktop.importTranslationContent(
+          importPreview.projectId,
+          importPreview.content,
+          importPreview.filename,
+          true,
+        );
+        setAttachedTranslation(result.translation);
+        if (transcript) setTranscript(applyTranslation(transcript, result.translation));
+        setPastedTranslation("");
+        setPasteImportOpen(false);
+        await loadDesktopProject(importPreview.projectId);
+      }
+      setImportPreview(null);
       await refreshLibrary();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Import du nettoyage impossible");
+      setError(err instanceof Error ? err.message : "Import impossible");
     } finally {
       setBusy(false);
     }
@@ -997,13 +1173,28 @@ function DesktopApp() {
     window.scrollTo({ top: 0 });
   }
 
-  function returnToLibrary() {
+  async function persistCurrentState() {
+    if (!desktop || !selectedProjectId || !transcript || editorLocked) return;
+    const loaded = await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
+    if (attachedTranslation) {
+      await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
+    }
+    setLoadedProject(loaded.project);
+  }
+
+  async function returnToLibrary() {
     if (
       desktopView === "options" &&
       (cleanupPromptChanged || translationPromptChanged) &&
       !window.confirm("Des modifications de prompt ne sont pas enregistrées. Quitter Options et les abandonner ?")
     ) return;
     audioRef.current?.pause();
+    try {
+      await persistCurrentState();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Modifications courantes impossibles à conserver");
+      return;
+    }
     setDesktopView("library");
     setPreviewTranscript(null);
     setPreviewSnapshot(null);
@@ -1060,6 +1251,8 @@ function DesktopApp() {
   async function downloadNewYoutubeProject() {
     const url = newYoutubeUrl.trim();
     if (!desktop || !url || !newSelectedYoutubeFormat) return;
+    setOperationStartedAt(Date.now());
+    setCancellingOperation(false);
     await runDesktopAction("Téléchargement vidéo...", async () => {
       setDownloadProgress({ projectId: "pending", stage: "metadata", message: "Préparation du projet YouTube..." });
       const result = await desktop.downloadYoutube({ url, formatSelector: newSelectedYoutubeFormat });
@@ -1070,6 +1263,7 @@ function DesktopApp() {
       setNewProjectOpen(false);
       resetNewProject();
     });
+    setOperationStartedAt(null);
   }
 
   async function importNewLocalProjectVideo() {
@@ -1111,6 +1305,12 @@ function DesktopApp() {
       setError("Ce projet n'a pas de lien YouTube.");
       return;
     }
+    if (
+      project.videoPath &&
+      !window.confirm("Remplacer la vidéo actuelle par la qualité YouTube sélectionnée ? La transcription et la traduction seront conservées.")
+    ) return;
+    setOperationStartedAt(Date.now());
+    setCancellingOperation(false);
     await runDesktopAction("Téléchargement vidéo...", async () => {
       setDownloadProgress({ projectId: project.id, stage: "metadata", message: "Analyse de la vidéo YouTube..." });
       const result = await desktop?.downloadYoutube({
@@ -1127,6 +1327,7 @@ function DesktopApp() {
         setDownloadProgress({ projectId: result.project.id, stage: "done", percent: 100, message: "Téléchargement terminé" });
       }
     });
+    setOperationStartedAt(null);
   }
 
   async function analyzeYoutubeFormatsDesktop(project: DesktopProject) {
@@ -1147,6 +1348,10 @@ function DesktopApp() {
   }
 
   async function importLocalVideoDesktop(project?: DesktopProject) {
+    if (
+      project?.videoPath &&
+      !window.confirm("Remplacer la vidéo actuelle par un fichier local ? La transcription et la traduction seront conservées.")
+    ) return;
     await runDesktopAction("Import vidéo...", async () => {
       const result = await desktop?.importLocalVideo(project?.id);
       if (result) {
@@ -1291,6 +1496,15 @@ function DesktopApp() {
     if (!audio) return;
     const nextTime = audio.currentTime;
     setCurrentTime(nextTime);
+    const wholeSecond = Math.floor(nextTime);
+    if (selectedProjectId && wholeSecond % 2 === 0 && wholeSecond !== resumeWriteSecond.current) {
+      resumeWriteSecond.current = wholeSecond;
+      const active = transcript?.segments.find((segment) => nextTime >= segment.start && nextTime < segment.end);
+      localStorage.setItem(
+        `tarjama-resume-${selectedProjectId}`,
+        JSON.stringify({ time: nextTime, segmentId: active?.id }),
+      );
+    }
     const end = parseTime(rangeEnd);
     const start = parseTime(rangeStart) ?? 0;
     if (rangePlaybackActive && loopEnabled && end !== null && end > start && nextTime >= end) {
@@ -1333,6 +1547,50 @@ function DesktopApp() {
     }, 1600);
   }
 
+  function focusSegment(segmentId: string, seek = true) {
+    const segment = displayedTranscript?.segments.find((candidate) => candidate.id === segmentId);
+    if (!segment) return;
+    if (seek) seekTo(segment.start);
+    setFocusedSegmentId(segment.id);
+    segmentRefs.current.get(segment.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function navigateAdjacentSegment(direction: -1 | 1) {
+    const segments = displayedTranscript?.segments ?? [];
+    if (!segments.length) return;
+    const anchorId = focusedSegmentId || activeSegmentId;
+    const currentIndex = Math.max(0, segments.findIndex((segment) => segment.id === anchorId));
+    const nextIndex = Math.max(0, Math.min(segments.length - 1, currentIndex + direction));
+    focusSegment(segments[nextIndex].id);
+  }
+
+  function navigateSearch(direction: -1 | 1) {
+    if (!searchResults.length) return;
+    const nextIndex = (searchIndex + direction + searchResults.length) % searchResults.length;
+    setSearchIndex(nextIndex);
+    const result = searchResults[nextIndex];
+    focusSegment(result.segmentId, false);
+    window.setTimeout(() => {
+      const field = segmentFieldRefs.current.get(`${result.segmentId}:${result.field}`);
+      if (!field) return;
+      field.focus();
+      field.setSelectionRange(result.offset, result.offset + searchQuery.trim().length);
+    }, 250);
+  }
+
+  function acceptResumePoint() {
+    if (!resumePoint) return;
+    seekTo(resumePoint.time);
+    if (resumePoint.segmentId) focusSegment(resumePoint.segmentId, false);
+    setResumePoint(null);
+  }
+
+  function restartProjectPlayback() {
+    seekTo(0);
+    setResumePoint(null);
+    if (selectedProjectId) localStorage.setItem(`tarjama-resume-${selectedProjectId}`, JSON.stringify({ time: 0 }));
+  }
+
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -1343,11 +1601,27 @@ function DesktopApp() {
       ...transcript,
       segments: transcript.segments.map((segment) => (segment.id === id ? { ...segment, ...patch } : segment)),
     });
+    setSaveStatus("dirty");
   }
 
   function mutateSegments(mutator: (segments: Segment[]) => Segment[]) {
     if (!transcript || editorLocked) return;
-    setTranscript({ ...transcript, segments: mutator(transcript.segments) });
+    const nextSegments = mutator(transcript.segments);
+    if (nextSegments === transcript.segments) return;
+    setUndoStack((stack) => [...stack.slice(-19), structuredClone(transcript)]);
+    setTranscript({ ...transcript, segments: nextSegments });
+    setSaveStatus("dirty");
+    setUndoVisible(true);
+    window.setTimeout(() => setUndoVisible(false), 5000);
+  }
+
+  function undoLastStructuralEdit() {
+    if (!undoStack.length || editorLocked) return;
+    const previous = undoStack.at(-1)!;
+    setUndoStack((stack) => stack.slice(0, -1));
+    setTranscript(previous);
+    setSaveStatus("dirty");
+    setUndoVisible(false);
   }
 
   function addSegmentAfter(segmentId: string) {
@@ -1414,14 +1688,19 @@ function DesktopApp() {
   }
 
   async function createSavePointDesktop() {
-    if (!desktop || !selectedProjectId || !transcript || editorLocked) return;
-    setSaveState("Sauvegarde...");
+    if (!desktop || !selectedProjectId || !transcript || editorLocked || saveStatus !== "dirty") return;
+    if (segmentIssues.length) {
+      setError("Corrige les erreurs d’horodatage signalées avant de sauvegarder.");
+      focusSegment(segmentIssues[0].segmentId, false);
+      return;
+    }
+    setSaveStatus("saving");
     setError("");
     try {
       applyLoadedProject(await desktop.createTranscriptSnapshot(selectedProjectId, transcript));
-      setSaveState("Sauvegardé");
+      setSaveStatus("saved");
     } catch (err) {
-      setSaveState("Sauvegarder");
+      setSaveStatus("dirty");
       setError(err instanceof Error ? err.message : "Sauvegarde impossible");
     }
   }
@@ -1444,17 +1723,7 @@ function DesktopApp() {
       setError("Ajoute d'abord une vidéo avant d'importer une traduction.");
       return;
     }
-    setError("");
-    try {
-      const result = await desktop.importTranslationFile(selectedProjectId);
-      if (result) {
-        setAttachedTranslation(result.translation);
-        if (transcript) setTranscript(applyTranslation(transcript, result.translation));
-        await loadDesktopProject(selectedProjectId);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Import traduction impossible");
-    }
+    await chooseImportFile("translation");
   }
 
   async function importPastedTranslationDesktop() {
@@ -1463,17 +1732,7 @@ function DesktopApp() {
       setError("Ajoute d'abord une vidéo avant d'importer une traduction.");
       return;
     }
-    setError("");
-    try {
-      const result = await desktop.importTranslationContent(selectedProjectId, pastedTranslation, "pasted-translation.md", true);
-      setAttachedTranslation(result.translation);
-      if (transcript) setTranscript(applyTranslation(transcript, result.translation));
-      setPastedTranslation("");
-      setPasteImportOpen(false);
-      await loadDesktopProject(selectedProjectId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Import traduction impossible");
-    }
+    previewPastedImport("translation", pastedTranslation);
   }
 
   async function exportVideoDesktop(track: ExportTrack, openAfter = false) {
@@ -1490,6 +1749,8 @@ function DesktopApp() {
       return;
     }
     setExportingTrack(track);
+    setOperationStartedAt(Date.now());
+    setCancellingOperation(false);
     setExportProgress(null);
     setError("");
     setState(track === "arabic" ? "Préparation de l'export arabe..." : "Préparation de l'export traduction...");
@@ -1508,12 +1769,28 @@ function DesktopApp() {
         setExportProgress(null);
       }
     } catch (err) {
-      setState("Export échoué.");
-      setError(err instanceof Error ? err.message : "Export impossible");
+      const message = err instanceof Error ? err.message : "Export impossible";
+      if (/annul|abort/i.test(message)) {
+        setState("Export annulé.");
+        setError("");
+      } else {
+        setState("Export échoué.");
+        setError(message);
+      }
       setExportProgress(null);
     } finally {
       setExportingTrack(null);
+      setOperationStartedAt(null);
+      setCancellingOperation(false);
     }
+  }
+
+  async function cancelLongOperation(kind: LongOperationKind) {
+    if (!desktop) return;
+    setCancellingOperation(true);
+    const cancelled = await desktop.cancelOperation(kind);
+    if (!cancelled) setCancellingOperation(false);
+    else setState("Annulation en cours...");
   }
 
   async function selectDesktopSnapshot(snapshotId: string) {
@@ -1565,7 +1842,11 @@ function DesktopApp() {
           </div>
         </div>
         <div className="desktop-project-actions">
-          <button disabled={busy || !project.videoPath} onClick={() => void importTranscriptDesktop(project)}>
+          <button
+            disabled={busy || !project.videoPath}
+            title={!project.videoPath ? "Ajoute d’abord une vidéo" : project.transcriptPath ? "Remplacer la transcription du projet" : "Importer une transcription"}
+            onClick={() => void importTranscriptDesktop(project)}
+          >
             <Upload size={16} />
             <span>{project.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
           </button>
@@ -1589,48 +1870,91 @@ function DesktopApp() {
   function renderDownloadProgress() {
     if (!downloadProgress || downloadProgress.stage === "done") return null;
     return (
-      <div className="download-progress" role="status" aria-live="polite">
-        <div>
-          <span>{downloadProgress.message}</span>
-          {downloadProgress.percent !== undefined && <strong>{downloadProgress.percent.toFixed(1)}%</strong>}
-        </div>
-        <progress value={downloadProgress.percent ?? undefined} max="100" />
-        <small>
-          {[downloadProgress.speed, downloadProgress.eta ? `ETA ${downloadProgress.eta}` : ""].filter(Boolean).join(" · ")}
-        </small>
-      </div>
+      <OperationProgress
+        message={downloadProgress.message}
+        percent={downloadProgress.percent}
+        detail={[downloadProgress.speed, downloadProgress.eta ? `Reste ${downloadProgress.eta}` : ""].filter(Boolean).join(" · ")}
+        elapsed={formatElapsed(operationStartedAt ? operationClock - operationStartedAt : 0)}
+        cancelling={cancellingOperation}
+        onCancel={() => void cancelLongOperation("download")}
+      />
     );
   }
 
   function renderExportProgress() {
     if (!exportProgress || exportProgress.stage === "done") return null;
     return (
-      <div className="download-progress export-progress" role="status" aria-live="polite">
-        <div>
-          <span>{exportProgress.message}</span>
-          {exportProgress.percent !== undefined && <strong>{exportProgress.percent.toFixed(1)}%</strong>}
-        </div>
-        <progress value={exportProgress.percent ?? undefined} max="100" />
-        <small>{exportProgress.eta ? `ETA ${exportProgress.eta}` : "Rendu en cours..."}</small>
-      </div>
+      <OperationProgress
+        message={exportProgress.message}
+        percent={exportProgress.percent}
+        detail={exportProgress.eta ? `Reste ${exportProgress.eta}` : "Rendu en cours"}
+        elapsed={formatElapsed(operationStartedAt ? operationClock - operationStartedAt : 0)}
+        cancelling={cancellingOperation}
+        onCancel={() => void cancelLongOperation("export")}
+      />
     );
   }
 
   function renderGroqProgress() {
     if (!groqProgress || groqProgress.stage === "done") return null;
     return (
-      <div className="download-progress" role="status" aria-live="polite">
-        <div>
-          <span>{groqProgress.message}</span>
-          {groqProgress.percent !== undefined && <strong>{groqProgress.percent.toFixed(1)}%</strong>}
-        </div>
-        <progress value={groqProgress.percent ?? undefined} max="100" />
-        <small>
-          {groqProgress.chunkIndex && groqProgress.chunkCount
-            ? `Morceau ${groqProgress.chunkIndex} sur ${groqProgress.chunkCount}`
-            : "Préparation de l'audio..."}
-        </small>
-      </div>
+      <OperationProgress
+        message={groqProgress.message}
+        percent={groqProgress.percent}
+        detail={groqProgress.chunkIndex && groqProgress.chunkCount
+          ? `Morceau ${groqProgress.chunkIndex} sur ${groqProgress.chunkCount}`
+          : "Préparation de l’audio"}
+        elapsed={formatElapsed(operationStartedAt ? operationClock - operationStartedAt : 0)}
+        cancelling={cancellingOperation}
+        onCancel={() => void cancelLongOperation("transcription")}
+      />
+    );
+  }
+
+  function renderNextProjectAction() {
+    if (!loadedProject || busy || isHistoryPreview) return null;
+    if (!loadedProjectHasVideo) {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Prochaine étape</strong><span>Ajoute la vidéo au projet.</span></div>
+          <button className="primary-action" onClick={() => void importLocalVideoDesktop(loadedProject)}>
+            <FileInput size={16} /><span>Importer une vidéo</span>
+          </button>
+        </section>
+      );
+    }
+    if (!transcript) {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Prochaine étape</strong><span>Crée ou importe la transcription.</span></div>
+          <button
+            className="primary-action"
+            disabled={Boolean(loadedProject.groqTranscribedAt)}
+            title={loadedProject.groqTranscribedAt ? "Cette vidéo a déjà consommé un appel Groq" : "Transcrire la vidéo avec Groq"}
+            onClick={() => void transcribeGroqDesktop(loadedProject)}
+          >
+            <Cloud size={16} /><span>Transcrire avec Groq</span>
+          </button>
+        </section>
+      );
+    }
+    if (!attachedTranslation) {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Prochaine étape</strong><span>Prépare la traduction à partir de la transcription corrigée.</span></div>
+          <button className="primary-action" onClick={() => void copyTranslationPromptDesktop()}>
+            <Copy size={16} /><span>{copyState}</span>
+          </button>
+        </section>
+      );
+    }
+    return (
+      <section className="next-action" aria-label="Prochaine étape">
+        <div><strong>Prochaine étape</strong><span>La traduction est prête à être exportée.</span></div>
+        <button className="primary-action" onClick={() => void exportVideoDesktop("translation")}>
+          <Download size={16} /><span>Exporter la traduction</span>
+        </button>
+      </section>
     );
   }
 
@@ -1639,7 +1963,7 @@ function DesktopApp() {
       <header className={`desktop-header ${desktopView !== "library" ? "desktop-header-editor" : ""}`}>
         {desktopView === "editor" ? (
           <>
-            <button className="back-button" onClick={returnToLibrary}>
+            <button className="back-button" onClick={() => void returnToLibrary()} title="Retourner aux projets">
               <ArrowLeft size={16} />
               <span>Projets</span>
             </button>
@@ -1652,14 +1976,14 @@ function DesktopApp() {
                 <Pencil size={16} />
                 <span>Renommer</span>
               </button>
-              <button className="icon-button" onClick={() => setShortcutsOpen(true)} title="Raccourcis clavier">
+              <button className="icon-button" onClick={() => setShortcutsOpen(true)} title="Aide et raccourcis - ?" aria-label="Aide et raccourcis">
                 <CircleHelp size={18} />
               </button>
             </div>
           </>
         ) : desktopView === "options" ? (
           <>
-            <button className="back-button" onClick={returnToLibrary}>
+            <button className="back-button" onClick={() => void returnToLibrary()} title="Retourner aux projets">
               <ArrowLeft size={16} />
               <span>Projets</span>
             </button>
@@ -1711,7 +2035,7 @@ function DesktopApp() {
                 {showArchives && archivedProjects.map(renderProject)}
               </>
             )}
-            {error && <pre className="error import-error">{error}</pre>}
+            {error && <ErrorNotice details={error} onRetry={lastActionRef.current ?? undefined} />}
             {library && <p className="desktop-path">{library.libraryDir}</p>}
           </section>
         </>
@@ -1834,14 +2158,14 @@ function DesktopApp() {
           </section>
 
           <p className="desktop-state">{optionsState}</p>
-          {error && <p className="error">{error}</p>}
+          {error && <ErrorNotice details={error} />}
         </section>
       )}
 
       {desktopView === "editor" && !loadedProject && (
         <section className="desktop-panel">
           <p className="state">{busy ? "Chargement du projet..." : "Aucun projet ouvert."}</p>
-          {error && <p className="error">{error}</p>}
+          {error && <ErrorNotice details={error} />}
         </section>
       )}
 
@@ -1851,16 +2175,32 @@ function DesktopApp() {
             <div className="video-meta">
               <strong>{loadedProject.title}</strong>
               <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
+              <span className={`save-indicator save-indicator-${saveStatus}`} role="status">
+                {saveStatus === "dirty" ? "Modifications non sauvegardées" : saveStatus === "saving" ? "Sauvegarde..." : "Sauvegardé"}
+              </span>
             </div>
             <div className="document-actions" ref={actionMenusRef}>
-              <button disabled={!transcript || editorLocked} onClick={() => void createSavePointDesktop()}>
+              <button
+                disabled={!transcript || editorLocked || saveStatus !== "dirty" || segmentIssues.length > 0}
+                onClick={() => void createSavePointDesktop()}
+                title={!transcript
+                  ? "Importe d’abord une transcription"
+                  : isHistoryPreview
+                    ? "Une ancienne sauvegarde est en lecture seule"
+                    : segmentIssues.length
+                      ? "Corrige les erreurs d’horodatage avant de sauvegarder"
+                      : saveStatus === "saved"
+                        ? "Aucune modification à sauvegarder"
+                        : "Créer une sauvegarde - Ctrl/Cmd+S"}
+              >
                 <Save size={16} />
-                <span>{saveState}</span>
+                <span>{saveStatus === "saving" ? "Sauvegarde..." : "Sauvegarder"}</span>
               </button>
 
               <div className={`action-menu ${openActionMenu === "transcription" ? "open" : ""}`}>
                 <button
                   className="action-menu-trigger"
+                  aria-expanded={openActionMenu === "transcription"}
                   onClick={() => setOpenActionMenu((value) => (value === "transcription" ? null : "transcription"))}
                 >
                   <span>Transcription</span>
@@ -1869,6 +2209,7 @@ function DesktopApp() {
                   <div className="action-menu-content">
                     <button
                       disabled={busy || isHistoryPreview || !loadedProjectHasVideo}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : isHistoryPreview ? "Une ancienne sauvegarde est en lecture seule" : "Importer une transcription JSON"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void importTranscriptDesktop(loadedProject);
@@ -1879,6 +2220,11 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={busy || isHistoryPreview || !loadedProjectHasVideo || Boolean(loadedProject.groqTranscribedAt)}
+                      title={!loadedProjectHasVideo
+                        ? "Ajoute d’abord une vidéo"
+                        : loadedProject.groqTranscribedAt
+                          ? "Cette vidéo a déjà été transcrite avec Groq"
+                          : isHistoryPreview ? "Une ancienne sauvegarde est en lecture seule" : "Transcrire avec Whisper Large V3 sur Groq"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void transcribeGroqDesktop(loadedProject);
@@ -1889,6 +2235,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={busy || isHistoryPreview || !transcript}
+                      title={!transcript ? "Importe d’abord une transcription" : "Copier le prompt de nettoyage"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void copyCleanupPromptDesktop();
@@ -1899,6 +2246,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={busy || isHistoryPreview || !transcript}
+                      title={!transcript ? "Importe d’abord une transcription" : "Coller une transcription nettoyée"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         setCleanupImportOpen(true);
@@ -1909,6 +2257,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={busy || isHistoryPreview || !transcript}
+                      title={!transcript ? "Importe d’abord une transcription" : "Choisir une transcription nettoyée"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void importCleanedTranscriptFileDesktop();
@@ -1924,6 +2273,7 @@ function DesktopApp() {
               <div className={`action-menu ${openActionMenu === "translation" ? "open" : ""}`}>
                 <button
                   className="action-menu-trigger"
+                  aria-expanded={openActionMenu === "translation"}
                   onClick={() => setOpenActionMenu((value) => (value === "translation" ? null : "translation"))}
                 >
                   <span>Traduction</span>
@@ -1932,6 +2282,7 @@ function DesktopApp() {
                   <div className="action-menu-content">
                     <button
                       disabled={!transcript || editorLocked}
+                      title={!transcript ? "Importe d’abord une transcription" : isHistoryPreview ? "Une ancienne sauvegarde est en lecture seule" : "Copier le prompt de traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void copyTranslationPromptDesktop();
@@ -1942,6 +2293,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !transcript ? "Importe d’abord une transcription" : "Coller une traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         setPasteImportOpen(true);
@@ -1952,6 +2304,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !transcript ? "Importe d’abord une transcription" : "Choisir une traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void importTranslationFileDesktop();
@@ -1967,6 +2320,7 @@ function DesktopApp() {
               <div className={`action-menu action-menu-export ${openActionMenu === "export" ? "open" : ""}`}>
                 <button
                   className="action-menu-trigger"
+                  aria-expanded={openActionMenu === "export"}
                   onClick={() => setOpenActionMenu((value) => (value === "export" ? null : "export"))}
                 >
                   <span>Exporter</span>
@@ -2045,6 +2399,7 @@ function DesktopApp() {
                     )}
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !transcript ? "Importe d’abord une transcription" : "Exporter les sous-titres arabes"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void exportVideoDesktop("arabic");
@@ -2055,6 +2410,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !transcript ? "Importe d’abord une transcription" : "Exporter puis ouvrir la vidéo arabe"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void exportVideoDesktop("arabic", true);
@@ -2065,6 +2421,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !attachedTranslation ? "Importe d’abord une traduction" : "Exporter la traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void exportVideoDesktop("translation");
@@ -2075,6 +2432,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !attachedTranslation ? "Importe d’abord une traduction" : "Exporter puis ouvrir la traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void exportVideoDesktop("translation", true);
@@ -2090,48 +2448,91 @@ function DesktopApp() {
           </div>
           {renderExportProgress()}
           {renderGroqProgress()}
-          {error && <pre className="error import-error">{error}</pre>}
+          {error && (
+            <ErrorNotice
+              details={error}
+              onRetry={lastActionRef.current ?? undefined}
+              onOptions={/groq|clé api|api key/i.test(error) ? () => setDesktopView("options") : undefined}
+              onChooseAnother={importPreview ? () => void chooseImportFile(importPreview.kind) : undefined}
+            />
+          )}
+          {renderNextProjectAction()}
 
           <section className="media-tools">
             <div>
               <strong>Vidéo</strong>
               <span>
                 {loadedProject.videoPath
-                  ? "Vidéo disponible"
+                  ? "Vidéo prête pour l’écoute et l’export."
                   : loadedProject.youtubeUrl
                     ? "Ajoute la vidéo depuis YouTube ou depuis ton ordinateur avant transcription, traduction ou export."
                     : "Importe une vidéo avant transcription, traduction ou export."}
               </span>
             </div>
-            <div className="media-tool-actions">
-              <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)}>
-                <RotateCcw size={16} />
-                <span>Choisir la qualité à télécharger</span>
-              </button>
-              <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
-                <FileInput size={16} />
-                <span>{loadedProject.videoPath ? "Remplacer par une vidéo locale" : "Importer une vidéo locale"}</span>
-              </button>
-            </div>
-            {loadedProject.youtubeUrlWarning && <p className="warning">{loadedProject.youtubeUrlWarning}</p>}
-            {youtubeFormats.length > 0 && youtubeFormatProjectId === loadedProject.id && (
-              <div className="youtube-download-choice">
-                <label className="youtube-format-picker">
-                  <span>{youtubeFormatTitle ? `Qualité à télécharger pour ${youtubeFormatTitle}` : "Qualité à télécharger"}</span>
-                  <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
-                    {youtubeFormats.map((format) => (
-                      <option key={format.id} value={format.formatSelector}>
-                        {format.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button disabled={busy || !selectedYoutubeFormat} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
-                  <Download size={16} />
-                  <span>{loadedProject.videoPath ? "Remplacer depuis YouTube" : "Télécharger depuis YouTube"}</span>
-                </button>
-              </div>
+            {loadedProject.videoPath ? (
+              <details className="media-management">
+                <summary><Settings size={16} /><span>Gérer la vidéo</span></summary>
+                <div className="media-management-content">
+                  <p>Ces opérations remplacent uniquement le fichier vidéo. La transcription et la traduction restent attachées au projet.</p>
+                  <div className="media-tool-actions">
+                    <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)} title={!loadedProject.youtubeUrl ? "Ce projet n’a pas de lien YouTube" : "Choisir une autre qualité YouTube"}>
+                      <RotateCcw size={16} />
+                      <span>Télécharger une autre qualité</span>
+                    </button>
+                    <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
+                      <FileInput size={16} />
+                      <span>Remplacer par un fichier local</span>
+                    </button>
+                  </div>
+                  {youtubeFormats.length > 0 && youtubeFormatProjectId === loadedProject.id && (
+                    <div className="youtube-download-choice">
+                      <label className="youtube-format-picker">
+                        <span>{youtubeFormatTitle ? `Nouvelle qualité pour ${youtubeFormatTitle}` : "Nouvelle qualité"}</span>
+                        <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
+                          {youtubeFormats.map((format) => (
+                            <option key={format.id} value={format.formatSelector}>{format.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <button disabled={busy || !selectedYoutubeFormat} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
+                        <Download size={16} />
+                        <span>Remplacer la vidéo</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </details>
+            ) : (
+              <>
+                <div className="media-tool-actions">
+                  <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)} title={!loadedProject.youtubeUrl ? "Ce projet n’a pas de lien YouTube" : "Choisir la qualité avant téléchargement"}>
+                    <RotateCcw size={16} />
+                    <span>Choisir la qualité à télécharger</span>
+                  </button>
+                  <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
+                    <FileInput size={16} />
+                    <span>Importer une vidéo locale</span>
+                  </button>
+                </div>
+                {youtubeFormats.length > 0 && youtubeFormatProjectId === loadedProject.id && (
+                  <div className="youtube-download-choice">
+                    <label className="youtube-format-picker">
+                      <span>{youtubeFormatTitle ? `Qualité à télécharger pour ${youtubeFormatTitle}` : "Qualité à télécharger"}</span>
+                      <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
+                        {youtubeFormats.map((format) => (
+                          <option key={format.id} value={format.formatSelector}>{format.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button disabled={busy || !selectedYoutubeFormat} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
+                      <Download size={16} />
+                      <span>Télécharger depuis YouTube</span>
+                    </button>
+                  </div>
+                )}
+              </>
             )}
+            {loadedProject.youtubeUrlWarning && <p className="warning">{loadedProject.youtubeUrlWarning}</p>}
             {busy && <p className="desktop-state">{state}</p>}
             {renderDownloadProgress()}
             {downloadProgress?.stage === "done" && (
@@ -2141,6 +2542,15 @@ function DesktopApp() {
 
           {mediaUrl && (
             <section className="player-band">
+              {resumePoint && (
+                <div className="resume-prompt" role="status">
+                  <span>Dernière écoute à <strong>{formatTime(resumePoint.time)}</strong></span>
+                  <div>
+                    <button className="primary-action" onClick={acceptResumePoint}>Reprendre à {formatTime(resumePoint.time)}</button>
+                    <button onClick={restartProjectPlayback}>Recommencer</button>
+                  </div>
+                </div>
+              )}
               <audio
                 ref={audioRef}
                 src={mediaUrl}
@@ -2156,25 +2566,29 @@ function DesktopApp() {
                 <label>
                   <span>Début</span>
                   <input value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
-                  <button onClick={() => setRangeStart(formatTime(currentTime))}>
+                  <button onClick={() => setRangeStart(formatTime(currentTime))} title="Prendre le temps courant comme début - D" aria-label="Prendre le temps courant comme début">
                     <FileInput size={16} />
                   </button>
                 </label>
                 <label>
                   <span>Fin</span>
                   <input value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
-                  <button onClick={() => setRangeEnd(formatTime(currentTime))}>
+                  <button onClick={() => setRangeEnd(formatTime(currentTime))} title="Prendre le temps courant comme fin - F" aria-label="Prendre le temps courant comme fin">
                     <FileInput size={16} />
                   </button>
                 </label>
-                <label className="toggle">
-                  <input checked={loopEnabled} type="checkbox" onChange={(event) => setLoopEnabled(event.target.checked)} />
+                <label className="toggle" title={hasInterval ? "Activer ou désactiver la boucle - B" : "Définis d’abord un intervalle valide"}>
+                  <input disabled={!hasInterval} checked={loopEnabled} type="checkbox" onChange={(event) => setLoopEnabled(event.target.checked)} />
                   <span>Boucle</span>
                 </label>
-                <button className="interval-clear" onClick={clearInterval} title="Effacer l’intervalle (Échap)">
+                <button disabled={!hasInterval} className="interval-clear" onClick={clearInterval} title={hasInterval ? "Quitter l’intervalle - Échap" : "Aucun intervalle actif"}>
                   <X size={16} />
-                  <span>Effacer</span>
+                  <span>Quitter l’intervalle</span>
                 </button>
+              </div>
+              <div className={`playback-mode playback-mode-${playbackMode === "Lecture libre" ? "free" : playbackMode === "Boucle" ? "loop" : "range"}`}>
+                <strong>{playbackMode}</strong>
+                {hasInterval && <span>{rangeStart} → {rangeEnd}</span>}
               </div>
               <div
                 className="timeline-wrap"
@@ -2202,30 +2616,36 @@ function DesktopApp() {
               </div>
               <div className="player-control-row">
                 <div className="audio-controls">
-                  <button onClick={() => seekBy(-10)}>-10s</button>
-                  <button onClick={() => seekBy(-3)}>-3s</button>
-                  <button className="primary-control" onClick={togglePlay}>
+                  <button onClick={() => seekBy(-10)} title="Reculer de 10 secondes - Maj+←">-10s</button>
+                  <button onClick={() => seekBy(-3)} title="Reculer de 3 secondes - ←">-3s</button>
+                  <button className="primary-control" onClick={togglePlay} title={`${isPlaying ? "Pause" : "Lecture"} - Espace`}>
                     {isPlaying ? <Pause size={18} /> : <Play size={18} />}
                     <span>{isPlaying ? "Pause" : "Lire"}</span>
                   </button>
-                  <button onClick={() => seekBy(3)}>+3s</button>
-                  <button onClick={() => seekBy(10)}>+10s</button>
-                  <button className="interval-return" onClick={returnToInterval} title="Revenir au début de l’intervalle">
+                  <button onClick={() => seekBy(3)} title="Avancer de 3 secondes - →">+3s</button>
+                  <button onClick={() => seekBy(10)} title="Avancer de 10 secondes - Maj+→">+10s</button>
+                  <button disabled={!hasInterval} className="interval-return" onClick={returnToInterval} title={hasInterval ? "Aller au début de l’intervalle" : "Aucun intervalle actif"}>
                     <RotateCcw size={16} />
-                    <span>Retour intervalle</span>
+                    <span>Début de l’intervalle</span>
                   </button>
                 </div>
                 <label className="playback-rate">
                   <span>Vitesse</span>
-                  <select value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
+                  <select title="Vitesse de lecture - − / +" value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
                     {PLAYBACK_RATES.map((rate) => <option key={rate} value={rate}>{String(rate).replace(".", ",")}×</option>)}
                   </select>
                 </label>
               </div>
               <div className="player-nav">
-                <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant">
+                <button className="icon-button" disabled={!displayedTranscript} onClick={() => navigateAdjacentSegment(-1)} title="Segment précédent - Alt+Haut" aria-label="Segment précédent">
+                  <ArrowUp size={16} />
+                </button>
+                <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant - S">
                   <LocateFixed size={16} />
                   <span>Segment</span>
+                </button>
+                <button className="icon-button" disabled={!displayedTranscript} onClick={() => navigateAdjacentSegment(1)} title="Segment suivant - Alt+Bas" aria-label="Segment suivant">
+                  <ArrowDown size={16} />
                 </button>
                 <button onClick={scrollToTop} title="Remonter en haut de la page">
                   <ArrowUpToLine size={16} />
@@ -2271,13 +2691,57 @@ function DesktopApp() {
 
           {!transcript && <p className="state">Vidéo téléchargée. Importe une transcription nettoyée pour commencer l'édition.</p>}
           {isHistoryPreview && <p className="state">Ancienne sauvegarde en lecture seule.</p>}
+          {searchOpen && displayedTranscript && (
+            <section className="document-search" role="search">
+              <Search size={17} />
+              <input
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setSearchIndex(0);
+                }}
+                placeholder="Rechercher dans l’arabe et le français"
+                aria-label="Rechercher dans la transcription"
+              />
+              <span>{searchQuery.trim() ? `${searchOccurrenceCount} occurrence(s)` : ""}</span>
+              <button className="icon-button" disabled={!searchResults.length} onClick={() => navigateSearch(-1)} title="Résultat précédent" aria-label="Résultat précédent">
+                <ArrowUp size={16} />
+              </button>
+              <button className="icon-button" disabled={!searchResults.length} onClick={() => navigateSearch(1)} title="Résultat suivant" aria-label="Résultat suivant">
+                <ArrowDown size={16} />
+              </button>
+              <button className="icon-button" onClick={() => setSearchOpen(false)} title="Fermer la recherche - Échap" aria-label="Fermer la recherche">
+                <X size={16} />
+              </button>
+            </section>
+          )}
+          {segmentIssues.length > 0 && (
+            <section className="validation-summary" role="alert">
+              <AlertTriangle size={17} />
+              <span>{segmentIssues.length} erreur(s) d’horodatage à corriger avant la sauvegarde.</span>
+              <button onClick={() => focusSegment(segmentIssues[0].segmentId, false)}>Voir la première</button>
+            </section>
+          )}
+          {undoVisible && undoStack.length > 0 && (
+            <div className="undo-toast" role="status">
+              <span>Structure des segments modifiée.</span>
+              <button onClick={undoLastStructuralEdit}><Undo2 size={15} /><span>Annuler</span></button>
+            </div>
+          )}
           {displayedTranscript && (
             <section className="workspace">
               <section className="segments">
                 {displayedTranscript.segments.map((segment, index) => (
                   <article
-                    className={`segment-row ${focusedSegmentId === segment.id ? "segment-row-focused" : ""}`}
+                    className={[
+                      "segment-row",
+                      activeSegmentId === segment.id ? "segment-row-active" : "",
+                      focusedSegmentId === segment.id ? "segment-row-focused" : "",
+                      issuesBySegment.has(segment.id) ? "segment-row-invalid" : "",
+                    ].filter(Boolean).join(" ")}
                     key={segment.id}
+                    aria-current={activeSegmentId === segment.id ? "true" : undefined}
                     ref={(element) => {
                       if (element) segmentRefs.current.set(segment.id, element);
                       else segmentRefs.current.delete(segment.id);
@@ -2286,7 +2750,7 @@ function DesktopApp() {
                     <div className="segment-meta">
                       <label className="time-control time-control-nav">
                         <span>Lire</span>
-                        <button className="timestamp" onClick={() => seekTo(segment.start)}>
+                        <button className="timestamp" onClick={() => seekTo(segment.start)} title="Lire depuis ce segment">
                           {formatTime(segment.start)}
                         </button>
                       </label>
@@ -2309,34 +2773,65 @@ function DesktopApp() {
                         />
                       </label>
                     </div>
+                    {issuesBySegment.has(segment.id) && (
+                      <button className="segment-error" onClick={() => focusSegment(segment.id, false)}>
+                        <AlertTriangle size={15} />
+                        <span>{issuesBySegment.get(segment.id)?.join(" · ")}</span>
+                      </button>
+                    )}
                     <div className="segment-fields">
                       <textarea
                         dir="rtl"
                         lang="ar"
                         disabled={editorLocked}
+                        ref={(element) => {
+                          const key = `${segment.id}:text`;
+                          if (element) segmentFieldRefs.current.set(key, element);
+                          else segmentFieldRefs.current.delete(key);
+                        }}
                         value={segment.text}
                         onChange={(event) => updateSegment(segment.id, { text: event.target.value })}
                       />
                       <textarea
                         disabled={editorLocked || !attachedTranslation}
+                        ref={(element) => {
+                          const key = `${segment.id}:translation`;
+                          if (element) segmentFieldRefs.current.set(key, element);
+                          else segmentFieldRefs.current.delete(key);
+                        }}
                         value={segment.translation}
                         placeholder={attachedTranslation ? "Traduction" : "Importer une traduction alignée"}
                         onChange={(event) => updateSegment(segment.id, { translation: event.target.value })}
                       />
                       <div className="segment-actions">
-                        <button disabled={editorLocked} onClick={() => addSegmentAfter(segment.id)}>
+                        <button disabled={editorLocked} onClick={() => addSegmentAfter(segment.id)} title={editorLocked ? "Modification désactivée en lecture seule" : "Ajouter un segment après"} aria-label="Ajouter un segment après">
                           <Plus size={16} />
                         </button>
                         <button
                           disabled={editorLocked || currentTime <= segment.start || currentTime >= segment.end}
                           onClick={() => splitSegment(segment.id)}
+                          title={editorLocked
+                            ? "Modification désactivée en lecture seule"
+                            : currentTime <= segment.start || currentTime >= segment.end
+                              ? "Place le curseur strictement à l’intérieur de ce segment"
+                              : `Scinder au temps ${formatTime(currentTime)}`}
+                          aria-label="Scinder le segment au temps courant"
                         >
                           <Scissors size={16} />
                         </button>
-                        <button disabled={editorLocked || index >= displayedTranscript.segments.length - 1} onClick={() => mergeWithNext(segment.id)}>
+                        <button
+                          disabled={editorLocked || index >= displayedTranscript.segments.length - 1}
+                          onClick={() => mergeWithNext(segment.id)}
+                          title={editorLocked
+                            ? "Modification désactivée en lecture seule"
+                            : index >= displayedTranscript.segments.length - 1
+                              ? "Aucun segment suivant à fusionner"
+                              : "Fusionner avec le segment suivant"}
+                          aria-label="Fusionner avec le segment suivant"
+                        >
                           <Combine size={16} />
                         </button>
-                        <button disabled={editorLocked} onClick={() => deleteSegment(segment.id)}>
+                        <button disabled={editorLocked} onClick={() => deleteSegment(segment.id)} title={editorLocked ? "Modification désactivée en lecture seule" : "Supprimer ce segment"} aria-label="Supprimer ce segment">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -2350,22 +2845,19 @@ function DesktopApp() {
       )}
 
       {newProjectOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={closeNewProject}>
-          <section
-            className="modal new-project-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="new-project-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
+        <AccessibleModal
+          className="new-project-modal"
+          labelledBy="new-project-title"
+          onClose={closeNewProject}
+          closeOnBackdrop={!busy}
+          closeDisabled={busy}
+        >
             <div className="modal-heading">
               <div>
                 <h2 id="new-project-title">Nouveau projet</h2>
                 <p>Choisis d’abord la source de la vidéo.</p>
               </div>
-              <button className="icon-button" disabled={busy} onClick={closeNewProject} title="Fermer">
-                <X size={18} />
-              </button>
+              <ModalCloseButton disabled={busy} onClick={closeNewProject} />
             </div>
 
             <div className="creation-tabs" role="tablist" aria-label="Source de la vidéo">
@@ -2398,7 +2890,7 @@ function DesktopApp() {
                 <label>
                   <span>Lien YouTube</span>
                   <input
-                    autoFocus
+                    data-autofocus
                     value={newYoutubeUrl}
                     onChange={(event) => {
                       setNewYoutubeUrl(event.target.value);
@@ -2452,7 +2944,7 @@ function DesktopApp() {
                 <label>
                   <span>Titre du projet</span>
                   <input
-                    autoFocus
+                    data-autofocus
                     maxLength={200}
                     value={newProjectTitle}
                     onChange={(event) => setNewProjectTitle(event.target.value)}
@@ -2479,74 +2971,77 @@ function DesktopApp() {
                 </button>
               </section>
             )}
-            {error && <pre className="error import-error">{error}</pre>}
-          </section>
-        </div>
+            {error && <ErrorNotice details={error} />}
+        </AccessibleModal>
       )}
 
       {shortcutsOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setShortcutsOpen(false)}>
-          <section
-            className="modal shortcuts-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="shortcuts-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
+        <AccessibleModal
+          className="shortcuts-modal"
+          labelledBy="shortcuts-title"
+          onClose={() => setShortcutsOpen(false)}
+          closeKeys={["Escape", "q", "?"]}
+        >
             <div className="modal-heading">
               <div>
-                <h2 id="shortcuts-title">Raccourcis de lecture</h2>
+                <h2 id="shortcuts-title">Aide et raccourcis</h2>
                 <p>Actifs hors des champs de texte.</p>
               </div>
-              <button className="icon-button" onClick={() => setShortcutsOpen(false)} title="Fermer">
-                <X size={18} />
-              </button>
+              <ModalCloseButton onClick={() => setShortcutsOpen(false)} />
             </div>
-            <dl className="shortcuts-list">
-              <div><dt>Espace</dt><dd>Lire ou mettre en pause</dd></div>
-              <div><dt>← / →</dt><dd>Reculer ou avancer de 3 secondes</dd></div>
-              <div><dt>Maj + ← / →</dt><dd>Reculer ou avancer de 10 secondes</dd></div>
-              <div><dt>D</dt><dd>Définir le début de l’intervalle</dd></div>
-              <div><dt>F</dt><dd>Définir la fin de l’intervalle</dd></div>
-              <div><dt>B</dt><dd>Activer ou désactiver la boucle</dd></div>
-              <div><dt>Échap</dt><dd>Effacer l’intervalle</dd></div>
-              <div><dt>− / +</dt><dd>Réduire ou augmenter la vitesse</dd></div>
-              <div><dt>S</dt><dd>Aller au segment du temps courant</dd></div>
-              <div><dt>?</dt><dd>Ouvrir cette aide</dd></div>
-            </dl>
+            <div className="shortcut-groups">
+              <section><h3>Lecture</h3><dl className="shortcuts-list">
+                <div><dt>Espace</dt><dd>Lire ou mettre en pause</dd></div>
+                <div><dt>← / →</dt><dd>Reculer ou avancer de 3 secondes</dd></div>
+                <div><dt>Maj + ← / →</dt><dd>Reculer ou avancer de 10 secondes</dd></div>
+                <div><dt>− / +</dt><dd>Réduire ou augmenter la vitesse</dd></div>
+              </dl></section>
+              <section><h3>Intervalle</h3><dl className="shortcuts-list">
+                <div><dt>D</dt><dd>Définir le début</dd></div>
+                <div><dt>F</dt><dd>Définir la fin</dd></div>
+                <div><dt>B</dt><dd>Activer ou désactiver la boucle</dd></div>
+                <div><dt>Échap</dt><dd>Quitter l’intervalle</dd></div>
+              </dl></section>
+              <section><h3>Navigation</h3><dl className="shortcuts-list">
+                <div><dt>S</dt><dd>Aller au segment courant</dd></div>
+                <div><dt>Alt + ↑ / ↓</dt><dd>Segment précédent ou suivant</dd></div>
+                <div><dt>Ctrl/Cmd + F</dt><dd>Rechercher dans le document</dd></div>
+              </dl></section>
+              <section><h3>Édition</h3><dl className="shortcuts-list">
+                <div><dt>Ctrl/Cmd + S</dt><dd>Créer une sauvegarde</dd></div>
+                <div><dt>Ctrl/Cmd + Z</dt><dd>Annuler une action structurelle hors d’un champ</dd></div>
+                <div><dt>Q / ? / Échap</dt><dd>Fermer cette aide</dd></div>
+              </dl></section>
+            </div>
             <div className="modal-actions">
               <button onClick={() => setShortcutsOpen(false)}>Fermer</button>
             </div>
-          </section>
-        </div>
+        </AccessibleModal>
       )}
 
       {pasteImportOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <section className="modal paste-modal" role="dialog" aria-modal="true">
-            <h2>Importer une traduction collée</h2>
+        <AccessibleModal className="paste-modal" labelledBy="paste-translation-title" onClose={() => setPasteImportOpen(false)}>
+            <h2 id="paste-translation-title">Importer une traduction collée</h2>
             <p>Colle une traduction Tarjama Studio en Markdown. Les timestamps seront validés avant remplacement.</p>
             <textarea
               value={pastedTranslation}
               onChange={(event) => setPastedTranslation(event.target.value)}
               placeholder={'## 00:00.000 --> 00:03.440\nTraduction française.'}
             />
-            {error && <pre className="error import-error">{error}</pre>}
+            {error && <ErrorNotice details={error} />}
             <div className="modal-actions">
               <button onClick={() => setPasteImportOpen(false)}>Annuler</button>
-              <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()}>
+              <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()} title={!pastedTranslation.trim() ? "Colle d’abord une traduction" : "Prévisualiser l’import"}>
                 <Check size={16} />
-                <span>Importer</span>
+                <span>Prévisualiser</span>
               </button>
             </div>
-          </section>
-        </div>
+        </AccessibleModal>
       )}
 
       {cleanupImportOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <section className="modal paste-modal" role="dialog" aria-modal="true">
-            <h2>Importer la transcription nettoyée</h2>
+        <AccessibleModal className="paste-modal" labelledBy="paste-cleanup-title" onClose={() => setCleanupImportOpen(false)} closeOnBackdrop={!busy} closeDisabled={busy}>
+            <h2 id="paste-cleanup-title">Importer la transcription nettoyée</h2>
             <p>
               Colle le Markdown horodaté renvoyé par le LLM. Les titres de blocs doivent reprendre exactement les timestamps source; seuls les textes peuvent être corrigés ou les blocs inutiles supprimés.
             </p>
@@ -2560,39 +3055,31 @@ function DesktopApp() {
                 {cleanedPasteReview.lines.map((line) => <span key={line}>{line}</span>)}
               </div>
             )}
-            {error && <pre className="error import-error">{error}</pre>}
+            {error && <ErrorNotice details={error} />}
             <div className="modal-actions">
               <button disabled={busy} onClick={() => setCleanupImportOpen(false)}>Annuler</button>
               <button
                 disabled={busy || !cleanedPasteReview.valid}
-                onClick={() => void importCleanedTranscriptContentDesktop()}
+                onClick={() => previewPastedImport("cleanup", pastedCleanupTranscript)}
               >
                 <Check size={16} />
-                <span>Valider et importer</span>
+                <span>Prévisualiser</span>
               </button>
             </div>
-          </section>
-        </div>
+        </AccessibleModal>
       )}
 
       {renameProjectOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setRenameProjectOpen(false)}>
-          <section
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="rename-project-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
+        <AccessibleModal labelledBy="rename-project-title" onClose={() => setRenameProjectOpen(false)} closeOnBackdrop={!busy} closeDisabled={busy}>
             <h2 id="rename-project-title">Renommer le projet</h2>
             <p>Ce titre sert uniquement à identifier le projet dans ta bibliothèque.</p>
             <input
-              autoFocus
+              data-autofocus
               maxLength={200}
               value={projectTitleDraft}
               onChange={(event) => setProjectTitleDraft(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Escape") setRenameProjectOpen(false);
+                if (event.key === "Escape" && !busy) setRenameProjectOpen(false);
                 if (event.key === "Enter" && projectTitleDraft.trim()) void renameProjectDesktop();
               }}
             />
@@ -2606,8 +3093,51 @@ function DesktopApp() {
                 <span>Renommer</span>
               </button>
             </div>
-          </section>
-        </div>
+        </AccessibleModal>
+      )}
+
+      {importPreview && (
+        <AccessibleModal
+          className="import-review-modal"
+          labelledBy="import-review-title"
+          onClose={() => setImportPreview(null)}
+          closeOnBackdrop={!busy}
+          closeDisabled={busy}
+        >
+          <div className="modal-heading">
+            <div>
+              <h2 id="import-review-title">Vérifier avant remplacement</h2>
+              <p>{importPreview.filename}</p>
+            </div>
+            <ModalCloseButton disabled={busy} onClick={() => setImportPreview(null)} />
+          </div>
+          <div className={`import-review-summary ${importPreview.preview.valid ? "valid" : "invalid"}`}>
+            <strong>{importPreview.preview.valid ? "Fichier prêt à importer" : "Import bloqué"}</strong>
+            <span>{importPreview.preview.segmentCount} segment(s)</span>
+            {importPreview.kind === "translation" && (
+              <span>{importPreview.preview.alignedCount} timestamp(s) aligné(s) sur {transcript?.segments.length ?? 0}</span>
+            )}
+          </div>
+          {importPreview.preview.errors.length > 0 && (
+            <ul className="import-review-errors">
+              {importPreview.preview.errors.map((message) => <li key={message}>{message}</li>)}
+            </ul>
+          )}
+          <details className="import-content-details">
+            <summary>Afficher le contenu</summary>
+            <pre>{importPreview.content.slice(0, IMPORT_PREVIEW_CHARACTER_LIMIT)}</pre>
+            {importPreview.content.length > IMPORT_PREVIEW_CHARACTER_LIMIT && (
+              <p>Aperçu limité aux {IMPORT_PREVIEW_CHARACTER_LIMIT.toLocaleString("fr-FR")} premiers caractères. Le fichier complet sera importé.</p>
+            )}
+          </details>
+          <div className="modal-actions">
+            <button disabled={busy} onClick={() => void chooseImportFile(importPreview.kind)}>Choisir un autre fichier</button>
+            <button disabled={busy} onClick={() => setImportPreview(null)}>Annuler</button>
+            <button className="primary-action" disabled={busy || !importPreview.preview.valid} onClick={() => void confirmImportPreview()}>
+              <Check size={16} /><span>Confirmer le remplacement</span>
+            </button>
+          </div>
+        </AccessibleModal>
       )}
 
     </main>

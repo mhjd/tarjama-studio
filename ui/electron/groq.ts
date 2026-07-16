@@ -135,28 +135,43 @@ async function apiKey(): Promise<string> {
   return key;
 }
 
-async function runFfmpeg(command: string, args: string[], cwd: string): Promise<void> {
+async function runFfmpeg(command: string, args: string[], cwd: string, signal?: AbortSignal): Promise<void> {
   const { spawn } = await import("node:child_process");
   await new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("Opération annulée"));
+      return;
+    }
     const child = spawn(command, args, { cwd, windowsHide: true });
     let stderr = "";
     let settled = false;
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      child.kill();
+      reject(new Error("Opération annulée"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const cleanup = () => signal?.removeEventListener("abort", onAbort);
     child.stderr.on("data", (chunk) => {
       stderr += String(chunk);
       if (Buffer.byteLength(stderr, "utf8") > MAX_FFMPEG_ERROR_BYTES && !settled) {
         settled = true;
         child.kill();
+        cleanup();
         reject(new Error("Extraction audio interrompue: sortie ffmpeg anormalement volumineuse"));
       }
     });
     child.on("error", (error) => {
       if (settled) return;
       settled = true;
+      cleanup();
       reject(error);
     });
     child.on("close", (code) => {
       if (settled) return;
       settled = true;
+      cleanup();
       if (code === 0) resolve();
       else reject(new Error(`Extraction audio impossible (ffmpeg ${code}): ${stderr.trim().slice(-1200)}`));
     });
@@ -169,6 +184,7 @@ async function createChunk(
   outputPath: string,
   start: number,
   requestedDuration: number,
+  signal?: AbortSignal,
 ): Promise<{ duration: number; bytes: number }> {
   let duration = requestedDuration;
   while (duration >= MIN_CHUNK_SECONDS) {
@@ -177,7 +193,7 @@ async function createChunk(
       "-hide_banner", "-loglevel", "error", "-y",
       "-ss", String(start), "-t", String(duration), "-i", sourcePath,
       "-vn", "-map", "0:a:0", "-ar", "16000", "-ac", "1", "-c:a", "flac", outputPath,
-    ], path.dirname(outputPath));
+    ], path.dirname(outputPath), signal);
     const bytes = (await fs.stat(outputPath)).size;
     if (bytes <= MAX_CHUNK_BYTES) return { duration, bytes };
     duration = Math.floor(duration * 0.75);
@@ -189,7 +205,7 @@ async function createChunk(
   );
 }
 
-async function transcribeChunk(filePath: string, key: string): Promise<GroqResponse> {
+async function transcribeChunk(filePath: string, key: string, signal?: AbortSignal): Promise<GroqResponse> {
   const data = new FormData();
   const bytes = await fs.readFile(filePath);
   data.append("file", new Blob([bytes], { type: "audio/flac" }), path.basename(filePath));
@@ -199,7 +215,12 @@ async function transcribeChunk(filePath: string, key: string): Promise<GroqRespo
   data.append("response_format", "verbose_json");
   data.append("timestamp_granularities[]", "word");
   data.append("timestamp_granularities[]", "segment");
-  const response = await fetch(API_URL, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: data });
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}` },
+    body: data,
+    signal,
+  });
   const payload = await response.json().catch(() => ({})) as GroqResponse;
   if (response.ok) return payload;
   const detail = payload.error?.message || `HTTP ${response.status}`;
@@ -223,6 +244,7 @@ export async function transcribeWithGroq(
   durationSeconds: number,
   ffmpeg: string,
   emit?: (progress: GroqTranscriptionProgress) => void,
+  signal?: AbortSignal,
 ): Promise<WorkspaceTranscript> {
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
     throw new Error("Durée de la vidéo inconnue; impossible de préparer les morceaux audio");
@@ -246,10 +268,11 @@ export async function transcribeWithGroq(
   try {
     emit?.({ projectId, stage: "preparing", percent: 0, message: "Préparation de l'audio pour Groq" });
     while (start < durationSeconds - 0.01) {
+      if (signal?.aborted) throw new Error("Opération annulée");
       chunkIndex += 1;
       const requested = Math.min(TARGET_CHUNK_SECONDS, durationSeconds - start);
       const chunkPath = path.join(tempDir, `chunk-${String(chunkIndex).padStart(3, "0")}.flac`);
-      const chunk = await createChunk(ffmpeg, sourcePath, chunkPath, start, requested);
+      const chunk = await createChunk(ffmpeg, sourcePath, chunkPath, start, requested, signal);
       const chunkCount = Math.max(estimatedChunks, chunkIndex);
       emit?.({
         projectId,
@@ -259,7 +282,7 @@ export async function transcribeWithGroq(
         percent: Math.min(95, ((chunkIndex - 0.5) / chunkCount) * 100),
         message: `Transcription Groq: morceau ${chunkIndex}/${chunkCount} (${(chunk.bytes / 1024 / 1024).toFixed(1)} MiB)`,
       });
-      const result = await transcribeChunk(chunkPath, key);
+      const result = await transcribeChunk(chunkPath, key, signal);
       await fs.writeFile(
         path.join(auditDir, `chunk-${String(chunkIndex).padStart(3, "0")}.json`),
         `${JSON.stringify({ chunk_start: start, chunk_duration: chunk.duration, chunk_bytes: chunk.bytes, response: result }, null, 2)}\n`,

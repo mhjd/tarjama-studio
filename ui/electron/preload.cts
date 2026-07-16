@@ -15,6 +15,8 @@ import type {
   DownloadYoutubeResult,
   ImportTranslationResult,
   ImportTranscriptResult,
+  LongOperationKind,
+  TextImportSelection,
   UpdateToolResult,
   WorkspaceTranscript,
   WorkspaceTranslation,
@@ -45,6 +47,10 @@ const api = {
     ipcRenderer.invoke("project:restore-snapshot", projectId, snapshotId),
   importTranscript: (projectId: string): Promise<ImportTranscriptResult | null> =>
     ipcRenderer.invoke("transcript:import", projectId),
+  pickTextImport: (kind: "transcript" | "cleanup" | "translation"): Promise<TextImportSelection | null> =>
+    ipcRenderer.invoke("import:pick-text", kind),
+  importTranscriptContent: (projectId: string, content: string, filename: string): Promise<ImportTranscriptResult> =>
+    ipcRenderer.invoke("transcript:import-content", projectId, content, filename),
   cleanupTranscriptPrompt: (projectId: string, transcript: WorkspaceTranscript): Promise<string> =>
     ipcRenderer.invoke("transcript:cleanup-prompt", projectId, transcript),
   translationPrompt: (projectId: string, transcript: WorkspaceTranscript): Promise<string> =>
@@ -88,6 +94,7 @@ const api = {
   saveGroqApiKey: (apiKey: string): Promise<GroqKeyStatus> => ipcRenderer.invoke("groq:save-key", apiKey),
   clearGroqApiKey: (): Promise<GroqKeyStatus> => ipcRenderer.invoke("groq:clear-key"),
   transcribeWithGroq: (projectId: string): Promise<DesktopProjectLoad> => ipcRenderer.invoke("groq:transcribe", projectId),
+  cancelOperation: (kind: LongOperationKind): Promise<boolean> => ipcRenderer.invoke("operation:cancel", kind),
   onGroqTranscriptionProgress: (callback: (progress: GroqTranscriptionProgress) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: GroqTranscriptionProgress) => callback(progress);
     ipcRenderer.on("groq:progress", listener);

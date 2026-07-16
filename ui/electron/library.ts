@@ -795,17 +795,31 @@ async function runTool(
   args: string[],
   cwd: string,
   onOutput?: (chunk: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   return await new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("Opération annulée"));
+      return;
+    }
     const child = spawn(command, args, { cwd, windowsHide: true });
     let stdout = "";
     let stderr = "";
     let outputBytes = 0;
     let settled = false;
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      child.kill();
+      reject(new Error("Opération annulée"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const cleanup = () => signal?.removeEventListener("abort", onAbort);
     const rejectOnce = (error: ToolError) => {
       if (settled) return;
       settled = true;
       child.kill();
+      cleanup();
       reject(error);
     };
     const appendOutput = (target: "stdout" | "stderr", chunk: unknown) => {
@@ -831,6 +845,7 @@ async function runTool(
     child.on("close", (code) => {
       if (settled) return;
       settled = true;
+      cleanup();
       if (code === 0) {
         resolve(stdout);
       } else {
@@ -923,11 +938,12 @@ async function runYtdlp(
   args: string[],
   cwd: string,
   onOutput?: (chunk: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      return await runTool(command, [...YTDLP_RETRY_ARGS, ...args], cwd, onOutput);
+      return await runTool(command, [...YTDLP_RETRY_ARGS, ...args], cwd, onOutput, signal);
     } catch (error) {
       lastError = error;
       if (!isRetryableYtdlpError(error) || attempt === 3) break;
@@ -1563,21 +1579,46 @@ export async function createLocalProject(title: string): Promise<CreateLocalProj
   return { project };
 }
 
-export async function importTranscript(projectId: string): Promise<ImportTranscriptResult | null> {
+export async function pickTextImport(kind: "transcript" | "cleanup" | "translation"): Promise<{ filename: string; content: string } | null> {
+  if (!["transcript", "cleanup", "translation"].includes(kind)) throw new Error("Type d’import invalide");
+  const filters = kind === "transcript"
+    ? [{ name: "Transcript JSON", extensions: ["json"] }]
+    : [{ name: "Document horodaté", extensions: ["md", "txt", "json"] }];
+  const selection = await dialog.showOpenDialog({
+    title: kind === "translation"
+      ? "Choisir une traduction"
+      : kind === "cleanup"
+        ? "Choisir une transcription nettoyée"
+        : "Choisir une transcription",
+    properties: ["openFile"],
+    filters,
+  });
+  if (selection.canceled || !selection.filePaths[0]) return null;
+  return {
+    filename: path.basename(selection.filePaths[0]),
+    content: await readTextFileLimited(selection.filePaths[0]),
+  };
+}
+
+export async function importTranscriptContent(
+  projectId: string,
+  content: string,
+  _filename = "transcript.json",
+): Promise<ImportTranscriptResult> {
   const projectPath = projectFile(projectId);
   if (!(await pathExists(projectPath))) {
     throw new Error("Project not found");
   }
   const project = await readJson<DesktopProject>(projectPath);
   await requireProjectVideo(project);
-  const selection = await dialog.showOpenDialog({
-    title: `Importer une transcription pour ${project.title}`,
-    properties: ["openFile"],
-    filters: [{ name: "Transcript JSON", extensions: ["json"] }],
-  });
-  if (selection.canceled || !selection.filePaths[0]) return null;
-
-  const transcript = validateTranscript(JSON.parse(await readTextFileLimited(selection.filePaths[0])));
+  assertTextSize(content);
+  let payload: unknown;
+  try {
+    payload = JSON.parse(content);
+  } catch (error) {
+    throw new Error(`JSON de transcription invalide: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const transcript = validateTranscript(payload);
   const dir = projectDir(project.id);
   await fs.mkdir(dir, { recursive: true });
 
@@ -1596,6 +1637,12 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
   };
   await writeProject(updatedProject);
   return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
+}
+
+export async function importTranscript(projectId: string): Promise<ImportTranscriptResult | null> {
+  const selection = await pickTextImport("transcript");
+  if (!selection) return null;
+  return await importTranscriptContent(projectId, selection.content, selection.filename);
 }
 
 const PROMPT_FILENAMES: Record<PromptKind, string> = {
@@ -1897,6 +1944,7 @@ export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsRes
 export async function downloadYoutube(
   request: DownloadYoutubeRequest,
   emitProgress?: (progress: DownloadProgress) => void,
+  signal?: AbortSignal,
 ): Promise<DownloadYoutubeResult> {
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
@@ -1915,6 +1963,8 @@ export async function downloadYoutube(
       sourceUrl,
     ],
     libraryDir(),
+    undefined,
+    signal,
   );
   const metadata = parseYtdlpMetadata(metadataText);
   assertYoutubeMetadata(metadata);
@@ -1929,9 +1979,10 @@ export async function downloadYoutube(
   }
   const dir = projectDir(id);
   await fs.mkdir(dir, { recursive: true });
+  const downloadDir = await fs.mkdtemp(path.join(dir, ".download-"));
   emitProgress?.({ projectId: id, stage: "download", percent: 0, message: "Téléchargement MP4 compatible..." });
 
-  const outputTemplate = path.join(dir, "source.%(ext)s");
+  const outputTemplate = path.join(downloadDir, "source.%(ext)s");
   const allowedFormats = youtubeFormatOptions(metadata).map((format) => format.formatSelector);
   const selectedFormat = safeFormatSelector(request.formatSelector, allowedFormats, BEST_MERGED_FORMAT);
   const downloadArgs = (format: string, cleanStart = false): string[] => [
@@ -1956,40 +2007,47 @@ export async function downloadYoutube(
       sourceUrl,
     ];
 
-  let downloadOutput: string;
+  let videoPath = "";
   try {
-    downloadOutput = await runYtdlp(
-      ytdlp,
-      downloadArgs(selectedFormat, true),
-      dir,
-      (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
-    );
-  } catch (error) {
-    if (!isHttp403YtdlpError(error)) throw error;
-    emitProgress?.({
-      projectId: id,
-      stage: "download",
-      percent: 0,
-      message: "YouTube refuse ce flux, nouvel essai avec un format alternatif...",
-    });
-    await removeGeneratedSourceFiles(dir);
-    downloadOutput = await runYtdlp(
-      ytdlp,
-      downloadArgs("18/b[ext=mp4]/best", true),
-      dir,
-      (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
-    );
-  }
+    let downloadOutput: string;
+    try {
+      downloadOutput = await runYtdlp(
+        ytdlp,
+        downloadArgs(selectedFormat, true),
+        downloadDir,
+        (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
+        signal,
+      );
+    } catch (error) {
+      if (!isHttp403YtdlpError(error) || signal?.aborted) throw error;
+      emitProgress?.({
+        projectId: id,
+        stage: "download",
+        percent: 0,
+        message: "YouTube refuse ce flux, nouvel essai avec un format alternatif...",
+      });
+      await removeGeneratedSourceFiles(downloadDir);
+      downloadOutput = await runYtdlp(
+        ytdlp,
+        downloadArgs("18/b[ext=mp4]/best", true),
+        downloadDir,
+        (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
+        signal,
+      );
+    }
 
-  const printedPath = lastOutputLine(downloadOutput);
-  const videoPath = path.isAbsolute(printedPath) ? printedPath : path.resolve(dir, printedPath);
-  await assertInsideLibrary(videoPath);
-  if (!(await pathExists(videoPath))) {
-    throw new Error("yt-dlp did not produce the expected video file");
-  }
-  const streams = await mediaStreams(videoPath, ffmpeg);
-  if (!streams.video || !streams.audio) {
-    throw new Error("Downloaded media must contain both video and audio streams");
+    const printedPath = lastOutputLine(downloadOutput);
+    const temporaryVideo = path.isAbsolute(printedPath) ? printedPath : path.resolve(downloadDir, printedPath);
+    await assertInsideLibrary(temporaryVideo);
+    if (!(await pathExists(temporaryVideo))) throw new Error("yt-dlp did not produce the expected video file");
+    const streams = await mediaStreams(temporaryVideo, ffmpeg);
+    if (!streams.video || !streams.audio) throw new Error("Downloaded media must contain both video and audio streams");
+    const extension = path.extname(temporaryVideo) || ".mp4";
+    videoPath = path.join(dir, `source${extension}`);
+    await removeGeneratedSourceFiles(dir);
+    await fs.rename(temporaryVideo, videoPath);
+  } finally {
+    await fs.rm(downloadDir, { recursive: true, force: true });
   }
   emitProgress?.({ projectId: id, stage: "done", percent: 100, message: "Téléchargement terminé" });
 
@@ -2329,6 +2387,7 @@ export async function exportVideo(
   openAfter = false,
   requestedOptions?: Partial<ExportVideoOptions>,
   emitProgress?: (progress: ExportProgress) => void,
+  signal?: AbortSignal,
 ): Promise<DesktopExportResult | null> {
   const options = normalizeExportOptions(requestedOptions);
   const project = await readProject(projectId);
@@ -2398,9 +2457,11 @@ export async function exportVideo(
     filters.push(`scale=${targetDimensions.width}:${targetDimensions.height}:flags=lanczos`);
   }
   filters.push(await subtitleFilter(assPath));
-  await runTool(
-    ffmpeg,
-    [
+  const temporaryOutput = path.join(outDir, `${stem}.partial.mp4`);
+  try {
+    await runTool(
+      ffmpeg,
+      [
       "-hide_banner",
       "-loglevel",
       "error",
@@ -2421,11 +2482,16 @@ export async function exportVideo(
       "yuv420p",
       "-movflags",
       "+faststart",
-      selection.filePath,
-    ],
-    projectDir(projectId),
-    createFfmpegExportProgressHandler(projectId, track, durationForProgress, emitProgress),
-  );
+        temporaryOutput,
+      ],
+      projectDir(projectId),
+      createFfmpegExportProgressHandler(projectId, track, durationForProgress, emitProgress),
+      signal,
+    );
+    await fs.copyFile(temporaryOutput, selection.filePath);
+  } finally {
+    await fs.rm(temporaryOutput, { force: true });
+  }
   emitProgress?.({
     projectId,
     track,

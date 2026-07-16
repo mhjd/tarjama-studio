@@ -27,6 +27,13 @@ type ImportTranscriptResult = {
   segmentCount: number;
 };
 
+type TextImportSelection = {
+  filename: string;
+  content: string;
+};
+
+type LongOperationKind = "download" | "transcription" | "export";
+
 type DownloadYoutubeRequest = {
   url: string;
   projectId?: string;
@@ -217,6 +224,8 @@ interface Window {
     loadSnapshot(projectId: string, snapshotId: string): Promise<{ snapshot: DesktopSnapshotInfo; transcript: DesktopTranscript }>;
     restoreSnapshot(projectId: string, snapshotId?: string): Promise<DesktopProjectLoad>;
     importTranscript(projectId: string): Promise<ImportTranscriptResult | null>;
+    pickTextImport(kind: "transcript" | "cleanup" | "translation"): Promise<TextImportSelection | null>;
+    importTranscriptContent(projectId: string, content: string, filename: string): Promise<ImportTranscriptResult>;
     cleanupTranscriptPrompt(projectId: string, transcript: DesktopTranscript): Promise<string>;
     translationPrompt(projectId: string, transcript: DesktopTranscript): Promise<string>;
     readPromptSettings(): Promise<DesktopPromptSettings>;
@@ -248,6 +257,7 @@ interface Window {
     saveGroqApiKey(apiKey: string): Promise<GroqKeyStatus>;
     clearGroqApiKey(): Promise<GroqKeyStatus>;
     transcribeWithGroq(projectId: string): Promise<DesktopProjectLoad>;
+    cancelOperation(kind: LongOperationKind): Promise<boolean>;
     onGroqTranscriptionProgress(callback: (progress: GroqTranscriptionProgress) => void): () => void;
     onDownloadProgress(callback: (progress: DownloadProgress) => void): () => void;
     onExportProgress(callback: (progress: ExportProgress) => void): () => void;

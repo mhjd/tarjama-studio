@@ -46,6 +46,13 @@ export type ImportTranscriptResult = {
   segmentCount: number;
 };
 
+export type TextImportSelection = {
+  filename: string;
+  content: string;
+};
+
+export type LongOperationKind = "download" | "transcription" | "export";
+
 export type DownloadProgress = {
   projectId: string;
   stage: "metadata" | "download" | "mux" | "done";

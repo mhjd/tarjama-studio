@@ -13,12 +13,14 @@ import {
   importTranslationContent,
   importTranslationFile,
   importTranscript,
+  importTranscriptContent,
   importCleanedTranscriptContent,
   importCleanedTranscriptFile,
   listYoutubeFormats,
   loadProject,
   loadSnapshot,
   openProjectFolder,
+  pickTextImport,
   readLibrary,
   restoreSnapshot,
   saveCurrentTranscript,
@@ -44,6 +46,7 @@ import type {
   DownloadYoutubeRequest,
   ExportSubtitleTrack,
   ExportVideoOptions,
+  LongOperationKind,
   PromptKind,
   WorkspaceTranscript,
   WorkspaceTranslation,
@@ -53,6 +56,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_ORIGIN = "tarjama://app";
 let startupLogFile = "";
 let mainWindow: BrowserWindow | null = null;
+const operationControllers = new Map<LongOperationKind, AbortController>();
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -193,6 +197,8 @@ function createWindow(): void {
   });
   window.on("unresponsive", () => writeStartupLog("Main window is unresponsive"));
   window.on("closed", () => {
+    operationControllers.forEach((controller) => controller.abort());
+    operationControllers.clear();
     if (mainWindow === window) mainWindow = null;
   });
 }
@@ -240,6 +246,10 @@ function registerIpc(): void {
     restoreSnapshot(projectId, snapshotId),
   );
   ipcMain.handle("transcript:import", async (_event, projectId: string) => importTranscript(projectId));
+  ipcMain.handle("import:pick-text", async (_event, kind: "transcript" | "cleanup" | "translation") => pickTextImport(kind));
+  ipcMain.handle("transcript:import-content", async (_event, projectId: string, content: string, filename: string) =>
+    importTranscriptContent(projectId, content, filename),
+  );
   ipcMain.handle("transcript:cleanup-prompt", async (_event, projectId: string, transcript: WorkspaceTranscript) =>
     renderCleanupPrompt(projectId, transcript),
   );
@@ -274,9 +284,14 @@ function registerIpc(): void {
       track: ExportSubtitleTrack,
       openAfter?: boolean,
       options?: Partial<ExportVideoOptions>,
-    ) => exportVideo(projectId, track, Boolean(openAfter), options, (progress) =>
-      _event.sender.send("video:export-progress", progress),
-    ),
+    ) => withOperation("export", (signal) => exportVideo(
+      projectId,
+      track,
+      Boolean(openAfter),
+      options,
+      (progress) => _event.sender.send("video:export-progress", progress),
+      signal,
+    )),
   );
   ipcMain.handle("video:import-local", async (_event, projectId?: string, title?: string) => importLocalVideo(projectId, title));
   ipcMain.handle("project:create-local", async (_event, title: string) => createLocalProject(title));
@@ -285,13 +300,17 @@ function registerIpc(): void {
   );
   ipcMain.handle("youtube:list-formats", async (_event, url: string) => listYoutubeFormats(url));
   ipcMain.handle("youtube:download", async (event, request: DownloadYoutubeRequest) =>
-    downloadYoutube(request, (progress) => event.sender.send("youtube:progress", progress)),
+    withOperation("download", (signal) => downloadYoutube(
+      request,
+      (progress) => event.sender.send("youtube:progress", progress),
+      signal,
+    )),
   );
   ipcMain.handle("tools:update-ytdlp", async () => updateYtdlp());
   ipcMain.handle("groq:key-status", async () => groqKeyStatus());
   ipcMain.handle("groq:save-key", async (_event, apiKey: string) => saveGroqApiKey(apiKey));
   ipcMain.handle("groq:clear-key", async () => clearGroqApiKey());
-  ipcMain.handle("groq:transcribe", async (event, projectId: string) => {
+  ipcMain.handle("groq:transcribe", async (event, projectId: string) => withOperation("transcription", async (signal) => {
     const project = await projectForTranscription(projectId);
     const transcript = await transcribeWithGroq(
       projectId,
@@ -299,8 +318,15 @@ function registerIpc(): void {
       project.durationSeconds ?? 0,
       await resolveTool("ffmpeg"),
       (progress) => event.sender.send("groq:progress", progress),
+      signal,
     );
     return await saveGeneratedTranscript(projectId, transcript);
+  }));
+  ipcMain.handle("operation:cancel", async (_event, kind: LongOperationKind) => {
+    const controller = operationControllers.get(kind);
+    if (!controller) return false;
+    controller.abort();
+    return true;
   });
   ipcMain.handle("project:archive", async (_event, projectId: string, archived: boolean) =>
     setProjectArchived(projectId, archived),
@@ -308,6 +334,17 @@ function registerIpc(): void {
   ipcMain.handle("project:rename", async (_event, projectId: string, title: string) => renameProject(projectId, title));
   ipcMain.handle("project:open-folder", async (_event, projectId: string) => openProjectFolder(projectId));
   ipcMain.handle("project:trash", async (_event, projectId: string) => trashProject(projectId));
+}
+
+async function withOperation<T>(kind: LongOperationKind, action: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  if (operationControllers.has(kind)) throw new Error("Une opération de ce type est déjà en cours");
+  const controller = new AbortController();
+  operationControllers.set(kind, controller);
+  try {
+    return await action(controller.signal);
+  } finally {
+    if (operationControllers.get(kind) === controller) operationControllers.delete(kind);
+  }
 }
 
 app.setName("Tarjama Studio");

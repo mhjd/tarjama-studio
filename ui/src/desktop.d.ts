@@ -12,6 +12,21 @@ type DesktopProject = {
   translationPath?: string;
   durationSeconds?: number;
   archivedAt?: string;
+  groqTranscribedAt?: string;
+  titleCustomizedAt?: string;
+  transcriptCleanedAt?: string;
+  transcriptReviewedAt?: string;
+  transcriptReviewedFingerprint?: string;
+  translationReviewedAt?: string;
+  translationReviewedFingerprint?: string;
+};
+
+type DesktopProjectReviewKind = "transcript" | "translation";
+
+type DesktopProjectReview = {
+  cleanupImported: boolean;
+  transcriptConfirmed: boolean;
+  translationConfirmed: boolean;
 };
 
 type DesktopLibraryInfo = {
@@ -24,6 +39,13 @@ type ImportTranscriptResult = {
   transcriptPath: string;
   segmentCount: number;
 };
+
+type TextImportSelection = {
+  filename: string;
+  content: string;
+};
+
+type LongOperationKind = "download" | "transcription" | "export";
 
 type DownloadYoutubeRequest = {
   url: string;
@@ -45,6 +67,10 @@ type CreateYoutubeProjectRequest = {
 type CreateYoutubeProjectResult = {
   project: DesktopProject;
   warning?: string;
+};
+
+type CreateLocalProjectResult = {
+  project: DesktopProject;
 };
 
 type UpdateToolResult = {
@@ -129,6 +155,7 @@ type DesktopRecoveryState = {
 
 type DesktopProjectLoad = {
   project: DesktopProject;
+  review: DesktopProjectReview;
   mediaUrl?: string;
   transcript: DesktopTranscript | null;
   translation: DesktopTranslation | null;
@@ -149,6 +176,16 @@ type DesktopExportResult = {
 
 type DesktopExportSubtitleTrack = "arabic" | "translation";
 type DesktopExportSubtitleStyle = "black-band" | "outline";
+type DesktopExportSubtitleSize = "compact" | "standard" | "large";
+type DesktopExportVideoQuality = "original" | "mobile-720p" | "compact-480p";
+type DesktopExportCueGrouping = "source" | "automatic" | "minimum-words";
+type DesktopExportVideoOptions = {
+  style: DesktopExportSubtitleStyle;
+  subtitleSize: DesktopExportSubtitleSize;
+  videoQuality: DesktopExportVideoQuality;
+  cueGrouping: DesktopExportCueGrouping;
+  minimumWords?: number;
+};
 
 type ExportProgress = {
   projectId: string;
@@ -159,15 +196,59 @@ type ExportProgress = {
   eta?: string;
 };
 
+type GroqKeyStatus = {
+  configured: boolean;
+  source: "stored" | "bundled-default" | "development-env" | "none";
+};
+
+type GroqTranscriptionProgress = {
+  projectId: string;
+  stage: "preparing" | "uploading" | "merging" | "done";
+  message: string;
+  percent?: number;
+  chunkIndex?: number;
+  chunkCount?: number;
+};
+
+type CleanedTranscriptImportResult = {
+  loaded: DesktopProjectLoad;
+  before: number;
+  after: number;
+  changed: number;
+  added: number;
+  removed: number;
+};
+
+type DesktopPromptKind = "transcript_cleanup" | "translation";
+
+type DesktopPromptSettings = {
+  transcriptCleanup: string;
+  translation: string;
+  transcriptCleanupCustomized: boolean;
+  translationCustomized: boolean;
+};
+
 interface Window {
   tarjamaDesktop?: {
+    copyText(text: string): Promise<void>;
     readLibrary(): Promise<DesktopLibraryInfo>;
     loadProject(projectId: string): Promise<DesktopProjectLoad>;
+    renameProject(projectId: string, title: string): Promise<DesktopProject>;
+    confirmProjectReview(projectId: string, kind: DesktopProjectReviewKind, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;
     saveCurrentTranscript(projectId: string, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;
     createTranscriptSnapshot(projectId: string, transcript: DesktopTranscript): Promise<DesktopProjectLoad>;
     loadSnapshot(projectId: string, snapshotId: string): Promise<{ snapshot: DesktopSnapshotInfo; transcript: DesktopTranscript }>;
     restoreSnapshot(projectId: string, snapshotId?: string): Promise<DesktopProjectLoad>;
     importTranscript(projectId: string): Promise<ImportTranscriptResult | null>;
+    pickTextImport(kind: "transcript" | "cleanup" | "translation"): Promise<TextImportSelection | null>;
+    importTranscriptContent(projectId: string, content: string, filename: string): Promise<ImportTranscriptResult>;
+    cleanupTranscriptPrompt(projectId: string, transcript: DesktopTranscript): Promise<string>;
+    translationPrompt(projectId: string, transcript: DesktopTranscript): Promise<string>;
+    readPromptSettings(): Promise<DesktopPromptSettings>;
+    savePrompt(kind: DesktopPromptKind, content: string): Promise<DesktopPromptSettings>;
+    resetPrompt(kind: DesktopPromptKind): Promise<DesktopPromptSettings>;
+    importCleanedTranscriptFile(projectId: string): Promise<CleanedTranscriptImportResult | null>;
+    importCleanedTranscriptContent(projectId: string, content: string): Promise<CleanedTranscriptImportResult>;
     importTranslationFile(projectId: string): Promise<ImportTranslationResult | null>;
     importTranslationContent(
       projectId: string,
@@ -180,13 +261,20 @@ interface Window {
       projectId: string,
       track: DesktopExportSubtitleTrack,
       openAfter?: boolean,
-      style?: DesktopExportSubtitleStyle
+      options?: Partial<DesktopExportVideoOptions>
     ): Promise<DesktopExportResult | null>;
-    importLocalVideo(projectId?: string): Promise<DownloadYoutubeResult | null>;
+    importLocalVideo(projectId?: string, title?: string): Promise<DownloadYoutubeResult | null>;
+    createLocalProject(title: string): Promise<CreateLocalProjectResult>;
     createYoutubeProject(request: CreateYoutubeProjectRequest): Promise<CreateYoutubeProjectResult>;
     listYoutubeFormats(url: string): Promise<YoutubeFormatsResult>;
     downloadYoutube(request: DownloadYoutubeRequest): Promise<DownloadYoutubeResult>;
     updateYtdlp(): Promise<UpdateToolResult>;
+    groqKeyStatus(): Promise<GroqKeyStatus>;
+    saveGroqApiKey(apiKey: string): Promise<GroqKeyStatus>;
+    clearGroqApiKey(): Promise<GroqKeyStatus>;
+    transcribeWithGroq(projectId: string): Promise<DesktopProjectLoad>;
+    cancelOperation(kind: LongOperationKind): Promise<boolean>;
+    onGroqTranscriptionProgress(callback: (progress: GroqTranscriptionProgress) => void): () => void;
     onDownloadProgress(callback: (progress: DownloadProgress) => void): () => void;
     onExportProgress(callback: (progress: ExportProgress) => void): () => void;
     setProjectArchived(projectId: string, archived: boolean): Promise<DesktopProject>;

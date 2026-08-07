@@ -12,6 +12,21 @@ export type DesktopProject = {
   translationPath?: string;
   durationSeconds?: number;
   archivedAt?: string;
+  groqTranscribedAt?: string;
+  titleCustomizedAt?: string;
+  transcriptCleanedAt?: string;
+  transcriptReviewedAt?: string;
+  transcriptReviewedFingerprint?: string;
+  translationReviewedAt?: string;
+  translationReviewedFingerprint?: string;
+};
+
+export type ProjectReviewKind = "transcript" | "translation";
+
+export type DesktopProjectReview = {
+  cleanupImported: boolean;
+  transcriptConfirmed: boolean;
+  translationConfirmed: boolean;
 };
 
 export type DesktopLibraryInfo = {
@@ -43,6 +58,13 @@ export type ImportTranscriptResult = {
   transcriptPath: string;
   segmentCount: number;
 };
+
+export type TextImportSelection = {
+  filename: string;
+  content: string;
+};
+
+export type LongOperationKind = "download" | "transcription" | "export";
 
 export type DownloadProgress = {
   projectId: string;
@@ -84,6 +106,10 @@ export type CreateYoutubeProjectResult = {
   warning?: string;
 };
 
+export type CreateLocalProjectResult = {
+  project: DesktopProject;
+};
+
 export type YoutubeFormatOption = {
   id: string;
   label: string;
@@ -122,6 +148,7 @@ export type DesktopRecoveryState = {
 
 export type DesktopProjectLoad = {
   project: DesktopProject;
+  review: DesktopProjectReview;
   mediaUrl?: string;
   transcript: WorkspaceTranscript | null;
   translation: WorkspaceTranslation | null;
@@ -159,3 +186,49 @@ export type DesktopExportResult = {
 export type ExportSubtitleTrack = "arabic" | "translation";
 
 export type ExportSubtitleStyle = "black-band" | "outline";
+
+export type ExportSubtitleSize = "compact" | "standard" | "large";
+
+export type ExportVideoQuality = "original" | "mobile-720p" | "compact-480p";
+
+export type ExportCueGrouping = "source" | "automatic" | "minimum-words";
+
+export type ExportVideoOptions = {
+  style: ExportSubtitleStyle;
+  subtitleSize: ExportSubtitleSize;
+  videoQuality: ExportVideoQuality;
+  cueGrouping: ExportCueGrouping;
+  minimumWords?: number;
+};
+
+export type GroqKeyStatus = {
+  configured: boolean;
+  source: "stored" | "bundled-default" | "development-env" | "none";
+};
+
+export type GroqTranscriptionProgress = {
+  projectId: string;
+  stage: "preparing" | "uploading" | "merging" | "done";
+  message: string;
+  percent?: number;
+  chunkIndex?: number;
+  chunkCount?: number;
+};
+
+export type CleanedTranscriptImportResult = {
+  loaded: DesktopProjectLoad;
+  before: number;
+  after: number;
+  changed: number;
+  added: number;
+  removed: number;
+};
+
+export type PromptKind = "transcript_cleanup" | "translation";
+
+export type DesktopPromptSettings = {
+  transcriptCleanup: string;
+  translation: string;
+  transcriptCleanupCustomized: boolean;
+  translationCustomized: boolean;
+};

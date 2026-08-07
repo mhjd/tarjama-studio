@@ -22,6 +22,7 @@ Build a local-first app to help transcribe, correct, and translate Arabic audio/
 - Avoid adding dependencies unless they clearly simplify the MVP.
 - Make local development easy to start and inspect.
 - When giving the user project commands, prefer `make ...` targets over raw `python`, `npm`, or nested `cd ui && ...` commands. Add a Makefile target first if a repeated project workflow lacks one.
+- Treat `desktop` as the ongoing development branch. When synchronizing it into `main`, merge and push `main`, then switch back to `desktop`; keep this `AGENTS.md` rule present on both branches.
 
 ## Current App Direction
 

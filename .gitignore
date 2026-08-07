@@ -1,4 +1,7 @@
 .DS_Store
+.env
+.env.*
+!.env.example
 __pycache__/
 *.py[cod]
 
@@ -16,9 +19,14 @@ ui/dist/
 ui/dist-electron/
 ui/desktop-bin/
 ui/release/
+ui/electron/generated_defaults.ts
 ui/tsconfig.tsbuildinfo
 
 data/raw/
 data/model_outputs/
 data/workspaces/
 exports/
+
+windows-whisper-benchmark/log.txt
+windows-whisper-benchmark/RAPPORT.md
+windows-whisper-benchmark/results/

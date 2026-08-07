@@ -2,12 +2,20 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import http.client
 import platform
 import shutil
 import stat
+import subprocess
 import sys
+import tarfile
+import tempfile
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Callable, TypeVar
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +26,10 @@ ARABIC_FONT_URL = (
     "https://github.com/googlefonts/noto-fonts/raw/main/"
     "hinted/ttf/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf"
 )
+DOWNLOAD_ATTEMPTS = 4
+DOWNLOAD_TIMEOUT_SECONDS = 120
+RETRYABLE_HTTP_STATUSES = {408, 425, 429, 500, 502, 503, 504}
+T = TypeVar("T")
 
 
 def host_key() -> str:
@@ -41,19 +53,89 @@ def copy_file(source: Path, target: Path) -> None:
     if not source.exists():
         raise SystemExit(f"Missing source binary: {source}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
-    make_executable(target)
+    temporary = target.with_suffix(target.suffix + ".tmp")
+    temporary.unlink(missing_ok=True)
+    shutil.copy2(source, temporary)
+    make_executable(temporary)
+    temporary.replace(target)
 
 
-def download(url: str, target: Path, executable: bool = True) -> None:
+def with_download_retries(url: str, operation: Callable[[], T]) -> T:
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            return operation()
+        except urllib.error.HTTPError as error:
+            retryable = error.code in RETRYABLE_HTTP_STATUSES
+            last_error: BaseException = error
+        except (urllib.error.URLError, http.client.RemoteDisconnected, TimeoutError, ConnectionError) as error:
+            retryable = True
+            last_error = error
+
+        if not retryable or attempt == DOWNLOAD_ATTEMPTS:
+            raise SystemExit(
+                f"Unable to download {url} after {attempt} attempt(s): {last_error}"
+            ) from last_error
+
+        delay = 2 ** (attempt - 1)
+        print(
+            f"Download attempt {attempt}/{DOWNLOAD_ATTEMPTS} failed for {url}: {last_error}. "
+            f"Retrying in {delay}s...",
+            file=sys.stderr,
+        )
+        time.sleep(delay)
+
+    raise AssertionError("download retry loop exited unexpectedly")
+
+
+def read_url(url: str, maximum_bytes: int) -> bytes:
+    def read() -> bytes:
+        request = urllib.request.Request(url, headers={"Cache-Control": "no-cache"})
+        with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:
+            content = response.read(maximum_bytes + 1)
+        if len(content) > maximum_bytes:
+            raise SystemExit(f"Downloaded file is unexpectedly large: {url}")
+        return content
+
+    return with_download_retries(url, read)
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while chunk := source.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def download(url: str, target: Path, executable: bool = True, expected_sha256: str | None = None) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".tmp")
     print(f"Downloading {url}")
-    with urllib.request.urlopen(url, timeout=120) as response:
-        tmp.write_bytes(response.read())
+    content = read_url(url, 100 * 1024 * 1024)
+    if expected_sha256 and hashlib.sha256(content).hexdigest() != expected_sha256:
+        raise SystemExit(f"Checksum verification failed: {url}")
+    tmp.write_bytes(content)
     tmp.replace(target)
     if executable:
         make_executable(target)
+
+
+def download_file(url: str, target: Path, expected_sha256: str, maximum_bytes: int) -> None:
+    def transfer() -> None:
+        digest = hashlib.sha256()
+        written = 0
+        request = urllib.request.Request(url, headers={"Cache-Control": "no-cache"})
+        with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response, target.open("wb") as output:
+            while chunk := response.read(1024 * 1024):
+                written += len(chunk)
+                if written > maximum_bytes:
+                    raise SystemExit(f"Downloaded file is unexpectedly large: {url}")
+                digest.update(chunk)
+                output.write(chunk)
+        if digest.hexdigest() != expected_sha256:
+            raise SystemExit(f"Checksum verification failed: {url}")
+
+    with_download_retries(url, transfer)
 
 
 def prepare_ytdlp(bin_dir: Path, key: str) -> None:
@@ -63,16 +145,29 @@ def prepare_ytdlp(bin_dir: Path, key: str) -> None:
     if override:
         copy_file(Path(override), target)
         return
-    if key.startswith("darwin-"):
-        download("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos", target)
+    asset = (
+        "yt-dlp_macos" if key.startswith("darwin-")
+        else "yt-dlp.exe" if key.startswith("win32-")
+        else "yt-dlp" if key.startswith("linux-")
+        else None
+    )
+    if not asset:
+        raise SystemExit(f"No yt-dlp package rule for {key}")
+    base_url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
+    checksum_lines = read_url(f"{base_url}/SHA2-256SUMS", 1024 * 1024).decode("utf-8").splitlines()
+    checksum = None
+    for line in checksum_lines:
+        fields = line.split()
+        if len(fields) >= 2 and fields[-1].lstrip("*") == asset:
+            checksum = fields[0].lower()
+            break
+    if not checksum or len(checksum) != 64:
+        raise SystemExit(f"Missing yt-dlp checksum for {asset}")
+    if target.exists() and sha256_file(target) == checksum:
+        make_executable(target)
+        print(f"Using verified yt-dlp at {target.relative_to(ROOT)}")
         return
-    if key.startswith("win32-"):
-        download("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe", target)
-        return
-    if key.startswith("linux-"):
-        download("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp", target)
-        return
-    raise SystemExit(f"No yt-dlp package rule for {key}")
+    download(f"{base_url}/{asset}", target, expected_sha256=checksum)
 
 
 def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
@@ -80,22 +175,77 @@ def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
     target = bin_dir / f"ffmpeg{extension}"
     override = os.environ.get("TARJAMA_FFMPEG")
     if override:
+        ensure_subtitle_filter(Path(override))
         copy_file(Path(override), target)
         return
 
-    mac_imageio = ROOT / ".venv/lib/python3.14/site-packages/imageio_ffmpeg/binaries/ffmpeg-macos-aarch64-v7.1"
-    if key == "darwin-arm64" and mac_imageio.exists():
-        copy_file(mac_imageio, target)
+    if key == "linux-x64":
+        asset = "ffmpeg-master-latest-linux64-gpl.tar.xz"
+        base_url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
+        checksum_lines = read_url(f"{base_url}/checksums.sha256", 1024 * 1024).decode("utf-8").splitlines()
+        checksum = None
+        for line in checksum_lines:
+            fields = line.split()
+            if len(fields) >= 2 and fields[-1].lstrip("*") == asset:
+                checksum = fields[0].lower()
+                break
+        if not checksum or len(checksum) != 64:
+            raise SystemExit(f"Missing FFmpeg checksum for {asset}")
+        with tempfile.TemporaryDirectory(prefix="tarjama-ffmpeg-") as temp_dir:
+            archive = Path(temp_dir) / asset
+            download_file(f"{base_url}/{asset}", archive, checksum, 300 * 1024 * 1024)
+            with tarfile.open(archive, "r:xz") as bundle:
+                member = next(
+                    (item for item in bundle.getmembers() if item.isfile() and item.name.endswith("/bin/ffmpeg")),
+                    None,
+                )
+                if member is None:
+                    raise SystemExit("FFmpeg archive does not contain bin/ffmpeg")
+                source = bundle.extractfile(member)
+                if source is None:
+                    raise SystemExit("Unable to read FFmpeg from archive")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with target.open("wb") as output:
+                    shutil.copyfileobj(source, output)
+                make_executable(target)
+        ensure_subtitle_filter(target)
         return
 
-    resolved = shutil.which("ffmpeg")
+    full_candidates = [
+        Path("/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg"),
+        Path("/usr/local/opt/ffmpeg-full/bin/ffmpeg"),
+    ]
+    resolved = next((str(candidate) for candidate in full_candidates if candidate.exists()), None)
+    resolved = resolved or shutil.which("ffmpeg")
     if resolved:
+        ensure_subtitle_filter(Path(resolved))
         copy_file(Path(resolved), target)
         return
 
     raise SystemExit(
         "ffmpeg is missing. Install ffmpeg or set TARJAMA_FFMPEG=/path/to/ffmpeg before packaging."
     )
+
+
+def ensure_subtitle_filter(ffmpeg: Path) -> None:
+    try:
+        result = subprocess.run(
+            [str(ffmpeg), "-hide_banner", "-filters"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise SystemExit(f"Unable to validate FFmpeg at {ffmpeg}: {error}") from error
+    output = f"{result.stdout}\n{result.stderr}"
+    if result.returncode != 0 or not any(
+        line.split()[1:2] == ["subtitles"] for line in output.splitlines() if line.strip()
+    ):
+        raise SystemExit(
+            f"FFmpeg at {ffmpeg} does not include the libass subtitles filter. "
+            "Install ffmpeg-full or set TARJAMA_FFMPEG to a complete static build."
+        )
 
 
 def prepare_fonts() -> None:

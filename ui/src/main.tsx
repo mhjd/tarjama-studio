@@ -3,9 +3,14 @@ import { createRoot } from "react-dom/client";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowDown,
+  ArrowUp,
   ArrowUpToLine,
   Check,
+  Captions,
+  CircleHelp,
   ClipboardPaste,
+  Cloud,
   Combine,
   Copy,
   Download,
@@ -16,18 +21,41 @@ import {
   LocateFixed,
   Moon,
   Pause,
+  Pencil,
   Plus,
   Play,
   RotateCcw,
   Save,
+  Search,
   Scissors,
+  Settings,
   Square,
   Sun,
   Trash2,
   Upload,
+  Undo2,
   X
 } from "lucide-react";
 import "./styles.css";
+import {
+  previewAlignedMarkdown,
+  previewTranscriptJson,
+  projectWorkflowStep,
+  searchTranscript,
+  stripModelCitationMarkers,
+  transcriptFingerprint,
+  validateEditorSegments,
+  type ImportContentPreview,
+} from "../electron/editor-logic";
+import {
+  AccessibleModal,
+  ErrorNotice,
+  formatElapsed,
+  isTextEntryTarget,
+  ModalCloseButton,
+  OperationProgress,
+  writeClipboardText,
+} from "./desktop-ux";
 
 type VideoItem = {
   corpus_id: string;
@@ -111,8 +139,57 @@ type Translation = {
 
 type ExportTrack = "arabic" | "translation";
 type ExportSubtitleStyle = "black-band" | "outline";
-type DesktopView = "library" | "editor";
+type ExportSubtitleSize = "compact" | "standard" | "large";
+type ExportVideoQuality = "original" | "mobile-720p" | "compact-480p";
+type ExportCueGrouping = "source" | "automatic" | "minimum-words";
+type ExportVideoOptions = {
+  style: ExportSubtitleStyle;
+  subtitleSize: ExportSubtitleSize;
+  videoQuality: ExportVideoQuality;
+  cueGrouping: ExportCueGrouping;
+  minimumWords?: number;
+};
+type DesktopView = "library" | "editor" | "options";
 type DesktopActionMenu = "transcription" | "translation" | "export" | null;
+type DesktopImportKind = "transcript" | "cleanup" | "translation";
+type DesktopImportPreview = {
+  projectId: string;
+  kind: DesktopImportKind;
+  filename: string;
+  content: string;
+  preview: ImportContentPreview;
+};
+type ResumePoint = { time: number; segmentId?: string };
+type SaveStatus = "saved" | "dirty" | "saving";
+const IMPORT_PREVIEW_CHARACTER_LIMIT = 20_000;
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+const DEFAULT_EXPORT_OPTIONS: ExportVideoOptions = {
+  style: "black-band",
+  subtitleSize: "standard",
+  videoQuality: "mobile-720p",
+  cueGrouping: "automatic",
+};
+
+function initialExportOptions(): ExportVideoOptions {
+  try {
+    const stored = JSON.parse(localStorage.getItem("tarjama-export-options") ?? "null") as Partial<ExportVideoOptions> | null;
+    return {
+      style: stored?.style === "outline" ? "outline" : "black-band",
+      subtitleSize: ["compact", "standard", "large"].includes(stored?.subtitleSize ?? "")
+        ? stored!.subtitleSize as ExportSubtitleSize
+        : DEFAULT_EXPORT_OPTIONS.subtitleSize,
+      videoQuality: ["original", "mobile-720p", "compact-480p"].includes(stored?.videoQuality ?? "")
+        ? stored!.videoQuality as ExportVideoQuality
+        : DEFAULT_EXPORT_OPTIONS.videoQuality,
+      cueGrouping: ["source", "automatic", "minimum-words"].includes(stored?.cueGrouping ?? "")
+        ? stored!.cueGrouping as ExportCueGrouping
+        : DEFAULT_EXPORT_OPTIONS.cueGrouping,
+      minimumWords: Math.max(2, Math.min(30, Number(stored?.minimumWords) || 10)),
+    };
+  } catch {
+    return { ...DEFAULT_EXPORT_OPTIONS, minimumWords: 10 };
+  }
+}
 
 type ExportJob = {
   id: string;
@@ -269,11 +346,66 @@ function shortText(value: string, max = 140): string {
   return `${compact.slice(0, max - 1)}…`;
 }
 
-function projectStatusLabel(project: DesktopProject): string {
-  if (!project.videoPath) return "Vidéo absente";
-  if (!project.transcriptPath) return "À transcrire";
-  if (!project.translationPath) return "Transcription sans traduction";
-  return "Prêt à exporter";
+function cleanupPastePreview(content: string): { valid: boolean; lines: string[] } {
+  if (!content.trim()) return { valid: false, lines: [] };
+  const markdownHeadings = [...content.matchAll(/^##\s+(.+?)\s+-->\s+(.+?)\s*$/gm)];
+  if (markdownHeadings.length) {
+    const first = markdownHeadings[0];
+    const last = markdownHeadings.at(-1)!;
+    return {
+      valid: true,
+      lines: [
+        `Markdown horodaté: ${markdownHeadings.length} bloc(s)`,
+        `Premier: ${first[1]} → ${first[2]}`,
+        `Dernier: ${last[1]} → ${last[2]}`,
+      ],
+    };
+  }
+  try {
+    const payload = JSON.parse(content) as { corpus_id?: unknown; segments?: unknown };
+    if (!payload || typeof payload !== "object" || !Array.isArray(payload.segments) || !payload.segments.length) {
+      return { valid: false, lines: ["Le JSON doit contenir un tableau segments non vide."] };
+    }
+    const segments = payload.segments as Array<{ start?: unknown; end?: unknown; text?: unknown }>;
+    const first = segments[0];
+    const last = segments.at(-1)!;
+    return {
+      valid: true,
+      lines: [
+        "JSON détecté: ancien format encore accepté.",
+        `corpus_id: ${String(payload.corpus_id ?? "absent")}`,
+        `${segments.length} segment(s)`,
+        `Premier: ${String(first.start ?? "?")} → ${String(first.end ?? "?")} · ${shortText(String(first.text ?? ""), 90)}`,
+        `Dernier: ${String(last.start ?? "?")} → ${String(last.end ?? "?")} · ${shortText(String(last.text ?? ""), 90)}`,
+      ],
+    };
+  } catch (error) {
+    return { valid: false, lines: [`JSON invalide: ${error instanceof Error ? error.message : String(error)}`] };
+  }
+}
+
+function projectStatusLabel(
+  project: DesktopProject,
+  review: DesktopProjectReview,
+  hasTranslation: boolean,
+): string {
+  const labels: Record<ReturnType<typeof projectWorkflowStep>, string> = {
+    video: "Vidéo absente",
+    transcription: "À transcrire",
+    cleanup: "Transcription à nettoyer",
+    "transcript-review": "Transcription à relire",
+    translation: "Prêt à traduire",
+    "translation-review": "Traduction à relire",
+    export: "Prêt à exporter",
+  };
+  return labels[projectWorkflowStep({
+    hasVideo: Boolean(project.videoPath),
+    hasTranscript: Boolean(project.transcriptPath),
+    cleanupImported: review.cleanupImported,
+    transcriptConfirmed: review.transcriptConfirmed,
+    hasTranslation,
+    translationConfirmed: review.translationConfirmed,
+  })];
 }
 
 function snapshotLabel(snapshot: SnapshotInfo): string {
@@ -337,6 +469,18 @@ function applyTranslation(transcript: Transcript, translation: Translation | nul
   };
 }
 
+function stripCitationMarkersFromTranscript(transcript: Transcript): Transcript {
+  let changed = false;
+  const segments = transcript.segments.map((segment) => {
+    const text = stripModelCitationMarkers(segment.text);
+    const translation = stripModelCitationMarkers(segment.translation ?? "");
+    if (text === segment.text && translation === (segment.translation ?? "")) return segment;
+    changed = true;
+    return { ...segment, text, translation };
+  });
+  return changed ? { ...transcript, segments } : transcript;
+}
+
 function translationFromTranscript(transcript: Transcript, base: Translation): Translation {
   return {
     ...base,
@@ -390,7 +534,7 @@ Contraintes impératives:
 - Réponds uniquement avec le document Markdown final, sans commentaire avant ou après.
 - Conserve exactement les métadonnées source_corpus_id, language et format.
 - Conserve exactement le même nombre de blocs.
-- Conserve exactement chaque ligne de titre "## début --> fin", sans modifier les timestamps.
+- Conserve exactement chaque ligne de titre "## début --> fin" et recopie-la autant que possible telle qu'elle apparaît dans la source, sans modifier les timestamps. Ne convertis jamais les heures en minutes totales: \`1:00:01.120\` ne doit jamais devenir \`60:01.120\`.
 - Ne fusionne pas et ne divise pas les blocs.
 - Sous chaque titre, remplace le texte arabe par la traduction française du bloc.
 - Si un passage est ambigu, traduis au mieux sans ajouter de note.
@@ -422,6 +566,11 @@ function DesktopApp() {
   const [desktopView, setDesktopView] = useState<DesktopView>("library");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [loadedProject, setLoadedProject] = useState<DesktopProject | null>(null);
+  const [projectReview, setProjectReview] = useState<DesktopProjectReview>({
+    cleanupImported: false,
+    transcriptConfirmed: false,
+    translationConfirmed: false,
+  });
   const [mediaUrl, setMediaUrl] = useState("");
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [attachedTranslation, setAttachedTranslation] = useState<Translation | null>(null);
@@ -430,37 +579,81 @@ function DesktopApp() {
   const [previewTranscript, setPreviewTranscript] = useState<Transcript | null>(null);
   const [previewSnapshot, setPreviewSnapshot] = useState<DesktopSnapshotInfo | null>(null);
   const [showArchives, setShowArchives] = useState(false);
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectMode, setNewProjectMode] = useState<"youtube" | "local">("youtube");
+  const [newYoutubeUrl, setNewYoutubeUrl] = useState("");
+  const [newProjectTitle, setNewProjectTitle] = useState("");
+  const [newYoutubeFormats, setNewYoutubeFormats] = useState<YoutubeFormatOption[]>([]);
+  const [newSelectedYoutubeFormat, setNewSelectedYoutubeFormat] = useState("");
+  const [newYoutubeTitle, setNewYoutubeTitle] = useState("");
   const [youtubeFormats, setYoutubeFormats] = useState<YoutubeFormatOption[]>([]);
   const [selectedYoutubeFormat, setSelectedYoutubeFormat] = useState("");
   const [youtubeFormatTitle, setYoutubeFormatTitle] = useState("");
   const [youtubeFormatProjectId, setYoutubeFormatProjectId] = useState("");
-  const [youtubeCreateWarning, setYoutubeCreateWarning] = useState("");
   const [state, setState] = useState("Prêt");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [copiedProjectId, setCopiedProjectId] = useState("");
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [groqProgress, setGroqProgress] = useState<GroqTranscriptionProgress | null>(null);
+  const [groqKeyStatus, setGroqKeyStatus] = useState<GroqKeyStatus>({ configured: false, source: "none" });
+  const [groqApiKey, setGroqApiKey] = useState("");
+  const [promptSettings, setPromptSettings] = useState<DesktopPromptSettings | null>(null);
+  const [cleanupPromptDraft, setCleanupPromptDraft] = useState("");
+  const [translationPromptDraft, setTranslationPromptDraft] = useState("");
+  const [optionsState, setOptionsState] = useState("Prêt");
+  const [theme, setTheme] = useState<"light" | "dark">(
+    () => (localStorage.getItem("tarjama-theme") === "light" ? "light" : "dark"),
+  );
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [rangeStart, setRangeStart] = useState("00:00");
   const [rangeEnd, setRangeEnd] = useState("00:00");
   const [loopEnabled, setLoopEnabled] = useState(false);
+  const [rangePlaybackActive, setRangePlaybackActive] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState<number>(() => {
+    const stored = Number(localStorage.getItem("tarjama-playback-rate"));
+    return PLAYBACK_RATES.includes(stored as (typeof PLAYBACK_RATES)[number]) ? stored : 1;
+  });
   const [isPlaying, setIsPlaying] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [pasteImportOpen, setPasteImportOpen] = useState(false);
   const [pastedTranslation, setPastedTranslation] = useState("");
+  const [cleanupImportOpen, setCleanupImportOpen] = useState(false);
+  const [pastedCleanupTranscript, setPastedCleanupTranscript] = useState("");
+  const [cleanupCopyState, setCleanupCopyState] = useState("Copier le prompt de nettoyage");
+  const [renameProjectOpen, setRenameProjectOpen] = useState(false);
+  const [projectTitleDraft, setProjectTitleDraft] = useState("");
   const [copyState, setCopyState] = useState("Copier prompt");
   const [exportingTrack, setExportingTrack] = useState<ExportTrack | null>(null);
-  const [exportSubtitleStyle, setExportSubtitleStyle] = useState<ExportSubtitleStyle>("black-band");
+  const [exportOptions, setExportOptions] = useState<ExportVideoOptions>(initialExportOptions);
   const [openActionMenu, setOpenActionMenu] = useState<DesktopActionMenu>(null);
-  const [saveState, setSaveState] = useState("Sauvegarder");
   const [timelineHover, setTimelineHover] = useState<{ time: number; x: number } | null>(null);
   const [focusedSegmentId, setFocusedSegmentId] = useState("");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [savedFingerprint, setSavedFingerprint] = useState("");
+  const [undoStack, setUndoStack] = useState<Transcript[]>([]);
+  const [undoVisible, setUndoVisible] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [autoFollowEnabled, setAutoFollowEnabled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [resumePoint, setResumePoint] = useState<ResumePoint | null>(null);
+  const [importPreview, setImportPreview] = useState<DesktopImportPreview | null>(null);
+  const [operationStartedAt, setOperationStartedAt] = useState<number | null>(null);
+  const [operationClock, setOperationClock] = useState(Date.now());
+  const [cancellingOperation, setCancellingOperation] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playerBandRef = useRef<HTMLElement | null>(null);
+  const currentTimeRef = useRef(0);
   const autosaveTimer = useRef<number | null>(null);
+  const resumeWriteSecond = useRef(-1);
+  const lastActionRef = useRef<(() => Promise<void>) | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const lastAutoFollowSegmentRef = useRef("");
   const segmentRefs = useRef(new Map<string, HTMLElement>());
+  const segmentFieldRefs = useRef(new Map<string, HTMLTextAreaElement>());
   const actionMenusRef = useRef<HTMLDivElement | null>(null);
 
   const activeProjects = useMemo(
@@ -475,6 +668,12 @@ function DesktopApp() {
   const isHistoryPreview = Boolean(previewTranscript);
   const displayedTranscript = previewTranscript ?? transcript;
   const editorLocked = isHistoryPreview || busy;
+  const cleanedPasteReview = useMemo(
+    () => cleanupPastePreview(pastedCleanupTranscript),
+    [pastedCleanupTranscript],
+  );
+  const cleanupPromptChanged = Boolean(promptSettings && cleanupPromptDraft !== promptSettings.transcriptCleanup);
+  const translationPromptChanged = Boolean(promptSettings && translationPromptDraft !== promptSettings.translation);
   const currentSaveSnapshot = useMemo(
     () => [...snapshots].reverse().find((snapshot) => snapshot.matches_current) ?? null,
     [snapshots]
@@ -486,15 +685,55 @@ function DesktopApp() {
         .sort((left, right) => snapshotSortTime(right) - snapshotSortTime(left)),
     [snapshots]
   );
+  const segmentIssues = useMemo(() => validateEditorSegments(displayedTranscript), [displayedTranscript]);
+  const issuesBySegment = useMemo(() => {
+    const grouped = new Map<string, string[]>();
+    segmentIssues.forEach((issue) => grouped.set(issue.segmentId, [...(grouped.get(issue.segmentId) ?? []), issue.message]));
+    return grouped;
+  }, [segmentIssues]);
+  const searchResults = useMemo(
+    () => searchTranscript(displayedTranscript, searchQuery),
+    [displayedTranscript, searchQuery],
+  );
+  const searchOccurrenceCount = searchResults.length;
+  const activeSegmentId = useMemo(() => {
+    const segments = displayedTranscript?.segments ?? [];
+    return segments.find((segment) => currentTime >= segment.start && currentTime < segment.end)?.id ?? "";
+  }, [currentTime, displayedTranscript]);
+  const hasInterval = useMemo(() => {
+    const start = parseTime(rangeStart) ?? 0;
+    const end = parseTime(rangeEnd);
+    return end !== null && end > start;
+  }, [rangeEnd, rangeStart]);
+  const playbackMode = loopEnabled && hasInterval ? "Boucle" : rangePlaybackActive && hasInterval ? "Intervalle" : "Lecture libre";
+  const anyModalOpen = newProjectOpen || shortcutsOpen || pasteImportOpen || cleanupImportOpen || renameProjectOpen || Boolean(importPreview);
 
   const refreshLibrary = useCallback(async () => {
     if (!desktop) return;
     setLibrary(await desktop.readLibrary());
   }, [desktop]);
 
+  const applyPromptSettings = useCallback((settings: DesktopPromptSettings) => {
+    setPromptSettings(settings);
+    setCleanupPromptDraft(settings.transcriptCleanup);
+    setTranslationPromptDraft(settings.translation);
+  }, []);
+
+  const loadOptions = useCallback(async () => {
+    if (!desktop) return;
+    const [prompts, keyStatus] = await Promise.all([desktop.readPromptSettings(), desktop.groqKeyStatus()]);
+    applyPromptSettings(prompts);
+    setGroqKeyStatus(keyStatus);
+  }, [applyPromptSettings, desktop]);
+
   useEffect(() => {
     void refreshLibrary().catch((err) => setError(err instanceof Error ? err.message : "Bibliothèque impossible à charger"));
   }, [refreshLibrary]);
+
+  useEffect(() => {
+    if (desktopView !== "options") return;
+    void loadOptions().catch((err) => setError(err instanceof Error ? err.message : "Options impossibles à charger"));
+  }, [desktopView, loadOptions]);
 
   useEffect(() => {
     if (!desktop) return;
@@ -514,8 +753,148 @@ function DesktopApp() {
   }, [desktop, selectedProjectId]);
 
   useEffect(() => {
+    if (!desktop) return;
+    return desktop.onGroqTranscriptionProgress((progress) => {
+      if (selectedProjectId && progress.projectId !== selectedProjectId) return;
+      setGroqProgress(progress);
+      setState(progress.message);
+    });
+  }, [desktop, selectedProjectId]);
+
+  useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    localStorage.setItem("tarjama-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("tarjama-playback-rate", String(playbackRate));
+    if (audioRef.current) audioRef.current.playbackRate = playbackRate;
+  }, [playbackRate]);
+
+  useEffect(() => {
+    currentTimeRef.current = 0;
+    setCurrentTime(0);
+    setDuration(0);
+  }, [mediaUrl]);
+
+  useEffect(() => {
+    localStorage.setItem("tarjama-export-options", JSON.stringify(exportOptions));
+  }, [exportOptions]);
+
+  useEffect(() => {
+    if (!operationStartedAt) return;
+    const timer = window.setInterval(() => setOperationClock(Date.now()), 500);
+    return () => window.clearInterval(timer);
+  }, [operationStartedAt]);
+
+  useEffect(() => {
+    if (searchOpen) window.setTimeout(() => searchInputRef.current?.focus(), 0);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!autoFollowEnabled || !activeSegmentId) {
+      lastAutoFollowSegmentRef.current = "";
+      return;
+    }
+    if (lastAutoFollowSegmentRef.current === activeSegmentId) return;
+    lastAutoFollowSegmentRef.current = activeSegmentId;
+    const frame = window.requestAnimationFrame(() => {
+      scrollSegmentToTop(activeSegmentId);
+      setFocusedSegmentId(activeSegmentId);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeSegmentId, autoFollowEnabled]);
+
+  useEffect(() => {
+    if (saveStatus === "saving" || !transcript || !savedFingerprint) return;
+    setSaveStatus(transcriptFingerprint(transcript) === savedFingerprint ? "saved" : "dirty");
+  }, [savedFingerprint, saveStatus, transcript]);
+
+  useEffect(() => {
+    if (desktopView !== "editor") return;
+    function onKeyDown(event: KeyboardEvent) {
+      const modifier = event.metaKey || event.ctrlKey;
+      const key = event.key.toLocaleLowerCase();
+      if (anyModalOpen) return;
+      if (openActionMenu && event.key === "Escape") {
+        event.preventDefault();
+        setOpenActionMenu(null);
+        return;
+      }
+      if (modifier && key === "s") {
+        event.preventDefault();
+        if (saveStatus === "dirty" && !editorLocked) void createSavePointDesktop();
+        return;
+      }
+      if (modifier && key === "f") {
+        event.preventDefault();
+        setSearchOpen(true);
+        return;
+      }
+      if (modifier && key === "z") {
+        if (isTextEntryTarget(event.target)) return;
+        event.preventDefault();
+        undoLastStructuralEdit();
+        return;
+      }
+      if (isTextEntryTarget(event.target) || event.metaKey || event.ctrlKey) return;
+      if (event.key === "?") {
+        event.preventDefault();
+        setShortcutsOpen(true);
+        return;
+      }
+      if (event.altKey && event.key === "ArrowUp") {
+        event.preventDefault();
+        navigateAdjacentSegment(-1);
+        return;
+      }
+      if (event.altKey && event.key === "ArrowDown") {
+        event.preventDefault();
+        navigateAdjacentSegment(1);
+        return;
+      }
+      if (event.altKey) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (searchOpen) setSearchOpen(false);
+        else clearInterval();
+        return;
+      }
+      if (!mediaUrl) return;
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        togglePlay();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        seekBy(event.shiftKey ? -10 : -3);
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        seekBy(event.shiftKey ? 10 : 3);
+      } else if (key === "d") {
+        event.preventDefault();
+        setRangeStart(formatTime(audio.currentTime));
+      } else if (key === "f") {
+        event.preventDefault();
+        setRangeEnd(formatTime(audio.currentTime));
+      } else if (key === "b") {
+        event.preventDefault();
+        setLoopEnabled((enabled) => !enabled);
+      } else if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        adjustPlaybackRate(-1);
+      } else if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        adjustPlaybackRate(1);
+      } else if (key === "s") {
+        event.preventDefault();
+        scrollToCurrentSegment();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [anyModalOpen, desktopView, editorLocked, focusedSegmentId, mediaUrl, openActionMenu, saveStatus, searchOpen, displayedTranscript, currentTime]);
 
   useEffect(() => {
     if (!openActionMenu) return;
@@ -524,27 +903,39 @@ function DesktopApp() {
         setOpenActionMenu(null);
       }
     }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpenActionMenu(null);
-    }
     window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
     };
   }, [openActionMenu]);
 
   const applyLoadedProject = useCallback((loaded: DesktopProjectLoad) => {
     setLoadedProject(loaded.project);
+    setProjectReview(loaded.review);
     setMediaUrl(loaded.mediaUrl ?? "");
-    const nextTranscript = loaded.transcript ? applyTranslation(loaded.transcript, loaded.translation) : null;
+    const combinedTranscript = loaded.transcript ? applyTranslation(loaded.transcript, loaded.translation) : null;
+    const nextTranscript = combinedTranscript ? stripCitationMarkersFromTranscript(combinedTranscript) : null;
+    const removedCitationMarkers = Boolean(combinedTranscript && nextTranscript !== combinedTranscript);
     setTranscript(nextTranscript);
     setAttachedTranslation(loaded.translation);
     setSnapshots(loaded.snapshots);
     setSelectedSnapshotId("");
     setPreviewTranscript(null);
     setPreviewSnapshot(null);
+    setUndoStack([]);
+    setUndoVisible(false);
+    const matchesSavedSnapshot = Boolean(
+      loaded.transcript && !removedCitationMarkers && loaded.snapshots.some((snapshot) => snapshot.matches_current),
+    );
+    setSavedFingerprint(matchesSavedSnapshot ? transcriptFingerprint(nextTranscript) : "");
+    setSaveStatus(loaded.transcript && !matchesSavedSnapshot ? "dirty" : "saved");
+    const storedResume = localStorage.getItem(`tarjama-resume-${loaded.project.id}`);
+    try {
+      const parsed = storedResume ? JSON.parse(storedResume) as ResumePoint : null;
+      setResumePoint(parsed && Number.isFinite(parsed.time) && parsed.time >= 5 ? parsed : null);
+    } catch {
+      setResumePoint(null);
+    }
     setState(
       loaded.transcript
         ? loaded.translation
@@ -598,6 +989,7 @@ function DesktopApp() {
   }, [attachedTranslation, desktop, editorLocked, selectedProjectId, transcript]);
 
   async function runDesktopAction(label: string, action: () => Promise<void>) {
+    lastActionRef.current = async () => runDesktopAction(label, action);
     setBusy(true);
     setState(label);
     setError("");
@@ -606,10 +998,19 @@ function DesktopApp() {
       await refreshLibrary();
       setState("Prêt");
     } catch (err) {
-      setState("Erreur");
-      setError(err instanceof Error ? err.message : "Action impossible");
+      const message = err instanceof Error ? err.message : "Action impossible";
+      if (/annul|abort/i.test(message)) {
+        setState("Opération annulée");
+        setError("");
+        setDownloadProgress(null);
+        setGroqProgress(null);
+      } else {
+        setState("Erreur");
+        setError(message);
+      }
     } finally {
       setBusy(false);
+      setCancellingOperation(false);
     }
   }
 
@@ -618,15 +1019,222 @@ function DesktopApp() {
       setError("Ajoute d'abord une vidéo avant d'importer une transcription.");
       return;
     }
-    await runDesktopAction("Import transcription...", async () => {
-      const result = await desktop?.importTranscript(project.id);
-      if (result) {
-        setState(`Transcription importée: ${result.segmentCount} segments`);
-        setSelectedProjectId(project.id);
-        setDesktopView("editor");
-        await loadDesktopProject(project.id);
-      }
+    await chooseImportFile("transcript", project.id);
+  }
+
+  async function transcribeGroqDesktop(project: DesktopProject) {
+    if (!desktop || !project.videoPath) {
+      setError("Ajoute d'abord une vidéo avant de lancer la transcription.");
+      return;
+    }
+    if (project.groqTranscribedAt) {
+      setError("Ce projet a déjà été transcrit avec Groq. La transcription reste disponible dans ce projet.");
+      return;
+    }
+    const keyStatus = await desktop.groqKeyStatus();
+    setGroqKeyStatus(keyStatus);
+    if (!keyStatus.configured) {
+      setDesktopView("options");
+      setOptionsState("Ajoute une clé Groq avant de lancer la transcription.");
+      return;
+    }
+    if (
+      project.transcriptPath &&
+      !window.confirm(
+        attachedTranslation
+          ? "Une transcription et une traduction existent déjà. Elles seront conservées dans l’historique, puis la traduction sera détachée car ses timestamps ne correspondront plus. Continuer ?"
+          : "Une transcription existe déjà. Elle sera conservée dans l’historique puis remplacée par la sortie Groq. Continuer ?",
+      )
+    ) return;
+    setGroqProgress({ projectId: project.id, stage: "preparing", percent: 0, message: "Préparation de la transcription Groq" });
+    setOperationStartedAt(Date.now());
+    setCancellingOperation(false);
+    await runDesktopAction("Transcription Groq...", async () => {
+      const loaded = await desktop.transcribeWithGroq(project.id);
+      applyLoadedProject(loaded);
+      setGroqProgress({ projectId: project.id, stage: "done", percent: 100, message: "Transcription Groq terminée" });
     });
+    setOperationStartedAt(null);
+  }
+
+  async function saveGroqKeyDesktop() {
+    if (!desktop || !groqApiKey.trim()) return;
+    try {
+      const status = await desktop.saveGroqApiKey(groqApiKey);
+      setGroqKeyStatus(status);
+      setGroqApiKey("");
+      setOptionsState("Clé Groq enregistrée dans le coffre chiffré du système.");
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Clé Groq impossible à enregistrer");
+    }
+  }
+
+  async function clearGroqKeyDesktop() {
+    if (!desktop) return;
+    if (!window.confirm("Supprimer la clé Groq personnelle enregistrée sur cet ordinateur ?")) return;
+    try {
+      setGroqKeyStatus(await desktop.clearGroqApiKey());
+      setGroqApiKey("");
+      setOptionsState("Clé Groq supprimée.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Clé Groq impossible à supprimer");
+    }
+  }
+
+  async function copyCleanupPromptDesktop() {
+    if (!desktop || !selectedProjectId || !transcript) return;
+    try {
+      const saved = await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
+      if (!saved.transcript) throw new Error("La transcription courante n'a pas pu être enregistrée");
+      const prompt = await desktop.cleanupTranscriptPrompt(selectedProjectId, saved.transcript);
+      await writeClipboardText(prompt);
+      setCleanupCopyState("Prompt copié");
+      setError("");
+      window.setTimeout(() => setCleanupCopyState("Copier le prompt de nettoyage"), 1800);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Copie du prompt impossible");
+    }
+  }
+
+  function applyCleanedTranscriptResult(result: CleanedTranscriptImportResult) {
+    applyLoadedProject(result.loaded);
+    setState(
+      `Nettoyage importé: ${result.changed} modifié(s), ${result.added} ajouté(s), ${result.removed} supprimé(s)`,
+    );
+  }
+
+  async function importCleanedTranscriptFileDesktop() {
+    await chooseImportFile("cleanup");
+  }
+
+  function buildImportPreview(projectId: string, kind: DesktopImportKind, filename: string, content: string): DesktopImportPreview {
+    if (kind === "transcript") {
+      return { projectId, kind, filename, content, preview: previewTranscriptJson(content) };
+    }
+    const sanitized = stripModelCitationMarkers(content);
+    if (!transcript) {
+      return {
+        projectId,
+        kind,
+        filename,
+        content: sanitized,
+        preview: { valid: false, segmentCount: 0, alignedCount: 0, errors: ["Aucune transcription source dans ce projet"] },
+      };
+    }
+    if (kind === "cleanup") {
+      const review = cleanupPastePreview(sanitized);
+      const segmentCount = (sanitized.match(/^##\s+/gm) ?? []).length;
+      return {
+        projectId,
+        kind,
+        filename,
+        content: sanitized,
+        preview: {
+          valid: review.valid,
+          segmentCount,
+          alignedCount: 0,
+          errors: review.valid ? [] : review.lines,
+        },
+      };
+    }
+    return {
+      projectId,
+      kind,
+      filename,
+      content: sanitized,
+      preview: previewAlignedMarkdown(sanitized, transcriptWithoutTranslations(transcript)),
+    };
+  }
+
+  async function chooseImportFile(kind: DesktopImportKind, projectId = selectedProjectId) {
+    if (!desktop) return;
+    setError("");
+    try {
+      const selection = await desktop.pickTextImport(kind);
+      if (selection) setImportPreview(buildImportPreview(projectId, kind, selection.filename, selection.content));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fichier impossible à lire");
+    }
+  }
+
+  function previewPastedImport(kind: "cleanup" | "translation", content: string) {
+    if (!content.trim()) return;
+    if (kind === "cleanup") setCleanupImportOpen(false);
+    else setPasteImportOpen(false);
+    setImportPreview(buildImportPreview(selectedProjectId, kind, kind === "cleanup" ? "contenu-collé.md" : "traduction-collée.md", content));
+  }
+
+  async function confirmImportPreview() {
+    if (!desktop || !importPreview?.projectId || !importPreview.preview.valid) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (importPreview.kind === "transcript") {
+        const result = await desktop.importTranscriptContent(importPreview.projectId, importPreview.content, importPreview.filename);
+        setState(`Transcription importée: ${result.segmentCount} segments`);
+        setSelectedProjectId(importPreview.projectId);
+        setDesktopView("editor");
+        await loadDesktopProject(importPreview.projectId);
+      } else if (importPreview.kind === "cleanup") {
+        applyCleanedTranscriptResult(await desktop.importCleanedTranscriptContent(importPreview.projectId, importPreview.content));
+        setPastedCleanupTranscript("");
+        setCleanupImportOpen(false);
+      } else {
+        const result = await desktop.importTranslationContent(
+          importPreview.projectId,
+          importPreview.content,
+          importPreview.filename,
+          true,
+        );
+        setAttachedTranslation(result.translation);
+        if (transcript) setTranscript(applyTranslation(transcript, result.translation));
+        setPastedTranslation("");
+        setPasteImportOpen(false);
+        await loadDesktopProject(importPreview.projectId);
+      }
+      setImportPreview(null);
+      await refreshLibrary();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Import impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function savePromptDesktop(kind: DesktopPromptKind) {
+    if (!desktop) return;
+    const content = kind === "transcript_cleanup" ? cleanupPromptDraft : translationPromptDraft;
+    setOptionsState("Enregistrement du prompt...");
+    setError("");
+    try {
+      const settings = await desktop.savePrompt(kind, content);
+      setPromptSettings(settings);
+      if (kind === "transcript_cleanup") setCleanupPromptDraft(settings.transcriptCleanup);
+      else setTranslationPromptDraft(settings.translation);
+      setOptionsState("Prompt personnalisé enregistré.");
+    } catch (err) {
+      setOptionsState("Erreur");
+      setError(err instanceof Error ? err.message : "Prompt impossible à enregistrer");
+    }
+  }
+
+  async function resetPromptDesktop(kind: DesktopPromptKind) {
+    if (!desktop) return;
+    const label = kind === "transcript_cleanup" ? "correction de transcription" : "traduction";
+    if (!window.confirm(`Êtes-vous sûr de vouloir revenir au prompt par défaut de ${label} ? Le prompt personnalisé sera supprimé et cette suppression ne pourra pas être annulée.`)) return;
+    setOptionsState("Restauration du prompt par défaut...");
+    setError("");
+    try {
+      const settings = await desktop.resetPrompt(kind);
+      setPromptSettings(settings);
+      if (kind === "transcript_cleanup") setCleanupPromptDraft(settings.transcriptCleanup);
+      else setTranslationPromptDraft(settings.translation);
+      setOptionsState("Prompt par défaut restauré.");
+    } catch (err) {
+      setOptionsState("Erreur");
+      setError(err instanceof Error ? err.message : "Prompt par défaut impossible à restaurer");
+    }
   }
 
   function openDesktopProject(projectId: string) {
@@ -639,8 +1247,28 @@ function DesktopApp() {
     window.scrollTo({ top: 0 });
   }
 
-  function returnToLibrary() {
+  async function persistCurrentState() {
+    if (!desktop || !selectedProjectId || !transcript || editorLocked) return;
+    const loaded = await desktop.saveCurrentTranscript(selectedProjectId, transcriptWithoutTranslations(transcript));
+    if (attachedTranslation) {
+      await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
+    }
+    setLoadedProject(loaded.project);
+  }
+
+  async function returnToLibrary() {
+    if (
+      desktopView === "options" &&
+      (cleanupPromptChanged || translationPromptChanged) &&
+      !window.confirm("Des modifications de prompt ne sont pas enregistrées. Quitter Options et les abandonner ?")
+    ) return;
     audioRef.current?.pause();
+    try {
+      await persistCurrentState();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Modifications courantes impossibles à conserver");
+      return;
+    }
     setDesktopView("library");
     setPreviewTranscript(null);
     setPreviewSnapshot(null);
@@ -648,24 +1276,100 @@ function DesktopApp() {
     window.scrollTo({ top: 0 });
   }
 
-  async function createYoutubeProjectDesktop() {
-    const url = youtubeUrl.trim();
-    if (!url) {
-      setError("Colle un lien YouTube avant de créer le projet.");
+  function resetNewProject() {
+    setNewProjectMode("youtube");
+    setNewYoutubeUrl("");
+    setNewProjectTitle("");
+    setNewYoutubeFormats([]);
+    setNewSelectedYoutubeFormat("");
+    setNewYoutubeTitle("");
+  }
+
+  function openNewProject(mode: "youtube" | "local" = "youtube") {
+    setError("");
+    resetNewProject();
+    setNewProjectMode(mode);
+    setNewProjectOpen(true);
+  }
+
+  function closeNewProject() {
+    if (busy) return;
+    setNewProjectOpen(false);
+    resetNewProject();
+    setError("");
+  }
+
+  async function analyzeNewYoutubeProject() {
+    const url = newYoutubeUrl.trim();
+    if (!desktop || !url) {
+      setError("Colle un lien YouTube avant de l’analyser.");
+      return;
+    }
+    setBusy(true);
+    setState("Analyse de la vidéo YouTube...");
+    setError("");
+    try {
+      const result = await desktop.listYoutubeFormats(url);
+      setNewYoutubeFormats(result.formats);
+      setNewSelectedYoutubeFormat(result.formats[0]?.formatSelector ?? "");
+      setNewYoutubeTitle(result.title);
+      setState(`${result.formats.length} format(s) disponible(s)`);
+    } catch (err) {
+      setState("Erreur");
+      setError(err instanceof Error ? err.message : "Analyse de la vidéo impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadNewYoutubeProject() {
+    const url = newYoutubeUrl.trim();
+    if (!desktop || !url || !newSelectedYoutubeFormat) return;
+    setOperationStartedAt(Date.now());
+    setCancellingOperation(false);
+    await runDesktopAction("Téléchargement vidéo...", async () => {
+      setDownloadProgress({ projectId: "pending", stage: "metadata", message: "Préparation du projet YouTube..." });
+      const result = await desktop.downloadYoutube({ url, formatSelector: newSelectedYoutubeFormat });
+      setSelectedProjectId(result.project.id);
+      setDesktopView("editor");
+      applyLoadedProject(await desktop.loadProject(result.project.id));
+      setDownloadProgress({ projectId: result.project.id, stage: "done", percent: 100, message: "Téléchargement terminé" });
+      setNewProjectOpen(false);
+      resetNewProject();
+    });
+    setOperationStartedAt(null);
+  }
+
+  async function importNewLocalProjectVideo() {
+    const title = newProjectTitle.trim();
+    if (!desktop || !title) {
+      setError("Donne un titre au projet avant de choisir la vidéo.");
+      return;
+    }
+    await runDesktopAction("Choix de la vidéo...", async () => {
+      const result = await desktop.importLocalVideo(undefined, title);
+      if (!result) return;
+      setSelectedProjectId(result.project.id);
+      setDesktopView("editor");
+      applyLoadedProject(await desktop.loadProject(result.project.id));
+      setNewProjectOpen(false);
+      resetNewProject();
+    });
+  }
+
+  async function createNewLocalProjectWithoutVideo() {
+    const title = newProjectTitle.trim();
+    if (!desktop || !title) {
+      setError("Donne un titre au projet avant de le créer.");
       return;
     }
     await runDesktopAction("Création du projet...", async () => {
-      const result = await desktop?.createYoutubeProject({ url });
-      if (!result) return;
-      setYoutubeUrl("");
-      setYoutubeFormats([]);
-      setSelectedYoutubeFormat("");
-      setYoutubeFormatTitle("");
-      setYoutubeFormatProjectId("");
-      setYoutubeCreateWarning(result.warning ?? "");
+      const result = await desktop.createLocalProject(title);
       setSelectedProjectId(result.project.id);
       setDesktopView("editor");
-      setState(result.warning ? "Projet créé avec avertissement" : "Projet créé. Tu peux maintenant ajouter la vidéo.");
+      applyLoadedProject(await desktop.loadProject(result.project.id));
+      setNewProjectOpen(false);
+      resetNewProject();
     });
   }
 
@@ -675,6 +1379,12 @@ function DesktopApp() {
       setError("Ce projet n'a pas de lien YouTube.");
       return;
     }
+    if (
+      project.videoPath &&
+      !window.confirm("Remplacer la vidéo actuelle par la qualité YouTube sélectionnée ? La transcription et la traduction seront conservées.")
+    ) return;
+    setOperationStartedAt(Date.now());
+    setCancellingOperation(false);
     await runDesktopAction("Téléchargement vidéo...", async () => {
       setDownloadProgress({ projectId: project.id, stage: "metadata", message: "Analyse de la vidéo YouTube..." });
       const result = await desktop?.downloadYoutube({
@@ -691,6 +1401,7 @@ function DesktopApp() {
         setDownloadProgress({ projectId: result.project.id, stage: "done", percent: 100, message: "Téléchargement terminé" });
       }
     });
+    setOperationStartedAt(null);
   }
 
   async function analyzeYoutubeFormatsDesktop(project: DesktopProject) {
@@ -711,6 +1422,10 @@ function DesktopApp() {
   }
 
   async function importLocalVideoDesktop(project?: DesktopProject) {
+    if (
+      project?.videoPath &&
+      !window.confirm("Remplacer la vidéo actuelle par un fichier local ? La transcription et la traduction seront conservées.")
+    ) return;
     await runDesktopAction("Import vidéo...", async () => {
       const result = await desktop?.importLocalVideo(project?.id);
       if (result) {
@@ -724,10 +1439,12 @@ function DesktopApp() {
   }
 
   async function updateYtdlpDesktop() {
+    setOptionsState("Mise à jour de yt-dlp...");
     await runDesktopAction("Mise à jour yt-dlp...", async () => {
       const result = await desktop?.updateYtdlp();
       if (result) {
         setState(`yt-dlp mis à jour: ${result.version}`);
+        setOptionsState(`yt-dlp mis à jour: ${result.version}`);
       }
     });
   }
@@ -748,7 +1465,7 @@ function DesktopApp() {
   async function copyProjectYoutubeUrl(project: DesktopProject) {
     if (!project.youtubeUrl) return;
     try {
-      await navigator.clipboard.writeText(project.youtubeUrl);
+      await writeClipboardText(project.youtubeUrl);
       setCopiedProjectId(project.id);
       setError("");
       window.setTimeout(() => {
@@ -760,57 +1477,127 @@ function DesktopApp() {
   }
 
   async function trashProjectDesktop(project: DesktopProject) {
-    const confirmed = window.confirm(`Déplacer le projet "${project.title}" à la corbeille ?`);
-    if (!confirmed) return;
     await runDesktopAction("Suppression...", async () => {
       await desktop?.trashProject(project.id);
     });
   }
 
-  function seekTo(seconds: number) {
+  function openRenameProject() {
+    if (!loadedProject) return;
+    setProjectTitleDraft(loadedProject.title);
+    setRenameProjectOpen(true);
+  }
+
+  async function renameProjectDesktop() {
+    if (!desktop || !loadedProject || !projectTitleDraft.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      const updated = await desktop.renameProject(loadedProject.id, projectTitleDraft);
+      setLoadedProject(updated);
+      setRenameProjectOpen(false);
+      setState("Projet renommé");
+      await refreshLibrary();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Projet impossible à renommer");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function isInsidePlaybackRange(seconds: number) {
+    const start = parseTime(rangeStart) ?? 0;
+    const end = parseTime(rangeEnd);
+    return end !== null && end > start && seconds >= start && seconds < end;
+  }
+
+  function seekTo(seconds: number, preserveRangePlayback = false) {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = Math.max(0, Math.min(seconds, duration || seconds));
-    setCurrentTime(audio.currentTime);
+    const knownDuration = [audio.duration, duration, loadedProject?.durationSeconds]
+      .find((value) => typeof value === "number" && Number.isFinite(value) && value > 0);
+    const target = Math.max(0, knownDuration ? Math.min(seconds, knownDuration) : seconds);
+    currentTimeRef.current = target;
+    setCurrentTime(target);
+    audio.currentTime = target;
+    if (!preserveRangePlayback && !isInsidePlaybackRange(target)) {
+      setRangePlaybackActive(false);
+    }
   }
 
   function seekBy(delta: number) {
-    seekTo((audioRef.current?.currentTime ?? 0) + delta);
+    seekTo(currentTimeRef.current + delta);
+  }
+
+  function adjustPlaybackRate(direction: -1 | 1) {
+    setPlaybackRate((rate) => {
+      const currentIndex = PLAYBACK_RATES.indexOf(rate as (typeof PLAYBACK_RATES)[number]);
+      const nextIndex = Math.max(0, Math.min(PLAYBACK_RATES.length - 1, currentIndex + direction));
+      return PLAYBACK_RATES[nextIndex];
+    });
   }
 
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
+    audio.playbackRate = playbackRate;
     const start = parseTime(rangeStart) ?? 0;
     const end = parseTime(rangeEnd);
-    if (audio.paused && end !== null && end > start && audio.currentTime >= end - 0.05) {
+    const hasRange = end !== null && end > start;
+    if (audio.paused && rangePlaybackActive && hasRange && audio.currentTime >= end - 0.05) {
       audio.currentTime = start;
+      currentTimeRef.current = start;
       setCurrentTime(start);
     }
-    if (audio.paused) void audio.play();
-    else audio.pause();
+    if (audio.paused) {
+      setRangePlaybackActive(hasRange && (rangePlaybackActive || isInsidePlaybackRange(audio.currentTime)));
+      void audio.play();
+    } else {
+      audio.pause();
+    }
   }
 
-  function stopAudio() {
-    audioRef.current?.pause();
-    seekTo(parseTime(rangeStart) ?? 0);
+  function returnToInterval() {
+    const start = parseTime(rangeStart) ?? 0;
+    seekTo(start, true);
+    setRangePlaybackActive(true);
+  }
+
+  function clearInterval() {
+    setRangeStart("00:00");
+    setRangeEnd("00:00");
+    setLoopEnabled(false);
+    setRangePlaybackActive(false);
   }
 
   function onTimeUpdate() {
     const audio = audioRef.current;
     if (!audio) return;
     const nextTime = audio.currentTime;
+    currentTimeRef.current = nextTime;
     setCurrentTime(nextTime);
+    const wholeSecond = Math.floor(nextTime);
+    if (selectedProjectId && wholeSecond % 2 === 0 && wholeSecond !== resumeWriteSecond.current) {
+      resumeWriteSecond.current = wholeSecond;
+      const active = transcript?.segments.find((segment) => nextTime >= segment.start && nextTime < segment.end);
+      localStorage.setItem(
+        `tarjama-resume-${selectedProjectId}`,
+        JSON.stringify({ time: nextTime, segmentId: active?.id }),
+      );
+    }
     const end = parseTime(rangeEnd);
     const start = parseTime(rangeStart) ?? 0;
-    if (loopEnabled && end !== null && end > start && nextTime >= end) {
+    if (rangePlaybackActive && loopEnabled && end !== null && end > start && nextTime >= end) {
       audio.currentTime = start;
+      currentTimeRef.current = start;
+      setCurrentTime(start);
       void audio.play();
       return;
     }
-    if (!loopEnabled && end !== null && end > start && nextTime >= end) {
+    if (rangePlaybackActive && !loopEnabled && end !== null && end > start && nextTime >= end) {
       audio.pause();
       audio.currentTime = end;
+      currentTimeRef.current = end;
       setCurrentTime(end);
     }
   }
@@ -843,6 +1630,58 @@ function DesktopApp() {
     }, 1600);
   }
 
+  function scrollSegmentToTop(segmentId: string) {
+    const element = segmentRefs.current.get(segmentId);
+    if (!element) return;
+    const stickyHeight = playerBandRef.current?.getBoundingClientRect().height ?? 0;
+    const targetTop = window.scrollY + element.getBoundingClientRect().top - stickyHeight - 12;
+    window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+  }
+
+  function focusSegment(segmentId: string, seek = true) {
+    const segment = displayedTranscript?.segments.find((candidate) => candidate.id === segmentId);
+    if (!segment) return;
+    if (seek) seekTo(segment.start);
+    setFocusedSegmentId(segment.id);
+    segmentRefs.current.get(segment.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function navigateAdjacentSegment(direction: -1 | 1) {
+    const segments = displayedTranscript?.segments ?? [];
+    if (!segments.length) return;
+    const anchorId = focusedSegmentId || activeSegmentId;
+    const currentIndex = Math.max(0, segments.findIndex((segment) => segment.id === anchorId));
+    const nextIndex = Math.max(0, Math.min(segments.length - 1, currentIndex + direction));
+    focusSegment(segments[nextIndex].id);
+  }
+
+  function navigateSearch(direction: -1 | 1) {
+    if (!searchResults.length) return;
+    const nextIndex = (searchIndex + direction + searchResults.length) % searchResults.length;
+    setSearchIndex(nextIndex);
+    const result = searchResults[nextIndex];
+    focusSegment(result.segmentId, false);
+    window.setTimeout(() => {
+      const field = segmentFieldRefs.current.get(`${result.segmentId}:${result.field}`);
+      if (!field) return;
+      field.focus();
+      field.setSelectionRange(result.offset, result.offset + searchQuery.trim().length);
+    }, 250);
+  }
+
+  function acceptResumePoint() {
+    if (!resumePoint) return;
+    seekTo(resumePoint.time);
+    if (resumePoint.segmentId) focusSegment(resumePoint.segmentId, false);
+    setResumePoint(null);
+  }
+
+  function restartProjectPlayback() {
+    seekTo(0);
+    setResumePoint(null);
+    if (selectedProjectId) localStorage.setItem(`tarjama-resume-${selectedProjectId}`, JSON.stringify({ time: 0 }));
+  }
+
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -853,11 +1692,34 @@ function DesktopApp() {
       ...transcript,
       segments: transcript.segments.map((segment) => (segment.id === id ? { ...segment, ...patch } : segment)),
     });
+    if ("text" in patch || "start" in patch || "end" in patch) {
+      setProjectReview((review) => ({ ...review, transcriptConfirmed: false, translationConfirmed: false }));
+    } else if ("translation" in patch) {
+      setProjectReview((review) => ({ ...review, translationConfirmed: false }));
+    }
+    setSaveStatus("dirty");
   }
 
   function mutateSegments(mutator: (segments: Segment[]) => Segment[]) {
     if (!transcript || editorLocked) return;
-    setTranscript({ ...transcript, segments: mutator(transcript.segments) });
+    const nextSegments = mutator(transcript.segments);
+    if (nextSegments === transcript.segments) return;
+    setUndoStack((stack) => [...stack.slice(-19), structuredClone(transcript)]);
+    setTranscript({ ...transcript, segments: nextSegments });
+    setProjectReview((review) => ({ ...review, transcriptConfirmed: false, translationConfirmed: false }));
+    setSaveStatus("dirty");
+    setUndoVisible(true);
+    window.setTimeout(() => setUndoVisible(false), 5000);
+  }
+
+  function undoLastStructuralEdit() {
+    if (!undoStack.length || editorLocked) return;
+    const previous = undoStack.at(-1)!;
+    setUndoStack((stack) => stack.slice(0, -1));
+    setTranscript(previous);
+    setProjectReview((review) => ({ ...review, transcriptConfirmed: false, translationConfirmed: false }));
+    setSaveStatus("dirty");
+    setUndoVisible(false);
   }
 
   function addSegmentAfter(segmentId: string) {
@@ -924,22 +1786,44 @@ function DesktopApp() {
   }
 
   async function createSavePointDesktop() {
-    if (!desktop || !selectedProjectId || !transcript || editorLocked) return;
-    setSaveState("Sauvegarde...");
+    if (!desktop || !selectedProjectId || !transcript || editorLocked || saveStatus !== "dirty") return;
+    if (segmentIssues.length) {
+      setError("Corrige les erreurs d’horodatage signalées avant de sauvegarder.");
+      focusSegment(segmentIssues[0].segmentId, false);
+      return;
+    }
+    setSaveStatus("saving");
     setError("");
     try {
       applyLoadedProject(await desktop.createTranscriptSnapshot(selectedProjectId, transcript));
-      setSaveState("Sauvegardé");
+      setSaveStatus("saved");
     } catch (err) {
-      setSaveState("Sauvegarder");
+      setSaveStatus("dirty");
       setError(err instanceof Error ? err.message : "Sauvegarde impossible");
     }
   }
 
+  async function confirmProjectReviewDesktop(kind: DesktopProjectReviewKind) {
+    if (!desktop || !selectedProjectId || !transcript || editorLocked) return;
+    if (segmentIssues.length) {
+      setError("Corrige les erreurs d’horodatage signalées avant de confirmer la relecture.");
+      focusSegment(segmentIssues[0].segmentId, false);
+      return;
+    }
+    if (kind === "translation" && !attachedTranslation) {
+      setError("Importe d’abord une traduction.");
+      return;
+    }
+    await runDesktopAction("Confirmation de la relecture...", async () => {
+      applyLoadedProject(await desktop.confirmProjectReview(selectedProjectId, kind, transcript));
+    });
+  }
+
   async function copyTranslationPromptDesktop() {
-    if (!transcript) return;
+    if (!desktop || !selectedProjectId || !transcript) return;
     try {
-      await navigator.clipboard.writeText(translationPromptFromTranscript(transcript));
+      const prompt = await desktop.translationPrompt(selectedProjectId, transcriptWithoutTranslations(transcript));
+      await writeClipboardText(prompt);
       setCopyState("Copié");
       window.setTimeout(() => setCopyState("Copier prompt"), 1600);
     } catch (err) {
@@ -953,17 +1837,7 @@ function DesktopApp() {
       setError("Ajoute d'abord une vidéo avant d'importer une traduction.");
       return;
     }
-    setError("");
-    try {
-      const result = await desktop.importTranslationFile(selectedProjectId);
-      if (result) {
-        setAttachedTranslation(result.translation);
-        if (transcript) setTranscript(applyTranslation(transcript, result.translation));
-        await loadDesktopProject(selectedProjectId);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Import traduction impossible");
-    }
+    await chooseImportFile("translation");
   }
 
   async function importPastedTranslationDesktop() {
@@ -972,17 +1846,7 @@ function DesktopApp() {
       setError("Ajoute d'abord une vidéo avant d'importer une traduction.");
       return;
     }
-    setError("");
-    try {
-      const result = await desktop.importTranslationContent(selectedProjectId, pastedTranslation, "pasted-translation.json", true);
-      setAttachedTranslation(result.translation);
-      if (transcript) setTranscript(applyTranslation(transcript, result.translation));
-      setPastedTranslation("");
-      setPasteImportOpen(false);
-      await loadDesktopProject(selectedProjectId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Import traduction impossible");
-    }
+    previewPastedImport("translation", pastedTranslation);
   }
 
   async function exportVideoDesktop(track: ExportTrack, openAfter = false) {
@@ -999,6 +1863,8 @@ function DesktopApp() {
       return;
     }
     setExportingTrack(track);
+    setOperationStartedAt(Date.now());
+    setCancellingOperation(false);
     setExportProgress(null);
     setError("");
     setState(track === "arabic" ? "Préparation de l'export arabe..." : "Préparation de l'export traduction...");
@@ -1008,7 +1874,7 @@ function DesktopApp() {
         await desktop.saveTranslation(selectedProjectId, translationFromTranscript(transcript, attachedTranslation));
       }
       setState("Choisis l'emplacement du fichier exporté...");
-      const result = await desktop.exportVideo(selectedProjectId, track, openAfter, exportSubtitleStyle);
+      const result = await desktop.exportVideo(selectedProjectId, track, openAfter, exportOptions);
       if (result) {
         setState(result.opened ? `Export créé et ouvert: ${result.outputPath}` : `Export créé: ${result.outputPath}`);
         setExportProgress(null);
@@ -1017,12 +1883,28 @@ function DesktopApp() {
         setExportProgress(null);
       }
     } catch (err) {
-      setState("Export échoué.");
-      setError(err instanceof Error ? err.message : "Export impossible");
+      const message = err instanceof Error ? err.message : "Export impossible";
+      if (/annul|abort/i.test(message)) {
+        setState("Export annulé.");
+        setError("");
+      } else {
+        setState("Export échoué.");
+        setError(message);
+      }
       setExportProgress(null);
     } finally {
       setExportingTrack(null);
+      setOperationStartedAt(null);
+      setCancellingOperation(false);
     }
+  }
+
+  async function cancelLongOperation(kind: LongOperationKind) {
+    if (!desktop) return;
+    setCancellingOperation(true);
+    const cancelled = await desktop.cancelOperation(kind);
+    if (!cancelled) setCancellingOperation(false);
+    else setState("Annulation en cours...");
   }
 
   async function selectDesktopSnapshot(snapshotId: string) {
@@ -1074,7 +1956,11 @@ function DesktopApp() {
           </div>
         </div>
         <div className="desktop-project-actions">
-          <button disabled={busy || !project.videoPath} onClick={() => void importTranscriptDesktop(project)}>
+          <button
+            disabled={busy || !project.videoPath}
+            title={!project.videoPath ? "Ajoute d’abord une vidéo" : project.transcriptPath ? "Remplacer la transcription du projet" : "Importer une transcription"}
+            onClick={() => void importTranscriptDesktop(project)}
+          >
             <Upload size={16} />
             <span>{project.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
           </button>
@@ -1098,45 +1984,174 @@ function DesktopApp() {
   function renderDownloadProgress() {
     if (!downloadProgress || downloadProgress.stage === "done") return null;
     return (
-      <div className="download-progress" role="status" aria-live="polite">
-        <div>
-          <span>{downloadProgress.message}</span>
-          {downloadProgress.percent !== undefined && <strong>{downloadProgress.percent.toFixed(1)}%</strong>}
-        </div>
-        <progress value={downloadProgress.percent ?? undefined} max="100" />
-        <small>
-          {[downloadProgress.speed, downloadProgress.eta ? `ETA ${downloadProgress.eta}` : ""].filter(Boolean).join(" · ")}
-        </small>
-      </div>
+      <OperationProgress
+        message={downloadProgress.message}
+        percent={downloadProgress.percent}
+        detail={[downloadProgress.speed, downloadProgress.eta ? `Reste ${downloadProgress.eta}` : ""].filter(Boolean).join(" · ")}
+        elapsed={formatElapsed(operationStartedAt ? operationClock - operationStartedAt : 0)}
+        cancelling={cancellingOperation}
+        onCancel={() => void cancelLongOperation("download")}
+      />
     );
   }
 
   function renderExportProgress() {
     if (!exportProgress || exportProgress.stage === "done") return null;
     return (
-      <div className="download-progress export-progress" role="status" aria-live="polite">
-        <div>
-          <span>{exportProgress.message}</span>
-          {exportProgress.percent !== undefined && <strong>{exportProgress.percent.toFixed(1)}%</strong>}
-        </div>
-        <progress value={exportProgress.percent ?? undefined} max="100" />
-        <small>{exportProgress.eta ? `ETA ${exportProgress.eta}` : "Rendu en cours..."}</small>
-      </div>
+      <OperationProgress
+        message={exportProgress.message}
+        percent={exportProgress.percent}
+        detail={exportProgress.eta ? `Reste ${exportProgress.eta}` : "Rendu en cours"}
+        elapsed={formatElapsed(operationStartedAt ? operationClock - operationStartedAt : 0)}
+        cancelling={cancellingOperation}
+        onCancel={() => void cancelLongOperation("export")}
+      />
+    );
+  }
+
+  function renderGroqProgress() {
+    if (!groqProgress || groqProgress.stage === "done") return null;
+    return (
+      <OperationProgress
+        message={groqProgress.message}
+        percent={groqProgress.percent}
+        detail={groqProgress.chunkIndex && groqProgress.chunkCount
+          ? `Morceau ${groqProgress.chunkIndex} sur ${groqProgress.chunkCount}`
+          : "Préparation de l’audio"}
+        elapsed={formatElapsed(operationStartedAt ? operationClock - operationStartedAt : 0)}
+        cancelling={cancellingOperation}
+        onCancel={() => void cancelLongOperation("transcription")}
+      />
+    );
+  }
+
+  function renderNextProjectAction() {
+    if (!loadedProject || busy || isHistoryPreview) return null;
+    const workflowStep = projectWorkflowStep({
+      hasVideo: loadedProjectHasVideo,
+      hasTranscript: Boolean(transcript),
+      cleanupImported: projectReview.cleanupImported,
+      transcriptConfirmed: projectReview.transcriptConfirmed,
+      hasTranslation: Boolean(attachedTranslation),
+      translationConfirmed: projectReview.translationConfirmed,
+    });
+    if (workflowStep === "video") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Prochaine étape</strong><span>Ajoute la vidéo au projet.</span></div>
+          <button className="primary-action" onClick={() => void importLocalVideoDesktop(loadedProject)}>
+            <FileInput size={16} /><span>Importer une vidéo</span>
+          </button>
+        </section>
+      );
+    }
+    if (workflowStep === "transcription") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Prochaine étape</strong><span>Crée ou importe la transcription.</span></div>
+          <button
+            className="primary-action"
+            disabled={Boolean(loadedProject.groqTranscribedAt)}
+            title={loadedProject.groqTranscribedAt ? "Cette vidéo a déjà consommé un appel Groq" : "Transcrire la vidéo avec Groq"}
+            onClick={() => void transcribeGroqDesktop(loadedProject)}
+          >
+            <Cloud size={16} /><span>Transcrire avec Groq</span>
+          </button>
+        </section>
+      );
+    }
+    if (workflowStep === "cleanup") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Prochaine étape</strong><span>Fais corriger la transcription par le LLM, puis importe le résultat.</span></div>
+          <div className="next-action-controls" aria-label="Faire corriger et importer la transcription">
+            <button onClick={() => void copyCleanupPromptDesktop()}>
+              <Copy size={16} /><span>1. {cleanupCopyState}</span>
+            </button>
+            <button className="primary-action" onClick={() => setCleanupImportOpen(true)}>
+              <ClipboardPaste size={16} /><span>2. Coller le résultat</span>
+            </button>
+          </div>
+        </section>
+      );
+    }
+    if (workflowStep === "transcript-review") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Relecture manuelle</strong><span>Relis et corrige la transcription en écoutant l’audio.</span></div>
+          <button className="primary-action" onClick={() => void confirmProjectReviewDesktop("transcript")}>
+            <Check size={16} /><span>Je confirme la transcription</span>
+          </button>
+        </section>
+      );
+    }
+    if (workflowStep === "translation") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Prochaine étape</strong><span>Copie le prompt, puis importe la traduction obtenue.</span></div>
+          <div className="next-action-controls" aria-label="Préparer et importer la traduction">
+            <button onClick={() => void copyTranslationPromptDesktop()}>
+              <Copy size={16} /><span>1. {copyState}</span>
+            </button>
+            <button className="primary-action" onClick={() => setPasteImportOpen(true)}>
+              <ClipboardPaste size={16} /><span>2. Coller le résultat</span>
+            </button>
+          </div>
+        </section>
+      );
+    }
+    if (workflowStep === "translation-review") {
+      return (
+        <section className="next-action" aria-label="Prochaine étape">
+          <div><strong>Relecture manuelle</strong><span>Relis et corrige les choix de traduction en écoutant l’audio.</span></div>
+          <button className="primary-action" onClick={() => void confirmProjectReviewDesktop("translation")}>
+            <Check size={16} /><span>Je confirme la traduction</span>
+          </button>
+        </section>
+      );
+    }
+    return (
+      <section className="next-action" aria-label="Workflow terminé">
+        <div><strong>Terminé !</strong><span>La transcription et la traduction sont prêtes à être exportées.</span></div>
+        <button className="primary-action" onClick={() => setOpenActionMenu("export")}>
+          <Settings size={16} /><span>Configurer l’export</span>
+        </button>
+      </section>
     );
   }
 
   return (
     <main className="desktop-shell">
-      <header className={`desktop-header ${desktopView === "editor" ? "desktop-header-editor" : ""}`}>
+      <header className={`desktop-header ${desktopView !== "library" ? "desktop-header-editor" : ""}`}>
         {desktopView === "editor" ? (
           <>
-            <button className="back-button" onClick={returnToLibrary}>
+            <button className="back-button" onClick={() => void returnToLibrary()} title="Retourner aux projets">
               <ArrowLeft size={16} />
               <span>Projets</span>
             </button>
             <div>
               <strong dir="auto">{loadedProject?.title ?? "Projet"}</strong>
-              <span>{loadedProject ? projectStatusLabel(loadedProject) : "Chargement"}</span>
+              <span>{loadedProject ? projectStatusLabel(loadedProject, projectReview, Boolean(attachedTranslation)) : "Chargement"}</span>
+            </div>
+            <div className="editor-header-actions">
+              <button disabled={!loadedProject || busy} onClick={openRenameProject} title="Renommer le projet">
+                <Pencil size={16} />
+                <span>Renommer</span>
+              </button>
+              <button className="icon-button" onClick={() => setShortcutsOpen(true)} title="Aide et raccourcis - ?" aria-label="Aide et raccourcis">
+                <CircleHelp size={18} />
+              </button>
+            </div>
+          </>
+        ) : desktopView === "options" ? (
+          <>
+            <button className="back-button" onClick={() => void returnToLibrary()} title="Retourner aux projets">
+              <ArrowLeft size={16} />
+              <span>Projets</span>
+            </button>
+            <div>
+              <strong>Options</strong>
+              <span>Réglages de l’application</span>
             </div>
           </>
         ) : (
@@ -1146,60 +2161,32 @@ function DesktopApp() {
           </div>
         )}
         {desktopView === "library" && (
-          <button disabled={busy} onClick={() => void refreshLibrary()}>
-            <RotateCcw size={16} />
-            <span>Actualiser</span>
-          </button>
+          <div className="desktop-header-actions">
+            <button disabled={busy} onClick={() => void refreshLibrary()}>
+              <RotateCcw size={16} />
+              <span>Actualiser</span>
+            </button>
+            <button onClick={() => setDesktopView("options")}>
+              <Settings size={16} />
+              <span>Options</span>
+            </button>
+          </div>
         )}
-        <button onClick={() => setTheme((value) => (value === "dark" ? "light" : "dark"))}>
-          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          <span>{theme === "dark" ? "Clair" : "Sombre"}</span>
-        </button>
       </header>
 
       {desktopView === "library" && (
         <>
-          <section className="desktop-panel">
-            <h1>Créer un projet</h1>
-            <div className="desktop-actions">
-              <label>
-                <span>Lien YouTube</span>
-                <input
-                  value={youtubeUrl}
-                  onChange={(event) => {
-                    setYoutubeUrl(event.target.value);
-                    setYoutubeFormats([]);
-                    setSelectedYoutubeFormat("");
-                    setYoutubeFormatTitle("");
-                    setYoutubeFormatProjectId("");
-                    setYoutubeCreateWarning("");
-                  }}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                />
-              </label>
-              <div className="desktop-create-buttons">
-                <button disabled={busy} onClick={() => void createYoutubeProjectDesktop()}>
-                  <Plus size={16} />
-                  <span>Créer projet</span>
-                </button>
-                <button disabled={busy} onClick={() => void updateYtdlpDesktop()}>
-                  <RotateCcw size={16} />
-                  <span>Mettre à jour yt-dlp</span>
-                </button>
-              </div>
-            </div>
-            {youtubeCreateWarning && <p className="warning">{youtubeCreateWarning}</p>}
-            <p className="desktop-state">{state}</p>
-            {renderDownloadProgress()}
-            {downloadProgress?.stage === "done" && (
-              <p className="desktop-state">Téléchargement terminé. Le projet a été ajouté à la liste.</p>
-            )}
-            {error && <p className="error">{error}</p>}
-            {library && <p className="desktop-path">{library.libraryDir}</p>}
-          </section>
-
           <section className="desktop-projects">
-            <h2>Projets</h2>
+            <div className="library-heading">
+              <div>
+                <h1>Projets</h1>
+                <p>Bibliothèque locale</p>
+              </div>
+              <button className="primary-action" onClick={() => openNewProject()}>
+                <Plus size={16} />
+                <span>Nouveau projet</span>
+              </button>
+            </div>
             {!activeProjects.length && <p className="state">Aucun projet actif.</p>}
             {activeProjects.map(renderProject)}
             {archivedProjects.length > 0 && (
@@ -1210,14 +2197,137 @@ function DesktopApp() {
                 {showArchives && archivedProjects.map(renderProject)}
               </>
             )}
+            {error && <ErrorNotice details={error} onRetry={lastActionRef.current ?? undefined} />}
+            {library && <p className="desktop-path">{library.libraryDir}</p>}
           </section>
         </>
+      )}
+
+      {desktopView === "options" && (
+        <section className="options-page">
+          <section className="options-section">
+            <div className="options-section-heading">
+              <div>
+                <h1>Apparence</h1>
+                <span>Thème utilisé au prochain démarrage inclus.</span>
+              </div>
+            </div>
+            <div className="theme-options" role="group" aria-label="Thème de l’application">
+              <button className={theme === "dark" ? "selected" : ""} onClick={() => setTheme("dark")}>
+                <Moon size={16} />
+                <span>Sombre</span>
+              </button>
+              <button className={theme === "light" ? "selected" : ""} onClick={() => setTheme("light")}>
+                <Sun size={16} />
+                <span>Clair</span>
+              </button>
+            </div>
+          </section>
+
+          <section className="options-section">
+            <div className="options-section-heading">
+              <div>
+                <h1>Clé API Groq</h1>
+                <span>
+                  {groqKeyStatus.source === "stored"
+                    ? "Une clé personnelle est enregistrée localement sur cette machine."
+                    : groqKeyStatus.source === "bundled-default"
+                      ? "La clé Groq par défaut de l’application est utilisée."
+                    : groqKeyStatus.source === "development-env"
+                      ? "La clé de développement du fichier .env est utilisée."
+                      : "Aucune clé configurée."}
+                </span>
+              </div>
+            </div>
+            <div className="option-inline-form">
+              <input
+                type="password"
+                autoComplete="off"
+                value={groqApiKey}
+                onChange={(event) => setGroqApiKey(event.target.value)}
+                placeholder="gsk_..."
+              />
+              <button disabled={!groqApiKey.trim()} onClick={() => void saveGroqKeyDesktop()}>
+                <Save size={16} />
+                <span>Enregistrer</span>
+              </button>
+              {groqKeyStatus.source === "stored" && (
+                <button className="danger-button" onClick={() => void clearGroqKeyDesktop()}>
+                  <Trash2 size={16} />
+                  <span>Supprimer</span>
+                </button>
+              )}
+            </div>
+          </section>
+
+          <section className="options-section">
+            <div className="options-section-heading">
+              <div>
+                <h1>Outils vidéo</h1>
+                <span>Met à jour le téléchargeur YouTube embarqué sans réinstaller l’application.</span>
+              </div>
+              <button disabled={busy} onClick={() => void updateYtdlpDesktop()}>
+                <RotateCcw size={16} />
+                <span>Mettre à jour yt-dlp</span>
+              </button>
+            </div>
+          </section>
+
+          <section className="options-section prompt-option">
+            <div className="options-section-heading">
+              <div>
+                <h1>Prompt de correction</h1>
+                <span>{promptSettings?.transcriptCleanupCustomized ? "Version personnalisée" : "Version par défaut"}</span>
+              </div>
+              <div className="options-actions">
+                <button
+                  disabled={!promptSettings?.transcriptCleanupCustomized && !cleanupPromptChanged}
+                  onClick={() => void resetPromptDesktop("transcript_cleanup")}
+                >
+                  <RotateCcw size={16} />
+                  <span>Revenir au défaut</span>
+                </button>
+                <button disabled={!cleanupPromptDraft.trim() || !cleanupPromptChanged} onClick={() => void savePromptDesktop("transcript_cleanup")}>
+                  <Save size={16} />
+                  <span>Enregistrer</span>
+                </button>
+              </div>
+            </div>
+            <textarea value={cleanupPromptDraft} onChange={(event) => setCleanupPromptDraft(event.target.value)} />
+          </section>
+
+          <section className="options-section prompt-option">
+            <div className="options-section-heading">
+              <div>
+                <h1>Prompt de traduction</h1>
+                <span>{promptSettings?.translationCustomized ? "Version personnalisée" : "Version par défaut"}</span>
+              </div>
+              <div className="options-actions">
+                <button
+                  disabled={!promptSettings?.translationCustomized && !translationPromptChanged}
+                  onClick={() => void resetPromptDesktop("translation")}
+                >
+                  <RotateCcw size={16} />
+                  <span>Revenir au défaut</span>
+                </button>
+                <button disabled={!translationPromptDraft.trim() || !translationPromptChanged} onClick={() => void savePromptDesktop("translation")}>
+                  <Save size={16} />
+                  <span>Enregistrer</span>
+                </button>
+              </div>
+            </div>
+            <textarea value={translationPromptDraft} onChange={(event) => setTranslationPromptDraft(event.target.value)} />
+          </section>
+
+          <p className="desktop-state">{optionsState}</p>
+          {error && <ErrorNotice details={error} />}
+        </section>
       )}
 
       {desktopView === "editor" && !loadedProject && (
         <section className="desktop-panel">
           <p className="state">{busy ? "Chargement du projet..." : "Aucun projet ouvert."}</p>
-          {error && <p className="error">{error}</p>}
+          {error && <ErrorNotice details={error} />}
         </section>
       )}
 
@@ -1227,16 +2337,32 @@ function DesktopApp() {
             <div className="video-meta">
               <strong>{loadedProject.title}</strong>
               <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
+              <span className={`save-indicator save-indicator-${saveStatus}`} role="status">
+                {saveStatus === "dirty" ? "Modifications non sauvegardées" : saveStatus === "saving" ? "Sauvegarde..." : "Sauvegardé"}
+              </span>
             </div>
             <div className="document-actions" ref={actionMenusRef}>
-              <button disabled={!transcript || editorLocked} onClick={() => void createSavePointDesktop()}>
+              <button
+                disabled={!transcript || editorLocked || saveStatus !== "dirty" || segmentIssues.length > 0}
+                onClick={() => void createSavePointDesktop()}
+                title={!transcript
+                  ? "Importe d’abord une transcription"
+                  : isHistoryPreview
+                    ? "Une ancienne sauvegarde est en lecture seule"
+                    : segmentIssues.length
+                      ? "Corrige les erreurs d’horodatage avant de sauvegarder"
+                      : saveStatus === "saved"
+                        ? "Aucune modification à sauvegarder"
+                        : "Créer une sauvegarde - Ctrl/Cmd+S"}
+              >
                 <Save size={16} />
-                <span>{saveState}</span>
+                <span>{saveStatus === "saving" ? "Sauvegarde..." : "Sauvegarder"}</span>
               </button>
 
               <div className={`action-menu ${openActionMenu === "transcription" ? "open" : ""}`}>
                 <button
                   className="action-menu-trigger"
+                  aria-expanded={openActionMenu === "transcription"}
                   onClick={() => setOpenActionMenu((value) => (value === "transcription" ? null : "transcription"))}
                 >
                   <span>Transcription</span>
@@ -1245,6 +2371,7 @@ function DesktopApp() {
                   <div className="action-menu-content">
                     <button
                       disabled={busy || isHistoryPreview || !loadedProjectHasVideo}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : isHistoryPreview ? "Une ancienne sauvegarde est en lecture seule" : "Importer une transcription JSON"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void importTranscriptDesktop(loadedProject);
@@ -1253,6 +2380,54 @@ function DesktopApp() {
                       <Upload size={16} />
                       <span>{loadedProject.transcriptPath ? "Remplacer transcription" : "Importer transcription"}</span>
                     </button>
+                    <button
+                      disabled={busy || isHistoryPreview || !loadedProjectHasVideo || Boolean(loadedProject.groqTranscribedAt)}
+                      title={!loadedProjectHasVideo
+                        ? "Ajoute d’abord une vidéo"
+                        : loadedProject.groqTranscribedAt
+                          ? "Cette vidéo a déjà été transcrite avec Groq"
+                          : isHistoryPreview ? "Une ancienne sauvegarde est en lecture seule" : "Transcrire avec Whisper Large V3 sur Groq"}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void transcribeGroqDesktop(loadedProject);
+                      }}
+                    >
+                      <Cloud size={16} />
+                      <span>{loadedProject.groqTranscribedAt ? "Déjà transcrit avec Groq" : "Transcrire avec Groq"}</span>
+                    </button>
+                    <button
+                      disabled={busy || isHistoryPreview || !transcript}
+                      title={!transcript ? "Importe d’abord une transcription" : "Copier le prompt de nettoyage"}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void copyCleanupPromptDesktop();
+                      }}
+                    >
+                      <Copy size={16} />
+                      <span>{cleanupCopyState}</span>
+                    </button>
+                    <button
+                      disabled={busy || isHistoryPreview || !transcript}
+                      title={!transcript ? "Importe d’abord une transcription" : "Coller une transcription nettoyée"}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        setCleanupImportOpen(true);
+                      }}
+                    >
+                      <ClipboardPaste size={16} />
+                      <span>Coller transcription nettoyée</span>
+                    </button>
+                    <button
+                      disabled={busy || isHistoryPreview || !transcript}
+                      title={!transcript ? "Importe d’abord une transcription" : "Choisir une transcription nettoyée"}
+                      onClick={() => {
+                        setOpenActionMenu(null);
+                        void importCleanedTranscriptFileDesktop();
+                      }}
+                    >
+                      <Upload size={16} />
+                      <span>Importer transcription nettoyée</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -1260,6 +2435,7 @@ function DesktopApp() {
               <div className={`action-menu ${openActionMenu === "translation" ? "open" : ""}`}>
                 <button
                   className="action-menu-trigger"
+                  aria-expanded={openActionMenu === "translation"}
                   onClick={() => setOpenActionMenu((value) => (value === "translation" ? null : "translation"))}
                 >
                   <span>Traduction</span>
@@ -1268,6 +2444,7 @@ function DesktopApp() {
                   <div className="action-menu-content">
                     <button
                       disabled={!transcript || editorLocked}
+                      title={!transcript ? "Importe d’abord une transcription" : isHistoryPreview ? "Une ancienne sauvegarde est en lecture seule" : "Copier le prompt de traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void copyTranslationPromptDesktop();
@@ -1278,6 +2455,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !transcript ? "Importe d’abord une transcription" : "Coller une traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         setPasteImportOpen(true);
@@ -1288,6 +2466,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !transcript ? "Importe d’abord une transcription" : "Choisir une traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void importTranslationFileDesktop();
@@ -1303,24 +2482,86 @@ function DesktopApp() {
               <div className={`action-menu action-menu-export ${openActionMenu === "export" ? "open" : ""}`}>
                 <button
                   className="action-menu-trigger"
+                  aria-expanded={openActionMenu === "export"}
                   onClick={() => setOpenActionMenu((value) => (value === "export" ? null : "export"))}
                 >
                   <span>Exporter</span>
                 </button>
                 {openActionMenu === "export" && (
                   <div className="action-menu-content">
-                    <label className="subtitle-style-picker">
+                    <label className="export-option">
                       <span>Style sous-titres</span>
                       <select
-                        value={exportSubtitleStyle}
-                        onChange={(event) => setExportSubtitleStyle(event.target.value as ExportSubtitleStyle)}
+                        value={exportOptions.style}
+                        onChange={(event) => setExportOptions((value) => ({
+                          ...value,
+                          style: event.target.value as ExportSubtitleStyle,
+                        }))}
                       >
                         <option value="black-band">Fond noir</option>
                         <option value="outline">Texte seul</option>
                       </select>
                     </label>
+                    <label className="export-option">
+                      <span>Taille du texte</span>
+                      <select
+                        value={exportOptions.subtitleSize}
+                        onChange={(event) => setExportOptions((value) => ({
+                          ...value,
+                          subtitleSize: event.target.value as ExportSubtitleSize,
+                        }))}
+                      >
+                        <option value="compact">Compacte</option>
+                        <option value="standard">Standard (recommandée)</option>
+                        <option value="large">Grande lisibilité</option>
+                      </select>
+                    </label>
+                    <label className="export-option">
+                      <span>Qualité vidéo</span>
+                      <select
+                        value={exportOptions.videoQuality}
+                        onChange={(event) => setExportOptions((value) => ({
+                          ...value,
+                          videoQuality: event.target.value as ExportVideoQuality,
+                        }))}
+                      >
+                        <option value="original">Résolution originale</option>
+                        <option value="mobile-720p">Mobile 720p (recommandée)</option>
+                        <option value="compact-480p">Très légère 480p</option>
+                      </select>
+                    </label>
+                    <label className="export-option">
+                      <span>Regroupement</span>
+                      <select
+                        value={exportOptions.cueGrouping}
+                        onChange={(event) => setExportOptions((value) => ({
+                          ...value,
+                          cueGrouping: event.target.value as ExportCueGrouping,
+                        }))}
+                      >
+                        <option value="automatic">Automatique (recommandé)</option>
+                        <option value="source">Conserver les segments</option>
+                        <option value="minimum-words">Minimum de mots</option>
+                      </select>
+                    </label>
+                    {exportOptions.cueGrouping === "minimum-words" && (
+                      <label className="export-option export-minimum-words">
+                        <span>Mots minimum</span>
+                        <input
+                          type="number"
+                          min="2"
+                          max="30"
+                          value={exportOptions.minimumWords ?? 10}
+                          onChange={(event) => setExportOptions((value) => ({
+                            ...value,
+                            minimumWords: Math.max(2, Math.min(30, Number(event.target.value) || 2)),
+                          }))}
+                        />
+                      </label>
+                    )}
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !transcript ? "Importe d’abord une transcription" : "Exporter les sous-titres arabes"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void exportVideoDesktop("arabic");
@@ -1331,6 +2572,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!transcript || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !transcript ? "Importe d’abord une transcription" : "Exporter puis ouvrir la vidéo arabe"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void exportVideoDesktop("arabic", true);
@@ -1341,6 +2583,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !attachedTranslation ? "Importe d’abord une traduction" : "Exporter la traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void exportVideoDesktop("translation");
@@ -1351,6 +2594,7 @@ function DesktopApp() {
                     </button>
                     <button
                       disabled={!attachedTranslation || editorLocked || !loadedProjectHasVideo || Boolean(exportingTrack)}
+                      title={!loadedProjectHasVideo ? "Ajoute d’abord une vidéo" : !attachedTranslation ? "Importe d’abord une traduction" : "Exporter puis ouvrir la traduction"}
                       onClick={() => {
                         setOpenActionMenu(null);
                         void exportVideoDesktop("translation", true);
@@ -1365,47 +2609,92 @@ function DesktopApp() {
             </div>
           </div>
           {renderExportProgress()}
+          {renderGroqProgress()}
+          {error && (
+            <ErrorNotice
+              details={error}
+              onRetry={lastActionRef.current ?? undefined}
+              onOptions={/groq|clé api|api key/i.test(error) ? () => setDesktopView("options") : undefined}
+              onChooseAnother={importPreview ? () => void chooseImportFile(importPreview.kind) : undefined}
+            />
+          )}
+          {renderNextProjectAction()}
 
           <section className="media-tools">
             <div>
               <strong>Vidéo</strong>
               <span>
                 {loadedProject.videoPath
-                  ? "Vidéo disponible"
+                  ? "Vidéo prête pour l’écoute et l’export."
                   : loadedProject.youtubeUrl
                     ? "Ajoute la vidéo depuis YouTube ou depuis ton ordinateur avant transcription, traduction ou export."
                     : "Importe une vidéo avant transcription, traduction ou export."}
               </span>
             </div>
-            <div className="media-tool-actions">
-              <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)}>
-                <RotateCcw size={16} />
-                <span>Choisir la qualité à télécharger</span>
-              </button>
-              <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
-                <FileInput size={16} />
-                <span>{loadedProject.videoPath ? "Remplacer par une vidéo locale" : "Importer une vidéo locale"}</span>
-              </button>
-            </div>
-            {loadedProject.youtubeUrlWarning && <p className="warning">{loadedProject.youtubeUrlWarning}</p>}
-            {youtubeFormats.length > 0 && youtubeFormatProjectId === loadedProject.id && (
-              <div className="youtube-download-choice">
-                <label className="youtube-format-picker">
-                  <span>{youtubeFormatTitle ? `Qualité à télécharger pour ${youtubeFormatTitle}` : "Qualité à télécharger"}</span>
-                  <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
-                    {youtubeFormats.map((format) => (
-                      <option key={format.id} value={format.formatSelector}>
-                        {format.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button disabled={busy || !selectedYoutubeFormat} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
-                  <Download size={16} />
-                  <span>{loadedProject.videoPath ? "Remplacer depuis YouTube" : "Télécharger depuis YouTube"}</span>
-                </button>
-              </div>
+            {loadedProject.videoPath ? (
+              <details className="media-management">
+                <summary><Settings size={16} /><span>Gérer la vidéo</span></summary>
+                <div className="media-management-content">
+                  <p>Ces opérations remplacent uniquement le fichier vidéo. La transcription et la traduction restent attachées au projet.</p>
+                  <div className="media-tool-actions">
+                    <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)} title={!loadedProject.youtubeUrl ? "Ce projet n’a pas de lien YouTube" : "Choisir une autre qualité YouTube"}>
+                      <RotateCcw size={16} />
+                      <span>Télécharger une autre qualité</span>
+                    </button>
+                    <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
+                      <FileInput size={16} />
+                      <span>Remplacer par un fichier local</span>
+                    </button>
+                  </div>
+                  {youtubeFormats.length > 0 && youtubeFormatProjectId === loadedProject.id && (
+                    <div className="youtube-download-choice">
+                      <label className="youtube-format-picker">
+                        <span>{youtubeFormatTitle ? `Nouvelle qualité pour ${youtubeFormatTitle}` : "Nouvelle qualité"}</span>
+                        <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
+                          {youtubeFormats.map((format) => (
+                            <option key={format.id} value={format.formatSelector}>{format.label}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <button disabled={busy || !selectedYoutubeFormat} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
+                        <Download size={16} />
+                        <span>Remplacer la vidéo</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </details>
+            ) : (
+              <>
+                <div className="media-tool-actions">
+                  <button disabled={busy || !loadedProject.youtubeUrl} onClick={() => void analyzeYoutubeFormatsDesktop(loadedProject)} title={!loadedProject.youtubeUrl ? "Ce projet n’a pas de lien YouTube" : "Choisir la qualité avant téléchargement"}>
+                    <RotateCcw size={16} />
+                    <span>Choisir la qualité à télécharger</span>
+                  </button>
+                  <button disabled={busy} onClick={() => void importLocalVideoDesktop(loadedProject)}>
+                    <FileInput size={16} />
+                    <span>Importer une vidéo locale</span>
+                  </button>
+                </div>
+                {youtubeFormats.length > 0 && youtubeFormatProjectId === loadedProject.id && (
+                  <div className="youtube-download-choice">
+                    <label className="youtube-format-picker">
+                      <span>{youtubeFormatTitle ? `Qualité à télécharger pour ${youtubeFormatTitle}` : "Qualité à télécharger"}</span>
+                      <select value={selectedYoutubeFormat} onChange={(event) => setSelectedYoutubeFormat(event.target.value)}>
+                        {youtubeFormats.map((format) => (
+                          <option key={format.id} value={format.formatSelector}>{format.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button disabled={busy || !selectedYoutubeFormat} onClick={() => void downloadYoutubeDesktop(loadedProject)}>
+                      <Download size={16} />
+                      <span>Télécharger depuis YouTube</span>
+                    </button>
+                  </div>
+                )}
+              </>
             )}
+            {loadedProject.youtubeUrlWarning && <p className="warning">{loadedProject.youtubeUrlWarning}</p>}
             {busy && <p className="desktop-state">{state}</p>}
             {renderDownloadProgress()}
             {downloadProgress?.stage === "done" && (
@@ -1414,34 +2703,66 @@ function DesktopApp() {
           </section>
 
           {mediaUrl && (
-            <section className="player-band">
+            <section className="player-band" ref={playerBandRef}>
+              {resumePoint && (
+                <div className="resume-prompt" role="status">
+                  <span>Dernière écoute à <strong>{formatTime(resumePoint.time)}</strong></span>
+                  <div>
+                    <button className="primary-action" onClick={acceptResumePoint}>Reprendre à {formatTime(resumePoint.time)}</button>
+                    <button onClick={restartProjectPlayback}>Recommencer</button>
+                  </div>
+                </div>
+              )}
               <audio
                 ref={audioRef}
                 src={mediaUrl}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 onTimeUpdate={onTimeUpdate}
-                onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? loadedProject.durationSeconds ?? 0)}
+                onLoadedMetadata={() => {
+                  const audio = audioRef.current;
+                  if (!audio) return;
+                  audio.playbackRate = playbackRate;
+                  currentTimeRef.current = audio.currentTime;
+                  setCurrentTime(audio.currentTime);
+                  setDuration(Number.isFinite(audio.duration) ? audio.duration : loadedProject.durationSeconds ?? 0);
+                }}
               />
               <div className="interval-row">
                 <label>
                   <span>Début</span>
                   <input value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} />
-                  <button onClick={() => setRangeStart(formatTime(currentTime))}>
+                  <button onClick={() => setRangeStart(formatTime(currentTime))} title="Prendre le temps courant comme début - D" aria-label="Prendre le temps courant comme début">
                     <FileInput size={16} />
                   </button>
                 </label>
                 <label>
                   <span>Fin</span>
                   <input value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} />
-                  <button onClick={() => setRangeEnd(formatTime(currentTime))}>
+                  <button onClick={() => setRangeEnd(formatTime(currentTime))} title="Prendre le temps courant comme fin - F" aria-label="Prendre le temps courant comme fin">
                     <FileInput size={16} />
                   </button>
                 </label>
-                <label className="toggle">
-                  <input checked={loopEnabled} type="checkbox" onChange={(event) => setLoopEnabled(event.target.checked)} />
+                <label className="toggle" title={hasInterval ? "Activer ou désactiver la boucle - B" : "Définis d’abord un intervalle valide"}>
+                  <input disabled={!hasInterval} checked={loopEnabled} type="checkbox" onChange={(event) => setLoopEnabled(event.target.checked)} />
                   <span>Boucle</span>
                 </label>
+                <div className={`playback-mode playback-mode-${playbackMode === "Lecture libre" ? "free" : playbackMode === "Boucle" ? "loop" : "range"}`}>
+                  <strong>{playbackMode}</strong>
+                  {hasInterval && <span>{rangeStart} → {rangeEnd}</span>}
+                </div>
+                {hasInterval && (
+                  <>
+                    <button className="interval-return" onClick={returnToInterval} title="Aller au début de l’intervalle">
+                      <RotateCcw size={16} />
+                      <span>Début de l’intervalle</span>
+                    </button>
+                    <button className="interval-clear" onClick={clearInterval} title="Quitter l’intervalle - Échap">
+                      <X size={16} />
+                      <span>Quitter l’intervalle</span>
+                    </button>
+                  </>
+                )}
               </div>
               <div
                 className="timeline-wrap"
@@ -1467,34 +2788,77 @@ function DesktopApp() {
                   <span>{formatTime(duration || loadedProject.durationSeconds || 0)}</span>
                 </div>
               </div>
-              <div className="audio-controls">
-                <button onClick={() => seekBy(-10)}>-10s</button>
-                <button onClick={() => seekBy(-3)}>-3s</button>
-                <button className="primary-control" onClick={togglePlay}>
-                  {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-                  <span>{isPlaying ? "Pause" : "Lire"}</span>
-                </button>
-                <button onClick={stopAudio}>
-                  <Square size={16} />
-                  <span>Stop</span>
-                </button>
-                <button onClick={() => seekBy(3)}>+3s</button>
-                <button onClick={() => seekBy(10)}>+10s</button>
-                <button onClick={() => seekTo(parseTime(rangeStart) ?? 0)} title="Retour au début de l'intervalle">
-                  <RotateCcw size={16} />
-                  <span>Début</span>
-                </button>
+              <div className="player-toolbar">
+                <div className="player-nav">
+                  <button className="icon-button" disabled={!displayedTranscript} onClick={() => navigateAdjacentSegment(-1)} title="Segment précédent - Alt+Haut" aria-label="Segment précédent">
+                    <ArrowUp size={16} />
+                  </button>
+                  <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant - S">
+                    <LocateFixed size={16} />
+                    <span>Segment</span>
+                  </button>
+                  <button className="icon-button" disabled={!displayedTranscript} onClick={() => navigateAdjacentSegment(1)} title="Segment suivant - Alt+Bas" aria-label="Segment suivant">
+                    <ArrowDown size={16} />
+                  </button>
+                </div>
+                <div className="audio-controls">
+                  <button onClick={() => seekBy(-10)} title="Reculer de 10 secondes - Maj+←">-10s</button>
+                  <button onClick={() => seekBy(-3)} title="Reculer de 3 secondes - ←">-3s</button>
+                  <button className="primary-control" onClick={togglePlay} title={`${isPlaying ? "Pause" : "Lecture"} - Espace`}>
+                    {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+                    <span>{isPlaying ? "Pause" : "Lire"}</span>
+                  </button>
+                  <button onClick={() => seekBy(3)} title="Avancer de 3 secondes - →">+3s</button>
+                  <button onClick={() => seekBy(10)} title="Avancer de 10 secondes - Maj+→">+10s</button>
+                </div>
+                <div className="player-utilities">
+                  <label className="playback-rate">
+                    <span>Vitesse</span>
+                    <select title="Vitesse de lecture - − / +" value={playbackRate} onChange={(event) => setPlaybackRate(Number(event.target.value))}>
+                      {PLAYBACK_RATES.map((rate) => <option key={rate} value={rate}>{String(rate).replace(".", ",")}×</option>)}
+                    </select>
+                  </label>
+                  <button
+                    className={`follow-toggle ${autoFollowEnabled ? "active" : ""}`}
+                    disabled={!displayedTranscript}
+                    aria-pressed={autoFollowEnabled}
+                    onClick={() => setAutoFollowEnabled((enabled) => !enabled)}
+                    title={`${autoFollowEnabled ? "Désactiver" : "Activer"} le suivi automatique du segment en cours`}
+                  >
+                    <Captions size={16} />
+                    <span>Suivi</span>
+                  </button>
+                  <button onClick={scrollToTop} title="Remonter en haut de la page">
+                    <ArrowUpToLine size={16} />
+                    <span>Haut</span>
+                  </button>
+                </div>
               </div>
-              <div className="player-nav">
-                <button disabled={!displayedTranscript} onClick={scrollToCurrentSegment} title="Aller au segment du temps courant">
-                  <LocateFixed size={16} />
-                  <span>Segment</span>
-                </button>
-                <button onClick={scrollToTop} title="Remonter en haut de la page">
-                  <ArrowUpToLine size={16} />
-                  <span>Haut</span>
-                </button>
-              </div>
+              {searchOpen && displayedTranscript && (
+                <section className="document-search" role="search">
+                  <Search size={17} />
+                  <input
+                    ref={searchInputRef}
+                    value={searchQuery}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setSearchIndex(0);
+                    }}
+                    placeholder="Rechercher dans l’arabe et le français"
+                    aria-label="Rechercher dans la transcription"
+                  />
+                  <span>{searchQuery.trim() ? `${searchOccurrenceCount} occurrence(s)` : ""}</span>
+                  <button className="icon-button" disabled={!searchResults.length} onClick={() => navigateSearch(-1)} title="Résultat précédent" aria-label="Résultat précédent">
+                    <ArrowUp size={16} />
+                  </button>
+                  <button className="icon-button" disabled={!searchResults.length} onClick={() => navigateSearch(1)} title="Résultat suivant" aria-label="Résultat suivant">
+                    <ArrowDown size={16} />
+                  </button>
+                  <button className="icon-button" onClick={() => setSearchOpen(false)} title="Fermer la recherche - Échap" aria-label="Fermer la recherche">
+                    <X size={16} />
+                  </button>
+                </section>
+              )}
             </section>
           )}
 
@@ -1534,13 +2898,32 @@ function DesktopApp() {
 
           {!transcript && <p className="state">Vidéo téléchargée. Importe une transcription nettoyée pour commencer l'édition.</p>}
           {isHistoryPreview && <p className="state">Ancienne sauvegarde en lecture seule.</p>}
+          {segmentIssues.length > 0 && (
+            <section className="validation-summary" role="alert">
+              <AlertTriangle size={17} />
+              <span>{segmentIssues.length} erreur(s) d’horodatage à corriger avant la sauvegarde.</span>
+              <button onClick={() => focusSegment(segmentIssues[0].segmentId, false)}>Voir la première</button>
+            </section>
+          )}
+          {undoVisible && undoStack.length > 0 && (
+            <div className="undo-toast" role="status">
+              <span>Structure des segments modifiée.</span>
+              <button onClick={undoLastStructuralEdit}><Undo2 size={15} /><span>Annuler</span></button>
+            </div>
+          )}
           {displayedTranscript && (
             <section className="workspace">
               <section className="segments">
                 {displayedTranscript.segments.map((segment, index) => (
                   <article
-                    className={`segment-row ${focusedSegmentId === segment.id ? "segment-row-focused" : ""}`}
+                    className={[
+                      "segment-row",
+                      activeSegmentId === segment.id ? "segment-row-active" : "",
+                      focusedSegmentId === segment.id ? "segment-row-focused" : "",
+                      issuesBySegment.has(segment.id) ? "segment-row-invalid" : "",
+                    ].filter(Boolean).join(" ")}
                     key={segment.id}
+                    aria-current={activeSegmentId === segment.id ? "true" : undefined}
                     ref={(element) => {
                       if (element) segmentRefs.current.set(segment.id, element);
                       else segmentRefs.current.delete(segment.id);
@@ -1549,7 +2932,7 @@ function DesktopApp() {
                     <div className="segment-meta">
                       <label className="time-control time-control-nav">
                         <span>Lire</span>
-                        <button className="timestamp" onClick={() => seekTo(segment.start)}>
+                        <button className="timestamp" onClick={() => seekTo(segment.start)} title="Lire depuis ce segment">
                           {formatTime(segment.start)}
                         </button>
                       </label>
@@ -1572,34 +2955,65 @@ function DesktopApp() {
                         />
                       </label>
                     </div>
+                    {issuesBySegment.has(segment.id) && (
+                      <button className="segment-error" onClick={() => focusSegment(segment.id, false)}>
+                        <AlertTriangle size={15} />
+                        <span>{issuesBySegment.get(segment.id)?.join(" · ")}</span>
+                      </button>
+                    )}
                     <div className="segment-fields">
                       <textarea
                         dir="rtl"
                         lang="ar"
                         disabled={editorLocked}
+                        ref={(element) => {
+                          const key = `${segment.id}:text`;
+                          if (element) segmentFieldRefs.current.set(key, element);
+                          else segmentFieldRefs.current.delete(key);
+                        }}
                         value={segment.text}
                         onChange={(event) => updateSegment(segment.id, { text: event.target.value })}
                       />
                       <textarea
                         disabled={editorLocked || !attachedTranslation}
+                        ref={(element) => {
+                          const key = `${segment.id}:translation`;
+                          if (element) segmentFieldRefs.current.set(key, element);
+                          else segmentFieldRefs.current.delete(key);
+                        }}
                         value={segment.translation}
                         placeholder={attachedTranslation ? "Traduction" : "Importer une traduction alignée"}
                         onChange={(event) => updateSegment(segment.id, { translation: event.target.value })}
                       />
                       <div className="segment-actions">
-                        <button disabled={editorLocked} onClick={() => addSegmentAfter(segment.id)}>
+                        <button disabled={editorLocked} onClick={() => addSegmentAfter(segment.id)} title={editorLocked ? "Modification désactivée en lecture seule" : "Ajouter un segment après"} aria-label="Ajouter un segment après">
                           <Plus size={16} />
                         </button>
                         <button
                           disabled={editorLocked || currentTime <= segment.start || currentTime >= segment.end}
                           onClick={() => splitSegment(segment.id)}
+                          title={editorLocked
+                            ? "Modification désactivée en lecture seule"
+                            : currentTime <= segment.start || currentTime >= segment.end
+                              ? "Place le curseur strictement à l’intérieur de ce segment"
+                              : `Scinder au temps ${formatTime(currentTime)}`}
+                          aria-label="Scinder le segment au temps courant"
                         >
                           <Scissors size={16} />
                         </button>
-                        <button disabled={editorLocked || index >= displayedTranscript.segments.length - 1} onClick={() => mergeWithNext(segment.id)}>
+                        <button
+                          disabled={editorLocked || index >= displayedTranscript.segments.length - 1}
+                          onClick={() => mergeWithNext(segment.id)}
+                          title={editorLocked
+                            ? "Modification désactivée en lecture seule"
+                            : index >= displayedTranscript.segments.length - 1
+                              ? "Aucun segment suivant à fusionner"
+                              : "Fusionner avec le segment suivant"}
+                          aria-label="Fusionner avec le segment suivant"
+                        >
                           <Combine size={16} />
                         </button>
-                        <button disabled={editorLocked} onClick={() => deleteSegment(segment.id)}>
+                        <button disabled={editorLocked} onClick={() => deleteSegment(segment.id)} title={editorLocked ? "Modification désactivée en lecture seule" : "Supprimer ce segment"} aria-label="Supprimer ce segment">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -1612,26 +3026,303 @@ function DesktopApp() {
         </section>
       )}
 
+      {newProjectOpen && (
+        <AccessibleModal
+          className="new-project-modal"
+          labelledBy="new-project-title"
+          onClose={closeNewProject}
+          closeOnBackdrop={!busy}
+          closeDisabled={busy}
+        >
+            <div className="modal-heading">
+              <div>
+                <h2 id="new-project-title">Nouveau projet</h2>
+                <p>Choisis d’abord la source de la vidéo.</p>
+              </div>
+              <ModalCloseButton disabled={busy} onClick={closeNewProject} />
+            </div>
+
+            <div className="creation-tabs" role="tablist" aria-label="Source de la vidéo">
+              <button
+                aria-selected={newProjectMode === "youtube"}
+                className={newProjectMode === "youtube" ? "selected" : ""}
+                role="tab"
+                onClick={() => {
+                  setNewProjectMode("youtube");
+                  setError("");
+                }}
+              >
+                <span>YouTube</span>
+              </button>
+              <button
+                aria-selected={newProjectMode === "local"}
+                className={newProjectMode === "local" ? "selected" : ""}
+                role="tab"
+                onClick={() => {
+                  setNewProjectMode("local");
+                  setError("");
+                }}
+              >
+                <span>Fichier local</span>
+              </button>
+            </div>
+
+            {newProjectMode === "youtube" ? (
+              <section className="creation-content" role="tabpanel">
+                <label>
+                  <span>Lien YouTube</span>
+                  <input
+                    data-autofocus
+                    value={newYoutubeUrl}
+                    onChange={(event) => {
+                      setNewYoutubeUrl(event.target.value);
+                      setNewYoutubeFormats([]);
+                      setNewSelectedYoutubeFormat("");
+                      setNewYoutubeTitle("");
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </label>
+                {!newYoutubeFormats.length ? (
+                  <div className="modal-actions">
+                    <button disabled={busy} onClick={closeNewProject}>Annuler</button>
+                    <button disabled={busy || !newYoutubeUrl.trim()} onClick={() => void analyzeNewYoutubeProject()}>
+                      <RotateCcw size={16} />
+                      <span>{busy ? "Analyse..." : "Analyser la vidéo"}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="youtube-analysis-summary">
+                      <strong dir="auto">{newYoutubeTitle || "Vidéo YouTube"}</strong>
+                      <span>Choisis la qualité à télécharger. Le projet sera créé avec cette vidéo.</span>
+                    </div>
+                    <label className="youtube-format-picker">
+                      <span>Qualité à télécharger</span>
+                      <select value={newSelectedYoutubeFormat} onChange={(event) => setNewSelectedYoutubeFormat(event.target.value)}>
+                        {newYoutubeFormats.map((format) => (
+                          <option key={format.id} value={format.formatSelector}>{format.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="modal-actions">
+                      <button disabled={busy} onClick={() => {
+                        setNewYoutubeFormats([]);
+                        setNewSelectedYoutubeFormat("");
+                        setNewYoutubeTitle("");
+                      }}>Modifier le lien</button>
+                      <button disabled={busy || !newSelectedYoutubeFormat} onClick={() => void downloadNewYoutubeProject()}>
+                        <Download size={16} />
+                        <span>{busy ? "Téléchargement..." : "Télécharger et créer"}</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+                {busy && <p className="desktop-state">{state}</p>}
+                {renderDownloadProgress()}
+              </section>
+            ) : (
+              <section className="creation-content" role="tabpanel">
+                <label>
+                  <span>Titre du projet</span>
+                  <input
+                    data-autofocus
+                    maxLength={200}
+                    value={newProjectTitle}
+                    onChange={(event) => setNewProjectTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") closeNewProject();
+                    }}
+                    placeholder="Ex. Cours sur la généalogie du Prophète"
+                  />
+                </label>
+                <p className="creation-help">La vidéo choisie sera copiée dans la bibliothèque, puis le projet s’ouvrira directement.</p>
+                <div className="modal-actions">
+                  <button disabled={busy} onClick={closeNewProject}>Annuler</button>
+                  <button disabled={busy || !newProjectTitle.trim()} onClick={() => void importNewLocalProjectVideo()}>
+                    <FileInput size={16} />
+                    <span>Choisir une vidéo</span>
+                  </button>
+                </div>
+                <button
+                  className="text-button"
+                  disabled={busy || !newProjectTitle.trim()}
+                  onClick={() => void createNewLocalProjectWithoutVideo()}
+                >
+                  Créer sans vidéo
+                </button>
+              </section>
+            )}
+            {error && <ErrorNotice details={error} />}
+        </AccessibleModal>
+      )}
+
+      {shortcutsOpen && (
+        <AccessibleModal
+          className="shortcuts-modal"
+          labelledBy="shortcuts-title"
+          onClose={() => setShortcutsOpen(false)}
+          closeKeys={["Escape", "q", "?"]}
+        >
+            <div className="modal-heading">
+              <div>
+                <h2 id="shortcuts-title">Aide et raccourcis</h2>
+                <p>Actifs hors des champs de texte.</p>
+              </div>
+              <ModalCloseButton onClick={() => setShortcutsOpen(false)} />
+            </div>
+            <div className="shortcut-groups">
+              <section><h3>Lecture</h3><dl className="shortcuts-list">
+                <div><dt>Espace</dt><dd>Lire ou mettre en pause</dd></div>
+                <div><dt>← / →</dt><dd>Reculer ou avancer de 3 secondes</dd></div>
+                <div><dt>Maj + ← / →</dt><dd>Reculer ou avancer de 10 secondes</dd></div>
+                <div><dt>− / +</dt><dd>Réduire ou augmenter la vitesse</dd></div>
+              </dl></section>
+              <section><h3>Intervalle</h3><dl className="shortcuts-list">
+                <div><dt>D</dt><dd>Définir le début</dd></div>
+                <div><dt>F</dt><dd>Définir la fin</dd></div>
+                <div><dt>B</dt><dd>Activer ou désactiver la boucle</dd></div>
+                <div><dt>Échap</dt><dd>Quitter l’intervalle</dd></div>
+              </dl></section>
+              <section><h3>Navigation</h3><dl className="shortcuts-list">
+                <div><dt>S</dt><dd>Aller au segment courant</dd></div>
+                <div><dt>Alt + ↑ / ↓</dt><dd>Segment précédent ou suivant</dd></div>
+                <div><dt>Ctrl/Cmd + F</dt><dd>Rechercher dans le document</dd></div>
+              </dl></section>
+              <section><h3>Édition</h3><dl className="shortcuts-list">
+                <div><dt>Ctrl/Cmd + S</dt><dd>Créer une sauvegarde</dd></div>
+                <div><dt>Ctrl/Cmd + Z</dt><dd>Annuler une action structurelle hors d’un champ</dd></div>
+                <div><dt>Q / ? / Échap</dt><dd>Fermer cette aide</dd></div>
+              </dl></section>
+            </div>
+            <div className="modal-actions">
+              <button onClick={() => setShortcutsOpen(false)}>Fermer</button>
+            </div>
+        </AccessibleModal>
+      )}
+
       {pasteImportOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <section className="modal paste-modal" role="dialog" aria-modal="true">
-            <h2>Importer une traduction collée</h2>
-            <p>Colle une traduction Tarjama Studio en JSON ou en Markdown. Les timestamps seront validés avant remplacement.</p>
+        <AccessibleModal className="paste-modal" labelledBy="paste-translation-title" onClose={() => setPasteImportOpen(false)}>
+            <h2 id="paste-translation-title">Importer une traduction collée</h2>
+            <p>Colle une traduction Tarjama Studio en Markdown. Les timestamps seront validés avant remplacement.</p>
             <textarea
               value={pastedTranslation}
               onChange={(event) => setPastedTranslation(event.target.value)}
-              placeholder='{ "segments": [ ... ] }'
+              placeholder={'## 00:00.000 --> 00:03.440\nTraduction française.'}
             />
+            {error && <ErrorNotice details={error} />}
             <div className="modal-actions">
               <button onClick={() => setPasteImportOpen(false)}>Annuler</button>
-              <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()}>
+              <button disabled={!pastedTranslation.trim()} onClick={() => void importPastedTranslationDesktop()} title={!pastedTranslation.trim() ? "Colle d’abord une traduction" : "Valider le contenu"}>
                 <Check size={16} />
-                <span>Importer</span>
+                <span>Valider</span>
               </button>
             </div>
-          </section>
-        </div>
+        </AccessibleModal>
       )}
+
+      {cleanupImportOpen && (
+        <AccessibleModal className="paste-modal" labelledBy="paste-cleanup-title" onClose={() => setCleanupImportOpen(false)} closeOnBackdrop={!busy} closeDisabled={busy}>
+            <h2 id="paste-cleanup-title">Importer la transcription nettoyée</h2>
+            <p>
+              Colle le Markdown horodaté renvoyé par le LLM. Les titres de blocs doivent reprendre exactement les timestamps source; seuls les textes peuvent être corrigés ou les blocs inutiles supprimés.
+            </p>
+            <textarea
+              value={pastedCleanupTranscript}
+              onChange={(event) => setPastedCleanupTranscript(event.target.value)}
+              placeholder={'## 00:00.000 --> 00:03.440\nالنص العربي المصحح.'}
+            />
+            {cleanedPasteReview.lines.length > 0 && (
+              <div className={`import-preview ${cleanedPasteReview.valid ? "valid" : "invalid"}`}>
+                {cleanedPasteReview.lines.map((line) => <span key={line}>{line}</span>)}
+              </div>
+            )}
+            {error && <ErrorNotice details={error} />}
+            <div className="modal-actions">
+              <button disabled={busy} onClick={() => setCleanupImportOpen(false)}>Annuler</button>
+              <button
+                disabled={busy || !cleanedPasteReview.valid}
+                onClick={() => previewPastedImport("cleanup", pastedCleanupTranscript)}
+                title={cleanedPasteReview.valid ? "Valider le contenu" : "Corrige le format avant de valider"}
+              >
+                <Check size={16} />
+                <span>Valider</span>
+              </button>
+            </div>
+        </AccessibleModal>
+      )}
+
+      {renameProjectOpen && (
+        <AccessibleModal labelledBy="rename-project-title" onClose={() => setRenameProjectOpen(false)} closeOnBackdrop={!busy} closeDisabled={busy}>
+            <h2 id="rename-project-title">Renommer le projet</h2>
+            <p>Ce titre sert uniquement à identifier le projet dans ta bibliothèque.</p>
+            <input
+              data-autofocus
+              maxLength={200}
+              value={projectTitleDraft}
+              onChange={(event) => setProjectTitleDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && !busy) setRenameProjectOpen(false);
+                if (event.key === "Enter" && projectTitleDraft.trim()) void renameProjectDesktop();
+              }}
+            />
+            <div className="modal-actions">
+              <button disabled={busy} onClick={() => setRenameProjectOpen(false)}>Annuler</button>
+              <button
+                disabled={busy || !projectTitleDraft.trim() || projectTitleDraft.trim() === loadedProject?.title}
+                onClick={() => void renameProjectDesktop()}
+              >
+                <Check size={16} />
+                <span>Renommer</span>
+              </button>
+            </div>
+        </AccessibleModal>
+      )}
+
+      {importPreview && (
+        <AccessibleModal
+          className="import-review-modal"
+          labelledBy="import-review-title"
+          onClose={() => setImportPreview(null)}
+          closeOnBackdrop={!busy}
+          closeDisabled={busy}
+        >
+          <div className="modal-heading">
+            <div>
+              <h2 id="import-review-title">Vérifier avant remplacement</h2>
+              <p>{importPreview.filename}</p>
+            </div>
+            <ModalCloseButton disabled={busy} onClick={() => setImportPreview(null)} />
+          </div>
+          <div className={`import-review-summary ${importPreview.preview.valid ? "valid" : "invalid"}`}>
+            <strong>{importPreview.preview.valid ? "Fichier prêt à importer" : "Import bloqué"}</strong>
+            <span>{importPreview.preview.segmentCount} segment(s)</span>
+            {importPreview.kind === "translation" && (
+              <span>{importPreview.preview.alignedCount} timestamp(s) aligné(s) sur {transcript?.segments.length ?? 0}</span>
+            )}
+          </div>
+          {importPreview.preview.errors.length > 0 && (
+            <ul className="import-review-errors">
+              {importPreview.preview.errors.map((message) => <li key={message}>{message}</li>)}
+            </ul>
+          )}
+          <details className="import-content-details">
+            <summary>Afficher le contenu</summary>
+            <pre>{importPreview.content.slice(0, IMPORT_PREVIEW_CHARACTER_LIMIT)}</pre>
+            {importPreview.content.length > IMPORT_PREVIEW_CHARACTER_LIMIT && (
+              <p>Aperçu limité aux {IMPORT_PREVIEW_CHARACTER_LIMIT.toLocaleString("fr-FR")} premiers caractères. Le fichier complet sera importé.</p>
+            )}
+          </details>
+          <div className="modal-actions">
+            <button disabled={busy} onClick={() => void chooseImportFile(importPreview.kind)}>Choisir un autre fichier</button>
+            <button disabled={busy} onClick={() => setImportPreview(null)}>Annuler</button>
+            <button className="primary-action" disabled={busy || !importPreview.preview.valid} onClick={() => void confirmImportPreview()}>
+              <Check size={16} /><span>Confirmer le remplacement</span>
+            </button>
+          </div>
+        </AccessibleModal>
+      )}
+
     </main>
   );
 }
@@ -2030,7 +3721,7 @@ function App() {
   async function copyTranslationPrompt() {
     if (!transcript || editorLocked) return;
     try {
-      await navigator.clipboard.writeText(translationPromptFromTranscript(transcript));
+      await writeClipboardText(translationPromptFromTranscript(transcript));
       setCopyState("Copié");
       setError("");
       window.setTimeout(() => setCopyState("Copier prompt"), 1800);

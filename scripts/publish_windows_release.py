@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 UI_DIR = ROOT / "ui"
 PACKAGE_JSON = UI_DIR / "package.json"
 PACKAGE_LOCK = UI_DIR / "package-lock.json"
-WINDOWS_PACKAGE_DIR = ROOT / "windows-test-package"
+WINDOWS_RELEASE_DIR = ROOT / "desktop-releases" / "windows"
 
 
 def read_json(path: Path) -> dict:
@@ -52,23 +52,15 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def update_readme(version: str) -> None:
-    readme = WINDOWS_PACKAGE_DIR / "README.md"
-    target_name = f"Tarjama-Studio-{version}-windows-portable.exe"
-    content = readme.read_text(encoding="utf-8")
-    content = re.sub(r"Tarjama-Studio-\d+\.\d+\.\d+-windows-portable\.exe", target_name, content)
-    readme.write_text(content, encoding="utf-8")
-
-
-def replace_package_exe(version: str) -> Path:
+def publish_exe(version: str) -> Path:
     source = UI_DIR / "release" / f"Tarjama Studio {version}.exe"
     if not source.exists():
         raise SystemExit(f"Build artifact missing: {source}")
 
-    WINDOWS_PACKAGE_DIR.mkdir(parents=True, exist_ok=True)
-    destination = WINDOWS_PACKAGE_DIR / f"Tarjama-Studio-{version}-windows-portable.exe"
+    WINDOWS_RELEASE_DIR.mkdir(parents=True, exist_ok=True)
+    destination = WINDOWS_RELEASE_DIR / f"Tarjama-Studio-{version}-windows-portable.exe"
 
-    for old_exe in WINDOWS_PACKAGE_DIR.glob("Tarjama-Studio-*-windows-portable.exe"):
+    for old_exe in WINDOWS_RELEASE_DIR.glob("Tarjama-Studio-*-windows-portable.exe"):
         if old_exe != destination:
             old_exe.unlink()
 
@@ -77,7 +69,7 @@ def replace_package_exe(version: str) -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build and refresh the Windows test package.")
+    parser = argparse.ArgumentParser(description="Build and publish the Windows portable executable.")
     parser.add_argument("--version", help="Explicit version to build. Defaults to the next patch version.")
     parser.add_argument("--skip-build", action="store_true", help="Only refresh package files from an existing build artifact.")
     args = parser.parse_args()
@@ -89,9 +81,8 @@ def main() -> None:
     if not args.skip_build:
         subprocess.run(["make", "desktop-win-portable"], cwd=ROOT, check=True)
 
-    packaged_exe = replace_package_exe(version)
-    update_readme(version)
-    print(f"Windows package ready: {packaged_exe.relative_to(ROOT)}")
+    packaged_exe = publish_exe(version)
+    print(f"Windows release ready: {packaged_exe.relative_to(ROOT)}")
     print(f"SHA-256: {sha256(packaged_exe)}")
 
 

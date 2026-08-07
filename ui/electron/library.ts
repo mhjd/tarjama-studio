@@ -3,16 +3,20 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type {
   CreateYoutubeProjectRequest,
   CreateYoutubeProjectResult,
+  CreateLocalProjectResult,
+  CleanedTranscriptImportResult,
+  DesktopPromptSettings,
   DesktopExportResult,
   DesktopLibraryInfo,
   DesktopProject,
   DesktopProjectLoad,
   DesktopSnapshotInfo,
   ExportProgress,
+  ExportVideoOptions,
   ExportSubtitleStyle,
   ExportSubtitleTrack,
   DownloadProgress,
@@ -20,12 +24,28 @@ import type {
   DownloadYoutubeResult,
   ImportTranslationResult,
   ImportTranscriptResult,
+  PromptKind,
+  ProjectReviewKind,
+  DesktopProjectReview,
+  TranscriptSegment,
   UpdateToolResult,
   WorkspaceTranscript,
   WorkspaceTranslation,
   YoutubeFormatOption,
   YoutubeFormatsResult,
 } from "./types.js";
+import { fetchWithRetries } from "./tool-download.js";
+import { assertSafeProjectId, assertSafeSnapshotId, safeFormatSelector, safeRemoteUrl } from "./security.js";
+import {
+  groupExportCues,
+  normalizeExportOptions,
+  outputDimensions,
+  subtitleFontSize,
+  videoEncodingArguments,
+  type ExportCue,
+  type VideoDimensions,
+} from "./export-options.js";
+import { parseMarkdownTimecode, stripModelCitationMarkers } from "./editor-logic.js";
 
 const PROJECT_FILE = "project.json";
 const TRANSCRIPT_FILE = "transcript.json";
@@ -33,6 +53,12 @@ const CURRENT_FILE = "current.json";
 const TRANSLATION_FILE = "translation.json";
 const ARABIC_SUBTITLE_FONT_NAME = "Noto Naskh Arabic";
 const LATIN_SUBTITLE_FONT_NAME = "Arial";
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const MAX_TEXT_IMPORT_BYTES = 25 * 1024 * 1024;
+const MAX_PROMPT_BYTES = 512 * 1024;
+const MAX_TRANSCRIPT_SEGMENTS = 100_000;
+const MAX_SEGMENT_TEXT_LENGTH = 1_000_000;
+const MAX_TOOL_OUTPUT_BYTES = 20 * 1024 * 1024;
 
 export function libraryDir(): string {
   return path.join(app.getPath("userData"), "projects");
@@ -98,6 +124,7 @@ async function removeGeneratedSourceFiles(dir: string): Promise<void> {
 }
 
 function projectDir(projectId: string): string {
+  assertSafeProjectId(projectId);
   return path.join(libraryDir(), projectId);
 }
 
@@ -129,8 +156,27 @@ function exportsDir(projectId: string): string {
   return path.join(projectDir(projectId), "exports");
 }
 
+function projectMediaUrl(projectId: string): string {
+  assertSafeProjectId(projectId);
+  return `tarjama://app/media/${encodeURIComponent(projectId)}`;
+}
+
 async function readJson<T>(filePath: string): Promise<T> {
   return JSON.parse(await fs.readFile(filePath, "utf8")) as T;
+}
+
+function assertTextSize(content: string, maximumBytes = MAX_TEXT_IMPORT_BYTES): void {
+  if (Buffer.byteLength(content, "utf8") > maximumBytes) {
+    throw new Error(`Le fichier texte dépasse la limite de ${Math.floor(maximumBytes / 1024 / 1024)} Mo`);
+  }
+}
+
+async function readTextFileLimited(filePath: string, maximumBytes = MAX_TEXT_IMPORT_BYTES): Promise<string> {
+  const metadata = await fs.stat(filePath);
+  if (!metadata.isFile() || metadata.size > maximumBytes) {
+    throw new Error(`Le fichier sélectionné dépasse la limite de ${Math.floor(maximumBytes / 1024 / 1024)} Mo`);
+  }
+  return await fs.readFile(filePath, "utf8");
 }
 
 async function writeJson(filePath: string, payload: unknown): Promise<void> {
@@ -146,6 +192,7 @@ async function requireProjectVideo(project: DesktopProject): Promise<string> {
   if (!project.videoPath || !(await pathExists(project.videoPath))) {
     throw new Error("Ajoute d'abord une vidéo au projet");
   }
+  await assertInsideLibrary(project.videoPath);
   return project.videoPath;
 }
 
@@ -156,6 +203,9 @@ function validateTranscript(payload: unknown): WorkspaceTranscript {
   const transcript = payload as WorkspaceTranscript;
   if (!Array.isArray(transcript.segments) || transcript.segments.length === 0) {
     throw new Error("Transcript must contain at least one segment");
+  }
+  if (transcript.segments.length > MAX_TRANSCRIPT_SEGMENTS) {
+    throw new Error(`Transcript contains too many segments (maximum ${MAX_TRANSCRIPT_SEGMENTS})`);
   }
   let previousStart = -1;
   const ids = new Set<string>();
@@ -182,8 +232,114 @@ function validateTranscript(payload: unknown): WorkspaceTranscript {
     if (typeof segment.translation !== "string") {
       throw new Error(`Segment ${index} translation must be a string`);
     }
+    if (segment.text.length > MAX_SEGMENT_TEXT_LENGTH || segment.translation.length > MAX_SEGMENT_TEXT_LENGTH) {
+      throw new Error(`Segment ${index} text is unreasonably large`);
+    }
   });
   return transcript;
+}
+
+function validateCleanedTranscript(
+  current: WorkspaceTranscript,
+  payload: unknown,
+): { transcript: WorkspaceTranscript; summary: Omit<CleanedTranscriptImportResult, "loaded"> } {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("La transcription nettoyée doit être un objet JSON");
+  }
+  const cleaned = payload as WorkspaceTranscript;
+  const currentKeys = Object.keys(current).sort();
+  const cleanedKeys = Object.keys(cleaned).sort();
+  if (JSON.stringify(currentKeys) !== JSON.stringify(cleanedKeys)) {
+    const missing = currentKeys.filter((key) => !cleanedKeys.includes(key));
+    const extra = cleanedKeys.filter((key) => !currentKeys.includes(key));
+    throw new Error(`Les clés principales ont changé. Manquantes: ${missing.join(", ") || "aucune"}; ajoutées: ${extra.join(", ") || "aucune"}`);
+  }
+  for (const key of ["corpus_id", "audio_path", "source_transcript", "source_model", "project_instructions", "created_at", "updated_at"] as const) {
+    if (key in current && cleaned[key] !== current[key]) {
+      throw new Error(`Le champ protégé ${key} a été modifié`);
+    }
+  }
+  const transcript = validateTranscript(cleaned);
+  const requiredSegmentKeys = ["end", "id", "start", "text", "translation"];
+  transcript.segments.forEach((segment, index) => {
+    const keys = Object.keys(segment).sort();
+    if (JSON.stringify(keys) !== JSON.stringify(requiredSegmentKeys)) {
+      throw new Error(`Les clés du segment ${index} ont changé`);
+    }
+    if (!segment.text.trim()) throw new Error(`Le segment ${index} est vide`);
+  });
+  const beforeById = new Map(current.segments.map((segment) => [String(segment.id), segment]));
+  const afterById = new Map(transcript.segments.map((segment) => [String(segment.id), segment]));
+  const keptIds = [...beforeById.keys()].filter((id) => afterById.has(id));
+  return {
+    transcript,
+    summary: {
+      before: current.segments.length,
+      after: transcript.segments.length,
+      added: [...afterById.keys()].filter((id) => !beforeById.has(id)).length,
+      removed: [...beforeById.keys()].filter((id) => !afterById.has(id)).length,
+      changed: keptIds.filter((id) => beforeById.get(id)?.text !== afterById.get(id)?.text).length,
+    },
+  };
+}
+
+function cleanedTranscriptFromMarkdown(
+  projectId: string,
+  current: WorkspaceTranscript,
+  content: string,
+): { transcript: WorkspaceTranscript; summary: Omit<CleanedTranscriptImportResult, "loaded"> } {
+  const { sections } = parseTimestampedMarkdown(content);
+  if (!sections.length) throw new Error("La transcription nettoyée ne contient aucun bloc Markdown horodaté");
+  const sourceByTimestamp = new Map(
+    current.segments.map((segment, index) => [timestampKey(segment.start, segment.end), { segment, index }]),
+  );
+  const usedSourceIds = new Set<string>();
+  const mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }> = [];
+  let previousSourceIndex = -1;
+  const segments = sections.map((section, sectionIndex) => {
+    const source = sourceByTimestamp.get(timestampKey(section.start, section.end));
+    if (!source || usedSourceIds.has(String(source.segment.id))) {
+      mismatches.push({ index: source?.index ?? sectionIndex, received: section });
+      return null;
+    }
+    usedSourceIds.add(String(source.segment.id));
+    if (source.index < previousSourceIndex) {
+      throw new Error(
+        `Les blocs ne sont plus dans l'ordre à la ligne ${section.headingLine}: ## ${timestampRange(section.start, section.end)}`,
+      );
+    }
+    previousSourceIndex = source.index;
+    if (!section.text.trim()) {
+      throw new Error(`Le bloc à la ligne ${section.headingLine} est vide: ## ${timestampRange(section.start, section.end)}`);
+    }
+    return { ...source.segment, text: section.text.trim(), translation: "" };
+  });
+  if (mismatches.length) {
+    throw alignmentError(
+      "Bloc de transcription inconnu ou dupliqué",
+      current,
+      mismatches,
+    );
+  }
+  const transcript = validateTranscript({
+    ...current,
+    corpus_id: projectId,
+    segments: segments.filter((segment): segment is TranscriptSegment => segment !== null),
+    updated_at: nowIso(),
+  });
+  const beforeById = new Map(current.segments.map((segment) => [String(segment.id), segment]));
+  const afterById = new Map(transcript.segments.map((segment) => [String(segment.id), segment]));
+  const keptIds = [...beforeById.keys()].filter((id) => afterById.has(id));
+  return {
+    transcript,
+    summary: {
+      before: current.segments.length,
+      after: transcript.segments.length,
+      added: 0,
+      removed: [...beforeById.keys()].filter((id) => !afterById.has(id)).length,
+      changed: keptIds.filter((id) => beforeById.get(id)?.text !== afterById.get(id)?.text).length,
+    },
+  };
 }
 
 function transcriptComparable(transcript: WorkspaceTranscript | null): string {
@@ -205,6 +361,11 @@ function transcriptComparable(transcript: WorkspaceTranscript | null): string {
 
 function transcriptsDiffer(left: WorkspaceTranscript | null, right: WorkspaceTranscript | null): boolean {
   return transcriptComparable(left) !== transcriptComparable(right);
+}
+
+function reviewFingerprint(transcript: WorkspaceTranscript, includeTranslation: boolean): string {
+  const reviewed = includeTranslation ? transcript : transcriptWithoutSegmentTranslations(transcript);
+  return createHash("sha256").update(transcriptComparable(reviewed)).digest("hex");
 }
 
 function transcriptWithoutSegmentTranslations(transcript: WorkspaceTranscript): WorkspaceTranscript {
@@ -339,6 +500,44 @@ async function loadSavedTranscript(projectId: string): Promise<WorkspaceTranscri
   return null;
 }
 
+async function storedProjectVideo(projectId: string): Promise<string | undefined> {
+  const dir = projectDir(projectId);
+  if (!(await pathExists(dir))) return undefined;
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const source = entries.find((entry) => entry.isFile() && entry.name.startsWith("source."));
+  return source ? path.join(dir, source.name) : undefined;
+}
+
+async function refreshProjectArtifactPaths(project: DesktopProject): Promise<DesktopProject> {
+  const savedTranscript = transcriptFile(project.id);
+  const currentTranscript = currentFile(project.id);
+  const translation = translationFile(project.id);
+  const transcriptPath = (await pathExists(savedTranscript))
+    ? savedTranscript
+    : (await pathExists(currentTranscript))
+      ? currentTranscript
+      : undefined;
+  const translationPath = (await pathExists(translation)) ? translation : undefined;
+  let videoPath = project.videoPath;
+  if (videoPath) {
+    try {
+      await assertInsideLibrary(videoPath);
+      if (!(await pathExists(videoPath))) videoPath = undefined;
+    } catch {
+      videoPath = undefined;
+    }
+  }
+  videoPath ??= await storedProjectVideo(project.id);
+  if (
+    project.transcriptPath === transcriptPath &&
+    project.translationPath === translationPath &&
+    project.videoPath === videoPath
+  ) return project;
+  const updated = { ...project, videoPath, transcriptPath, translationPath };
+  await writeProject(updated);
+  return updated;
+}
+
 async function ensureInitialSnapshot(projectId: string, transcript: WorkspaceTranscript): Promise<void> {
   if ((await snapshotFiles(projectId)).length === 0) {
     await writeSnapshot(projectId, transcript, "initial");
@@ -360,28 +559,37 @@ async function recoveryState(projectId: string): Promise<DesktopProjectLoad["rec
   };
 }
 
-function parseTimecode(value: string): number {
-  const parts = value.trim().split(":");
-  if (parts.length === 2) return Number(parts[0]) * 60 + Number(parts[1]);
-  if (parts.length === 3) return Number(parts[0]) * 3600 + Number(parts[1]) * 60 + Number(parts[2]);
-  throw new Error(`Invalid timecode: ${value}`);
-}
-
 function sameTime(left: number, right: number): boolean {
-  return Number(left.toFixed(3)) === Number(right.toFixed(3));
+  return timestampMilliseconds(left) === timestampMilliseconds(right);
 }
 
-function parseTranslationMarkdown(content: string): { metadata: Record<string, string>; sections: Array<{ start: number; end: number; translation: string }> } {
+function timestampMilliseconds(seconds: number): number {
+  return Math.round(Number(seconds) * 1000);
+}
+
+function timestampKey(start: number, end: number): string {
+  return `${timestampMilliseconds(start)}:${timestampMilliseconds(end)}`;
+}
+
+type MarkdownSection = { start: number; end: number; text: string; headingLine: number };
+
+function parseTimestampedMarkdown(content: string): { metadata: Record<string, string>; sections: MarkdownSection[] } {
   const metadata: Record<string, string> = {};
-  const sections: Array<{ start: number; end: number; translation: string }> = [];
-  let current: { start: number; end: number; lines: string[] } | null = null;
+  const sections: MarkdownSection[] = [];
+  let current: { start: number; end: number; lines: string[]; headingLine: number } | null = null;
   const heading = /^##\s+(.+?)\s+-->\s+(.+?)\s*$/;
-  for (const rawLine of content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n")) {
+  const lines = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  for (const [index, rawLine] of lines.entries()) {
     const line = rawLine.trimEnd();
     const match = line.match(heading);
     if (match) {
-      if (current) sections.push({ start: current.start, end: current.end, translation: current.lines.join("\n").trim() });
-      current = { start: parseTimecode(match[1]), end: parseTimecode(match[2]), lines: [] };
+      if (current) sections.push({ start: current.start, end: current.end, text: current.lines.join("\n").trim(), headingLine: current.headingLine });
+      const start = parseMarkdownTimecode(match[1]);
+      const end = parseMarkdownTimecode(match[2]);
+      if (start === null || end === null) {
+        throw new Error(`Timestamp invalide à la ligne ${index + 1}: ${line}`);
+      }
+      current = { start, end, lines: [], headingLine: index + 1 };
       continue;
     }
     if (!current) {
@@ -393,8 +601,44 @@ function parseTranslationMarkdown(content: string): { metadata: Record<string, s
     }
     current.lines.push(line);
   }
-  if (current) sections.push({ start: current.start, end: current.end, translation: current.lines.join("\n").trim() });
+  if (current) sections.push({ start: current.start, end: current.end, text: current.lines.join("\n").trim(), headingLine: current.headingLine });
   return { metadata, sections };
+}
+
+function timestampRange(start: number, end: number): string {
+  return `${formatPromptTime(start)} --> ${formatPromptTime(end)}`;
+}
+
+function alignmentError(
+  title: string,
+  transcript: WorkspaceTranscript,
+  mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }>,
+): Error {
+  const details = mismatches.slice(0, 8).map(({ index, received }) => {
+    const expected = transcript.segments[index];
+    const expectedLine = expected
+      ? `attendu: ## ${timestampRange(expected.start, expected.end)}\n  arabe: ${expected.text.trim() || "(vide)"}`
+      : "attendu: aucun bloc supplémentaire";
+    const receivedLine = received
+      ? `reçu: ## ${timestampRange(received.start, received.end)}\n  texte: ${received.text.trim() || "(vide)"}`
+      : "reçu: bloc absent";
+    return `Bloc ${index + 1}\n  ${expectedLine}\n  ${receivedLine}`;
+  });
+  const suffix = mismatches.length > 8 ? `\n… et ${mismatches.length - 8} autre(s) bloc(s).` : "";
+  return new Error(`${title}. Chaque titre doit reprendre exactement le timestamp de la transcription.\n${details.join("\n\n")}${suffix}`);
+}
+
+function segmentCountError(label: string, transcript: WorkspaceTranscript, sections: MarkdownSection[]): Error {
+  const index = Math.min(sections.length, transcript.segments.length - 1);
+  const expected = transcript.segments[index];
+  const received = sections[index];
+  const expectedLine = expected
+    ? `attendu autour du bloc ${index + 1}: ## ${timestampRange(expected.start, expected.end)}\n  arabe: ${expected.text.trim() || "(vide)"}`
+    : "attendu: aucun bloc supplémentaire";
+  const receivedLine = received
+    ? `reçu autour du bloc ${index + 1}: ## ${timestampRange(received.start, received.end)}\n  texte: ${received.text.trim() || "(vide)"}`
+    : "reçu: bloc absent";
+  return new Error(`${label} contient ${sections.length} bloc(s); attendu: ${transcript.segments.length}.\n${expectedLine}\n${receivedLine}`);
 }
 
 function translationFromJson(
@@ -447,25 +691,25 @@ function translationFromMarkdown(
   content: string,
   filename: string,
 ): WorkspaceTranslation {
-  const { metadata, sections } = parseTranslationMarkdown(content);
+  const { metadata, sections } = parseTimestampedMarkdown(content);
   if (sections.length !== transcript.segments.length) {
-    throw new Error(`La traduction contient ${sections.length} segment(s); attendu: ${transcript.segments.length}`);
+    throw segmentCountError("La traduction", transcript, sections);
   }
-  const mismatches: number[] = [];
+  const mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }> = [];
   const segments = transcript.segments.map((source, index) => {
     const translated = sections[index];
     if (!sameTime(source.start, translated.start) || !sameTime(source.end, translated.end)) {
-      mismatches.push(index + 1);
+      mismatches.push({ index, received: translated });
     }
     return {
       id: String(source.id),
       start: source.start,
       end: source.end,
-      translation: translated.translation,
+      translation: translated.text,
     };
   });
   if (mismatches.length) {
-    throw new Error(`Timestamp non aligné dans le(s) bloc(s): ${mismatches.slice(0, 8).join(", ")}`);
+    throw alignmentError("Timestamps non alignés", transcript, mismatches);
   }
   return {
     corpus_id: projectId,
@@ -485,7 +729,8 @@ function translationFromImportContent(
   content: string,
   filename: string,
 ): WorkspaceTranslation {
-  const trimmed = content.trim();
+  const sanitized = stripModelCitationMarkers(content);
+  const trimmed = sanitized.trim();
   if (!trimmed) throw new Error("La traduction est vide");
   if (trimmed.startsWith("{")) {
     try {
@@ -497,14 +742,20 @@ function translationFromImportContent(
       throw err;
     }
   }
-  return translationFromMarkdown(projectId, transcript, content, filename);
+  return translationFromMarkdown(projectId, transcript, sanitized, filename);
 }
 
 function assertTranslationAlignment(transcript: WorkspaceTranscript, translation: WorkspaceTranslation): void {
   if (translation.segments.length !== transcript.segments.length) {
-    throw new Error(`La traduction contient ${translation.segments.length} segment(s); attendu: ${transcript.segments.length}`);
+    const sections = translation.segments.map((segment, index) => ({
+      start: segment.start,
+      end: segment.end,
+      text: segment.translation,
+      headingLine: index + 1,
+    }));
+    throw segmentCountError("La traduction", transcript, sections);
   }
-  const mismatches: number[] = [];
+  const mismatches: Array<{ index: number; received?: { start: number; end: number; text: string } }> = [];
   transcript.segments.forEach((source, index) => {
     const translated = translation.segments[index];
     if (
@@ -512,11 +763,14 @@ function assertTranslationAlignment(transcript: WorkspaceTranscript, translation
       !sameTime(source.start, translated.start) ||
       !sameTime(source.end, translated.end)
     ) {
-      mismatches.push(index + 1);
+      mismatches.push({
+        index,
+        received: { start: translated.start, end: translated.end, text: translated.translation },
+      });
     }
   });
   if (mismatches.length) {
-    throw new Error(`Traduction non alignée dans le(s) segment(s): ${mismatches.slice(0, 8).join(", ")}`);
+    throw alignmentError("Traduction non alignée", transcript, mismatches);
   }
 }
 
@@ -541,25 +795,57 @@ async function runTool(
   args: string[],
   cwd: string,
   onOutput?: (chunk: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   return await new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("Opération annulée"));
+      return;
+    }
     const child = spawn(command, args, { cwd, windowsHide: true });
     let stdout = "";
     let stderr = "";
-    child.stdout.on("data", (chunk) => {
+    let outputBytes = 0;
+    let settled = false;
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      child.kill();
+      reject(new Error("Opération annulée"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const cleanup = () => signal?.removeEventListener("abort", onAbort);
+    const rejectOnce = (error: ToolError) => {
+      if (settled) return;
+      settled = true;
+      child.kill();
+      cleanup();
+      reject(error);
+    };
+    const appendOutput = (target: "stdout" | "stderr", chunk: unknown) => {
       const value = String(chunk);
-      stdout += value;
+      outputBytes += Buffer.byteLength(value, "utf8");
+      if (outputBytes > MAX_TOOL_OUTPUT_BYTES) {
+        rejectOnce(new ToolError(`${path.basename(command)} produced too much output`, stdout, stderr, null));
+        return;
+      }
+      if (target === "stdout") stdout += value;
+      else stderr += value;
       onOutput?.(value);
+    };
+    child.stdout.on("data", (chunk) => {
+      appendOutput("stdout", chunk);
     });
     child.stderr.on("data", (chunk) => {
-      const value = String(chunk);
-      stderr += value;
-      onOutput?.(value);
+      appendOutput("stderr", chunk);
     });
     child.on("error", (error) => {
-      reject(new ToolError(`${path.basename(command)} could not be started at ${command}\n${error.message}`, stdout, stderr, null));
+      rejectOnce(new ToolError(`${path.basename(command)} could not be started at ${command}\n${error.message}`, stdout, stderr, null));
     });
     child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       if (code === 0) {
         resolve(stdout);
       } else {
@@ -584,29 +870,57 @@ async function makeExecutable(filePath: string): Promise<void> {
   }
 }
 
-function ytdlpDownloadUrl(): string {
-  if (process.platform === "darwin") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos";
-  if (process.platform === "win32") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
-  if (process.platform === "linux") return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+function ytdlpAssetName(): string {
+  if (process.platform === "darwin") return "yt-dlp_macos";
+  if (process.platform === "win32") return "yt-dlp.exe";
+  if (process.platform === "linux") return "yt-dlp";
   throw new Error(`Unsupported platform for yt-dlp update: ${process.platform}`);
 }
 
-async function downloadFile(url: string, targetPath: string): Promise<void> {
-  const response = await fetch(url);
+function ytdlpDownloadUrl(assetName: string): string {
+  return `https://github.com/yt-dlp/yt-dlp/releases/latest/download/${assetName}`;
+}
+
+async function expectedYtdlpChecksum(assetName: string): Promise<string> {
+  const response = await fetchWithRetries(ytdlpDownloadUrl("SHA2-256SUMS"));
+  if (!response.ok) throw new Error(`Checksum download failed: HTTP ${response.status}`);
+  const line = (await response.text())
+    .split(/\r?\n/)
+    .find((candidate) => candidate.trim().split(/\s+/).at(-1)?.replace(/^\*/, "") === assetName);
+  const checksum = line?.trim().split(/\s+/)[0];
+  if (!checksum || !/^[a-f0-9]{64}$/i.test(checksum)) {
+    throw new Error(`Checksum missing for ${assetName}`);
+  }
+  return checksum.toLowerCase();
+}
+
+async function downloadFile(url: string, targetPath: string, expectedChecksum: string): Promise<void> {
+  const response = await fetchWithRetries(url);
   if (!response.ok) {
     throw new Error(`Download failed: HTTP ${response.status}`);
   }
+  const contentLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > 100 * 1024 * 1024) {
+    throw new Error("Downloaded tool is unexpectedly large");
+  }
+  const content = Buffer.from(await response.arrayBuffer());
+  if (content.length > 100 * 1024 * 1024) throw new Error("Downloaded tool is unexpectedly large");
+  const checksum = createHash("sha256").update(content).digest("hex");
+  if (checksum !== expectedChecksum) {
+    throw new Error("yt-dlp checksum verification failed; the existing version was preserved");
+  }
   const tmpPath = `${targetPath}.tmp`;
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  await fs.writeFile(tmpPath, Buffer.from(await response.arrayBuffer()));
+  await fs.writeFile(tmpPath, content, { mode: 0o755 });
   await makeExecutable(tmpPath);
   await fs.rm(targetPath, { force: true }).catch(() => undefined);
   await fs.rename(tmpPath, targetPath);
 }
 
 export async function updateYtdlp(): Promise<UpdateToolResult> {
+  const assetName = ytdlpAssetName();
   const targetPath = path.join(app.getPath("userData"), "bin", platformKey(), `yt-dlp${executableExtension()}`);
-  await downloadFile(ytdlpDownloadUrl(), targetPath);
+  await downloadFile(ytdlpDownloadUrl(assetName), targetPath, await expectedYtdlpChecksum(assetName));
   const version = (await runTool(targetPath, ["--version"], app.getPath("userData"))).trim();
   return { path: targetPath, version };
 }
@@ -624,11 +938,12 @@ async function runYtdlp(
   args: string[],
   cwd: string,
   onOutput?: (chunk: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      return await runTool(command, [...YTDLP_RETRY_ARGS, ...args], cwd, onOutput);
+      return await runTool(command, [...YTDLP_RETRY_ARGS, ...args], cwd, onOutput, signal);
     } catch (error) {
       lastError = error;
       if (!isRetryableYtdlpError(error) || attempt === 3) break;
@@ -729,6 +1044,7 @@ function youtubeIdFromUrl(url: URL, depth = 0): string | undefined {
 function parseYoutubeUrl(rawUrl: string): ParsedYoutubeUrl {
   const inputUrl = rawUrl.trim();
   if (!inputUrl) throw new Error("Colle un lien YouTube avant de créer le projet.");
+  if (inputUrl.length > 4096) throw new Error("Le lien vidéo est anormalement long");
 
   if (YOUTUBE_ID_PATTERN.test(inputUrl)) {
     return {
@@ -1063,31 +1379,58 @@ function createFfmpegExportProgressHandler(
   };
 }
 
-async function mediaStreams(filePath: string, ffmpeg: string): Promise<{ audio: boolean; video: boolean }> {
+type MediaStreams = {
+  audio: boolean;
+  video: boolean;
+  duration?: number;
+  width?: number;
+  height?: number;
+};
+
+async function mediaStreams(filePath: string, ffmpeg: string): Promise<MediaStreams> {
   const output = await new Promise<string>((resolve, reject) => {
     const child = spawn(ffmpeg, ["-hide_banner", "-i", filePath], { windowsHide: true });
     let combined = "";
     child.stdout.on("data", (chunk) => {
       combined += String(chunk);
+      if (Buffer.byteLength(combined, "utf8") > MAX_TOOL_OUTPUT_BYTES) child.kill();
     });
     child.stderr.on("data", (chunk) => {
       combined += String(chunk);
+      if (Buffer.byteLength(combined, "utf8") > MAX_TOOL_OUTPUT_BYTES) child.kill();
     });
     child.on("error", reject);
     child.on("close", () => resolve(combined));
   });
-  return { audio: output.includes(" Audio:"), video: output.includes(" Video:") };
+  const durationMatch = output.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+  const duration = durationMatch
+    ? Number(durationMatch[1]) * 3600 + Number(durationMatch[2]) * 60 + Number(durationMatch[3])
+    : undefined;
+  const videoLine = output.split(/\r?\n/).find((line) => line.includes(" Video:"));
+  const dimensionsMatch = videoLine?.match(/\b(\d{2,5})x(\d{2,5})(?:\s|,|\[)/);
+  let width = dimensionsMatch ? Number(dimensionsMatch[1]) : undefined;
+  let height = dimensionsMatch ? Number(dimensionsMatch[2]) : undefined;
+  const rotationMatch = output.match(/rotation of\s+(-?\d+(?:\.\d+)?)\s+degrees/i)
+    ?? output.match(/rotate\s*:\s*(-?\d+(?:\.\d+)?)/i);
+  if (width && height && rotationMatch && Math.abs(Math.round(Number(rotationMatch[1]) / 90)) % 2 === 1) {
+    [width, height] = [height, width];
+  }
+  return { audio: output.includes(" Audio:"), video: output.includes(" Video:"), duration, width, height };
 }
 
-async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
+export async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
   const extension = executableExtension();
   const key = platformKey();
   const candidates = [
-    path.join(app.getPath("userData"), "bin", key, `${name}${extension}`),
+    ...(name === "yt-dlp" ? [path.join(app.getPath("userData"), "bin", key, `${name}${extension}`)] : []),
     path.join(process.resourcesPath, "desktop-bin", key, `${name}${extension}`),
-    path.join(app.getAppPath(), "desktop-bin", key, `${name}${extension}`),
-    path.join(app.getAppPath(), "..", "desktop-bin", key, `${name}${extension}`),
-    path.join(process.cwd(), "desktop-bin", key, `${name}${extension}`),
+    ...(!app.isPackaged
+      ? [
+          path.join(app.getAppPath(), "desktop-bin", key, `${name}${extension}`),
+          path.join(app.getAppPath(), "..", "desktop-bin", key, `${name}${extension}`),
+          path.join(process.cwd(), "desktop-bin", key, `${name}${extension}`),
+        ]
+      : []),
   ];
   for (const candidate of candidates) {
     if (await pathExists(candidate)) return candidate;
@@ -1097,11 +1440,37 @@ async function resolveTool(name: "yt-dlp" | "ffmpeg"): Promise<string> {
 
 async function resolveDesktopResource(relativePath: string): Promise<string | null> {
   const candidates = [
-    path.join(app.getPath("userData"), relativePath),
     path.join(process.resourcesPath, relativePath),
-    path.join(app.getAppPath(), relativePath),
-    path.join(app.getAppPath(), "..", relativePath),
-    path.join(process.cwd(), relativePath),
+    ...(!app.isPackaged
+      ? [
+          path.join(MODULE_DIR, relativePath),
+          path.join(MODULE_DIR, "..", relativePath),
+          path.join(MODULE_DIR, "..", "..", relativePath),
+          path.join(app.getAppPath(), relativePath),
+          path.join(app.getAppPath(), "..", relativePath),
+          path.join(process.cwd(), relativePath),
+        ]
+      : []),
+  ];
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) return candidate;
+  }
+  return null;
+}
+
+async function resolveBundledDesktopResource(relativePath: string): Promise<string | null> {
+  const candidates = [
+    path.join(process.resourcesPath, relativePath),
+    ...(!app.isPackaged
+      ? [
+          path.join(MODULE_DIR, relativePath),
+          path.join(MODULE_DIR, "..", relativePath),
+          path.join(MODULE_DIR, "..", "..", relativePath),
+          path.join(app.getAppPath(), relativePath),
+          path.join(app.getAppPath(), "..", relativePath),
+          path.join(process.cwd(), relativePath),
+        ]
+      : []),
   ];
   for (const candidate of candidates) {
     if (await pathExists(candidate)) return candidate;
@@ -1116,9 +1485,16 @@ export async function readLibrary(): Promise<DesktopLibraryInfo> {
   const projects: DesktopProject[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
+    try {
+      assertSafeProjectId(entry.name);
+    } catch {
+      continue;
+    }
     const filePath = path.join(root, entry.name, PROJECT_FILE);
     if (!(await pathExists(filePath))) continue;
-    projects.push(await readJson<DesktopProject>(filePath));
+    const project = await readJson<DesktopProject>(filePath);
+    if (project.id !== entry.name) continue;
+    projects.push(await refreshProjectArtifactPaths(project));
   }
   projects.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   return { libraryDir: root, projects };
@@ -1127,7 +1503,9 @@ export async function readLibrary(): Promise<DesktopLibraryInfo> {
 async function readProject(projectId: string): Promise<DesktopProject> {
   const filePath = projectFile(projectId);
   if (!(await pathExists(filePath))) throw new Error("Project not found");
-  return await readJson<DesktopProject>(filePath);
+  const project = await readJson<DesktopProject>(filePath);
+  if (project.id !== projectId) throw new Error("Le projet ne correspond pas à son dossier");
+  return await refreshProjectArtifactPaths(project);
 }
 
 async function findProjectByYoutubeId(youtubeId: string): Promise<DesktopProject | null> {
@@ -1168,6 +1546,7 @@ export async function createYoutubeProject(
   const title =
     request.title?.trim() ||
     (parsed.youtubeId ? `YouTube ${parsed.youtubeId}` : `Lien YouTube ${shortHash(parsed.canonicalUrl).slice(0, 6)}`);
+  if (title.length > 200) throw new Error("Le titre du projet ne peut pas dépasser 200 caractères");
   const project: DesktopProject = {
     id,
     title,
@@ -1182,21 +1561,64 @@ export async function createYoutubeProject(
   return { project, warning: parsed.warning };
 }
 
-export async function importTranscript(projectId: string): Promise<ImportTranscriptResult | null> {
+export async function createLocalProject(title: string): Promise<CreateLocalProjectResult> {
+  const cleanTitle = title.replace(/\s+/g, " ").trim();
+  if (!cleanTitle) throw new Error("Le titre du projet ne peut pas être vide");
+  if (cleanTitle.length > 200) throw new Error("Le titre du projet ne peut pas dépasser 200 caractères");
+  await fs.mkdir(libraryDir(), { recursive: true });
+  let id = slugify(`local_${cleanTitle}`);
+  if (await pathExists(projectDir(id))) id = slugify(`local_${cleanTitle}_${Date.now()}`);
+  const project: DesktopProject = {
+    id,
+    title: cleanTitle,
+    titleCustomizedAt: nowIso(),
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+  await writeProject(project);
+  return { project };
+}
+
+export async function pickTextImport(kind: "transcript" | "cleanup" | "translation"): Promise<{ filename: string; content: string } | null> {
+  if (!["transcript", "cleanup", "translation"].includes(kind)) throw new Error("Type d’import invalide");
+  const filters = kind === "transcript"
+    ? [{ name: "Transcript JSON", extensions: ["json"] }]
+    : [{ name: "Document horodaté", extensions: ["md", "txt", "json"] }];
+  const selection = await dialog.showOpenDialog({
+    title: kind === "translation"
+      ? "Choisir une traduction"
+      : kind === "cleanup"
+        ? "Choisir une transcription nettoyée"
+        : "Choisir une transcription",
+    properties: ["openFile"],
+    filters,
+  });
+  if (selection.canceled || !selection.filePaths[0]) return null;
+  return {
+    filename: path.basename(selection.filePaths[0]),
+    content: await readTextFileLimited(selection.filePaths[0]),
+  };
+}
+
+export async function importTranscriptContent(
+  projectId: string,
+  content: string,
+  _filename = "transcript.json",
+): Promise<ImportTranscriptResult> {
   const projectPath = projectFile(projectId);
   if (!(await pathExists(projectPath))) {
     throw new Error("Project not found");
   }
   const project = await readJson<DesktopProject>(projectPath);
   await requireProjectVideo(project);
-  const selection = await dialog.showOpenDialog({
-    title: `Importer une transcription pour ${project.title}`,
-    properties: ["openFile"],
-    filters: [{ name: "Transcript JSON", extensions: ["json"] }],
-  });
-  if (selection.canceled || !selection.filePaths[0]) return null;
-
-  const transcript = validateTranscript(JSON.parse(await fs.readFile(selection.filePaths[0], "utf8")));
+  assertTextSize(content);
+  let payload: unknown;
+  try {
+    payload = JSON.parse(content);
+  } catch (error) {
+    throw new Error(`JSON de transcription invalide: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  const transcript = validateTranscript(payload);
   const dir = projectDir(project.id);
   await fs.mkdir(dir, { recursive: true });
 
@@ -1212,9 +1634,231 @@ export async function importTranscript(projectId: string): Promise<ImportTranscr
     ...project,
     updatedAt: nowIso(),
     transcriptPath,
+    transcriptCleanedAt: undefined,
+    transcriptReviewedAt: undefined,
+    transcriptReviewedFingerprint: undefined,
+    translationReviewedAt: undefined,
+    translationReviewedFingerprint: undefined,
   };
   await writeProject(updatedProject);
   return { project: updatedProject, transcriptPath, segmentCount: transcript.segments.length };
+}
+
+export async function importTranscript(projectId: string): Promise<ImportTranscriptResult | null> {
+  const selection = await pickTextImport("transcript");
+  if (!selection) return null;
+  return await importTranscriptContent(projectId, selection.content, selection.filename);
+}
+
+const PROMPT_FILENAMES: Record<PromptKind, string> = {
+  transcript_cleanup: "transcript_cleanup.md",
+  translation: "translation.md",
+};
+
+function assertPromptKind(kind: unknown): asserts kind is PromptKind {
+  if (kind !== "transcript_cleanup" && kind !== "translation") {
+    throw new Error("Type de prompt invalide");
+  }
+}
+
+function promptOverridePath(kind: PromptKind): string {
+  assertPromptKind(kind);
+  return path.join(app.getPath("userData"), "prompts", PROMPT_FILENAMES[kind]);
+}
+
+async function defaultPrompt(kind: PromptKind): Promise<string> {
+  const bundled = await resolveBundledDesktopResource(path.join("prompts", PROMPT_FILENAMES[kind]));
+  if (!bundled) throw new Error(`Le prompt par défaut ${kind} est introuvable`);
+  return await fs.readFile(bundled, "utf8");
+}
+
+async function promptValue(kind: PromptKind): Promise<{ content: string; customized: boolean }> {
+  const fallback = await defaultPrompt(kind);
+  const override = promptOverridePath(kind);
+  if (!(await pathExists(override))) return { content: fallback, customized: false };
+  const content = await fs.readFile(override, "utf8");
+  if (content === fallback) {
+    await fs.rm(override, { force: true });
+    return { content: fallback, customized: false };
+  }
+  return { content, customized: true };
+}
+
+function validatePromptTemplate(kind: PromptKind, content: string): void {
+  assertPromptKind(kind);
+  assertTextSize(content, MAX_PROMPT_BYTES);
+  if (!content.trim()) throw new Error("Le prompt ne peut pas être vide");
+  const required = kind === "transcript_cleanup"
+    ? ["{{corpus_id}}", "{{title}}", "{{source_blocks}}"]
+    : ["{{corpus_id}}", "{{source_blocks}}", "{{project_instructions_block}}"];
+  const missing = required.filter((placeholder) => !content.includes(placeholder));
+  if (missing.length) throw new Error(`Placeholder(s) obligatoire(s) manquant(s): ${missing.join(", ")}`);
+}
+
+export async function readPromptSettings(): Promise<DesktopPromptSettings> {
+  const cleanup = await promptValue("transcript_cleanup");
+  const translation = await promptValue("translation");
+  return {
+    transcriptCleanup: cleanup.content,
+    translation: translation.content,
+    transcriptCleanupCustomized: cleanup.customized,
+    translationCustomized: translation.customized,
+  };
+}
+
+export async function savePromptOverride(kind: PromptKind, content: string): Promise<DesktopPromptSettings> {
+  validatePromptTemplate(kind, content);
+  const target = promptOverridePath(kind);
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.writeFile(target, content, "utf8");
+  return await readPromptSettings();
+}
+
+export async function resetPromptOverride(kind: PromptKind): Promise<DesktopPromptSettings> {
+  await fs.rm(promptOverridePath(kind), { force: true });
+  return await readPromptSettings();
+}
+
+export async function renderCleanupPrompt(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+): Promise<string> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const clean = transcriptWithoutSegmentTranslations(validateTranscript(transcript));
+  const sourceBlocks = clean.segments
+    .map((segment) => `## ${formatPromptTime(segment.start)} --> ${formatPromptTime(segment.end)}\n${segment.text.trim()}`)
+    .join("\n\n");
+  const template = (await promptValue("transcript_cleanup")).content;
+  validatePromptTemplate("transcript_cleanup", template);
+  return template
+    .replaceAll("{{corpus_id}}", projectId)
+    .replaceAll("{{title}}", project.title)
+    .replace("{{source_blocks}}", sourceBlocks);
+}
+
+function formatPromptTime(seconds: number): string {
+  const milliseconds = Math.max(0, Math.round(seconds * 1000));
+  const hours = Math.floor(milliseconds / 3_600_000);
+  const minutes = Math.floor((milliseconds % 3_600_000) / 60_000);
+  const secs = Math.floor((milliseconds % 60_000) / 1000);
+  const millis = milliseconds % 1000;
+  const base = hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  return `${base}.${String(millis).padStart(3, "0")}`;
+}
+
+export async function renderTranslationPrompt(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+): Promise<string> {
+  const clean = validateTranscript(transcript);
+  const sourceBlocks = clean.segments
+    .map((segment) => `## ${formatPromptTime(segment.start)} --> ${formatPromptTime(segment.end)}\n${segment.text.trim()}`)
+    .join("\n\n");
+  const instructions = clean.project_instructions?.trim();
+  const instructionsBlock = instructions ? `\nInstructions propres à ce projet:\n${instructions}\n` : "";
+  return (await promptValue("translation")).content
+    .replaceAll("{{corpus_id}}", projectId)
+    .replace("{{project_instructions_block}}", instructionsBlock)
+    .replace("{{source_blocks}}", sourceBlocks);
+}
+
+async function saveCleanedTranscript(
+  projectId: string,
+  current: WorkspaceTranscript,
+  transcript: WorkspaceTranscript,
+  summary: Omit<CleanedTranscriptImportResult, "loaded">,
+): Promise<CleanedTranscriptImportResult> {
+  const project = await readProject(projectId);
+  const clean = transcriptWithoutSegmentTranslations(transcript);
+  clean.corpus_id = projectId;
+  clean.updated_at = nowIso();
+  await writeSnapshot(projectId, current, "pre_cleanup");
+
+  let translationPath = project.translationPath;
+  const existingTranslationPath = translationFile(projectId);
+  if (await pathExists(existingTranslationPath)) {
+    const translation = await readJson<WorkspaceTranslation>(existingTranslationPath);
+    try {
+      assertTranslationAlignment(clean, translation);
+    } catch {
+      await writeTranslationSnapshot(projectId, translation, "pre_cleanup");
+      await fs.rm(existingTranslationPath, { force: true });
+      translationPath = undefined;
+    }
+  }
+
+  await writeJson(transcriptFile(projectId), clean);
+  await writeJson(currentFile(projectId), clean);
+  await writeSnapshot(projectId, clean, "cleaned");
+  await writeProject({
+    ...project,
+    updatedAt: nowIso(),
+    transcriptPath: transcriptFile(projectId),
+    translationPath,
+    transcriptCleanedAt: nowIso(),
+    transcriptReviewedAt: undefined,
+    transcriptReviewedFingerprint: undefined,
+    translationReviewedAt: undefined,
+    translationReviewedFingerprint: undefined,
+  });
+  return { loaded: await loadProject(projectId), ...summary };
+}
+
+async function importCleanedTranscriptPayload(
+  projectId: string,
+  payload: unknown,
+): Promise<CleanedTranscriptImportResult> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const current = await loadSavedTranscript(projectId);
+  if (!current) throw new Error("Aucune transcription à nettoyer dans ce projet");
+  const { transcript, summary } = validateCleanedTranscript(current, payload);
+  return await saveCleanedTranscript(projectId, current, transcript, summary);
+}
+
+export async function importCleanedTranscriptContent(
+  projectId: string,
+  content: string,
+): Promise<CleanedTranscriptImportResult> {
+  assertTextSize(content);
+  const sanitized = stripModelCitationMarkers(content);
+  if (!sanitized.trim()) throw new Error("La transcription nettoyée est vide");
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const current = await loadSavedTranscript(projectId);
+  if (!current) throw new Error("Aucune transcription à nettoyer dans ce projet");
+  const trimmed = sanitized.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      return await importCleanedTranscriptPayload(projectId, JSON.parse(trimmed));
+    } catch (error) {
+      if (error instanceof SyntaxError) throw new Error(`JSON de transcription invalide: ${error.message}`);
+      throw error;
+    }
+  }
+  const { transcript, summary } = cleanedTranscriptFromMarkdown(projectId, current, sanitized);
+  return await saveCleanedTranscript(projectId, current, transcript, summary);
+}
+
+export async function importCleanedTranscriptFile(
+  projectId: string,
+): Promise<CleanedTranscriptImportResult | null> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const selection = await dialog.showOpenDialog({
+    title: `Importer la transcription nettoyée pour ${project.title}`,
+    properties: ["openFile"],
+    filters: [
+      { name: "Transcription Markdown", extensions: ["md", "markdown", "txt"] },
+      { name: "Transcription JSON (ancien format)", extensions: ["json"] },
+      { name: "Tous les fichiers", extensions: ["*"] },
+    ],
+  });
+  if (selection.canceled || !selection.filePaths[0]) return null;
+  return await importCleanedTranscriptContent(projectId, await readTextFileLimited(selection.filePaths[0]));
 }
 
 async function copyVideoIntoProject(
@@ -1241,12 +1885,13 @@ async function copyVideoIntoProject(
     title: project.title || fallbackTitle || path.basename(sourcePath, extension),
     updatedAt: nowIso(),
     videoPath,
+    durationSeconds: streams.duration,
   };
   await writeProject(updatedProject);
   return { project: updatedProject, videoPath };
 }
 
-export async function importLocalVideo(projectId?: string): Promise<DownloadYoutubeResult | null> {
+export async function importLocalVideo(projectId?: string, title?: string): Promise<DownloadYoutubeResult | null> {
   await fs.mkdir(libraryDir(), { recursive: true });
   const selection = await dialog.showOpenDialog({
     title: "Importer une vidéo",
@@ -1264,24 +1909,27 @@ export async function importLocalVideo(projectId?: string): Promise<DownloadYout
   }
 
   const extension = path.extname(sourcePath) || ".mp4";
-  const title = path.basename(sourcePath, extension);
-  let id = slugify(`local_${title}`);
+  const fallbackTitle = path.basename(sourcePath, extension);
+  const projectTitle = title?.replace(/\s+/g, " ").trim() || fallbackTitle;
+  let id = slugify(`local_${projectTitle}`);
   if (await pathExists(projectDir(id))) {
-    id = slugify(`local_${title}_${Date.now()}`);
+    id = slugify(`local_${projectTitle}_${Date.now()}`);
   }
   const project: DesktopProject = {
     id,
-    title,
+    title: projectTitle,
+    titleCustomizedAt: title?.trim() ? nowIso() : undefined,
     createdAt: nowIso(),
     updatedAt: nowIso(),
   };
-  return await copyVideoIntoProject(project, sourcePath, title);
+  return await copyVideoIntoProject(project, sourcePath, projectTitle);
 }
 
 export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsResult> {
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
+  const sourceUrl = safeRemoteUrl(url);
   const metadataText = await runYtdlp(
     ytdlp,
     [
@@ -1289,7 +1937,8 @@ export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsRes
       "--ffmpeg-location",
       ffmpeg,
       "-J",
-      url,
+      "--",
+      sourceUrl,
     ],
     libraryDir(),
   );
@@ -1306,13 +1955,13 @@ export async function listYoutubeFormats(url: string): Promise<YoutubeFormatsRes
 export async function downloadYoutube(
   request: DownloadYoutubeRequest,
   emitProgress?: (progress: DownloadProgress) => void,
+  signal?: AbortSignal,
 ): Promise<DownloadYoutubeResult> {
   await fs.mkdir(libraryDir(), { recursive: true });
   const ytdlp = await resolveTool("yt-dlp");
   const ffmpeg = await resolveTool("ffmpeg");
   const existingTarget = request.projectId ? await readProject(request.projectId) : null;
-  const sourceUrl = request.url.trim() || existingTarget?.youtubeUrl || "";
-  if (!sourceUrl) throw new Error("Lien YouTube absent");
+  const sourceUrl = safeRemoteUrl(request.url.trim() || existingTarget?.youtubeUrl || "");
   emitProgress?.({ projectId: "pending", stage: "metadata", message: "Analyse de la vidéo YouTube..." });
   const metadataText = await runYtdlp(
     ytdlp,
@@ -1321,9 +1970,12 @@ export async function downloadYoutube(
       "--ffmpeg-location",
       ffmpeg,
       "-J",
+      "--",
       sourceUrl,
     ],
     libraryDir(),
+    undefined,
+    signal,
   );
   const metadata = parseYtdlpMetadata(metadataText);
   assertYoutubeMetadata(metadata);
@@ -1338,10 +1990,12 @@ export async function downloadYoutube(
   }
   const dir = projectDir(id);
   await fs.mkdir(dir, { recursive: true });
+  const downloadDir = await fs.mkdtemp(path.join(dir, ".download-"));
   emitProgress?.({ projectId: id, stage: "download", percent: 0, message: "Téléchargement MP4 compatible..." });
 
-  const outputTemplate = path.join(dir, "source.%(ext)s");
-  const selectedFormat = request.formatSelector || BEST_MERGED_FORMAT;
+  const outputTemplate = path.join(downloadDir, "source.%(ext)s");
+  const allowedFormats = youtubeFormatOptions(metadata).map((format) => format.formatSelector);
+  const selectedFormat = safeFormatSelector(request.formatSelector, allowedFormats, BEST_MERGED_FORMAT);
   const downloadArgs = (format: string, cleanStart = false): string[] => [
       "--no-warnings",
       "--no-playlist",
@@ -1360,50 +2014,60 @@ export async function downloadYoutube(
       "after_move:filepath",
       "-o",
       outputTemplate,
+      "--",
       sourceUrl,
     ];
 
-  let downloadOutput: string;
+  let videoPath = "";
   try {
-    downloadOutput = await runYtdlp(
-      ytdlp,
-      downloadArgs(selectedFormat, true),
-      dir,
-      (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
-    );
-  } catch (error) {
-    if (!isHttp403YtdlpError(error)) throw error;
-    emitProgress?.({
-      projectId: id,
-      stage: "download",
-      percent: 0,
-      message: "YouTube refuse ce flux, nouvel essai avec un format alternatif...",
-    });
-    await removeGeneratedSourceFiles(dir);
-    downloadOutput = await runYtdlp(
-      ytdlp,
-      downloadArgs("18/b[ext=mp4]/best", true),
-      dir,
-      (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
-    );
-  }
+    let downloadOutput: string;
+    try {
+      downloadOutput = await runYtdlp(
+        ytdlp,
+        downloadArgs(selectedFormat, true),
+        downloadDir,
+        (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
+        signal,
+      );
+    } catch (error) {
+      if (!isHttp403YtdlpError(error) || signal?.aborted) throw error;
+      emitProgress?.({
+        projectId: id,
+        stage: "download",
+        percent: 0,
+        message: "YouTube refuse ce flux, nouvel essai avec un format alternatif...",
+      });
+      await removeGeneratedSourceFiles(downloadDir);
+      downloadOutput = await runYtdlp(
+        ytdlp,
+        downloadArgs("18/b[ext=mp4]/best", true),
+        downloadDir,
+        (chunk) => handleYtdlpProgressChunk(chunk, id, emitProgress),
+        signal,
+      );
+    }
 
-  const printedPath = lastOutputLine(downloadOutput);
-  const videoPath = path.isAbsolute(printedPath) ? printedPath : path.resolve(dir, printedPath);
-  await assertInsideLibrary(videoPath);
-  if (!(await pathExists(videoPath))) {
-    throw new Error("yt-dlp did not produce the expected video file");
-  }
-  const streams = await mediaStreams(videoPath, ffmpeg);
-  if (!streams.video || !streams.audio) {
-    throw new Error("Downloaded media must contain both video and audio streams");
+    const printedPath = lastOutputLine(downloadOutput);
+    const temporaryVideo = path.isAbsolute(printedPath) ? printedPath : path.resolve(downloadDir, printedPath);
+    await assertInsideLibrary(temporaryVideo);
+    if (!(await pathExists(temporaryVideo))) throw new Error("yt-dlp did not produce the expected video file");
+    const streams = await mediaStreams(temporaryVideo, ffmpeg);
+    if (!streams.video || !streams.audio) throw new Error("Downloaded media must contain both video and audio streams");
+    const extension = path.extname(temporaryVideo) || ".mp4";
+    videoPath = path.join(dir, `source${extension}`);
+    await removeGeneratedSourceFiles(dir);
+    await fs.rename(temporaryVideo, videoPath);
+  } finally {
+    await fs.rm(downloadDir, { recursive: true, force: true });
   }
   emitProgress?.({ projectId: id, stage: "done", percent: 100, message: "Téléchargement terminé" });
 
   const project: DesktopProject = {
     ...(existingTarget ?? { id, createdAt: nowIso(), updatedAt: nowIso(), title: id }),
     id,
-    title: request.title?.trim() || metadata.title || existingTarget?.title || id,
+    title: existingTarget?.titleCustomizedAt
+      ? existingTarget.title
+      : request.title?.trim() || metadata.title || existingTarget?.title || id,
     createdAt: existingTarget?.createdAt ?? nowIso(),
     updatedAt: nowIso(),
     youtubeUrl: metadata.webpage_url || existingTarget?.youtubeUrl || sourceUrl,
@@ -1417,9 +2081,36 @@ export async function downloadYoutube(
   return { project, videoPath };
 }
 
+function transcriptCameFromGroq(transcript: WorkspaceTranscript | null): boolean {
+  return transcript?.source_transcript === "groq-cloud";
+}
+
+async function projectReviewState(
+  project: DesktopProject,
+  transcript: WorkspaceTranscript | null,
+  translation: WorkspaceTranslation | null,
+): Promise<DesktopProjectReview> {
+  if (!transcript) {
+    return { cleanupImported: false, transcriptConfirmed: false, translationConfirmed: false };
+  }
+  const cleanupImported = Boolean(project.transcriptCleanedAt) ||
+    (await snapshotFiles(project.id)).some((filePath) => path.basename(filePath).startsWith("cleaned_"));
+  const combined = transcriptWithTranslation(transcript, translation)!;
+  return {
+    cleanupImported,
+    transcriptConfirmed: project.transcriptReviewedFingerprint === reviewFingerprint(transcript, false),
+    translationConfirmed: Boolean(translation) &&
+      project.translationReviewedFingerprint === reviewFingerprint(combined, true),
+  };
+}
+
 export async function loadProject(projectId: string): Promise<DesktopProjectLoad> {
-  const project = await readProject(projectId);
+  let project = await refreshProjectArtifactPaths(await readProject(projectId));
   const transcript = await loadSavedTranscript(projectId);
+  if (!project.groqTranscribedAt && transcriptCameFromGroq(transcript)) {
+    project = { ...project, groqTranscribedAt: transcript?.created_at || nowIso() };
+    await writeProject(project);
+  }
   const translationPath = translationFile(projectId);
   const translation = (await pathExists(translationPath))
     ? await readJson<WorkspaceTranslation>(translationPath)
@@ -1429,12 +2120,122 @@ export async function loadProject(projectId: string): Promise<DesktopProjectLoad
   if (snapshotCurrent) await ensureInitialSnapshot(projectId, snapshotCurrent);
   return {
     project,
-    mediaUrl: project.videoPath ? pathToFileURL(project.videoPath).toString() : undefined,
+    review: await projectReviewState(project, transcript, translation),
+    mediaUrl: project.videoPath ? projectMediaUrl(project.id) : undefined,
     transcript,
     translation,
     snapshots: await listSnapshotInfo(projectId, snapshotCurrent),
     recovery: await recoveryState(projectId),
   };
+}
+
+export async function resolveProjectMediaPath(projectId: string): Promise<string> {
+  return await requireProjectVideo(await readProject(projectId));
+}
+
+export async function projectForTranscription(projectId: string): Promise<DesktopProject> {
+  const project = await readProject(projectId);
+  const existingTranscript = project.groqTranscribedAt ? null : await loadSavedTranscript(projectId);
+  if (project.groqTranscribedAt || transcriptCameFromGroq(existingTranscript)) {
+    throw new Error("Ce projet a déjà été transcrit avec Groq. Un second appel est bloqué pour éviter une dépense inutile.");
+  }
+  const videoPath = await requireProjectVideo(project);
+  if (project.durationSeconds && project.durationSeconds > 0) return project;
+  const streams = await mediaStreams(videoPath, await resolveTool("ffmpeg"));
+  if (!streams.duration) throw new Error("Durée de la vidéo impossible à déterminer");
+  const updated = { ...project, durationSeconds: streams.duration, updatedAt: nowIso() };
+  await writeProject(updated);
+  return updated;
+}
+
+export async function saveGeneratedTranscript(
+  projectId: string,
+  transcript: WorkspaceTranscript,
+): Promise<DesktopProjectLoad> {
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const clean = transcriptWithoutSegmentTranslations(validateTranscript(transcript));
+  const previousTranscript = await loadSavedTranscript(projectId);
+  if (previousTranscript) await writeSnapshot(projectId, previousTranscript, "pre_groq");
+  const previousTranslationPath = translationFile(projectId);
+  if (await pathExists(previousTranslationPath)) {
+    const previousTranslation = await readJson<WorkspaceTranslation>(previousTranslationPath);
+    await writeTranslationSnapshot(projectId, previousTranslation, "pre_groq");
+    await fs.rm(previousTranslationPath, { force: true });
+  }
+  clean.corpus_id = projectId;
+  clean.created_at = clean.created_at || nowIso();
+  clean.updated_at = nowIso();
+  await writeJson(transcriptFile(projectId), clean);
+  await writeJson(currentFile(projectId), clean);
+  await writeSnapshot(projectId, clean, "generated");
+  await writeProject({
+    ...project,
+    updatedAt: nowIso(),
+    transcriptPath: transcriptFile(projectId),
+    translationPath: undefined,
+    groqTranscribedAt: nowIso(),
+    transcriptCleanedAt: undefined,
+    transcriptReviewedAt: undefined,
+    transcriptReviewedFingerprint: undefined,
+    translationReviewedAt: undefined,
+    translationReviewedFingerprint: undefined,
+  });
+  return await loadProject(projectId);
+}
+
+function assertProjectReviewKind(kind: unknown): asserts kind is ProjectReviewKind {
+  if (kind !== "transcript" && kind !== "translation") {
+    throw new Error("Type de relecture invalide");
+  }
+}
+
+export async function confirmProjectReview(
+  projectId: string,
+  kind: ProjectReviewKind,
+  transcript: WorkspaceTranscript,
+): Promise<DesktopProjectLoad> {
+  assertProjectReviewKind(kind);
+  const project = await readProject(projectId);
+  await requireProjectVideo(project);
+  const clean = validateTranscript(transcript);
+  clean.corpus_id = projectId;
+  clean.updated_at = nowIso();
+  const plainTranscript = transcriptWithoutSegmentTranslations(clean);
+  await writeJson(currentFile(projectId), plainTranscript);
+  await writeJson(transcriptFile(projectId), plainTranscript);
+
+  if (kind === "transcript") {
+    await writeSnapshot(projectId, plainTranscript, "transcript_reviewed");
+    await writeProject({
+      ...project,
+      updatedAt: nowIso(),
+      transcriptPath: transcriptFile(projectId),
+      transcriptReviewedAt: nowIso(),
+      transcriptReviewedFingerprint: reviewFingerprint(plainTranscript, false),
+      translationReviewedAt: undefined,
+      translationReviewedFingerprint: undefined,
+    });
+    return await loadProject(projectId);
+  }
+
+  const existingTranslationPath = translationFile(projectId);
+  if (!(await pathExists(existingTranslationPath))) {
+    throw new Error("Importe d'abord une traduction");
+  }
+  const translation = translationFromTranscriptSnapshot(projectId, clean);
+  await writeJson(existingTranslationPath, translation);
+  await writeSnapshot(projectId, clean, "translation_reviewed");
+  await writeTranslationSnapshot(projectId, translation, "reviewed");
+  await writeProject({
+    ...project,
+    updatedAt: nowIso(),
+    transcriptPath: transcriptFile(projectId),
+    translationPath: existingTranslationPath,
+    translationReviewedAt: nowIso(),
+    translationReviewedFingerprint: reviewFingerprint(clean, true),
+  });
+  return await loadProject(projectId);
 }
 
 export async function saveCurrentTranscript(projectId: string, transcript: WorkspaceTranscript): Promise<DesktopProjectLoad> {
@@ -1472,6 +2273,7 @@ export async function createTranscriptSnapshot(projectId: string, transcript: Wo
 }
 
 export async function loadSnapshot(projectId: string, snapshotId: string): Promise<{ snapshot: DesktopSnapshotInfo; transcript: WorkspaceTranscript }> {
+  assertSafeSnapshotId(snapshotId);
   const filePath = path.join(snapshotsDir(projectId), snapshotId);
   await assertInsideLibrary(filePath);
   if (!(await pathExists(filePath))) throw new Error("Sauvegarde inconnue");
@@ -1486,6 +2288,7 @@ export async function loadSnapshot(projectId: string, snapshotId: string): Promi
 }
 
 export async function restoreSnapshot(projectId: string, snapshotId?: string): Promise<DesktopProjectLoad> {
+  if (snapshotId) assertSafeSnapshotId(snapshotId);
   const filePath = snapshotId ? path.join(snapshotsDir(projectId), snapshotId) : await latestSnapshot(projectId);
   if (!filePath) throw new Error("Aucune sauvegarde à restaurer");
   await assertInsideLibrary(filePath);
@@ -1526,7 +2329,7 @@ export async function importTranslationFile(projectId: string): Promise<ImportTr
     ],
   });
   if (selection.canceled || !selection.filePaths[0]) return null;
-  return await importTranslationContent(projectId, await fs.readFile(selection.filePaths[0], "utf8"), path.basename(selection.filePaths[0]), true);
+  return await importTranslationContent(projectId, await readTextFileLimited(selection.filePaths[0]), path.basename(selection.filePaths[0]), true);
 }
 
 export async function importTranslationContent(
@@ -1535,6 +2338,7 @@ export async function importTranslationContent(
   filename: string,
   replace: boolean,
 ): Promise<ImportTranslationResult> {
+  assertTextSize(content);
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
   await requireProjectVideo(project);
@@ -1549,7 +2353,13 @@ export async function importTranslationContent(
   const translation = translationFromImportContent(projectId, transcript, content, filename);
   await writeJson(target, translation);
   await writeTranslationSnapshot(projectId, translation, "import");
-  const updatedProject = { ...project, updatedAt: nowIso(), translationPath: target };
+  const updatedProject = {
+    ...project,
+    updatedAt: nowIso(),
+    translationPath: target,
+    translationReviewedAt: undefined,
+    translationReviewedFingerprint: undefined,
+  };
   await writeProject(updatedProject);
   return { project: updatedProject, translation };
 }
@@ -1601,32 +2411,45 @@ function displayTimecode(seconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
-type SubtitleCue = {
-  start: number;
-  end: number;
-  text: string;
-};
+function exportFilenameTitle(title: string): string {
+  const clean = title
+    .normalize("NFC")
+    .replace(/[^\p{L}\p{N}]+/gu, "_")
+    .replace(/^_+|_+$/g, "");
+  if (!clean) return "Tarjama_Studio";
+  const usable = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(clean) ? `${clean}_video` : clean;
+  const maximumLength = 100;
+  if (usable.length <= maximumLength) return usable;
+  const cut = usable.slice(0, maximumLength - 1);
+  const lastSeparator = cut.lastIndexOf("_");
+  const compact = lastSeparator >= Math.floor(maximumLength * 0.6) ? cut.slice(0, lastSeparator) : cut;
+  return compact.replace(/_+$/g, "");
+}
 
 async function writeAssSubtitles(
   filePath: string,
-  cues: SubtitleCue[],
+  cues: ExportCue[],
   style: ExportSubtitleStyle,
   track: ExportSubtitleTrack,
+  dimensions: VideoDimensions,
+  fontSize: number,
 ): Promise<void> {
   const usable = cues.filter((cue) => cue.text.trim() && cue.end > cue.start);
   if (!usable.length) throw new Error("Aucun sous-titre non vide à exporter");
   const fontName = track === "translation" ? LATIN_SUBTITLE_FONT_NAME : ARABIC_SUBTITLE_FONT_NAME;
+  const horizontalMargin = Math.max(20, Math.round(dimensions.width * 0.05));
+  const verticalMargin = Math.max(18, Math.round(dimensions.height * 0.058));
   const defaultStyle =
     style === "black-band"
-      ? `Style: Default,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,80,80,42,1`
-      : `Style: Default,${fontName},34,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,80,80,42,1`;
+      ? `Style: Default,${fontName},${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,${horizontalMargin},${horizontalMargin},${verticalMargin},1`
+      : `Style: Default,${fontName},${fontSize},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.6,0,2,${horizontalMargin},${horizontalMargin},${verticalMargin},1`;
   const lines = [
     "[Script Info]",
     "Title: Tarjama Studio export",
     "ScriptType: v4.00+",
     "ScaledBorderAndShadow: yes",
-    "PlayResX: 1280",
-    "PlayResY: 720",
+    `PlayResX: ${dimensions.width}`,
+    `PlayResY: ${dimensions.height}`,
     "WrapStyle: 0",
     "",
     "[V4+ Styles]",
@@ -1658,20 +2481,21 @@ export async function exportVideo(
   projectId: string,
   track: ExportSubtitleTrack,
   openAfter = false,
-  style: ExportSubtitleStyle = "black-band",
+  requestedOptions?: Partial<ExportVideoOptions>,
   emitProgress?: (progress: ExportProgress) => void,
+  signal?: AbortSignal,
 ): Promise<DesktopExportResult | null> {
-  const subtitleStyle: ExportSubtitleStyle = style === "outline" ? "outline" : "black-band";
+  const options = normalizeExportOptions(requestedOptions);
   const project = await readProject(projectId);
   const transcript = await loadSavedTranscript(projectId);
   if (!transcript) throw new Error("Transcription absente");
   const videoPath = await requireProjectVideo(project);
-  const cues =
+  const sourceCues =
     track === "arabic"
       ? transcript.segments.map((segment) => ({
           start: segment.start,
           end: segment.end,
-          text: `[${displayTimecode(segment.start)}] ${segment.text}`,
+          text: segment.text,
         }))
       : await (async () => {
           const translationPath = translationFile(projectId);
@@ -1684,9 +2508,13 @@ export async function exportVideo(
             text: segment.translation,
           }));
         })();
+  const groupedCues = groupExportCues(sourceCues, options.cueGrouping, options.minimumWords);
+  const cues = track === "arabic"
+    ? groupedCues.map((cue) => ({ ...cue, text: `[${displayTimecode(cue.start)}] ${cue.text}` }))
+    : groupedCues;
 
-  const suffix = track === "arabic" ? "arabe" : "traduction";
-  const defaultName = `${slugify(project.title)}_${suffix}.mp4`;
+  const language = track === "arabic" ? "ar" : "fr";
+  const defaultName = `${exportFilenameTitle(project.title)}_${language}.mp4`;
   const selection = await dialog.showSaveDialog({
     title: track === "arabic" ? "Exporter la vidéo sous-titrée en arabe" : "Exporter la vidéo avec traduction",
     defaultPath: defaultName,
@@ -1697,8 +2525,21 @@ export async function exportVideo(
   const outDir = exportsDir(projectId);
   const stem = `${filenameTimestamp()}_${createHash("sha1").update(selection.filePath).digest("hex").slice(0, 8)}`;
   const assPath = path.join(outDir, `${stem}.ass`);
-  await writeAssSubtitles(assPath, cues, subtitleStyle, track);
   const ffmpeg = await resolveTool("ffmpeg");
+  const streams = await mediaStreams(videoPath, ffmpeg);
+  if (!streams.width || !streams.height) {
+    throw new Error("Les dimensions de la vidéo sont impossibles à déterminer pour calculer des sous-titres lisibles");
+  }
+  const sourceDimensions = { width: streams.width, height: streams.height };
+  const targetDimensions = outputDimensions(sourceDimensions, options.videoQuality);
+  await writeAssSubtitles(
+    assPath,
+    cues,
+    options.style,
+    track,
+    targetDimensions,
+    subtitleFontSize(targetDimensions, options.subtitleSize),
+  );
   const durationForProgress = Math.max(project.durationSeconds ?? 0, ...cues.map((cue) => cue.end));
   emitProgress?.({
     projectId,
@@ -1707,9 +2548,16 @@ export async function exportVideo(
     percent: 0,
     message: `Export ${track === "arabic" ? "arabe" : "traduction"} en cours`,
   });
-  await runTool(
-    ffmpeg,
-    [
+  const filters: string[] = [];
+  if (targetDimensions.width !== sourceDimensions.width || targetDimensions.height !== sourceDimensions.height) {
+    filters.push(`scale=${targetDimensions.width}:${targetDimensions.height}:flags=lanczos`);
+  }
+  filters.push(await subtitleFilter(assPath));
+  const temporaryOutput = path.join(outDir, `${stem}.partial.mp4`);
+  try {
+    await runTool(
+      ffmpeg,
+      [
       "-hide_banner",
       "-loglevel",
       "error",
@@ -1720,22 +2568,26 @@ export async function exportVideo(
       "-i",
       videoPath,
       "-vf",
-      await subtitleFilter(assPath),
+      filters.join(","),
       "-c:v",
       "libx264",
       "-preset",
       "superfast",
-      "-crf",
-      "23",
-      "-c:a",
-      "copy",
+      ...videoEncodingArguments(options.videoQuality),
+      "-pix_fmt",
+      "yuv420p",
       "-movflags",
       "+faststart",
-      selection.filePath,
-    ],
-    projectDir(projectId),
-    createFfmpegExportProgressHandler(projectId, track, durationForProgress, emitProgress),
-  );
+        temporaryOutput,
+      ],
+      projectDir(projectId),
+      createFfmpegExportProgressHandler(projectId, track, durationForProgress, emitProgress),
+      signal,
+    );
+    await fs.copyFile(temporaryOutput, selection.filePath);
+  } finally {
+    await fs.rm(temporaryOutput, { force: true });
+  }
   emitProgress?.({
     projectId,
     track,
@@ -1763,6 +2615,16 @@ export async function setProjectArchived(projectId: string, archived: boolean): 
   return updated;
 }
 
+export async function renameProject(projectId: string, title: string): Promise<DesktopProject> {
+  const clean = title.replace(/\s+/g, " ").trim();
+  if (!clean) throw new Error("Le titre du projet ne peut pas être vide");
+  if (clean.length > 200) throw new Error("Le titre du projet ne peut pas dépasser 200 caractères");
+  const project = await readProject(projectId);
+  const updated = { ...project, title: clean, titleCustomizedAt: nowIso(), updatedAt: nowIso() };
+  await writeProject(updated);
+  return updated;
+}
+
 export async function openProjectFolder(projectId: string): Promise<void> {
   const dir = projectDir(projectId);
   await assertInsideLibrary(dir);
@@ -1770,7 +2632,19 @@ export async function openProjectFolder(projectId: string): Promise<void> {
 }
 
 export async function trashProject(projectId: string): Promise<void> {
+  const project = await readProject(projectId);
   const dir = projectDir(projectId);
   await assertInsideLibrary(dir);
+  const confirmation = await dialog.showMessageBox({
+    type: "warning",
+    title: "Déplacer le projet à la corbeille",
+    message: `Déplacer « ${project.title} » à la corbeille ?`,
+    detail: "La bibliothèque des autres projets ne sera pas modifiée.",
+    buttons: ["Annuler", "Déplacer à la corbeille"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  });
+  if (confirmation.response !== 1) return;
   await shell.trashItem(dir);
 }

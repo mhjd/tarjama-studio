@@ -25,7 +25,7 @@ Contraintes imperatives:
 - Reponds uniquement avec le document Markdown corrige, sans commentaire avant ou apres.
 - N'insere aucun marqueur technique de citation genere par ChatGPT ou par ses outils, notamment `cite`, `filecite`, `turn...search...`, `turn...file...`, commentaire HTML ou glyphe prive. Les references utiles doivent apparaitre uniquement sous une forme lisible par un humain dans le texte final.
 - Chaque bloc commence exactement par une ligne `## début --> fin`.
-- Conserve exactement chaque titre de bloc que tu gardes, timestamps compris. Ne modifie jamais un timestamp, ne fusionne jamais et ne divise jamais un bloc.
+- Conserve exactement chaque titre de bloc que tu gardes, timestamps compris, et recopie-le autant que possible tel qu'il apparait dans la source. Ne convertis jamais les heures en minutes totales: `1:00:01.120` ne doit jamais devenir `60:01.120`. Ne modifie jamais un timestamp, ne fusionne jamais et ne divise jamais un bloc.
 - Conserve tous les blocs utiles, dans le meme ordre.
 - Tu peux supprimer un bloc uniquement s'il est entierement inutile: repetition parasite, hallucination evidente, bruit de modele, ou fragment vide/non exploitable.
 - Ne laisse aucun bloc vide.

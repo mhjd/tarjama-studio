@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   previewAlignedMarkdown,
   previewTranscriptJson,
+  parseMarkdownTimecode,
   projectWorkflowStep,
   searchTranscript,
   stripModelCitationMarkers,
@@ -80,7 +81,7 @@ test("model citation markers are removed without touching readable references", 
   );
 });
 
-test("markdown preview requires exact source timestamps", () => {
+test("markdown preview rejects timestamps with a different temporal value", () => {
   const source = transcript([
     { id: "1", start: 0, end: 3.44, text: "a", translation: "" },
     { id: "2", start: 3.44, end: 7, text: "b", translation: "" },
@@ -92,6 +93,28 @@ test("markdown preview requires exact source timestamps", () => {
   assert.equal(valid.valid, true);
   assert.equal(valid.alignedCount, 2);
   assert.equal(previewAlignedMarkdown("## 00:00.000 --> 00:03.400\nErreur", source).valid, false);
+});
+
+test("markdown timestamps compare normalized hour values", () => {
+  const source = transcript([
+    { id: "1", start: 3601.12, end: 3661.12, text: "a", translation: "" },
+  ]);
+
+  assert.equal(previewAlignedMarkdown("## 1:00:01.120 --> 1:01:01.120\nTexte", source).valid, true);
+  assert.equal(previewAlignedMarkdown("## 01:00:01.120 --> 01:01:01.120\nTexte", source).valid, true);
+  assert.equal(parseMarkdownTimecode("1:00:01.120"), parseMarkdownTimecode("01:00:01.120"));
+  assert.equal(parseMarkdownTimecode("18:45.940"), 1125.94);
+});
+
+test("markdown timestamps reject total minutes and out-of-range components", () => {
+  const source = transcript([
+    { id: "1", start: 3601.12, end: 3661.12, text: "a", translation: "" },
+  ]);
+
+  assert.equal(parseMarkdownTimecode("60:01.120"), null);
+  assert.equal(parseMarkdownTimecode("00:60:01.120"), null);
+  assert.equal(parseMarkdownTimecode("00:00:60.000"), null);
+  assert.equal(previewAlignedMarkdown("## 60:01.120 --> 61:01.120\nTexte", source).valid, false);
 });
 
 test("JSON preview rejects malformed segment payloads", () => {

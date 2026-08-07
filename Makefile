@@ -1,4 +1,4 @@
-.PHONY: cli tui whisper-benchmark dev-api dev-api-reload dev-ui build-ui electron-build desktop-tools desktop-build desktop-package desktop-dist desktop-win-portable desktop-linux-appimage desktop-security-test desktop-windows-release desktop-linux-release desktop-dev npm-audit
+.PHONY: cli tui whisper-benchmark dev-api dev-api-reload dev-ui build-ui electron-build desktop-tools desktop-build desktop-package desktop-dist desktop-win-portable desktop-linux-appimage desktop-security-test desktop-windows-release desktop-linux-release desktop-release-checksums desktop-release desktop-dev npm-audit
 
 cli:
 	.venv-asr/bin/python scripts/tarjama_cli.py $(ARGS)
@@ -50,6 +50,15 @@ desktop-windows-release:
 
 desktop-linux-release:
 	python3 scripts/publish_linux_release.py $(ARGS)
+
+desktop-release-checksums:
+	python3 scripts/update_release_checksums.py
+
+desktop-release:
+	$(MAKE) desktop-security-test
+	$(MAKE) desktop-windows-release
+	$(MAKE) desktop-linux-release
+	$(MAKE) desktop-release-checksums
 
 desktop-dev:
 	cd ui && npm run desktop:dev

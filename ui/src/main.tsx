@@ -534,7 +534,7 @@ Contraintes impératives:
 - Réponds uniquement avec le document Markdown final, sans commentaire avant ou après.
 - Conserve exactement les métadonnées source_corpus_id, language et format.
 - Conserve exactement le même nombre de blocs.
-- Conserve exactement chaque ligne de titre "## début --> fin", sans modifier les timestamps.
+- Conserve exactement chaque ligne de titre "## début --> fin" et recopie-la autant que possible telle qu'elle apparaît dans la source, sans modifier les timestamps. Ne convertis jamais les heures en minutes totales: \`1:00:01.120\` ne doit jamais devenir \`60:01.120\`.
 - Ne fusionne pas et ne divise pas les blocs.
 - Sous chaque titre, remplace le texte arabe par la traduction française du bloc.
 - Si un passage est ambigu, traduis au mieux sans ajouter de note.

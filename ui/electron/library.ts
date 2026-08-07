@@ -34,6 +34,7 @@ import type {
   YoutubeFormatOption,
   YoutubeFormatsResult,
 } from "./types.js";
+import { fetchWithRetries } from "./tool-download.js";
 import { assertSafeProjectId, assertSafeSnapshotId, safeFormatSelector, safeRemoteUrl } from "./security.js";
 import {
   groupExportCues,
@@ -44,7 +45,7 @@ import {
   type ExportCue,
   type VideoDimensions,
 } from "./export-options.js";
-import { stripModelCitationMarkers } from "./editor-logic.js";
+import { parseMarkdownTimecode, stripModelCitationMarkers } from "./editor-logic.js";
 
 const PROJECT_FILE = "project.json";
 const TRANSCRIPT_FILE = "transcript.json";
@@ -558,17 +559,6 @@ async function recoveryState(projectId: string): Promise<DesktopProjectLoad["rec
   };
 }
 
-function parseTimecode(value: string): number {
-  const parts = value.trim().split(":");
-  const numbers = parts.map(Number);
-  if (numbers.some((part) => !Number.isFinite(part) || part < 0)) {
-    throw new Error(`Invalid timecode: ${value}`);
-  }
-  if (parts.length === 2) return numbers[0] * 60 + numbers[1];
-  if (parts.length === 3) return numbers[0] * 3600 + numbers[1] * 60 + numbers[2];
-  throw new Error(`Invalid timecode: ${value}`);
-}
-
 function sameTime(left: number, right: number): boolean {
   return timestampMilliseconds(left) === timestampMilliseconds(right);
 }
@@ -594,11 +584,12 @@ function parseTimestampedMarkdown(content: string): { metadata: Record<string, s
     const match = line.match(heading);
     if (match) {
       if (current) sections.push({ start: current.start, end: current.end, text: current.lines.join("\n").trim(), headingLine: current.headingLine });
-      try {
-        current = { start: parseTimecode(match[1]), end: parseTimecode(match[2]), lines: [], headingLine: index + 1 };
-      } catch {
+      const start = parseMarkdownTimecode(match[1]);
+      const end = parseMarkdownTimecode(match[2]);
+      if (start === null || end === null) {
         throw new Error(`Timestamp invalide à la ligne ${index + 1}: ${line}`);
       }
+      current = { start, end, lines: [], headingLine: index + 1 };
       continue;
     }
     if (!current) {
@@ -891,7 +882,7 @@ function ytdlpDownloadUrl(assetName: string): string {
 }
 
 async function expectedYtdlpChecksum(assetName: string): Promise<string> {
-  const response = await fetch(ytdlpDownloadUrl("SHA2-256SUMS"));
+  const response = await fetchWithRetries(ytdlpDownloadUrl("SHA2-256SUMS"));
   if (!response.ok) throw new Error(`Checksum download failed: HTTP ${response.status}`);
   const line = (await response.text())
     .split(/\r?\n/)
@@ -904,7 +895,7 @@ async function expectedYtdlpChecksum(assetName: string): Promise<string> {
 }
 
 async function downloadFile(url: string, targetPath: string, expectedChecksum: string): Promise<void> {
-  const response = await fetch(url);
+  const response = await fetchWithRetries(url);
   if (!response.ok) {
     throw new Error(`Download failed: HTTP ${response.status}`);
   }

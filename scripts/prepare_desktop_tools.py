@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import hashlib
+import http.client
 import platform
 import shutil
 import stat
@@ -10,8 +11,11 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Callable, TypeVar
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +26,10 @@ ARABIC_FONT_URL = (
     "https://github.com/googlefonts/noto-fonts/raw/main/"
     "hinted/ttf/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf"
 )
+DOWNLOAD_ATTEMPTS = 4
+DOWNLOAD_TIMEOUT_SECONDS = 120
+RETRYABLE_HTTP_STATUSES = {408, 425, 429, 500, 502, 503, 504}
+T = TypeVar("T")
 
 
 def host_key() -> str:
@@ -52,14 +60,58 @@ def copy_file(source: Path, target: Path) -> None:
     temporary.replace(target)
 
 
+def with_download_retries(url: str, operation: Callable[[], T]) -> T:
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            return operation()
+        except urllib.error.HTTPError as error:
+            retryable = error.code in RETRYABLE_HTTP_STATUSES
+            last_error: BaseException = error
+        except (urllib.error.URLError, http.client.RemoteDisconnected, TimeoutError, ConnectionError) as error:
+            retryable = True
+            last_error = error
+
+        if not retryable or attempt == DOWNLOAD_ATTEMPTS:
+            raise SystemExit(
+                f"Unable to download {url} after {attempt} attempt(s): {last_error}"
+            ) from last_error
+
+        delay = 2 ** (attempt - 1)
+        print(
+            f"Download attempt {attempt}/{DOWNLOAD_ATTEMPTS} failed for {url}: {last_error}. "
+            f"Retrying in {delay}s...",
+            file=sys.stderr,
+        )
+        time.sleep(delay)
+
+    raise AssertionError("download retry loop exited unexpectedly")
+
+
+def read_url(url: str, maximum_bytes: int) -> bytes:
+    def read() -> bytes:
+        request = urllib.request.Request(url, headers={"Cache-Control": "no-cache"})
+        with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:
+            content = response.read(maximum_bytes + 1)
+        if len(content) > maximum_bytes:
+            raise SystemExit(f"Downloaded file is unexpectedly large: {url}")
+        return content
+
+    return with_download_retries(url, read)
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while chunk := source.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def download(url: str, target: Path, executable: bool = True, expected_sha256: str | None = None) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".tmp")
     print(f"Downloading {url}")
-    with urllib.request.urlopen(url, timeout=120) as response:
-        content = response.read(100 * 1024 * 1024 + 1)
-    if len(content) > 100 * 1024 * 1024:
-        raise SystemExit(f"Downloaded file is unexpectedly large: {url}")
+    content = read_url(url, 100 * 1024 * 1024)
     if expected_sha256 and hashlib.sha256(content).hexdigest() != expected_sha256:
         raise SystemExit(f"Checksum verification failed: {url}")
     tmp.write_bytes(content)
@@ -69,17 +121,21 @@ def download(url: str, target: Path, executable: bool = True, expected_sha256: s
 
 
 def download_file(url: str, target: Path, expected_sha256: str, maximum_bytes: int) -> None:
-    digest = hashlib.sha256()
-    written = 0
-    with urllib.request.urlopen(url, timeout=120) as response, target.open("wb") as output:
-        while chunk := response.read(1024 * 1024):
-            written += len(chunk)
-            if written > maximum_bytes:
-                raise SystemExit(f"Downloaded file is unexpectedly large: {url}")
-            digest.update(chunk)
-            output.write(chunk)
-    if digest.hexdigest() != expected_sha256:
-        raise SystemExit(f"Checksum verification failed: {url}")
+    def transfer() -> None:
+        digest = hashlib.sha256()
+        written = 0
+        request = urllib.request.Request(url, headers={"Cache-Control": "no-cache"})
+        with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response, target.open("wb") as output:
+            while chunk := response.read(1024 * 1024):
+                written += len(chunk)
+                if written > maximum_bytes:
+                    raise SystemExit(f"Downloaded file is unexpectedly large: {url}")
+                digest.update(chunk)
+                output.write(chunk)
+        if digest.hexdigest() != expected_sha256:
+            raise SystemExit(f"Checksum verification failed: {url}")
+
+    with_download_retries(url, transfer)
 
 
 def prepare_ytdlp(bin_dir: Path, key: str) -> None:
@@ -98,8 +154,7 @@ def prepare_ytdlp(bin_dir: Path, key: str) -> None:
     if not asset:
         raise SystemExit(f"No yt-dlp package rule for {key}")
     base_url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download"
-    with urllib.request.urlopen(f"{base_url}/SHA2-256SUMS", timeout=120) as response:
-        checksum_lines = response.read().decode("utf-8").splitlines()
+    checksum_lines = read_url(f"{base_url}/SHA2-256SUMS", 1024 * 1024).decode("utf-8").splitlines()
     checksum = None
     for line in checksum_lines:
         fields = line.split()
@@ -108,6 +163,10 @@ def prepare_ytdlp(bin_dir: Path, key: str) -> None:
             break
     if not checksum or len(checksum) != 64:
         raise SystemExit(f"Missing yt-dlp checksum for {asset}")
+    if target.exists() and sha256_file(target) == checksum:
+        make_executable(target)
+        print(f"Using verified yt-dlp at {target.relative_to(ROOT)}")
+        return
     download(f"{base_url}/{asset}", target, expected_sha256=checksum)
 
 
@@ -123,8 +182,7 @@ def prepare_ffmpeg(bin_dir: Path, key: str) -> None:
     if key == "linux-x64":
         asset = "ffmpeg-master-latest-linux64-gpl.tar.xz"
         base_url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
-        with urllib.request.urlopen(f"{base_url}/checksums.sha256", timeout=120) as response:
-            checksum_lines = response.read().decode("utf-8").splitlines()
+        checksum_lines = read_url(f"{base_url}/checksums.sha256", 1024 * 1024).decode("utf-8").splitlines()
         checksum = None
         for line in checksum_lines:
             fields = line.split()

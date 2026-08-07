@@ -50,10 +50,21 @@ export function projectWorkflowStep(state: {
   return "export";
 }
 
-const MARKDOWN_TIMESTAMP = /^##\s+(\d{2}:\d{2}(?::\d{2})?\.\d{3})\s+-->\s+(\d{2}:\d{2}(?::\d{2})?\.\d{3})\s*$/;
+const MARKDOWN_TIMESTAMP = /^##\s+(.+?)\s+-->\s+(.+?)\s*$/;
+const TIMECODE = /^(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)$/;
 
 function roundedTime(value: number): number {
   return Math.round(value * 1000) / 1000;
+}
+
+export function parseMarkdownTimecode(value: string): number | null {
+  const match = value.trim().match(TIMECODE);
+  if (!match) return null;
+  const hours = match[1] === undefined ? 0 : Number(match[1]);
+  const minutes = Number(match[2]);
+  const seconds = Number(match[3]);
+  if (![hours, minutes, seconds].every(Number.isFinite) || minutes >= 60 || seconds >= 60) return null;
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 export function transcriptFingerprint(transcript: WorkspaceTranscript | null): string {
@@ -143,10 +154,18 @@ export function previewAlignedMarkdown(
       errors.push(`Bloc ${index + 1}: titre invalide (${header.slice(0, 100)})`);
       return;
     }
+    const receivedStart = parseMarkdownTimecode(match[1]);
+    const receivedEnd = parseMarkdownTimecode(match[2]);
+    if (receivedStart === null || receivedEnd === null) {
+      errors.push(`Bloc ${index + 1}: titre invalide (${header.slice(0, 100)})`);
+      return;
+    }
     const expected = transcript.segments[index];
     if (!expected) return;
     const expectedHeader = `## ${formatPreciseTime(expected.start)} --> ${formatPreciseTime(expected.end)}`;
-    if (header.trim() === expectedHeader) alignedCount += 1;
+    if (roundedTime(receivedStart) === roundedTime(expected.start) && roundedTime(receivedEnd) === roundedTime(expected.end)) {
+      alignedCount += 1;
+    }
     else errors.push(`Bloc ${index + 1}: attendu ${expectedHeader}; reçu ${header.trim()}`);
   });
   if (headers.length !== transcript.segments.length) {

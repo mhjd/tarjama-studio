@@ -357,14 +357,15 @@ def ensure_transcript(corpus_id: str) -> dict[str, Any]:
 
 
 def parse_timecode(value: str) -> float:
-    parts = value.strip().split(":")
-    if len(parts) == 2:
-        minutes, seconds = parts
-        return int(minutes) * 60 + float(seconds)
-    if len(parts) == 3:
-        hours, minutes, seconds = parts
-        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
-    raise ValueError(f"Invalid timecode: {value}")
+    match = re.fullmatch(r"(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)", value.strip())
+    if not match:
+        raise ValueError(f"Invalid timecode: {value}")
+    hours = int(match.group(1) or 0)
+    minutes = int(match.group(2))
+    seconds = float(match.group(3))
+    if minutes >= 60 or seconds >= 60:
+        raise ValueError(f"Invalid timecode: {value}")
+    return hours * 3600 + minutes * 60 + seconds
 
 
 def same_time(left: float, right: float) -> bool:

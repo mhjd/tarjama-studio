@@ -1,0 +1,10 @@
+# Fragment for operator review only; never copied to the live Caddy configuration here.
+tarjama.example.invalid {
+    encode zstd gzip
+    request_body {
+        max_size 1025MB
+    }
+    reverse_proxy 127.0.0.1:18090
+    header Strict-Transport-Security "max-age=31536000"
+    # Do not log query strings, cookies or Authorization headers.
+}

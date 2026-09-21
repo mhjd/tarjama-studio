@@ -1,0 +1,135 @@
+# Preparation only. Activation requires the user's separate deployment instruction.
+name: tarjama-web
+x-app: &app
+  image: tarjama-web:${APP_TAG:?Set APP_TAG to the tested commit}
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+    target: api
+  user: '10001:10001'
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: ['/tmp:size=64m,mode=1777']
+  environment: &environment
+    APP_MODE: production
+    LISTEN_ADDR: 0.0.0.0:8090
+    PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?HTTPS origin required}
+    OIDC_ISSUER: ${OIDC_ISSUER:?OIDC issuer required}
+    OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?OIDC client ID required}
+    OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret
+    DATABASE_URL_FILE: /run/secrets/database_url
+    ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
+    GEMINI_API_KEY_FILE: /run/secrets/gemini_key
+    GROQ_API_KEY_FILE: /run/secrets/groq_key
+    MEDIA_TOKEN_FILE: /run/secrets/media_token
+    MEDIA_URL: http://media:8091
+    GOMAXPROCS: '2'
+  secrets: [database_url, encryption_key, oidc_client_secret, gemini_key, groq_key, media_token]
+  volumes: ['storage:/storage']
+  cpus: 1
+  mem_limit: 512m
+  pids_limit: 100
+  logging:
+    driver: json-file
+    options: {max-size: 5m, max-file: '3'}
+services:
+  db:
+    image: postgres:17-alpine
+    user: postgres
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs: ["/tmp:size=64m,mode=1777", "/var/run/postgresql:size=16m,mode=1777"]
+    environment:
+      POSTGRES_DB: tarjama
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password, app_db_password]
+    volumes: ['database:/var/lib/postgresql/data', './init-db.sh:/docker-entrypoint-initdb.d/10-app.sh:ro']
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d tarjama']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    security_opt: [no-new-privileges:true]
+    cpus: 1
+    mem_limit: 768m
+    pids_limit: 150
+  api:
+    <<: *app
+    ports: ['127.0.0.1:${API_PORT:-18090}:8090']
+    networks: [database, outbound]
+    depends_on:
+      db: {condition: service_healthy}
+    # API accepts uploads but does not call the media service or providers.
+    command: [api]
+    healthcheck:
+      test: [CMD, /usr/local/bin/tarjama, healthcheck]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+  worker:
+    <<: *app
+    command: [worker]
+    networks: [database, media_control, outbound]
+    depends_on:
+      db: {condition: service_healthy}
+    mem_limit: 768m
+  media:
+    image: tarjama-media:${APP_TAG}
+    build: {context: .., dockerfile: deploy/Dockerfile, target: media}
+    user: '10002:10002'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      # Requires a reviewed host profile permitting nested unprivileged user namespaces.
+      # Default restrictions are kept until the operator has validated that profile.
+    environment:
+      APP_MODE: production
+      LISTEN_ADDR: 0.0.0.0:8091
+      MEDIA_TOKEN_FILE: /run/secrets/media_token
+      DOWNLOAD_PROXY: http://egress:8092
+      GOMAXPROCS: '2'
+    secrets: [media_token]
+    tmpfs: ['/tmp:size=4g,mode=1777']
+    networks: [media_control, download]
+    cpus: 2
+    mem_limit: 2g
+    pids_limit: 100
+  egress:
+    image: tarjama-web:${APP_TAG}
+    command: [egress]
+    user: '10003:10003'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      LISTEN_ADDR: 0.0.0.0:8092
+      WARP_HTTP_PROXY: ${WARP_HTTP_PROXY:?Dedicated private WARP HTTP CONNECT proxy required}
+    networks: [download, warp]
+    cpus: 0.25
+    mem_limit: 96m
+    pids_limit: 50
+networks:
+  database: {internal: true}
+  media_control: {internal: true}
+  download: {internal: true}
+  outbound: {}
+  # Attach only to the private network of the existing dedicated WARP proxy.
+  # No host networking or global routing change. Actual name supplied by operator.
+  warp:
+    external: true
+    name: ${WARP_NETWORK:?Existing isolated WARP network required}
+volumes:
+  database: {}
+  storage: {}
+secrets:
+  database_url: {file: '${SECRETS_DIR:?Secrets directory required}/database_url'}
+  postgres_password: {file: '${SECRETS_DIR}/postgres_password'}
+  app_db_password: {file: '${SECRETS_DIR}/app_db_password'}
+  encryption_key: {file: '${SECRETS_DIR}/encryption_key'}
+  oidc_client_secret: {file: '${SECRETS_DIR}/oidc_client_secret'}
+  gemini_key: {file: '${SECRETS_DIR}/gemini_key'}
+  groq_key: {file: '${SECRETS_DIR}/groq_key'}
+  media_token: {file: '${SECRETS_DIR}/media_token'}

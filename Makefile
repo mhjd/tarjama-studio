@@ -68,3 +68,61 @@ npm-audit:
 
 correction-skill-test:
 	python3 -B -m unittest discover -s codex-skills/correct-tarjama-project/scripts -p 'test_*.py' -v
+
+# Hosted app only. These do not invoke the obsolete FastAPI/desktop workflows.
+.PHONY: web-tools web-deps web-test web-build web-dev web-dev-down web-config web-up web-down web-migrate web-backup web-import web-gc
+web-tools:
+	docker build -f web/deploy/Dockerfile.tools -t tarjama-web-tools:test web
+
+web-deps:
+	web/scripts/tools.sh go mod download
+	web/scripts/tools.sh sh -c 'cd /work/web/frontend && npm ci'
+
+web-test:
+	TEST_UID=$$(id -u) TEST_GID=$$(id -g) docker compose -f web/deploy/compose.test.yml run --rm checks; result=$$?; docker compose -f web/deploy/compose.test.yml down; exit $$result
+
+web-build:
+	web/scripts/tools.sh sh -c 'go build -o /work/web/.cache/tarjama ./cmd/tarjama && cd /work/web/frontend && npm run build'
+
+WEB_ENV ?= web/deploy/.env
+web-config:
+	docker compose --env-file $(WEB_ENV) -f web/deploy/compose.yml config --quiet
+
+web-dev:
+	docker compose -f web/deploy/compose.dev.yml up --build -d
+
+web-dev-down:
+	docker compose -f web/deploy/compose.dev.yml down
+
+# Prepared for a separate, explicitly authorized deployment. Never part of web-test.
+web-up:
+	@test "$(DEPLOY_AUTHORIZED)" = "yes" || (echo 'Mise en service non autorisée : fournir DEPLOY_AUTHORIZED=yes après instruction séparée.'; exit 1)
+	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml up --build -d
+
+web-down:
+	@test "$(DEPLOY_AUTHORIZED)" = "yes"
+	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml down
+
+web-migrate:
+	@test "$(DEPLOY_AUTHORIZED)" = "yes"
+	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml run --rm api migrate
+
+web-backup:
+	web/scripts/backup.sh "$(BACKUP_DIR)"
+
+web-import:
+	@test "$(DEPLOY_AUTHORIZED)" = "yes"
+	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml run --rm api import $(ARGS)
+
+web-gc:
+	@test "$(DEPLOY_AUTHORIZED)" = "yes"
+	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml run --rm api gc
+
+.PHONY: web-images web-audit
+web-images:
+	docker build -f web/deploy/Dockerfile --target api -t tarjama-web:review web
+	docker build -f web/deploy/Dockerfile --target media -t tarjama-media:review web
+
+web-audit:
+	web/scripts/tools.sh go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+	web/scripts/tools.sh sh -c 'cd /work/web/frontend && npm audit --audit-level=high'

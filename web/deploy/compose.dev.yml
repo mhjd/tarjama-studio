@@ -1,0 +1,46 @@
+# Dedicated loopback demonstration with explicit mock providers, never production.
+name: tarjama-local-dev
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: local-only
+      POSTGRES_DB: tarjama
+    volumes: ['dev_db:/var/lib/postgresql/data']
+    networks: [dev]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U test -d tarjama']
+      interval: 2s
+      timeout: 2s
+      retries: 20
+    cpus: 0.5
+    mem_limit: 512m
+  app:
+    image: tarjama-web-tools:test
+    init: true
+    working_dir: /work/web/backend
+    user: '${TEST_UID:-1001}:${TEST_GID:-1001}'
+    command: [go, run, ./cmd/fixture]
+    environment:
+      APP_MODE: test
+      PUBLIC_ORIGIN: http://127.0.0.1:8090
+      FIXTURE_LISTEN_ADDR: 0.0.0.0:8090
+      DATABASE_URL: postgres://test:local-only@db:5432/tarjama?sslmode=disable
+      ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      STORAGE_DIR: /work/web/.runtime/dev-storage
+      FRONTEND_DIR: /work/web/frontend/dist
+      GOMODCACHE: /work/web/.cache/go
+      GOCACHE: /work/web/.cache/build
+    volumes: ['../..:/work']
+    ports: ['127.0.0.1:8090:8090']
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [dev]
+    cpus: 2
+    mem_limit: 2g
+    pids_limit: 256
+networks:
+  dev: {internal: true}
+volumes:
+  dev_db: {}

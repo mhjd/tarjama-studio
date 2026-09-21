@@ -66,7 +66,7 @@ func (a *API) Routes() http.Handler {
 	a.Auth.Routes(m)
 	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) })
 	m.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
-		if a.Store.DB.Ping(r.Context()) != nil {
+		if a.Store.Ready(r.Context()) != nil {
 			http.Error(w, "Indisponible", 503)
 			return
 		}
@@ -312,6 +312,19 @@ func (a *API) advance(w http.ResponseWriter, r *http.Request) {
 			}
 			if p.Stage != "arabic" {
 				return ErrConflict
+			}
+			if p.TranslationSource == p.ArabicVersion {
+				complete := true
+				for _, segment := range p.Segments {
+					if strings.TrimSpace(segment.French) == "" {
+						complete = false
+					}
+				}
+				if complete {
+					p.ConfirmedArabic = p.ArabicVersion
+					p.Stage = "review"
+					return nil
+				}
 			}
 			if p.TranslationSource > 0 && !b.Replace {
 				return errors.New("La nouvelle traduction remplacera vos retouches françaises. Confirmez ce remplacement.")

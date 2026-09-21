@@ -5,11 +5,12 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-//go:embed schema.sql
+//go:embed migrations/*.sql
 var schema embed.FS
 
 type Store struct{ DB *pgxpool.Pool }
@@ -26,7 +27,6 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 	return &Store{p}, nil
 }
 func (s *Store) Migrate(ctx context.Context) error {
-	b, _ := schema.ReadFile("schema.sql")
 	tx, e := s.DB.Begin(ctx)
 	if e != nil {
 		return e
@@ -35,10 +35,44 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if _, e = tx.Exec(ctx, "SELECT pg_advisory_xact_lock(91372610)"); e != nil {
 		return e
 	}
-	if _, e = tx.Exec(ctx, string(b)); e != nil {
+	if _, e = tx.Exec(ctx, "CREATE TABLE IF NOT EXISTS schema_migrations(name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"); e != nil {
 		return e
 	}
+	files, e := schema.ReadDir("migrations")
+	if e != nil {
+		return e
+	}
+	for _, file := range files {
+		var applied bool
+		if e = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE name=$1)", file.Name()).Scan(&applied); e != nil {
+			return e
+		}
+		if applied {
+			continue
+		}
+		sql, e := schema.ReadFile("migrations/" + file.Name())
+		if e != nil {
+			return e
+		}
+		if _, e = tx.Exec(ctx, string(sql)); e != nil {
+			return fmt.Errorf("migration %s: %w", file.Name(), e)
+		}
+		if _, e = tx.Exec(ctx, "INSERT INTO schema_migrations(name) VALUES($1)", file.Name()); e != nil {
+			return e
+		}
+	}
 	return tx.Commit(ctx)
+}
+func (s *Store) Ready(ctx context.Context) error {
+	var applied bool
+	e := s.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE name='001_initial.sql')").Scan(&applied)
+	if e != nil {
+		return e
+	}
+	if !applied {
+		return errors.New("migration pending")
+	}
+	return nil
 }
 func (s *Store) User(ctx context.Context, issuer, subject string) (string, error) {
 	var uid string

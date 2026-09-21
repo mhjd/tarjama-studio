@@ -162,3 +162,58 @@ test("blur saves only that field and never overwrites characters typed during a 
   await expect(page.getByRole("status")).toContainText("Enregistré");
   expect(secondWrites).toBe(1);
 });
+
+test("step waits for compositionend when clicked while Arabic composition is active", async ({
+  page,
+}) => {
+  await login(page);
+  await page.getByRole("button", { name: /Vidéo importée/ }).click();
+  const field = page.getByRole("textbox", { name: /Arabe/ });
+  await field.focus();
+  await field.dispatchEvent("compositionstart");
+  await field.fill("كلمات أثناء الكتابة");
+  let advanced = false;
+  page.on("request", (r) => {
+    if (r.url().endsWith("/advance")) advanced = true;
+  });
+  await page
+    .getByRole("button", { name: "Terminer la correction arabe · Traduire" })
+    .evaluate((button: HTMLButtonElement) => button.click());
+  await page.waitForTimeout(100);
+  expect(advanced).toBe(false);
+  await field.evaluate((el: HTMLTextAreaElement) => {
+    el.value = "كلمات عربية مكتملة";
+    el.dispatchEvent(
+      new CompositionEvent("compositionend", { bubbles: true, data: "مكتملة" }),
+    );
+  });
+  await expect(page.getByRole("textbox", { name: /Français/ })).toBeVisible({
+    timeout: 30000,
+  });
+  await expect(page.getByRole("textbox", { name: /Arabe/ })).toHaveValue(
+    "كلمات عربية مكتملة",
+  );
+});
+
+test("audio keeps playing while editing without stealing focus", async ({
+  page,
+}) => {
+  await login(page);
+  await page.getByRole("button", { name: /Vidéo importée/ }).click();
+  const field = page.getByRole("textbox", { name: /Français/ });
+  await expect(field).toBeVisible();
+  await page.getByRole("button", { name: "Lecture", exact: true }).click();
+  await field.focus();
+  await expect
+    .poll(() =>
+      page.locator("video").evaluate((v: HTMLVideoElement) => v.currentTime),
+    )
+    .toBeGreaterThan(0);
+  await expect(field).toBeFocused();
+  await expect
+    .poll(() =>
+      page.locator("video").evaluate((v: HTMLVideoElement) => v.paused),
+    )
+    .toBe(false);
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+});

@@ -22,3 +22,39 @@ La matrice de livraison sera complétée après les tests de chaque incrément.
 - Compose, images et runbook préparés ; aucun service vivant activé. Sandbox Bubblewrap refusée sur ce VPS avec les profils actuels : prérequis bloquant avant exploitation des médias non fiables.
 
 Vérifications de cet incrément : tests Go avec `-race`, `go vet`, build TypeScript/Vite, 4 scénarios navigateur Chromium à 390 px, audit npm sans vulnérabilité et govulncheck sans vulnérabilité après mises à jour. Les tests couvrent OIDC signé local, accès intercomptes, Range, versions concurrentes, saturation/reprise avec clé personnelle, leases périmées, génération média, horaires après une heure, import et vrais exports. Une vérification sur téléphone physique et les fournisseurs réels restent à faire.
+
+## Consolidation finale
+
+Migrations SQL numérotées, readiness vérifiant le schéma, imports desktop sans transfert aveugle des confirmations, réutilisation de la traduction importée après nouvelle validation humaine de l'arabe. Test de RPC média authentifié et d'import dry-run/copie/réimport idempotent sur vidéo synthétique, sans appel IA ni modification de snapshots. Tests des deux orientations et de rotation caméra. Le test IME supplémentaire clique l'étape *pendant* une composition et attend son texte final.
+
+Le confinement système et la sortie WARP réels restent à valider ; les refus de namespaces ont été constatés, pas contournés. Le runner local FFmpeg non sandboxé est explicitement réservé aux fixtures synthétiques dans le conteneur de test. Les documents de livraison détaillent ce qui doit être configuré avant une instruction séparée de mise en service.
+
+Les images d'outils et de livraison occupent du disque local ; l'espace libre a baissé pendant les builds (environ 17 Gio lors de la consolidation). Aucun prune global n'a été exécuté. Revalider l'espace réellement disponible, la réservation du stockage et une destination externe pour les backups avant déploiement.
+
+## Résultat final de la mission (21 septembre 2026)
+
+| Phase | Livré et vérifié localement | Validation externe restante |
+| --- | --- | --- |
+| 0 | Arbre initial propre, fetch, branche `web-vps` sur `183cf9b`, inventaire non destructif | Politique d'exploitation/backup réelle, détails WARP |
+| 1 | API Go, migrations PostgreSQL numérotées, React séparé, OIDC signé de test, propriétaires, blur/flush, conflits | Issuer et domaine HTTPS réels |
+| 2 | Upload, remplacement de téléchargement par génération, média privé/Range, FLAC, découpage ASR, file et reprise | Sandbox système autorisée ; téléchargement réel via WARP ; compte Groq |
+| 3 | Clients HTTP Gemini/Groq, prompts fixes, validation stricte, morceaux 20 min + borne de texte, cooldowns, clés personnelles | Accès Gemini 3.8 Flash/quota du compte ; validation linguistique réelle ; références religieuses humaines |
+| 4 | MP4 arabe/français Low/High, portrait/paysage/rotation, rendu visuellement inspecté, interface 390 px, écoute pendant édition | Téléphone physique/clavier mobile natif ; vidéos tutorielles absentes |
+| 5 | Images, Compose, OIDC/proxy/secrets configurables, backup/restauration de fixtures, import dry-run/copie/réimport de test | Sauvegarde hors VPS, données privées autorisées, instruction séparée de déploiement |
+
+Commandes exécutées avec succès sur l'arbre livré :
+
+- `make web-test` : **21 tests Go**, sous-cas inclus, avec `-race`, `go vet`, build TypeScript/Vite ; **6 scénarios Playwright Chromium** ; dump/restore PostgreSQL dans une seconde DB isolée. Pas de clé payante ni accès fournisseur réel.
+- `make web-build` et `make web-images` : exécutable et deux images construits.
+- `make web-audit` : govulncheck sans vulnérabilité trouvée ; npm audit sans vulnérabilité trouvée. Ce résultat n'est pas une certification du système d'exploitation ou du futur réseau.
+- `make web-config WEB_ENV=web/deploy/.env.example` ; configurations dev/test/import également validées.
+- `git diff --check` ; aucune modification de `ui/`, `server/`, `data/`, `AGENTS.md` ou du handoff ; `main` conservé à `a247734`.
+
+Préflight de l'image média finale, sans réseau, sans port ni données, terminé avec le refus attendu : **sandbox indisponible**. L'application refuse donc de traiter des médias en production dans la configuration actuelle. Aucun contournement de restriction hôte n'a été appliqué.
+
+Images locales préparées (non publiées) :
+
+- `tarjama-web:review` : `sha256:27bb29e8f9af8a15bb29e142addf3c023ffaa145a25fe007ffd49f0769f4a9f0`
+- `tarjama-media:review` : `sha256:5d75def21dccf9e664cbf9a0efae33048348eaf0608cd6d200f3534ef7b675be`
+
+État d'exploitation en fin de mission : stacks de test arrêtées ; seuls les trois conteneurs PostgreSQL préexistants figurent dans `docker ps`. Environ **16 Gio libres** après les builds. Aucune stack Tarjama de développement, préproduction ou production active ; aucun changement de proxy/DNS/certificat/pare-feu/SSO/routage. Aucun push Git ni déploiement. Le commit final et son parent constituent la livraison locale sur `web-vps`.

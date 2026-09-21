@@ -113,7 +113,7 @@ func RunWorker(ctx context.Context, s *Store, c Config) error {
 	if e := os.MkdirAll(c.Storage, 0700); e != nil {
 		return e
 	}
-	w := &Worker{Store: s, Config: c, Providers: NewProviders(), Media: &RemoteMedia{URL: c.MediaURL, Token: c.MediaToken, Client: &http.Client{Timeout: 10 * time.Minute}}}
+	w := &Worker{Store: s, Config: c, Providers: NewProviders(), Media: &RemoteMedia{URL: c.MediaURL, Token: c.MediaToken, Client: &http.Client{Timeout: 4 * time.Hour}}}
 	for ctx.Err() == nil {
 		worked, e := w.Once(ctx)
 		if e != nil && !errors.Is(e, pgx.ErrNoRows) {

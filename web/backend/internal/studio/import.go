@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +25,13 @@ type DesktopBundle struct {
 }
 
 func readJSON(path string, v any) error {
+	st, e := os.Lstat(path)
+	if e != nil {
+		return e
+	}
+	if !st.Mode().IsRegular() {
+		return errors.New("JSON non régulier refusé")
+	}
 	f, e := os.Open(path)
 	if e != nil {
 		return e
@@ -106,9 +114,7 @@ func ReadDesktop(dir string) (DesktopBundle, error) {
 		}
 	}
 	if complete {
-		p.Stage = "review"
 		p.TranslationSource = p.ArabicVersion
-		p.ConfirmedArabic = p.ArabicVersion
 	}
 	files, e := filepath.Glob(filepath.Join(dir, "source.*"))
 	if e != nil || len(files) != 1 {
@@ -173,7 +179,7 @@ func ImportCommand(ctx context.Context, s *Store, c Config, args []string) error
 	}
 	name := id() + ".mp4"
 	path := storagePath(c.Storage, name)
-	media := RemoteMedia{URL: c.MediaURL, Token: c.MediaToken, Client: NewProviders().Client}
+	media := RemoteMedia{URL: c.MediaURL, Token: c.MediaToken, Client: &http.Client{Timeout: 4 * time.Hour}}
 	info, e := media.Process(ctx, MediaRequest{Operation: "prepare"}, bundle.Media, path)
 	if e != nil {
 		return e

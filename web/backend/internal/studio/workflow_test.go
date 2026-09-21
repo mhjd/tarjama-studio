@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -144,5 +148,72 @@ func TestCancelledLeaseAndCooldownIsolation(t *testing.T) {
 	}
 	if d, e := s.Cooldown(ctx, "gemini:personal"); e != nil || d != 0 {
 		t.Fatal("personal blocked", d, e)
+	}
+}
+
+func TestProviderStructuredWireValidation(t *testing.T) {
+	source := []Segment{{ID: "a", Arabic: "سلام"}}
+	for _, tc := range []struct {
+		content, finish string
+		valid           bool
+	}{
+		{`{"segments":[{"id":"a","text":"Bonjour"}]}`, "STOP", true},
+		{`{"segments":[{"id":"a","text":"Bonjour","start":0}]}`, "STOP", false},
+		{`{"segments":[]}`, "STOP", false},
+		{`{"segments":[{"id":"a","text":"Bonjour"}]}`, "MAX_TOKENS", false},
+		{`{"segments":[`, "STOP", false},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body map[string]any
+			if json.NewDecoder(r.Body).Decode(&body) != nil {
+				t.Fatal("request JSON")
+			}
+			if body["systemInstruction"] == nil || body["generationConfig"] == nil {
+				t.Error("missing fixed instruction/schema")
+			}
+			json.NewEncoder(w).Encode(map[string]any{"candidates": []any{map[string]any{"finishReason": tc.finish, "content": map[string]any{"parts": []any{map[string]string{"text": tc.content}}}}}})
+		}))
+		p := NewProviders()
+		p.GeminiURL = server.URL
+		_, e := p.Text(context.Background(), "fixture", "translate", source, nil)
+		server.Close()
+		if (e == nil) != tc.valid {
+			t.Fatal(tc, e)
+		}
+	}
+}
+func TestGroqMultipartContract(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "audio.flac")
+	os.WriteFile(file, []byte("fLaCfixture"), 0600)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer fixture" {
+			t.Error("authorization")
+		}
+		if e := r.ParseMultipartForm(1024); e != nil {
+			t.Fatal(e)
+		}
+		defer r.MultipartForm.RemoveAll()
+		for k, v := range map[string]string{"model": GroqModel, "language": "ar", "response_format": "verbose_json"} {
+			if r.FormValue(k) != v {
+				t.Error(k)
+			}
+		}
+		if len(r.MultipartForm.Value["timestamp_granularities[]"]) != 2 {
+			t.Error("missing timestamp detail")
+		}
+		f, _, e := r.FormFile("file")
+		if e != nil {
+			t.Fatal(e)
+		}
+		f.Close()
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"segments":[{"start":0,"end":1,"text":"سلام"}],"words":[{"start":0,"end":1,"word":"سلام"}]}`))
+	}))
+	defer server.Close()
+	p := NewProviders()
+	p.GroqURL = server.URL
+	response, raw, e := p.Audio(context.Background(), "fixture", file)
+	if e != nil || len(response.Segments) != 1 || len(raw) == 0 {
+		t.Fatal(response, e)
 	}
 }

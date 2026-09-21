@@ -122,8 +122,9 @@ func (m *RemoteMedia) Process(ctx context.Context, p MediaRequest, input, output
 }
 
 type LocalMedia struct {
-	Test  bool
-	Proxy string
+	Test         bool
+	ConsumeInput bool // only private upload files owned by the RPC handler
+	Proxy        string
 }
 type limitedBuffer struct {
 	bytes.Buffer
@@ -137,7 +138,14 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 	return b.Buffer.Write(p)
 }
 func (m LocalMedia) run(ctx context.Context, dir, program string, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, 8*time.Minute)
+	timeout := 4 * time.Hour
+	if program == "ffprobe" {
+		timeout = 30 * time.Second
+	}
+	if program == "yt-dlp" {
+		timeout = 30 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	binary := program
 	argv := args
@@ -150,7 +158,7 @@ func (m LocalMedia) run(ctx context.Context, dir, program string, args ...string
 		argv = append(argv, args...)
 		binary = "bwrap"
 	}
-	argv = append([]string{"--fsize=1073741824", "--cpu=480", "--nofile=128", "--", binary}, argv...)
+	argv = append([]string{"--fsize=1073741824", "--cpu=14400", "--nofile=128", "--", binary}, argv...)
 	cmd := exec.CommandContext(ctx, "prlimit", argv...)
 	cmd.Dir = dir
 	cmd.Env = []string{"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/tmp", "LANG=C.UTF-8"}
@@ -262,7 +270,11 @@ func (m LocalMedia) Process(ctx context.Context, p MediaRequest, input, output s
 		return MediaInfo{}, e
 	}
 	defer os.RemoveAll(dir)
-	if input != "" {
+	if input != "" && m.ConsumeInput {
+		if e = os.Rename(input, filepath.Join(dir, "input")); e != nil {
+			return MediaInfo{}, e
+		}
+	} else if input != "" {
 		in, e := os.Open(input)
 		if e != nil {
 			return MediaInfo{}, e
@@ -287,9 +299,16 @@ func (m LocalMedia) Process(ctx context.Context, p MediaRequest, input, output s
 			return MediaInfo{}, &ProviderError{Public: "Sortie WARP non configurée", Temporary: true}
 		}
 		// All extractor and media requests use the filtering proxy. Container has no direct egress.
-		_, e = m.run(ctx, dir, "yt-dlp", "--ignore-config", "--no-playlist", "--no-cache-dir", "--no-progress", "--socket-timeout", "20", "--retries", "2", "--fragment-retries", "2", "--max-filesize", "1G", "--match-filters", "duration <= 10800", "--proxy", m.Proxy, "--format", "best[height<=1080][ext=mp4]/best[height<=1080]", "--output", "input", "--", u)
+		_, e = m.run(ctx, dir, "yt-dlp", "--ignore-config", "--no-playlist", "--no-cache-dir", "--no-progress", "--socket-timeout", "20", "--retries", "2", "--fragment-retries", "2", "--max-filesize", "1G", "--match-filters", "duration <= 10800", "--proxy", m.Proxy, "--js-runtimes", "node", "--format", "bv*[height<=1080]+ba/b[height<=1080]", "--merge-output-format", "mkv", "--output", "input.%(ext)s", "--", u)
 		if e != nil {
 			return MediaInfo{}, &ProviderError{Public: "Téléchargement indisponible", Temporary: true}
+		}
+		files, e := filepath.Glob(filepath.Join(dir, "input.*"))
+		if e != nil || len(files) != 1 {
+			return MediaInfo{}, errors.New("Sortie téléchargement ambiguë")
+		}
+		if e = os.Rename(files[0], filepath.Join(dir, "input")); e != nil {
+			return MediaInfo{}, e
 		}
 	}
 	info, e := m.probe(ctx, dir, "input")
@@ -357,6 +376,16 @@ func (m LocalMedia) Process(ctx context.Context, p MediaRequest, input, output s
 	default:
 		return info, errors.New("Opération média invalide")
 	}
+	if m.ConsumeInput { // both paths are private temporaries on the same filesystem
+		st, e := os.Stat(filepath.Join(dir, name))
+		if e != nil {
+			return info, e
+		}
+		if st.Size() > MaxMediaBytes {
+			return info, errors.New("Résultat trop grand")
+		}
+		return info, os.Rename(filepath.Join(dir, name), output)
+	}
 	f, e := os.Open(filepath.Join(dir, name))
 	if e != nil {
 		return info, e
@@ -387,7 +416,7 @@ func RunMedia(ctx context.Context) error {
 		return errors.New("MEDIA_TOKEN requis")
 	}
 	mode := os.Getenv("APP_MODE")
-	local := LocalMedia{Test: mode == "test", Proxy: os.Getenv("DOWNLOAD_PROXY")}
+	local := LocalMedia{Test: mode == "test", ConsumeInput: true, Proxy: os.Getenv("DOWNLOAD_PROXY")}
 	if !local.Test {
 		dir, e := os.MkdirTemp("", "sandbox-check-")
 		if e != nil {
@@ -399,6 +428,17 @@ func RunMedia(ctx context.Context) error {
 			return errors.New("Sandbox média indisponible : vérifier user namespaces/AppArmor/seccomp avant mise en service")
 		}
 	}
+	addr := os.Getenv("LISTEN_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:8091"
+	}
+	server := HTTPServer(addr, MediaHandler(local, token))
+	server.WriteTimeout = 4 * time.Hour
+	go func() { <-ctx.Done(); server.Close() }()
+	return server.ListenAndServe()
+}
+
+func MediaHandler(local Media, token string) http.Handler {
 	var mu sync.Mutex
 	m := http.NewServeMux()
 	m.HandleFunc("POST /process", func(w http.ResponseWriter, r *http.Request) {
@@ -464,11 +504,6 @@ func RunMedia(ctx context.Context) error {
 		w.Header().Set("X-Media-Info", string(data))
 		http.ServeFile(w, r, output)
 	})
-	addr := os.Getenv("LISTEN_ADDR")
-	if addr == "" {
-		addr = "127.0.0.1:8091"
-	}
-	server := HTTPServer(addr, m)
-	go func() { <-ctx.Done(); server.Close() }()
-	return server.ListenAndServe()
+
+	return m
 }

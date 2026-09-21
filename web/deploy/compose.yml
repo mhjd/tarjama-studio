@@ -95,7 +95,7 @@ services:
     tmpfs: ['/tmp:size=4g,mode=1777']
     networks: [media_control, download]
     cpus: 2
-    mem_limit: 2g
+    mem_limit: 3g
     pids_limit: 100
   egress:
     image: tarjama-web:${APP_TAG}

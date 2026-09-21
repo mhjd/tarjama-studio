@@ -56,6 +56,13 @@ func LoadConfig() (Config, error) {
 	if c.Mode != "production" && (u.Hostname() != "127.0.0.1" && u.Hostname() != "localhost") {
 		return c, errors.New("Le développement doit rester sur loopback")
 	}
+	if c.Mode == "production" {
+		issuer, e := url.Parse(c.Issuer)
+		if e != nil || issuer.Scheme != "https" || issuer.Host == "" || issuer.User != nil || issuer.RawQuery != "" || issuer.Fragment != "" {
+			return c, errors.New("OIDC_ISSUER HTTPS requis")
+		}
+	}
+
 	if c.DB == "" {
 		return c, errors.New("DATABASE_URL absent")
 	}

@@ -79,7 +79,7 @@ web-deps:
 	web/scripts/tools.sh sh -c 'cd /work/web/frontend && npm ci'
 
 web-test:
-	TEST_UID=$$(id -u) TEST_GID=$$(id -g) docker compose -f web/deploy/compose.test.yml run --rm checks; result=$$?; docker compose -f web/deploy/compose.test.yml down; exit $$result
+	web/scripts/test.sh
 
 web-build:
 	web/scripts/tools.sh sh -c 'go build -o /work/web/.cache/tarjama ./cmd/tarjama && cd /work/web/frontend && npm run build'
@@ -112,7 +112,7 @@ web-backup:
 
 web-import:
 	@test "$(DEPLOY_AUTHORIZED)" = "yes"
-	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml run --rm api import $(ARGS)
+	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml -f web/deploy/compose.import.yml run --rm api import $(ARGS)
 
 web-gc:
 	@test "$(DEPLOY_AUTHORIZED)" = "yes"

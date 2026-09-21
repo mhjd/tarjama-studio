@@ -479,3 +479,100 @@ func TestRotationAndLandscape(t *testing.T) {
 		}
 	}
 }
+
+func TestMediaRPCAndDesktopCopyImport(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	owner, _ := fixture(t, s)
+	dir := t.TempDir()
+	storage := t.TempDir()
+	source := filepath.Join(dir, "source.mp4")
+	if out, e := exec.Command("ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=s=160x120:d=2", "-f", "lavfi", "-i", "sine=duration=2", "-c:v", "libx264", "-threads", "1", "-c:a", "aac", "-shortest", source).CombinedOutput(); e != nil {
+		t.Fatal(e, string(out))
+	}
+	token := strings.Repeat("m", 32)
+	server := httptest.NewServer(MediaHandler(LocalMedia{Test: true, ConsumeInput: true}, token))
+	defer server.Close()
+	client := RemoteMedia{URL: server.URL, Token: "bad", Client: server.Client()}
+	if _, e := client.Process(ctx, MediaRequest{Operation: "prepare"}, source, filepath.Join(storage, "bad")); e == nil {
+		t.Fatal("RPC token ignored")
+	}
+	client.Token = token
+	info, e := client.Process(ctx, MediaRequest{Operation: "prepare"}, source, filepath.Join(storage, "valid"))
+	if e != nil || info.Width != 160 {
+		t.Fatal(info, e)
+	}
+	os.WriteFile(filepath.Join(dir, "project.json"), []byte(`{"title":"Copie desktop"}`), 0600)
+	os.WriteFile(filepath.Join(dir, "current.json"), []byte(`{"segments":[{"id":"a","start":0,"end":1,"text":"سلام"}]}`), 0600)
+	os.WriteFile(filepath.Join(dir, "translation.json"), []byte(`{"segments":[{"id":"a","start":0,"end":1,"translation":"Bonjour"}]}`), 0600)
+	os.Mkdir(filepath.Join(dir, "snapshots"), 0700)
+	snapshot := filepath.Join(dir, "snapshots", "immutable.json")
+	os.WriteFile(snapshot, []byte("immutable"), 0600)
+	c := Config{Storage: storage, MediaURL: server.URL, MediaToken: token}
+	args := []string{"--bundle", dir, "--owner", owner}
+	if e = ImportCommand(ctx, s, c, args); e != nil {
+		t.Fatal(e)
+	}
+	before, _ := s.List(ctx, owner)
+	if len(before) != 1 {
+		t.Fatal("dry-run wrote data")
+	}
+	for i := 0; i < 2; i++ {
+		if e = ImportCommand(ctx, s, c, append(args, "--apply")); e != nil {
+			t.Fatal(e)
+		}
+	}
+	projects, _ := s.List(ctx, owner)
+	if len(projects) != 2 {
+		t.Fatal("duplicate import", len(projects))
+	}
+	var imported Project
+	for _, p := range projects {
+		if p.Title == "Copie desktop" {
+			imported, _ = s.Get(ctx, owner, p.ID)
+		}
+	}
+	if imported.Stage != "arabic" || imported.ConfirmedArabic != 0 || imported.ConfirmedReview != 0 || imported.Segments[0].French != "Bonjour" {
+		t.Fatal(imported)
+	}
+	jobs, _ := s.Jobs(ctx, owner, imported.ID)
+	if len(jobs) != 0 {
+		t.Fatal("import called providers")
+	}
+	b, _ := os.ReadFile(snapshot)
+	if string(b) != "immutable" {
+		t.Fatal("snapshot changed")
+	}
+	if _, e = os.Stat(source); e != nil {
+		t.Fatal("desktop media moved")
+	}
+	_, api := testAPI(t, s)
+	session, csrf := sessionFor(t, s, owner)
+	status, _ := call(t, api, session, csrf, "POST", "/api/projects/"+imported.ID+"/advance", map[string]any{"version": 1, "stage": "arabic"})
+	if status != 200 {
+		t.Fatal(status)
+	}
+	jobs, _ = s.Jobs(ctx, owner, imported.ID)
+	if len(jobs) != 0 {
+		t.Fatal("revalidation retranslated imported text")
+	}
+	imported, _ = s.Get(ctx, owner, imported.ID)
+	if imported.Stage != "review" {
+		t.Fatal(imported)
+	}
+}
+func TestMigrationRepeatAndReadiness(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	if e := s.Migrate(ctx); e != nil {
+		t.Fatal(e)
+	}
+	if e := s.Ready(ctx); e != nil {
+		t.Fatal(e)
+	}
+	var count int
+	s.DB.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count)
+	if count != 1 {
+		t.Fatal(count)
+	}
+}

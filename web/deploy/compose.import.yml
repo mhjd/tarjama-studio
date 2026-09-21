@@ -1,0 +1,5 @@
+# Add only for an explicitly scoped desktop import. Host source is read-only.
+services:
+  api:
+    volumes:
+      - '${IMPORT_BUNDLE:?Set IMPORT_BUNDLE to one coherent desktop project copy}:/imports/bundle:ro'

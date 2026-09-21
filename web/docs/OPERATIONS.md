@@ -51,7 +51,7 @@ Sauvegarde d'exploitation seulement, aucun historique proposé dans l'interface.
 DEPLOY_AUTHORIZED=yes WRITES_PAUSED=yes make web-backup BACKUP_DIR=/chemin/prive/hors-volumes
 ```
 
-Le script crée des fichiers datés exclusifs (`pg_dump -Fc`, archive média et SHA-256). Chiffrer et copier hors du VPS. Conserver séparément la clé de chiffrement et les secrets. Les backups ne doivent pas remplir le disque du service. Tester les checksums et `pg_restore` dans une DB isolée avec la même version majeure, puis restaurer une copie des médias dans un volume vide et vérifier la lecture/export avant tout remplacement vivant. Ne jamais restaurer sur la DB active sans périmètre et sauvegarde préalables. Le script de backup n'a pas été exécuté sur des données vivantes.
+Le script crée des fichiers datés exclusifs (`pg_dump -Fc`, archive média et SHA-256). Chiffrer et copier hors du VPS. Conserver séparément la clé de chiffrement et les secrets. Les backups ne doivent pas remplir le disque du service. `make web-test` effectue déjà un dump/restore de fixtures dans une seconde DB isolée. Pour les futurs backups réels, tester les checksums et `pg_restore` dans une DB isolée avec la même version majeure, puis restaurer une copie des médias dans un volume vide et vérifier la lecture/export avant tout remplacement vivant. Ne jamais restaurer sur la DB active sans périmètre et sauvegarde préalables. Le script de backup n'a pas été exécuté sur des données vivantes.
 
 Les projets restent conservés jusqu'à suppression utilisateur. Après suppression, les objets sans référence sont ramassés après 24 h, uniquement dans le stockage web :
 
@@ -63,12 +63,12 @@ Les résultats utiles à une reprise restent en base. Il n'y a pas de purge auto
 
 ## Import desktop
 
-Ne fournir qu'une copie cohérente, application desktop fermée. Le conteneur d'import doit recevoir ce seul bundle en lecture seule ; ce montage n'est volontairement pas général dans le Compose.
+Ne fournir qu'une copie cohérente, application desktop fermée. L’override `compose.import.yml` monte ce seul bundle en lecture seule, uniquement pour cette commande.
 
 ```sh
-make web-import DEPLOY_AUTHORIZED=yes ARGS='--bundle /imports/projet --owner IDENTIFIANT_COMPTE'
+IMPORT_BUNDLE=/copie/desktop/projet make web-import DEPLOY_AUTHORIZED=yes ARGS='--bundle /imports/bundle --owner IDENTIFIANT_COMPTE'
 # Après lecture du rapport, dans le périmètre d'import autorisé :
-make web-import DEPLOY_AUTHORIZED=yes ARGS='--bundle /imports/projet --owner IDENTIFIANT_COMPTE --apply'
+IMPORT_BUNDLE=/copie/desktop/projet make web-import DEPLOY_AUTHORIZED=yes ARGS='--bundle /imports/bundle --owner IDENTIFIANT_COMPTE --apply'
 ```
 
 `current.json` prime sur `transcript.json`. La traduction séparée est alignée par IDs et millisecondes ; les conflits avec une traduction embarquée sont refusés. Un digest de contenu/média empêche un second import identique pour le même propriétaire. La copie média est validée puis les textes sont importés dans une transaction. Aucun appel IA. Les dates/empreintes de validation desktop ne deviennent pas des confirmations humaines web : relecture requise. Les archives et snapshots d'origine restent intacts.

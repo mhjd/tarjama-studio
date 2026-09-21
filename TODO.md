@@ -1,5 +1,7 @@
 # TODO
 
+> **Périmètre historique desktop/local.** Cette liste n'est pas la feuille de route de la migration web/VPS. Les choix d'interface avancée, de sauvegarde manuelle, d'historique et de priorité locale ci-dessous ne doivent pas être réintroduits dans le nouveau produit. Lire [docs/WEB_VPS_HANDOFF.md](docs/WEB_VPS_HANDOFF.md) pour les décisions finales et l'ordre de réalisation.
+
 ## Couche intuitive de l'application
 
 ### Clavier et modales

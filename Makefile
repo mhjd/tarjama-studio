@@ -1,4 +1,4 @@
-.PHONY: cli tui whisper-benchmark dev-api dev-api-reload dev-ui build-ui electron-build desktop-tools desktop-build desktop-package desktop-dist desktop-win-portable desktop-linux-appimage desktop-security-test desktop-windows-release desktop-linux-release desktop-release-checksums desktop-release desktop-dev npm-audit
+.PHONY: cli tui whisper-benchmark dev-api dev-api-reload dev-ui build-ui electron-build desktop-tools desktop-build desktop-package desktop-dist desktop-win-portable desktop-linux-appimage desktop-security-test desktop-windows-release desktop-linux-release desktop-release-checksums desktop-release desktop-dev npm-audit correction-skill-test
 
 cli:
 	.venv-asr/bin/python scripts/tarjama_cli.py $(ARGS)
@@ -65,3 +65,6 @@ desktop-dev:
 
 npm-audit:
 	cd ui && npm audit --audit-level=high
+
+correction-skill-test:
+	python3 -B -m unittest discover -s codex-skills/correct-tarjama-project/scripts -p 'test_*.py' -v

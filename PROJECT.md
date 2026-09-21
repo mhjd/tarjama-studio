@@ -1,3 +1,5 @@
+> **Migration web/VPS :** ce document décrit l'ancien MVP local et n'est pas le cahier des charges de la nouvelle application. Lire [docs/WEB_VPS_HANDOFF.md](docs/WEB_VPS_HANDOFF.md). Partir de la version desktop actuelle (`DesktopApp` et `ui/electron/`), pas de l'ancien serveur FastAPI ni de l'ancien `App` web.
+
 Le projet consiste à créer une application locale facilitant la transcription, la correction et la traduction de vidéos arabes.
 
 ## Objectif produit

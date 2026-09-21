@@ -1,0 +1,4 @@
+interface:
+  display_name: "Corriger un projet Tarjama"
+  short_description: "Applique prudemment les retours des correcteurs"
+  default_prompt: "Utilise $correct-tarjama-project pour corriger le projet indiqué à partir de cette liste :\n- …"

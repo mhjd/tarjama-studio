@@ -6,6 +6,18 @@ Complément de décision après la passation initiale : l'utilisateur indique qu
 
 **Lire ce document entièrement, puis inspecter les modules desktop indiqués avant toute implémentation.** Le code présent est une application desktop opérationnelle. La version web décrite ici reste à construire. Cette passation ne prétend pas qu'un backend Go, une authentification ou une file distribuée existent déjà.
 
+## 0. Périmètre de la mission : réaliser et tester, s'arrêter avant le déploiement
+
+**L'utilisateur demande explicitement que l'agent s'arrête avant tout déploiement.** Réaliser l'application complète décrite ici, ses tests et builds, préparer les fichiers/configurations/scripts nécessaires à son exploitation, puis livrer un état prêt pour la prochaine intervention. L'utilisateur donnera séparément les instructions de mise en service.
+
+- Autorisé dans cette mission : développement sur `web-vps`, inventaire en lecture seule du VPS, tests dans un environnement de développement isolé et limité à loopback, données de test, services temporaires dédiés aux tests, préparation des images et des commandes de déploiement sans leur activation.
+- Ne pas publier l'application ni activer une installation de préproduction/production, même derrière un accès privé. Ne pas modifier le proxy en service, les DNS, les certificats de service, les règles du pare-feu, la configuration SSO existante ou le routage global du VPS pour la mettre à disposition.
+- Ne pas migrer de données utilisateur dans une installation vivante ; tester l'import sur des fixtures ou une copie autorisée dans l'environnement de test.
+- Les sections architecture, sécurité et exploitation décrivent ce que le code et la configuration doivent permettre. Elles n'autorisent pas leur mise en service dans cette mission. Une future cible Make de déploiement peut être préparée mais ne doit pas être exécutée ; une cible de test/développement doit rester clairement distincte.
+- En fin de travail, fournir le commit testé, les fonctionnalités terminées, les vérifications réellement exécutées, les prérequis externes manquants et les commandes préparées. Distinguer sans ambiguïté application implémentée, intégrations simulées et validation réelle encore nécessaire.
+
+Le domaine, l'identité réelle, les clés runtime, les ressources du VPS et les vidéos tutorielles restent à préciser lorsqu'ils sont nécessaires. Ils ne doivent pas empêcher d'implémenter et de tester le reste, ni être inventés pour annoncer un résultat complet.
+
 ## 1. Instruction centrale : partir du desktop, ignorer l'ancien web
 
 L'utilisateur demande expressément de prendre comme référence la version desktop la plus avancée. Il faut **ignorer comme base de développement** l'ancienne version séparant FastAPI et frontend web : elle est totalement dépassée.
@@ -470,7 +482,7 @@ Le skill `codex-skills/correct-tarjama-project` est un outil **desktop local** p
 
 ### Phase 0 — orientation et inventaire non destructif
 
-Lire `AGENTS.md`, ce document, les sources desktop du tableau, puis relever les caractéristiques réelles du VPS. Vérifier branche/base et statut Git. Présenter les hypothèses de déploiement et demander seulement les informations impossibles à découvrir : domaine, fournisseur SSO, secrets à injecter hors conversation publique, disponibilité des tutoriels.
+Lire `AGENTS.md`, ce document, les sources desktop du tableau, puis relever en lecture seule les caractéristiques réelles du VPS. Vérifier branche/base et statut Git. Documenter les hypothèses d'exploitation ; demander seulement les informations nécessaires au travail courant et impossibles à découvrir. Préparer des emplacements configurables pour domaine, fournisseur SSO et secrets ; les décisions propres à la mise en service seront données séparément par l'utilisateur.
 
 Ne pas bloquer les tests et le code local faute de domaine ou de clé : utiliser des fournisseurs simulés explicitement limités aux tests/développement. Ne pas mettre une fausse authentification ou un faux fournisseur en production pour prétendre avoir fini.
 
@@ -494,9 +506,11 @@ Nettoyage automatique, validation humaine arabe, traduction par morceaux, relect
 
 Low/High, style imposé, rendu arabe correct, téléchargement privé. Tester de bout en bout avec clavier mobile et lecture pendant l'édition. Intégrer les deux tutoriels fournis ou documenter honnêtement leur absence avec guides texte.
 
-### Phase 5 — préproduction et import
+### Phase 5 — préparation de livraison et tests d'import, sans déploiement
 
-OIDC réel, HTTPS et intégration au proxy existant, secrets runtime, sauvegardes, health/readiness, logs expurgés, redémarrage/reprise, migration desktop dry-run puis copie pilote. Une ouverture publique nécessite une identité réelle, des autorisations vérifiées et des limites de ressources effectives ; un prototype localhost n'est pas un déploiement public terminé.
+Préparer et valider les configurations OIDC, HTTPS/proxy, secrets runtime, sauvegardes, health/readiness et logs expurgés, sans les activer sur les services en place. Tester redémarrage/reprise dans l'environnement isolé et l'import desktop en dry-run puis copie de test si les données sont disponibles. Documenter les valeurs attendues et les vérifications qui nécessiteront le futur environnement réel.
+
+**Point d'arrêt obligatoire : aucun déploiement.** Après les tests et builds, remettre le commit testé, le bilan fonctionnel, les éventuelles limites, les fichiers de configuration et la procédure préparée. Ne pas ouvrir de port public, créer de route de proxy ou activer une stack de préproduction pour montrer le résultat. Attendre les instructions séparées de l'utilisateur pour la mise en service.
 
 À chaque incrément : tests pertinents, commit cohérent sur `web-vps`, mise à jour d'un état d'avancement distinguant implémenté, simulé et restant. Ne pas annoncer « terminé » après le seul scaffold. Ne pas étendre à paiement, multilingue, montage ou collaboration temps réel sans besoin confirmé.
 
@@ -584,7 +598,8 @@ Les contrôles de cette section prouvent uniquement la non-régression de la bas
 - « Google SSO donne une clé AI Studio » : non, la connexion au compte applicatif et les credentials de fournisseur sont distincts.
 - « Une réponse JSON syntaxiquement valide peut être appliquée » : vérifier également IDs, cardinalité, version source, langue/champ et intégrité temporelle.
 - « Le clone contient les projets de l'utilisateur » : non, ils vivent dans la bibliothèque locale hors Git.
+- « Finir le projet implique de le déployer pour les tests utilisateur » : non, la mission s'arrête explicitement avant toute mise en service ; seul l'environnement de test isolé est dans le périmètre actuel.
 
 ## 21. Instruction de démarrage à donner au nouvel agent
 
-> Travaille sur `web-vps` dans ce dépôt. Lis d'abord `AGENTS.md`, puis intégralement `docs/WEB_VPS_HANDOFF.md`. Vérifie que ta branche descend du desktop `9b3cc9fb1584ea195cfd2b8065a688a2bfca0cb7` et contient le commit de passation publié. La référence métier est exclusivement le desktop actuel (`DesktopApp` dans `ui/src/main.tsx` et `ui/electron/`). Ignore comme base l'ancien FastAPI, l'ancien `App` web et le workflow CLI local. Inspecte le VPS sans perturber ses services, puis commence par le premier incrément vertical Go/PostgreSQL/React décrit en phase 1. Respecte les décisions finales : Gemini et Groq partagés, attente ou clé personnelle facultative, aucun OpenRouter/crédit, prompts fixes, mobile sombre simple, sauvegarde sur blur et flush avant étape suivante, aucun historique utilisateur. Préserve les données desktop. Distingue les comportements réellement implémentés des mocks et des prérequis de déploiement encore manquants. Documente et teste les incréments sur `web-vps`.
+> Travaille sur `web-vps` dans ce dépôt. Lis d'abord `AGENTS.md`, puis intégralement `docs/WEB_VPS_HANDOFF.md`. Vérifie que ta branche descend du desktop `9b3cc9fb1584ea195cfd2b8065a688a2bfca0cb7` et contient les dernières mises à jour de la passation. La référence métier est exclusivement le desktop actuel (`DesktopApp` dans `ui/src/main.tsx` et `ui/electron/`). Ignore comme base l'ancien FastAPI, l'ancien `App` web et le workflow CLI local. Inspecte le VPS sans perturber ses services, puis commence par le premier incrément vertical Go/PostgreSQL/React décrit en phase 1. Respecte les décisions finales : Gemini et Groq partagés, attente ou clé personnelle facultative, aucun OpenRouter/crédit, prompts fixes, mobile sombre simple, sauvegarde sur blur et flush avant étape suivante, aucun historique utilisateur. Préserve les données desktop. Réalise et teste les incréments sur `web-vps`, puis prépare la livraison. Arrête-toi avant tout déploiement ou modification des services du VPS : je te donnerai séparément les instructions de mise en service. Remets le commit testé et un bilan distinguant implémenté, testé, simulé et prérequis encore manquants.

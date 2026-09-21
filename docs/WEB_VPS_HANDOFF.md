@@ -2,6 +2,8 @@
 
 Date : 21 septembre 2026. Destinataire : un nouvel agent Codex travaillant sur le VPS de l'utilisateur, dans le même dépôt, sans accès à la conversation précédente.
 
+Complément de décision après la passation initiale : l'utilisateur indique que l'IP de son serveur est bloquée par YouTube, mais qu'il a réussi avec Cloudflare WARP + yt-dlp. Il approuve une sortie WARP réservée aux téléchargements vidéo. L'import de fichier est désormais un choix de premier niveau à la création d'un projet, et doit aussi être proposé lorsqu'un téléchargement échoue. Ces décisions sont intégrées ci-dessous ; elles ne décrivent pas une implémentation déjà livrée.
+
 **Lire ce document entièrement, puis inspecter les modules desktop indiqués avant toute implémentation.** Le code présent est une application desktop opérationnelle. La version web décrite ici reste à construire. Cette passation ne prétend pas qu'un backend Go, une authentification ou une file distribuée existent déjà.
 
 ## 1. Instruction centrale : partir du desktop, ignorer l'ancien web
@@ -102,6 +104,9 @@ Cette section fixe l'état final de la discussion. Ne pas réimplémenter une pr
 | Sauvegarde manuelle | Supprimée |
 | Historique utilisateur/snapshots web | Supprimés, y compris restauration et comparaison de versions |
 | Téléchargement vidéo | Bonne qualité automatiquement, sans choix de format/qualité utilisateur |
+| Source du projet | Deux choix dès la création : coller un lien ou importer une vidéo depuis son appareil |
+| Échec du téléchargement | Proposer l'import de fichier dans le même projet, sans imposer une nouvelle création |
+| Sortie réseau vidéo | yt-dlp via Cloudflare WARP, réservé au composant de téléchargement ; reste du VPS sur sa connexion habituelle |
 | Export vidéo | Deux qualités seulement : Low pour WhatsApp, High pour YouTube |
 | Style sous-titres | Gros, blancs sur fond noir ; pas de sélecteurs de police/taille/style |
 | Tutoriels de clés | Vidéos hébergées par l'application pour Google AI Studio et Groq |
@@ -193,9 +198,13 @@ Une connexion simple, puis « Mes projets » et une action principale « Nouvell
 
 ### 7.2 Ajouter et préparer
 
-Coller un lien, avec import de fichier comme secours recommandé. Aucun sélecteur de format, résolution ou audio à cette étape. Le serveur choisit une bonne qualité bornée ; un plafond initial à 1080p est une proposition d'exploitation à confirmer selon le stockage.
+Proposer deux choix clairement visibles dès la création d'un projet de traduction vidéo : **« Coller un lien »** et **« Importer une vidéo »** depuis le téléphone ou l'ordinateur. L'import n'est pas une option cachée ni réservée aux erreurs. Aucun sélecteur de format, résolution ou audio à cette étape. Pour un lien, le serveur choisit une bonne qualité bornée ; un plafond initial à 1080p est une proposition d'exploitation à confirmer selon le stockage.
 
-L'application enchaîne téléchargement, extraction audio, transcription Groq, nettoyage Gemini. Afficher des étapes compréhensibles et l'état d'attente ; ne pas demander de prompt ni d'import de réponse. Le traitement survit à la fermeture du navigateur. Éviter une progression inventée à 99 % pendant une limite journalière.
+Si le téléchargement échoue, afficher un message compréhensible avec l'action **« Importer la vidéo depuis mon appareil »** dans le même projet. Conserver le titre et le contexte ; ne pas obliger à recréer un projet, installer yt-dlp ou configurer WARP. L'utilisateur peut choisir l'import sans attendre des réessais indéfinis. Les deux modes d'entrée convergent vers la même validation audio/vidéo et le même traitement.
+
+Lors du passage d'un téléchargement échoué/en attente à un upload, invalider ou annuler le job précédent : une réponse tardive du téléchargement ne doit pas remplacer le fichier importé ni déclencher deux transcriptions. Un upload interrompu reste réessayable et n'est jamais annoncé comme prêt avant validation complète.
+
+Après téléchargement ou upload validé, l'application enchaîne extraction audio, transcription Groq et nettoyage Gemini. Afficher des étapes compréhensibles et l'état d'attente ; ne pas demander de prompt ni d'import de réponse. Le traitement serveur survit à la fermeture du navigateur ; ne pas promettre qu'un upload depuis le téléphone continue après fermeture de sa page. Éviter une progression inventée à 99 % pendant une limite journalière.
 
 ### 7.3 Corriger l'arabe
 
@@ -334,7 +343,13 @@ Le SSO ne remplace pas l'autorisation métier. Toute lecture/écriture d'un proj
 
 YouTube ne garantit pas l'extraction depuis une IP de datacenter. Invidious n'est pas une copie indépendante des vidéos ; ses instances rencontrent elles aussi les blocages YouTube. Ne pas dépendre d'une instance publique pour promettre une fiabilité permanente. [Documentation Invidious](https://docs.invidious.io/instances/), [notes yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/Extractors)
 
-Point de départ recommandé : yt-dlp maintenu dans le worker isolé, concurrence faible, reprise bornée et import de fichier de secours. Pas de cookies du compte YouTube du propriétaire partagés aux utilisateurs, pas de recherche de proxy résidentiel ou de contournement automatique comme première architecture. Un échec doit indiquer que la vidéo est inaccessible et proposer l'import.
+Décision actualisée : le propriétaire a fait fonctionner **Cloudflare WARP + yt-dlp** sur le serveur dont l'IP directe est bloquée. Reprendre cette configuration vérifiée sur le VPS, en réservant WARP au téléchargement vidéo. Ce constat utilisateur n'est pas une garantie de disponibilité permanente ni une vérification effectuée par l'agent qui rédige ce document.
+
+Garder yt-dlp maintenu dans le worker isolé, une concurrence faible et des reprises bornées. Utiliser la même sortie WARP pour l'extraction des informations et les pistes téléchargées. Préférer un proxy privé dédié lorsque la configuration WARP le permet, sans exposer ce proxy publiquement. Le site, SSH, la base et les appels Gemini/Groq conservent leur connexion habituelle ; ne pas modifier la route par défaut de tout le VPS pour cette fonctionnalité.
+
+Si WARP tombe, conserver le job en attente sans basculer silencieusement vers l'IP directe déjà bloquée. Dès qu'un échec de téléchargement est présenté à l'utilisateur, proposer l'import dans le même projet ; ne pas l'obliger à patienter pour utiliser ce choix. Vérifier les téléchargements courts/longs, plusieurs passages successifs et la reprise après redémarrage WARP. WARP ne remplace aucun des contrôles d'isolation et SSRF ci-dessous. Les privilèges éventuellement nécessaires au tunnel ne doivent pas être accordés au processus qui analyse les vidéos.
+
+Pas de cookies du compte YouTube du propriétaire partagés aux utilisateurs, ni de dépendance à une instance Invidious publique. Aucun réglage réseau n'apparaît dans le parcours utilisateur. L'import reste disponible dès la création et comme alternative immédiate à un lien impossible à télécharger.
 
 Le validateur desktop `safeRemoteUrl` vérifie essentiellement protocole et absence d'identifiants intégrés : **il ne protège pas un serveur web contre les SSRF**. Pour le nouveau produit :
 
@@ -469,7 +484,7 @@ Créer les cibles Make du nouveau workflow avant de les recommander. Noms propos
 
 ### Phase 2 — médias et transcription
 
-Upload/import de secours, téléchargement borné, worker média confiné, stockage privé, HTTP Range, file PostgreSQL et clients Groq. Reporter les acquis de découpage et d'offsets ; simuler saturation/reprise/crash avant appels réels limités. Définir les bornes de disque/CPU et de rétention nécessaires au VPS.
+Deux entrées de création (lien ou upload), téléchargement borné via WARP dédié, proposition d'upload après échec dans le même projet, worker média confiné, stockage privé, HTTP Range, file PostgreSQL et clients Groq. Reporter les acquis de découpage et d'offsets ; simuler saturation/reprise/crash avant appels réels limités. Définir les bornes de disque/CPU et de rétention nécessaires au VPS.
 
 ### Phase 3 — Gemini et workflow complet
 
@@ -503,6 +518,9 @@ OIDC réel, HTTPS et intégration au proxy existant, secrets runtime, sauvegarde
 - Pas de bouton sauvegarder/historique, de prompt à copier, de sélecteur de modèle ou de mode clair.
 - Arabe seul à la correction ; français visible à la relecture ; RTL/LTR correct sur smartphone.
 - Défilement audio par défaut, sans arracher le focus pendant la saisie.
+- Création : lien et import de fichier disponibles sur ordinateur et téléphone, avec le même parcours après validation du média.
+- Échec de téléchargement : import proposé dans le même projet ; aucun résultat tardif du lien ne remplace l'upload ou ne lance une seconde transcription.
+- Upload interrompu ou média sans audio/vidéo : état honnête, reprise/réessai possible, pas de traitement d'un fichier incomplet.
 
 ### Fournisseurs et jobs
 
@@ -512,6 +530,7 @@ OIDC réel, HTTPS et intégration au proxy existant, secrets runtime, sauvegarde
 - Groq limité : attente ou clé facultative, progression conservée.
 - Redémarrage API/worker au milieu d'une vidéo : morceaux terminés réutilisés, leases expirées récupérées.
 - Plusieurs utilisateurs : un long job n'occupe pas à lui seul la capacité partagée ; pas de retry storm.
+- WARP indisponible puis rétabli : téléchargement conservé/repris, import toujours proposé si un échec est affiché ; site et connexion d'administration inchangés, aucune sortie directe involontaire.
 - Réponse LLM tronquée/ID manquant/duplicata/texte mal formé : pas de succès ni d'application partielle incohérente.
 
 ### Temps, traduction et export

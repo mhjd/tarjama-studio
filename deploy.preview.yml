@@ -85,9 +85,9 @@ services:
     port: 8092
     env:
       LISTEN_ADDR: 0.0.0.0:8092
-      WARP_HTTP_PROXY: REQUIRED_WARP_HTTP_PROXY
+      WARP_HTTP_PROXY: 172.31.250.2:40001
       GOMAXPROCS: '1'
-    egress: [REQUIRED_WARP_EGRESS]
+    egress: [warp-downloads]
     resources: {cpu: 250m, memory: 128Mi}
     tmp: 16Mi
   db:

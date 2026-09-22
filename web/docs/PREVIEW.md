@@ -69,8 +69,8 @@ avec les labels de révision et `/etc/vps-preview/local-images.json`.
 
 Les services et jobs de `deploy.preview.yml` utilisent ces références. Les cinq
 services restent `enabled: false`. Aucun job ni déploiement de courtier exécuté.
-`validate` et `plan` ont été relancés : tous deux refusent **« Capacité réseau non
-enregistrée »**, en présence des capacités OIDC/WARP encore non renseignées.
+`validate` et `plan` ont été relancés après configuration de `warp-downloads` :
+tous deux refusent désormais **« Profil de sandbox non enregistré »**.
 La recette n'est donc pas validée intégralement ; aucun faux endpoint ou profil
 n'a été ajouté pour faire passer ce contrôle. OIDC, WARP, sandbox, API fournisseurs
 et stockage/sauvegardes restent à qualifier. Le statut reste0 replica/0 ready.
@@ -118,7 +118,7 @@ Deux comptes de test distincts doivent être autorisés pour vérifier l'isolati
 | API UID/GID `10001:10001` | `pv-db:5432` ; issuer/token/JWKS HTTPS | sessions et données ; capacité OIDC à fournir |
 | worker UID/GID `10001:10001` | `pv-db:5432`, `pv-media:8091`, web public TCP 443 | file, transfert média authentifié, Gemini/Groq |
 | média UID/GID `10002:10002` | `pv-egress:8092` uniquement | proxy HTTP CONNECT du téléchargement |
-| egress UID/GID `10003:10003` | une IPv4 et un port WARP administrés | tunnel HTTP CONNECT, sans repli direct |
+| egress UID/GID `10003:10003` | `172.31.250.2:40001` via `warp-downloads` | tunnel HTTP CONNECT, sans repli direct |
 | bootstrap/migration | `pv-db:5432` | création du rôle puis schéma |
 
 DNS autorisé par le moteur. Aucun port hôte supplémentaire, aucune sortie publique
@@ -133,9 +133,14 @@ la liste `egress` à leurs capacités. Aucun endpoint n'est inventé.
 `WARP_HTTP_PROXY` doit être l'IPv4:port réelle, **sans schéma URL ni identifiants**.
 Le service doit accepter CONNECT vers une IP publique résolue et épinglée (IPv4 ou
 IPv6), en conservant TLS/SNI au nom d'origine. Un proxy SOCKS seul est insuffisant.
-`WARP_EGRESS` est le nom exact de cette capacité dans le catalogue. Aucun service
-compatible n'est établi actuellement. Tester panne/reprise et absence de sortie
-directe avant essais utilisateur de liens YouTube.
+`WARP_HTTP_PROXY=172.31.250.2:40001` et `WARP_EGRESS=warp-downloads` sont
+maintenant renseignés dans la recette désactivée et les paramètres de rendu.
+La capacité est confirmée dans le catalogue (IPv4/port exacts). Cela ne qualifie
+pas encore les téléchargements YouTube, TLS/SNI de bout en bout ni panne/reprise.
+Le code SSRF reste inchangé : domaines autorisés, CONNECT443 seulement, résolution
+contrôlée et IP publique épinglée, aucun repli direct. La vérification TLS du
+téléchargeur est conservée. Aucun accès réel au proxy ni téléchargement effectué
+pour cette mise à jour.
 
 ## Sandbox et capacité à qualifier
 

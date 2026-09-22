@@ -32,6 +32,10 @@ def render(values, phase="stopped"):
     if not port.isdigit() or not 1 <= int(port) <= 65535:
         raise ValueError("WARP_HTTP_PROXY: administrator-provided IPv4:port required")
     text = (ROOT / "deploy.preview.yml").read_text()
+    # Public proxy settings can already be pinned in the reviewed recipe.
+    text = re.sub(r'(?m)^(\s+WARP_HTTP_PROXY: ).+$', r'\1REQUIRED_WARP_HTTP_PROXY', text)
+    text = re.sub(r'(?ms)(^  egress:\n.*?^    egress: )\[[^\]\n]*\]',
+                  r'\1[REQUIRED_WARP_EGRESS]', text)
     # The reviewed recipe may already pin a previous local build. A new render
     # must use the supplied digests, never silently keep that previous build.
     for field, component in [("API_IMAGE", "web"), ("MEDIA_IMAGE", "media")]:

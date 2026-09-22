@@ -110,3 +110,22 @@ non enregistrée ». Les prérequis OIDC/WARP/sandbox ne sont pas inventés pour
 contourner ce refus. Le catalogue confirme les secrets internes, Gemini et Groq,
 mais ne valide pas les API fournisseurs. Stockage et sauvegardes restent à qualifier.
 `atelier` reste arrêté, cinq services désactivés dans la recette, aucun job lancé.
+
+## Proxy WARP renseigné — 22 septembre 2026
+
+La recette désactivée et ses paramètres publics utilisent maintenant
+`WARP_HTTP_PROXY=172.31.250.2:40001` et la seule capacité de sortie `warp-downloads`
+pour egress. IPv4/port confirmés dans le catalogue administrateur. Le média reste
+limité au proxy egress ; aucune sortie publique ajoutée. Le générateur remplace
+également les paramètres WARP déjà renseignés pour éviter de conserver une ancienne
+adresse à la prochaine génération.
+
+Code média/egress inchangé : protections SSRF, IP publique épinglée, CONNECT443,
+TLS/SNI et absence de repli direct conservés. Quatre tests de rendu et le test
+existant `TestSSRFAndWARPFailClosed` réussis ; aucune requête réelle au proxy ou
+à YouTube. Les images importées restent valables, aucun code embarqué modifié.
+
+`validate` et `plan` réexécutés : refus « Profil de sandbox non enregistré ».
+Ne pas en déduire que les autres prérequis sont validés. OIDC, sandbox média,
+téléchargements YouTube réels, fournisseurs et stockage/sauvegardes restent à
+qualifier. Les cinq services restent désactivés ; `atelier` est à0 replica/0 ready.

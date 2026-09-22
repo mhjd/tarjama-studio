@@ -1,0 +1,158 @@
+# Preparation only. Replace REQUIRED_* through make web-preview-render.
+# All services remain stopped by default. No fabricated image digest or identity.
+version: 1
+services:
+  web:
+    enabled: false
+    image: REQUIRED_API_IMAGE
+    args: [api]
+    uid: 10001
+    gid: 10001
+    port: 8090
+    env:
+      APP_MODE: production
+      LISTEN_ADDR: 0.0.0.0:8090
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      OIDC_ISSUER: REQUIRED_OIDC_ISSUER
+      OIDC_CLIENT_ID: REQUIRED_OIDC_CLIENT_ID
+      OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+    secrets:
+      - {name: tarjama-db-app, path: /run/db}
+      - {name: tarjama-encryption, path: /run/encryption}
+      - {name: tarjama-oidc, path: /run/oidc}
+    volumes: [{name: library, path: /storage}]
+    connect: [db]
+    egress: [REQUIRED_OIDC_EGRESS]
+    resources: {cpu: 500m, memory: 512Mi}
+    tmp: 64Mi
+    health: {path: /readyz}
+  worker:
+    enabled: false
+    image: REQUIRED_API_IMAGE
+    args: [worker]
+    uid: 10001
+    gid: 10001
+    env:
+      APP_MODE: production
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      GEMINI_API_KEY_FILE: /run/gemini/api_key
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      MEDIA_TOKEN_FILE: /run/media/token
+      MEDIA_URL: http://pv-media:8091
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+    secrets:
+      - {name: tarjama-db-app, path: /run/db}
+      - {name: tarjama-encryption, path: /run/encryption}
+      - {name: tarjama-gemini, path: /run/gemini}
+      - {name: tarjama-groq, path: /run/groq}
+      - {name: tarjama-media, path: /run/media}
+    volumes: [{name: library, path: /storage}]
+    connect: [db, media]
+    egress: [public-web]
+    resources: {cpu: 750m, memory: 768Mi}
+    tmp: 64Mi
+  media:
+    enabled: false
+    image: REQUIRED_MEDIA_IMAGE
+    args: [media]
+    uid: 10002
+    gid: 10002
+    port: 8091
+    env:
+      APP_MODE: production
+      LISTEN_ADDR: 0.0.0.0:8091
+      MEDIA_TOKEN_FILE: /run/media/token
+      DOWNLOAD_PROXY: http://pv-egress:8092
+      GOMAXPROCS: '2'
+    secrets: [{name: tarjama-media, path: /run/media}]
+    connect: [egress]
+    security: REQUIRED_MEDIA_SECURITY
+    resources: {cpu: 2000m, memory: 3072Mi}
+    tmp: 2560Mi
+  egress:
+    enabled: false
+    image: REQUIRED_API_IMAGE
+    args: [egress]
+    uid: 10003
+    gid: 10003
+    port: 8092
+    env:
+      LISTEN_ADDR: 0.0.0.0:8092
+      WARP_HTTP_PROXY: REQUIRED_WARP_HTTP_PROXY
+      GOMAXPROCS: '1'
+    egress: [REQUIRED_WARP_EGRESS]
+    resources: {cpu: 250m, memory: 128Mi}
+    tmp: 16Mi
+  db:
+    enabled: false
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 70
+    gid: 70
+    port: 5432
+    args: [postgres, -c, unix_socket_directories=/tmp, -c, max_connections=40, -c, shared_buffers=128MB]
+    env:
+      POSTGRES_DB: tarjama
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/db-admin/postgres_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=peer
+      PGDATA: /data/pgdata
+      PGSERVICE: preview-init
+      PGSERVICEFILE: /configuration/pg_service.conf
+    secrets: [{name: tarjama-db-admin, path: /run/db-admin}]
+    configs: [{name: postgres-client, path: /configuration}]
+    volumes: [{name: database, path: /data}]
+    resources: {cpu: 750m, memory: 768Mi}
+    tmp: 64Mi
+jobs:
+  bootstrap-db:
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 70
+    gid: 70
+    command: [/bin/sh]
+    args: [/configuration/bootstrap-db.sh]
+    env:
+      PGHOST: pv-db
+      PGPORT: '5432'
+      PGDATABASE: tarjama
+      PGUSER: postgres
+      PGPASSWORD: {secret: tarjama-db-admin, key: postgres_password}
+      APP_DB_PASSWORD: {secret: tarjama-db-app, key: app_db_password}
+    configs: [{name: bootstrap, path: /configuration}]
+    connect: [db]
+    resources: {cpu: 100m, memory: 128Mi}
+    timeout: 240
+  migrate:
+    image: REQUIRED_API_IMAGE
+    uid: 10001
+    gid: 10001
+    args: [migrate]
+    env:
+      DATABASE_URL_FILE: /run/db/database_url
+    secrets: [{name: tarjama-db-app, path: /run/db}]
+    connect: [db]
+    resources: {cpu: 250m, memory: 256Mi}
+    timeout: 300
+  sandbox-check:
+    image: REQUIRED_MEDIA_IMAGE
+    uid: 10002
+    gid: 10002
+    args: [sandbox-check]
+    security: REQUIRED_MEDIA_SECURITY
+    resources: {cpu: 2000m, memory: 3072Mi}
+    tmp: 2560Mi
+    timeout: 60
+volumes:
+  library: {size: 14Gi}
+  database: {size: 2Gi}
+configs:
+  postgres-client:
+    pg_service.conf: "[preview-init]\nhost=/tmp\n"
+  bootstrap:
+    bootstrap-db.sh: REQUIRED_BOOTSTRAP_SCRIPT

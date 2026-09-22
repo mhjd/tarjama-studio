@@ -1,0 +1,70 @@
+name: Prepare private web preview images
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tarjama-preview-images
+  cancel-in-progress: false
+jobs:
+  checks:
+    if: github.repository == 'mhjd/tarjama-studio' && github.ref == 'refs/heads/web-vps'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+      - run: make web-tools web-deps web-test web-preview-test
+  images:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+      # Fail closed: the administrator must seed two PRIVATE packages and grant
+      # this repository Actions access before the first application publication.
+      - name: Check private package visibility before building or publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          for package in tarjama-web tarjama-media; do
+            visibility=$(gh api "/users/mhjd/packages/container/$package" --jq '.visibility')
+            test "$visibility" = private || { echo "Package must already be private: $package"; exit 1; }
+          done
+      - name: Build images from the tested commit
+        run: make web-images web-preview-db-test
+      - name: Publish only to verified private packages and record registry digests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          export DOCKER_CONFIG="$RUNNER_TEMP/tarjama-docker"
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          mkdir -p image-lock
+          for package in tarjama-web tarjama-media; do
+            test "$(gh api "/users/mhjd/packages/container/$package" --jq '.visibility')" = private
+            reference="ghcr.io/mhjd/$package:$GITHUB_SHA"
+            docker tag "$package:review" "$reference"
+            docker push "$reference"
+            test "$(gh api "/users/mhjd/packages/container/$package" --jq '.visibility')" = private
+            docker image inspect "$reference" --format '{{json .RepoDigests}}' |
+              jq -er --arg prefix "ghcr.io/mhjd/$package@sha256:" '.[] | select(startswith($prefix))' > "image-lock/$package.txt"
+            test "$(wc -l < "image-lock/$package.txt")" -eq 1
+          done
+          printf '%s\n' "$GITHUB_SHA" > image-lock/commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: private-preview-image-digests
+          path: image-lock/
+          if-no-files-found: error
+          retention-days: 30

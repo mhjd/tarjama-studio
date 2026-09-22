@@ -44,3 +44,10 @@ Textes sauvegardés au blur uniquement lorsqu'ils ont changé. Navigation, valid
 Chaque média/segment/job/export appartient au propriétaire du projet. Les sessions ne prennent aucun ID utilisateur du navigateur. Les URL de vidéos sont normalisées vers des vidéos YouTube individuelles ; import de fichier disponible dès la création ou dans le même projet après échec d'un lien.
 
 Les modèles sont fixes : `whisper-large-v3` et `gemini-3.8-flash`. Clé partagée par défaut, personnelle facultative, aucune bascule silencieuse d'une clé personnelle invalide. Pas d'OpenRouter, crédits, prompts personnalisés, historique utilisateur ou sauvegarde manuelle.
+
+## Aperçu privé administré
+
+La recette du moteur générique `vps-preview` et ses prérequis sont décrits dans
+[docs/PREVIEW.md](docs/PREVIEW.md). Le modèle racine `deploy.preview.yml` conserve
+tous les services arrêtés ; aucune activation sans images privées, secrets,
+identité, réseau et sandbox qualifiés.

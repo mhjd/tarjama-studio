@@ -8,12 +8,39 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"time"
 )
 
 //go:embed migrations/*.sql
 var schema embed.FS
 
 type Store struct{ DB *pgxpool.Pool }
+
+// OpenWhenReady tolerates a new pod's database/network startup. The caller must
+// supply a deadline. Never return connection errors containing the secret DSN.
+func OpenWhenReady(ctx context.Context, dsn string) (*Store, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		return nil, errors.New("Délai de disponibilité DB obligatoire")
+	}
+	p, e := pgxpool.New(ctx, dsn)
+	if e != nil {
+		return nil, errors.New("Configuration DB invalide")
+	}
+	for {
+		probe, cancel := context.WithTimeout(ctx, 3*time.Second)
+		e = p.Ping(probe)
+		cancel()
+		if e == nil {
+			return &Store{p}, nil
+		}
+		select {
+		case <-ctx.Done():
+			p.Close()
+			return nil, fmt.Errorf("Base indisponible dans le délai prévu: %w", ctx.Err())
+		case <-time.After(time.Second):
+		}
+	}
+}
 
 func Open(ctx context.Context, dsn string) (*Store, error) {
 	p, e := pgxpool.New(ctx, dsn)

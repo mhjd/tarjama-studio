@@ -1,5 +1,9 @@
 # Exploitation préparée — ne pas activer pendant cette mission
 
+Pour la cible privée `atelier` via le moteur générique, suivre [PREVIEW.md](PREVIEW.md).
+Les commandes Compose ci-dessous restent une procédure distincte et ne doivent pas
+servir à contourner le courtier ou à configurer les services existants.
+
 ## Valeurs à fournir avant une instruction de déploiement
 
 - Domaine HTTPS et intégration au Caddy existant. L'API est prévue sur `127.0.0.1:18090`, port à revérifier avant activation.

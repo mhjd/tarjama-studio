@@ -58,3 +58,34 @@ Images locales préparées (non publiées) :
 - `tarjama-media:review` : `sha256:5d75def21dccf9e664cbf9a0efae33048348eaf0608cd6d200f3534ef7b675be`
 
 État d'exploitation en fin de mission : stacks de test arrêtées ; seuls les trois conteneurs PostgreSQL préexistants figurent dans `docker ps`. Environ **16 Gio libres** après les builds. Aucune stack Tarjama de développement, préproduction ou production active ; aucun changement de proxy/DNS/certificat/pare-feu/SSO/routage. Aucun push Git ni déploiement. Le commit final et son parent constituent la livraison locale sur `web-vps`.
+
+## Préparation du moteur générique vps-preview — 22 septembre 2026
+
+Recette et dossier administrateur : [PREVIEW.md](PREVIEW.md), modèle racine
+`deploy.preview.yml`. Les cinq services sont arrêtés par défaut. Trois jobs
+explicites : création du rôle DB, migration SQL, diagnostic média. Générateur des
+phases arrêté/DB seule/actif sans appel de déploiement, CI manuelle limitée aux
+packages GHCR privés déjà vérifiés. Aucune publication ni activation effectuée.
+
+La migration n'exige plus les secrets applicatifs : attente PostgreSQL bornée à
+90s, durée globale240s ; l'API/worker ne migrent pas automatiquement. Le worker
+n'exige plus le secret OIDC. Préflight Bubblewrap renforcé avec ffprobe/yt-dlp.
+
+Vérifications : 24 tests Go avec race detector, go vet, build frontend et 6 tests
+Playwright réussis ; backup/restore synthétique réussi ; 3 tests du rendu de recette
+réussis. Deux images reconstruites. Test DB isolé de l'image réelle réussi sous
+UID70, rootfs read-only et capabilities retirées : rôle non superuser, bootstrap
+répété, migration lancée avant disponibilité de la DB, schéma appliqué. Une
+configuration cliente PostgreSQL explicite corrige le chemin du socket initial
+vers `/tmp`. Fixtures et conteneurs temporaires supprimés après tests.
+
+Le diagnostic média sous Docker échoue encore sur la création des namespaces
+non privilégiés. Aucun profil Kubernetes n'a été qualifié. `validate` et `plan`
+refusent le modèle (« Montage non déclaré ou non autorisé ») : le catalogue est
+vide, les digests privés et les paramètres réels restent à fournir. Ni validation
+complète de la recette ni pull privé GHCR ni intégrations réelles annoncés.
+
+Blocages : images privées et accès de lecture administré ; secrets dédiés ; client
+OIDC et capacité réseau correspondante ; sortie WARP HTTP CONNECT ciblée ; sandbox
+qualifiée ; capacité physique et sauvegarde/restauration des PVC. L'emplacement
+`atelier` est resté à 0 replica, 0 ready, sans révision Tarjama activée.

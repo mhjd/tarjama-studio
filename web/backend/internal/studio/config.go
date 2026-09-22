@@ -25,7 +25,24 @@ func secret(name string) string {
 	}
 	return os.Getenv(name)
 }
+
+// Migrations need database access only, never application or provider secrets.
+func LoadDatabaseURL() (string, error) {
+	dsn := secret("DATABASE_URL")
+	if dsn == "" {
+		return "", errors.New("DATABASE_URL absent")
+	}
+	return dsn, nil
+}
 func LoadConfig() (Config, error) {
+	return loadConfig(true)
+}
+
+func LoadWorkerConfig() (Config, error) {
+	return loadConfig(false)
+}
+
+func loadConfig(identityRequired bool) (Config, error) {
 	c := Config{Mode: os.Getenv("APP_MODE"), Addr: os.Getenv("LISTEN_ADDR"), Origin: os.Getenv("PUBLIC_ORIGIN"), DB: secret("DATABASE_URL"), Storage: os.Getenv("STORAGE_DIR"), Frontend: os.Getenv("FRONTEND_DIR"), Issuer: os.Getenv("OIDC_ISSUER"), ClientID: os.Getenv("OIDC_CLIENT_ID"), ClientSecret: secret("OIDC_CLIENT_SECRET"), GroqKey: secret("GROQ_API_KEY"), GeminiKey: secret("GEMINI_API_KEY"), MediaURL: os.Getenv("MEDIA_URL"), MediaToken: secret("MEDIA_TOKEN")}
 	if c.Mode == "" {
 		c.Mode = "production"
@@ -50,13 +67,13 @@ func LoadConfig() (Config, error) {
 	if c.Mode != "development" && c.Mode != "test" && c.Mode != "production" {
 		return c, errors.New("APP_MODE invalide")
 	}
-	if c.Mode == "production" && (u.Scheme != "https" || c.Issuer == "" || c.ClientID == "" || c.ClientSecret == "") {
+	if c.Mode == "production" && (u.Scheme != "https" || (identityRequired && (c.Issuer == "" || c.ClientID == "" || c.ClientSecret == ""))) {
 		return c, errors.New("HTTPS et OIDC sont obligatoires en production")
 	}
 	if c.Mode != "production" && (u.Hostname() != "127.0.0.1" && u.Hostname() != "localhost") {
 		return c, errors.New("Le développement doit rester sur loopback")
 	}
-	if c.Mode == "production" {
+	if c.Mode == "production" && identityRequired {
 		issuer, e := url.Parse(c.Issuer)
 		if e != nil || issuer.Scheme != "https" || issuer.Host == "" || issuer.User != nil || issuer.RawQuery != "" || issuer.Fragment != "" {
 			return c, errors.New("OIDC_ISSUER HTTPS requis")

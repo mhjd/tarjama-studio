@@ -126,3 +126,28 @@ web-images:
 web-audit:
 	web/scripts/tools.sh go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 	web/scripts/tools.sh sh -c 'cd /work/web/frontend && npm audit --audit-level=high'
+
+# Generic VPS broker. Rendering/validation/planning do not activate any service.
+PREVIEW_INPUTS ?= web/deploy/preview/inputs.json
+PREVIEW_FILE ?= deploy.preview.yml
+PREVIEW_OUTPUT ?= web/deploy/preview/resolved.yml
+PREVIEW_PHASE ?= stopped
+.PHONY: web-preview-render web-preview-validate web-preview-plan web-preview-status web-preview-test
+web-preview-render:
+	python3 web/scripts/preview-render.py --inputs "$(PREVIEW_INPUTS)" --output "$(PREVIEW_OUTPUT)" --phase "$(PREVIEW_PHASE)"
+
+web-preview-validate:
+	vps-preview validate atelier --file "$(PREVIEW_FILE)"
+
+web-preview-plan:
+	vps-preview plan atelier --file "$(PREVIEW_FILE)"
+
+web-preview-status:
+	vps-preview status atelier
+
+web-preview-test:
+	python3 -B -m unittest discover -s web/scripts -p 'test_preview.py' -v
+
+.PHONY: web-preview-db-test
+web-preview-db-test:
+	web/scripts/preview-db-test.sh

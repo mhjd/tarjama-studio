@@ -410,6 +410,25 @@ func (m LocalMedia) Process(ctx context.Context, p MediaRequest, input, output s
 	ok = e == nil
 	return info, e
 }
+
+// Same mandatory preflight for service startup and the explicit preview job.
+// No test-mode bypass is accepted by this command.
+func CheckMediaSandbox(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	dir, e := os.MkdirTemp("", "sandbox-check-")
+	if e != nil {
+		return e
+	}
+	defer os.RemoveAll(dir)
+	for _, tool := range []struct{ program, flag string }{{"ffprobe", "-version"}, {"yt-dlp", "--version"}} {
+		if _, e = (LocalMedia{}).run(ctx, dir, tool.program, tool.flag); e != nil {
+			return errors.New("Sandbox média indisponible : vérifier user namespaces/AppArmor/seccomp et outils avant mise en service")
+		}
+	}
+	return nil
+}
+
 func RunMedia(ctx context.Context) error {
 	token := secret("MEDIA_TOKEN")
 	if len(token) < 32 {
@@ -418,14 +437,8 @@ func RunMedia(ctx context.Context) error {
 	mode := os.Getenv("APP_MODE")
 	local := LocalMedia{Test: mode == "test", ConsumeInput: true, Proxy: os.Getenv("DOWNLOAD_PROXY")}
 	if !local.Test {
-		dir, e := os.MkdirTemp("", "sandbox-check-")
-		if e != nil {
+		if e := CheckMediaSandbox(ctx); e != nil {
 			return e
-		}
-		_, e = local.run(ctx, dir, "true")
-		os.RemoveAll(dir)
-		if e != nil {
-			return errors.New("Sandbox média indisponible : vérifier user namespaces/AppArmor/seccomp avant mise en service")
 		}
 	}
 	addr := os.Getenv("LISTEN_ADDR")

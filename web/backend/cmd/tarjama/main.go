@@ -42,7 +42,30 @@ func run() error {
 	if command == "egress" {
 		return studio.RunEgress(ctx)
 	}
-	c, e := studio.LoadConfig()
+	if command == "sandbox-check" {
+		return studio.CheckMediaSandbox(ctx)
+	}
+	if command == "migrate" {
+		dsn, e := studio.LoadDatabaseURL()
+		if e != nil {
+			return e
+		}
+		migration, cancel := context.WithTimeout(ctx, 240*time.Second)
+		defer cancel()
+		startup, ready := context.WithTimeout(migration, 90*time.Second)
+		s, e := studio.OpenWhenReady(startup, dsn)
+		ready()
+		if e != nil {
+			return e
+		}
+		defer s.DB.Close()
+		return s.Migrate(migration)
+	}
+	loadConfig := studio.LoadConfig
+	if command == "worker" {
+		loadConfig = studio.LoadWorkerConfig
+	}
+	c, e := loadConfig()
 	if e != nil {
 		return e
 	}
@@ -52,8 +75,6 @@ func run() error {
 	}
 	defer s.DB.Close()
 	switch command {
-	case "migrate":
-		return s.Migrate(ctx)
 	case "worker":
 		return studio.RunWorker(ctx, s, c)
 	case "import":

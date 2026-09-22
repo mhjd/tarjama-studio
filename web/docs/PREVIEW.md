@@ -5,43 +5,63 @@ Cible : `atelier`, `https://atelier.preview.runagen.com`, moteur générique
 publication d'image ou changement d'infrastructure effectué pendant cette préparation.
 La validation du moteur sur une application synthétique ne qualifie pas Tarjama.
 
-## Recette et images
+## Recette et images locales — mode retenu
 
-`deploy.preview.yml` est un **modèle non activable en l'état** : tous les services
-sont `enabled: false`, les références non disponibles sont `REQUIRED_*`.
-`web/scripts/preview-render.py` intègre le script SQL public et les seuls paramètres
-publics fournis dans `web/deploy/preview/inputs.json` (voir l'exemple adjacent).
-Il refuse des champs supplémentaires, les tags à la place de digests et
-l'écrasement d'une recette existante. Aucun générateur ne lance le courtier.
+Le workflow GHCR a été archivé hors de `.github/workflows` dans
+`web/deploy/preview/web-preview-images.yml.disabled`. Il ne reçoit plus de push ni
+de demande manuelle sur `web-vps`. Le seul run précédent est terminé : tests
+réussis, contrôle de visibilité GHCR bloqué après une image scratch vide ; aucune
+image applicative publiée. Les scripts GHCR historiques restent inactifs.
 
-Images prévues : `ghcr.io/mhjd/tarjama-web@sha256:…` (API, worker, egress, migration)
-et `ghcr.io/mhjd/tarjama-media@sha256:…` (média, diagnostic). Dockerfile existant,
-cibles `api` et `media`, architecture Linux amd64 ; aucune clé embarquée.
-Les ID d'images locales ne sont pas des digests de manifeste GHCR.
-Le digest PostgreSQL du modèle provient de l'image 17 Alpine réellement présente
-localement, architecture amd64 et UID/GID `70:70` vérifiés lors du test isolé.
+Construire localement, puis importer sans déploiement :
 
-Le workflow manuel `.github/workflows/web-preview-images.yml` est limité à
-`mhjd/tarjama-studio`, branche `web-vps`. Il teste avant publication, refuse les
-packages absents ou non privés, vérifie à nouveau leur visibilité avant/après push,
-et produit un artefact contenant les deux références par digest et le commit.
-Il ne déploie rien et n'a pas été exécuté sur GitHub.
+```sh
+make web-images
+make web-preview-import
+make web-preview-validate
+make web-preview-plan
+make web-preview-status
+```
 
-À préparer par l'administrateur : deux packages **privés**, `tarjama-web` et
-`tarjama-media`, initialisés si nécessaire avec une image inoffensive, reliés au
-dépôt et autorisant son workflow Actions à écrire/lire les métadonnées via
-`GITHUB_TOKEN`. Ne pas y publier le code avant vérification de la visibilité.
-Enregistrer séparément un accès de lecture GHCR pour le VPS ; tester un pull privé
-réel par le mécanisme administré. Un login Docker local ne configure pas le courtier.
-Le précontrôle CI échoue si la lecture des métadonnées n'est pas autorisée ; il
-ne considère jamais un refus d'accès comme un package neuf à publier.
+`web-images` construit les cibles `api` et `media` de `web/deploy/Dockerfile` pour
+Linux amd64, avec les tags `tarjama-web:review` et `tarjama-media:review` et le label
+de révision Git. `.dockerignore` limite le contexte aux sources backend/frontend
+et aux Dockerfiles, en excluant dépendances locales, secrets, .env, clés, archives,
+données et espaces de travail. Ne pas réutiliser un ancien tag après modification
+des sources : reconstruire, puis importer de nouveau.
 
-Référence : [documentation officielle GHCR](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+`web-preview-import` appelle séquentiellement `vps-preview image-import atelier`
+pour les noms `web` et `media`. Reporter **exactement** les champs `image` retournés
+dans `deploy.preview.yml` et les paramètres de rendu :
+`preview.local/atelier/web@sha256:…` et `preview.local/atelier/media@sha256:…`.
+Ces digests de manifeste ne sont pas les Docker image IDs. Le catalogue local
+non secret `/etc/vps-preview/local-images.json` permet de vérifier leur enregistrement.
+L'import ne démarre ni service ni migration. Le moteur impose
+`imagePullPolicy: Never` ; après perte du cache ou changement de nœud, réimporter.
+
+L'import requiert une image/archive de moins de4Gi et une marge disque d'au moins4Gi
+plus l'espace de travail. Ne pas nettoyer globalement Docker ni supprimer les
+images de retour arrière. Le build lui-même n'est pas borné par l'importeur.
+PostgreSQL reste l'image externe 17 Alpine épinglée à son digest vérifié ; seules
+les deux images applicatives nécessitent cet import local.
+
+`deploy.preview.yml` reste une **recette non activable en l'état** : tous les
+services sont `enabled: false` et les paramètres non disponibles restent
+`REQUIRED_*`. `web/scripts/preview-render.py` intègre le script SQL public et les
+seuls paramètres publics fournis dans `web/deploy/preview/inputs.json` (voir
+l'exemple adjacent). Il accepte les références locales de cet emplacement,
+refuse les tags, champs supplémentaires et écrasements de fichiers existants,
+et remplace également les anciens digests déjà épinglés. Aucun rendu n'active rien.
+
+L'accès GHCR en lecture reste enregistré par l'administrateur, mais n'intervient
+plus dans cette procédure. Aucun jeton de publication ni quota GitHub Actions requis.
 
 ## Secrets à enregistrer dans le catalogue `atelier`
 
-Noms proposés par la recette, **aucun n'est actuellement enregistré**. Ils ne sont
-pas des preuves de capacités disponibles. Les fichiers sont lus avec `*_FILE` ;
+Catalogue relu le 22 septembre : DB administrateur/applicative, chiffrement,
+Gemini, Groq et token média sont enregistrés avec les clés attendues.
+**`tarjama-oidc` reste absent.** Les valeurs et API fournisseurs n'ont pas été
+consultées ni validées. Les fichiers sont lus avec `*_FILE` ;
 les valeurs sont fournies uniquement par l'administrateur, jamais en YAML/Git/chat.
 
 | Référence catalogue | Clés/fichiers et format | Destinataires |
@@ -142,8 +162,9 @@ procédure administrée d'export/restauration de ces PVC reste à établir.
 
 ## Procédure préparée — à exécuter seulement après levée des prérequis
 
-1. Publier les images privées testées, obtenir les digests réels, qualifier leur
-   lecture par le VPS, enregistrer secrets/OIDC/WARP/profil et valider le stockage.
+1. Construire/importer localement les images testées, reporter les références
+   exactes retournées, enregistrer OIDC/WARP/profil et valider fournisseurs,
+   stockage et sauvegardes. Les secrets internes et fournisseurs sont déjà enregistrés.
 2. Renseigner uniquement les paramètres publics dans `inputs.json`, puis :
 
    ```sh
@@ -183,9 +204,10 @@ Conserver les recettes résolues approuvées et le verrou de digests dans le dé
 
 ## Vérifications de cette préparation
 
-- `validate` et `plan` exécutés sur le modèle : tous deux refusent « Montage non
-  déclaré ou non autorisé ». Le catalogue est vide ; les images/paramètres restent
-  également à résoudre. Cela n'est **pas** une validation réussie du schéma final.
+- Lors de la préparation initiale, `validate` et `plan` refusaient le modèle
+  (« Montage non déclaré ou non autorisé »). Le catalogue était alors vide.
+  Les secrets internes/Gemini/Groq sont maintenant enregistrés ; OIDC reste absent.
+  La recette finale exige encore les paramètres OIDC, WARP et sandbox qualifiés.
 - `make web-preview-test` : garde contre activation implicite, placeholders,
   valeurs secrètes supplémentaires et écrasement d'une recette revue.
 - `make web-preview-db-test` : DB éphémère UID70, racine read-only, capacités
@@ -197,5 +219,6 @@ Conserver les recettes résolues approuvées et le verrou de digests dans le dé
   retirées et no-new-privileges : échec confirmé de création des namespaces
   non privilégiés (« No permissions to create new namespace »). Aucun profil
   Kubernetes qualifié et aucune protection assouplie.
-- Images construites localement ; aucune publication GHCR ni CI distante lancée.
+- Workflow GitHub Actions archivé et inactif sur `web-vps` ; voir les imports
+  locaux et l’état actualisé dans [STATUS.md](STATUS.md).
 - `atelier` reste arrêté ; aucune révision Tarjama déployée.

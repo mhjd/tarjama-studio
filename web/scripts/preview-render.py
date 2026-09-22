@@ -14,9 +14,9 @@ FIELDS = {"API_IMAGE", "MEDIA_IMAGE", "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_EGR
 def render(values, phase="stopped"):
     if set(values) != FIELDS or any(not isinstance(v, str) or not v or "REQUIRED_" in v for v in values.values()):
         raise ValueError("Provide exactly the public fields in inputs.example.json, without placeholders or secret values")
-    for field, package in [("API_IMAGE", "tarjama-web"), ("MEDIA_IMAGE", "tarjama-media")]:
-        if not re.fullmatch(r"ghcr\.io/mhjd/" + package + r"@sha256:[a-f0-9]{64}", values[field]):
-            raise ValueError(f"{field}: full private GHCR registry digest required (not a local image ID)")
+    for field, component in [("API_IMAGE", "web"), ("MEDIA_IMAGE", "media")]:
+        if not re.fullmatch(r"preview\.local/atelier/" + component + r"@sha256:[a-f0-9]{64}", values[field]):
+            raise ValueError(f"{field}: exact registered local manifest reference required (not a local image ID)")
     issuer = urlsplit(values["OIDC_ISSUER"])
     if issuer.scheme != "https" or not issuer.hostname or issuer.username or issuer.password or issuer.query or issuer.fragment:
         raise ValueError("OIDC_ISSUER must be the real HTTPS discovery issuer")
@@ -32,6 +32,11 @@ def render(values, phase="stopped"):
     if not port.isdigit() or not 1 <= int(port) <= 65535:
         raise ValueError("WARP_HTTP_PROXY: administrator-provided IPv4:port required")
     text = (ROOT / "deploy.preview.yml").read_text()
+    # The reviewed recipe may already pin a previous local build. A new render
+    # must use the supplied digests, never silently keep that previous build.
+    for field, component in [("API_IMAGE", "web"), ("MEDIA_IMAGE", "media")]:
+        text = re.sub(r'(?m)^(\s+image: )"?preview\.local/atelier/' + component + r'@sha256:[a-f0-9]{64}"?$',
+                      lambda match: match[1] + "REQUIRED_" + field, text)
     replacements = dict(values)
     replacements["BOOTSTRAP_SCRIPT"] = (ROOT / "web/deploy/preview/bootstrap-db.sh").read_text()
     text = re.sub(r"\bREQUIRED_([A-Z_]+)\b", lambda m: json.dumps(replacements[m[1]], ensure_ascii=False), text)

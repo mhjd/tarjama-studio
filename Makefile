@@ -120,8 +120,8 @@ web-gc:
 
 .PHONY: web-images web-audit
 web-images:
-	docker build -f web/deploy/Dockerfile --target api -t tarjama-web:review web
-	docker build -f web/deploy/Dockerfile --target media -t tarjama-media:review web
+	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target api -t tarjama-web:review web
+	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target media -t tarjama-media:review web
 
 web-audit:
 	web/scripts/tools.sh go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
@@ -155,3 +155,9 @@ web-preview-db-test:
 .PHONY: web-ghcr-test
 web-ghcr-test:
 	python3 -B -m unittest discover -s web/scripts -p 'test_ghcr.py' -v
+
+# Imports register node-local images only; they do not start services or jobs.
+.PHONY: web-preview-import
+web-preview-import:
+	vps-preview image-import atelier --name web --image tarjama-web:review
+	vps-preview image-import atelier --name media --image tarjama-media:review

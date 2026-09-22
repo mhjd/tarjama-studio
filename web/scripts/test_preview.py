@@ -13,8 +13,8 @@ spec.loader.exec_module(preview)
 class PreviewSafetyTests(unittest.TestCase):
     def inputs(self):
         # Syntax fixtures only; these digests never reach the broker/registry.
-        return dict(API_IMAGE='ghcr.io/mhjd/tarjama-web@sha256:' + 'a' * 64,
-                    MEDIA_IMAGE='ghcr.io/mhjd/tarjama-media@sha256:' + 'b' * 64,
+        return dict(API_IMAGE='preview.local/atelier/web@sha256:' + 'a' * 64,
+                    MEDIA_IMAGE='preview.local/atelier/media@sha256:' + 'b' * 64,
                     OIDC_ISSUER='https://identity.example.test', OIDC_CLIENT_ID='tarjama-test',
                     OIDC_EGRESS='oidc-test', WARP_HTTP_PROXY='192.0.2.10:3128',
                     WARP_EGRESS='warp-test', MEDIA_SECURITY='runtime-default')
@@ -28,7 +28,7 @@ class PreviewSafetyTests(unittest.TestCase):
 
     def test_rejects_unresolved_images_or_extra_secret_values(self):
         for field, value in [('API_IMAGE', 'tarjama-web:review'), ('MEDIA_IMAGE', 'REQUIRED_IMAGE'),
-                             ('WARP_EGRESS', 'public-web'), ('OIDC_CLIENT_ID', 'client\nsecret: value')]:
+                             ('API_IMAGE', 'preview.local/another-slot/web@sha256:' + 'a' * 64), ('WARP_EGRESS', 'public-web'), ('OIDC_CLIENT_ID', 'client\nsecret: value')]:
             inputs = self.inputs()
             inputs[field] = value
             with self.subTest(field=field), self.assertRaises(ValueError):
@@ -49,6 +49,21 @@ class PreviewSafetyTests(unittest.TestCase):
                     preview.main()
             self.assertEqual(caught.exception.code, 1)
             self.assertEqual(output.read_text(), 'previous reviewed recipe')
+
+    def test_render_updates_already_pinned_images(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'web/deploy/preview').mkdir(parents=True)
+            (root / 'web/deploy/preview/bootstrap-db.sh').write_text('# synthetic bootstrap\n')
+            (root / 'deploy.preview.yml').write_text(
+                'services:\n  web:\n    enabled: false\n    image: preview.local/atelier/web@sha256:' + 'c' * 64 +
+                '\n  media:\n    enabled: false\n    image: "preview.local/atelier/media@sha256:' + 'd' * 64 + '"\n')
+            with patch.object(preview, 'ROOT', root):
+                result = preview.render(self.inputs())
+            self.assertIn(self.inputs()['API_IMAGE'], result)
+            self.assertIn(self.inputs()['MEDIA_IMAGE'], result)
+            self.assertNotIn('c' * 64, result)
+            self.assertNotIn('d' * 64, result)
 
 
 if __name__ == '__main__':

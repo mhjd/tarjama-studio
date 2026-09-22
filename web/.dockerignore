@@ -1,3 +1,12 @@
+# Only application source and Docker recipes belong to the build context.
+**
+!backend/
+!backend/**
+!frontend/
+!frontend/**
+!deploy/
+!deploy/Dockerfile
+!deploy/Dockerfile.tools
 .cache
 .runtime
 frontend/node_modules
@@ -7,3 +16,18 @@ frontend/playwright-report
 **/.env
 **/.env.*
 **/secrets
+
+**/node_modules
+**/.git
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.zip
+**/*.tar
+**/*.tar.gz
+**/*.tgz
+**/data
+**/storage
+**/workspaces
+**/snapshots

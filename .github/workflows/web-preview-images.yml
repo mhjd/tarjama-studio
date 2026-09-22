@@ -1,6 +1,12 @@
 name: Prepare private web preview images
 on:
   workflow_dispatch:
+  push:
+    branches: [web-vps]
+    paths:
+      - .github/workflows/web-preview-images.yml
+      - web/scripts/ghcr-private.py
+      - web/deploy/preview/publish-request.txt
 permissions:
   contents: read
 concurrency:
@@ -16,7 +22,7 @@ jobs:
         with:
           lfs: false
           persist-credentials: false
-      - run: make web-tools web-deps web-test web-preview-test
+      - run: make web-tools web-deps web-test web-preview-test web-ghcr-test
   images:
     needs: checks
     runs-on: ubuntu-24.04
@@ -29,17 +35,16 @@ jobs:
         with:
           lfs: false
           persist-credentials: false
-      # Fail closed: the administrator must seed two PRIVATE packages and grant
-      # this repository Actions access before the first application publication.
-      - name: Check private package visibility before building or publishing
+      - name: Authenticate with the job-scoped GITHUB_TOKEN
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          for package in tarjama-web tarjama-media; do
-            visibility=$(gh api "/users/mhjd/packages/container/$package" --jq '.visibility')
-            test "$visibility" = private || { echo "Package must already be private: $package"; exit 1; }
-          done
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Bootstrap empty packages if needed and require private visibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 web/scripts/ghcr-private.py --bootstrap
       - name: Build images from the tested commit
         run: make web-images web-preview-db-test
       - name: Publish only to verified private packages and record registry digests
@@ -47,24 +52,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          export DOCKER_CONFIG="$RUNNER_TEMP/tarjama-docker"
-          trap 'rm -rf "$DOCKER_CONFIG"' EXIT
-          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           mkdir -p image-lock
           for package in tarjama-web tarjama-media; do
-            test "$(gh api "/users/mhjd/packages/container/$package" --jq '.visibility')" = private
+            python3 web/scripts/ghcr-private.py
             reference="ghcr.io/mhjd/$package:$GITHUB_SHA"
             docker tag "$package:review" "$reference"
             docker push "$reference"
-            test "$(gh api "/users/mhjd/packages/container/$package" --jq '.visibility')" = private
+            python3 web/scripts/ghcr-private.py
             docker image inspect "$reference" --format '{{json .RepoDigests}}' |
               jq -er --arg prefix "ghcr.io/mhjd/$package@sha256:" '.[] | select(startswith($prefix))' > "image-lock/$package.txt"
             test "$(wc -l < "image-lock/$package.txt")" -eq 1
           done
           printf '%s\n' "$GITHUB_SHA" > image-lock/commit.txt
+          cat image-lock/tarjama-web.txt image-lock/tarjama-media.txt
       - uses: actions/upload-artifact@v4
         with:
           name: private-preview-image-digests
           path: image-lock/
           if-no-files-found: error
           retention-days: 30
+      - name: Remove registry credentials
+        if: always()
+        run: docker logout ghcr.io

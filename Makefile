@@ -151,3 +151,7 @@ web-preview-test:
 .PHONY: web-preview-db-test
 web-preview-db-test:
 	web/scripts/preview-db-test.sh
+
+.PHONY: web-ghcr-test
+web-ghcr-test:
+	python3 -B -m unittest discover -s web/scripts -p 'test_ghcr.py' -v

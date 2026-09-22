@@ -2,7 +2,8 @@
 
 Cible : `atelier`, `https://atelier.preview.runagen.com`, moteur générique
 `vps-preview` 6.5.0. Branche `web-vps`. Aucun déploiement, job de courtier,
-publication d'image ou changement d'infrastructure effectué pendant cette préparation.
+publication d'image sur un registre ni reconfiguration des services existants.
+Les deux images applicatives ont été importées dans le cache local du nœud, sans activation.
 La validation du moteur sur une application synthétique ne qualifie pas Tarjama.
 
 ## Recette et images locales — mode retenu
@@ -55,6 +56,29 @@ et remplace également les anciens digests déjà épinglés. Aucun rendu n'acti
 
 L'accès GHCR en lecture reste enregistré par l'administrateur, mais n'intervient
 plus dans cette procédure. Aucun jeton de publication ni quota GitHub Actions requis.
+
+## Résultat des imports locaux
+
+Images construites depuis `e6a0cf34cb39a37386d910a90967b20c936fb92f`, puis importées
+le 22 septembre 2026. Références exactes, Docker IDs et dates consignés dans
+[`images.lock.json`](../deploy/preview/images.lock.json), concordance vérifiée
+avec les labels de révision et `/etc/vps-preview/local-images.json`.
+
+- Web : `preview.local/atelier/web@sha256:966a2e244b183332f68e5e99caf062907f7628ef2004daacbe0695ffec9b8c9b`.
+- Média : `preview.local/atelier/media@sha256:fc54ba926b58aa256800c484a4cc74508e1afa70289f994fa723cfa6e7b11f2f`.
+
+Les services et jobs de `deploy.preview.yml` utilisent ces références. Les cinq
+services restent `enabled: false`. Aucun job ni déploiement de courtier exécuté.
+`validate` et `plan` ont été relancés : tous deux refusent **« Capacité réseau non
+enregistrée »**, en présence des capacités OIDC/WARP encore non renseignées.
+La recette n'est donc pas validée intégralement ; aucun faux endpoint ou profil
+n'a été ajouté pour faire passer ce contrôle. OIDC, WARP, sandbox, API fournisseurs
+et stockage/sauvegardes restent à qualifier. Le statut reste0 replica/0 ready.
+
+Le build Linux amd64 et les imports ont réussi. Les quatre tests de rendu passent,
+ainsi que le test DB isolé avec l'image web reconstruite (initialisation restreinte,
+bootstrap répété, migration attendue). Cela ne constitue pas un essai utilisateur
+sur la cible ni une qualification de la sandbox média.
 
 ## Secrets à enregistrer dans le catalogue `atelier`
 

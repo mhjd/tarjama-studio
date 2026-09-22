@@ -1,0 +1,18 @@
+{
+  "source_commit": "e6a0cf34cb39a37386d910a90967b20c936fb92f",
+  "platform": "linux/amd64",
+  "images": {
+    "web": {
+      "image": "preview.local/atelier/web@sha256:966a2e244b183332f68e5e99caf062907f7628ef2004daacbe0695ffec9b8c9b",
+      "docker_id": "sha256:6602a204ce7f045a5be7d672b143a611b6db5c2251a3f92af623cf4c29bef937",
+      "imported_at": "2026-09-22T10:04:59.766702+00:00",
+      "platform": "linux/amd64"
+    },
+    "media": {
+      "image": "preview.local/atelier/media@sha256:fc54ba926b58aa256800c484a4cc74508e1afa70289f994fa723cfa6e7b11f2f",
+      "docker_id": "sha256:6fbe59e36ee0da7c2093697039dd2763b1bada0c5d4678801c64182bfbb498b3",
+      "imported_at": "2026-09-22T10:05:42.829312+00:00",
+      "platform": "linux/amd64"
+    }
+  }
+}

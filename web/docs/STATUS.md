@@ -89,3 +89,24 @@ Blocages : images privées et accès de lecture administré ; secrets dédiés ;
 OIDC et capacité réseau correspondante ; sortie WARP HTTP CONNECT ciblée ; sandbox
 qualifiée ; capacité physique et sauvegarde/restauration des PVC. L'emplacement
 `atelier` est resté à 0 replica, 0 ready, sans révision Tarjama activée.
+
+## Images locales importées — 22 septembre 2026
+
+Le propriétaire a abandonné GitHub Actions. Le workflow de publication a été
+archivé hors du répertoire actif et sa désactivation poussée sur `web-vps`
+(`e08bba3`). Vérification GitHub : un seul run, déjà terminé en échec de contrôle
+de visibilité ; aucun run actif à annuler. Aucun nouveau workflow déclenché.
+
+Images reconstruites localement pour Linux amd64 depuis `e6a0cf3` avec contexte
+restreint, puis importées par `vps-preview image-import` sous les noms `web` et
+`media`. Les deux appels ont réussi, sans démarrage, avec politique Never.
+Les références exactes sont épinglées dans `deploy.preview.yml` ; preuve de
+correspondance commit/image/catalogue dans `web/deploy/preview/images.lock.json`.
+Le générateur accepte les images locales et remplace les anciennes références.
+Quatre tests de rendu et le test DB isolé sur la nouvelle image ont réussi.
+
+`validate` et `plan` relancés sur la recette mise à jour : refus « Capacité réseau
+non enregistrée ». Les prérequis OIDC/WARP/sandbox ne sont pas inventés pour
+contourner ce refus. Le catalogue confirme les secrets internes, Gemini et Groq,
+mais ne valide pas les API fournisseurs. Stockage et sauvegardes restent à qualifier.
+`atelier` reste arrêté, cinq services désactivés dans la recette, aucun job lancé.

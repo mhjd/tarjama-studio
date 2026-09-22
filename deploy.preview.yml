@@ -4,7 +4,7 @@ version: 1
 services:
   web:
     enabled: false
-    image: REQUIRED_API_IMAGE
+    image: preview.local/atelier/web@sha256:966a2e244b183332f68e5e99caf062907f7628ef2004daacbe0695ffec9b8c9b
     args: [api]
     uid: 10001
     gid: 10001
@@ -32,7 +32,7 @@ services:
     health: {path: /readyz}
   worker:
     enabled: false
-    image: REQUIRED_API_IMAGE
+    image: preview.local/atelier/web@sha256:966a2e244b183332f68e5e99caf062907f7628ef2004daacbe0695ffec9b8c9b
     args: [worker]
     uid: 10001
     gid: 10001
@@ -60,7 +60,7 @@ services:
     tmp: 64Mi
   media:
     enabled: false
-    image: REQUIRED_MEDIA_IMAGE
+    image: preview.local/atelier/media@sha256:fc54ba926b58aa256800c484a4cc74508e1afa70289f994fa723cfa6e7b11f2f
     args: [media]
     uid: 10002
     gid: 10002
@@ -78,7 +78,7 @@ services:
     tmp: 2560Mi
   egress:
     enabled: false
-    image: REQUIRED_API_IMAGE
+    image: preview.local/atelier/web@sha256:966a2e244b183332f68e5e99caf062907f7628ef2004daacbe0695ffec9b8c9b
     args: [egress]
     uid: 10003
     gid: 10003
@@ -129,7 +129,7 @@ jobs:
     resources: {cpu: 100m, memory: 128Mi}
     timeout: 240
   migrate:
-    image: REQUIRED_API_IMAGE
+    image: preview.local/atelier/web@sha256:966a2e244b183332f68e5e99caf062907f7628ef2004daacbe0695ffec9b8c9b
     uid: 10001
     gid: 10001
     args: [migrate]
@@ -140,7 +140,7 @@ jobs:
     resources: {cpu: 250m, memory: 256Mi}
     timeout: 300
   sandbox-check:
-    image: REQUIRED_MEDIA_IMAGE
+    image: preview.local/atelier/media@sha256:fc54ba926b58aa256800c484a4cc74508e1afa70289f994fa723cfa6e7b11f2f
     uid: 10002
     gid: 10002
     args: [sandbox-check]

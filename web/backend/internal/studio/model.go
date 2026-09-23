@@ -49,6 +49,7 @@ type Job struct {
 	Lease         string  `json:"-"`
 	Progress      int     `json:"progress"`
 	Attempts      int     `json:"-"`
+	MediaAttempt  int     `json:"-"`
 	Message       string  `json:"message"`
 	NextAttempt   string  `json:"next_attempt_at"`
 }

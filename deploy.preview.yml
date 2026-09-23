@@ -43,8 +43,10 @@ services:
       ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
       GEMINI_API_KEY_FILE: /run/gemini/api_key
       GROQ_API_KEY_FILE: /run/groq/api_key
-      MEDIA_TOKEN_FILE: /run/media/token
-      MEDIA_URL: http://pv-media:8091
+      MEDIA_ENGINE: isolated-jobs
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
       STORAGE_DIR: /storage
       GOMAXPROCS: '1'
     secrets:
@@ -52,30 +54,12 @@ services:
       - {name: tarjama-encryption, path: /run/encryption}
       - {name: tarjama-gemini, path: /run/gemini}
       - {name: tarjama-groq, path: /run/groq}
-      - {name: tarjama-media, path: /run/media}
+      - {name: isolated-jobs, path: /run/isolated-jobs}
     volumes: [{name: library, path: /storage}]
-    connect: [db, media]
-    egress: [public-web]
+    connect: [db]
+    egress: [public-web, isolated-jobs]
     resources: {cpu: 750m, memory: 768Mi}
     tmp: 64Mi
-  media:
-    enabled: false
-    image: preview.local/atelier/media@sha256:fc54ba926b58aa256800c484a4cc74508e1afa70289f994fa723cfa6e7b11f2f
-    args: [media]
-    uid: 10002
-    gid: 10002
-    port: 8091
-    env:
-      APP_MODE: production
-      LISTEN_ADDR: 0.0.0.0:8091
-      MEDIA_TOKEN_FILE: /run/media/token
-      DOWNLOAD_PROXY: http://pv-egress:8092
-      GOMAXPROCS: '2'
-    secrets: [{name: tarjama-media, path: /run/media}]
-    connect: [egress]
-    security: REQUIRED_MEDIA_SECURITY
-    resources: {cpu: 2000m, memory: 3072Mi}
-    tmp: 2560Mi
   egress:
     enabled: false
     image: preview.local/atelier/web@sha256:966a2e244b183332f68e5e99caf062907f7628ef2004daacbe0695ffec9b8c9b
@@ -139,15 +123,6 @@ jobs:
     connect: [db]
     resources: {cpu: 250m, memory: 256Mi}
     timeout: 300
-  sandbox-check:
-    image: preview.local/atelier/media@sha256:fc54ba926b58aa256800c484a4cc74508e1afa70289f994fa723cfa6e7b11f2f
-    uid: 10002
-    gid: 10002
-    args: [sandbox-check]
-    security: REQUIRED_MEDIA_SECURITY
-    resources: {cpu: 2000m, memory: 3072Mi}
-    tmp: 2560Mi
-    timeout: 60
 volumes:
   library: {size: 14Gi}
   database: {size: 2Gi}

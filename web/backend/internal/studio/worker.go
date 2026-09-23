@@ -107,13 +107,46 @@ func MergeASR(chunks []ASRChunk, duration int64) ([]Segment, error) {
 	return out, ValidateSegments(out)
 }
 func RunWorker(ctx context.Context, s *Store, c Config) error {
-	if c.MediaURL == "" || c.MediaToken == "" {
-		return errors.New("MEDIA_URL et MEDIA_TOKEN requis")
-	}
 	if e := os.MkdirAll(c.Storage, 0700); e != nil {
 		return e
 	}
-	w := &Worker{Store: s, Config: c, Providers: NewProviders(), Media: &RemoteMedia{URL: c.MediaURL, Token: c.MediaToken, Client: &http.Client{Timeout: 4 * time.Hour}}}
+	var media Media
+	var isolated *IsolatedMedia
+	switch c.MediaEngine {
+	case "isolated-jobs":
+		client, e := NewIsolatedClient(c.JobsURL, c.JobsToken, c.JobsCA)
+		if e != nil {
+			return e
+		}
+		isolated = &IsolatedMedia{Store: s, Client: client, Storage: c.Storage, Unit: -1}
+		media = isolated
+	case "", "bubblewrap":
+		if c.MediaURL == "" || c.MediaToken == "" {
+			return errors.New("MEDIA_URL et MEDIA_TOKEN requis")
+		}
+		media = &RemoteMedia{URL: c.MediaURL, Token: c.MediaToken, Client: &http.Client{Timeout: 4 * time.Hour}}
+	default:
+		return errors.New("Moteur média inconnu")
+	}
+	w := &Worker{Store: s, Config: c, Providers: NewProviders(), Media: media}
+	if isolated != nil {
+		cleanupCtx, stop := context.WithCancel(ctx)
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for cleanupCtx.Err() == nil {
+				bounded, cancel := context.WithTimeout(cleanupCtx, 15*time.Second)
+				_ = isolated.Reconcile(bounded)
+				cancel()
+				select {
+				case <-cleanupCtx.Done():
+					return
+				case <-time.After(5 * time.Second):
+				}
+			}
+		}()
+		defer func() { stop(); <-done }()
+	}
 	for ctx.Err() == nil {
 		worked, e := w.Once(ctx)
 		if e != nil && !errors.Is(e, pgx.ErrNoRows) {
@@ -127,6 +160,12 @@ func RunWorker(ctx context.Context, s *Store, c Config) error {
 		}
 	}
 	return nil
+}
+func (w *Worker) media(j Job, unit int) Media {
+	if m, ok := w.Media.(interface{ ForJob(Job, int) Media }); ok {
+		return m.ForJob(j, unit)
+	}
+	return w.Media
 }
 func (w *Worker) Once(ctx context.Context) (bool, error) {
 	j, e := w.Store.Claim(ctx)
@@ -207,7 +246,7 @@ func (w *Worker) process(ctx context.Context, j Job) error {
 		if j.Kind == "prepare" {
 			input = storagePath(w.Config.Storage, j.Input.Media)
 		}
-		info, e := w.Media.Process(ctx, MediaRequest{Operation: j.Kind, URL: j.Input.URL}, input, output)
+		info, e := w.media(j, -1).Process(ctx, MediaRequest{Operation: j.Kind, URL: j.Input.URL}, input, output)
 		if e != nil {
 			return e
 		}
@@ -241,12 +280,17 @@ func (w *Worker) process(ctx context.Context, j Job) error {
 		}
 		temp := storagePath(w.Config.Storage, id())
 		defer os.Remove(temp)
-		_, e = w.Media.Process(ctx, MediaRequest{Operation: "export", Track: parts[1], Quality: parts[2], Segments: j.Input.Segments}, storagePath(w.Config.Storage, j.Input.Media), temp)
+		_, e = w.media(j, -1).Process(ctx, MediaRequest{Operation: "export", Track: parts[1], Quality: parts[2], Segments: j.Input.Segments}, storagePath(w.Config.Storage, j.Input.Media), temp)
 		if e != nil {
 			return e
 		}
 		// The job ID owns this immutable export; lease validation and rename share the project transaction.
-		return w.Store.Finish(ctx, j, func(p *Project) error { return os.Rename(temp, storagePath(w.Config.Storage, j.ID+".mp4")) }, "")
+		return w.Store.Finish(ctx, j, func(p *Project) error {
+			if e := os.Rename(temp, storagePath(w.Config.Storage, j.ID+".mp4")); e != nil {
+				return e
+			}
+			return syncDirectory(w.Config.Storage)
+		}, "")
 	}
 }
 func (w *Worker) transcribe(ctx context.Context, j Job) error {
@@ -284,7 +328,7 @@ func (w *Worker) transcribe(ctx context.Context, j Job) error {
 	}
 	temp := storagePath(w.Config.Storage, id())
 	defer os.Remove(temp)
-	info, e := w.Media.Process(ctx, MediaRequest{Operation: "audio", Start: start, Duration: math.Min(600, duration-start)}, storagePath(w.Config.Storage, j.Input.Media), temp)
+	info, e := w.media(j, len(chunks)).Process(ctx, MediaRequest{Operation: "audio", Start: start, Duration: math.Min(600, duration-start)}, storagePath(w.Config.Storage, j.Input.Media), temp)
 	if e != nil {
 		return e
 	}

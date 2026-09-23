@@ -8,13 +8,13 @@ import re
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
-FIELDS = {"API_IMAGE", "MEDIA_IMAGE", "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_EGRESS", "WARP_HTTP_PROXY", "WARP_EGRESS", "MEDIA_SECURITY"}
+FIELDS = {"API_IMAGE", "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_EGRESS", "WARP_HTTP_PROXY", "WARP_EGRESS"}
 
 
 def render(values, phase="stopped"):
     if set(values) != FIELDS or any(not isinstance(v, str) or not v or "REQUIRED_" in v for v in values.values()):
         raise ValueError("Provide exactly the public fields in inputs.example.json, without placeholders or secret values")
-    for field, component in [("API_IMAGE", "web"), ("MEDIA_IMAGE", "media")]:
+    for field, component in [("API_IMAGE", "web")]:
         if not re.fullmatch(r"preview\.local/atelier/" + component + r"@sha256:[a-f0-9]{64}", values[field]):
             raise ValueError(f"{field}: exact registered local manifest reference required (not a local image ID)")
     issuer = urlsplit(values["OIDC_ISSUER"])
@@ -22,7 +22,7 @@ def render(values, phase="stopped"):
         raise ValueError("OIDC_ISSUER must be the real HTTPS discovery issuer")
     if not re.fullmatch(r"[A-Za-z0-9._-]{1,160}", values["OIDC_CLIENT_ID"]):
         raise ValueError("OIDC_CLIENT_ID: invalid public identifier")
-    for key in ("OIDC_EGRESS", "WARP_EGRESS", "MEDIA_SECURITY"):
+    for key in ("OIDC_EGRESS", "WARP_EGRESS"):
         if not re.fullmatch(r"[a-z][a-z0-9-]{0,62}", values[key]):
             raise ValueError(f"{key}: registered capability/profile name required")
     if values["WARP_EGRESS"] == "public-web":
@@ -38,7 +38,7 @@ def render(values, phase="stopped"):
                   r'\1[REQUIRED_WARP_EGRESS]', text)
     # The reviewed recipe may already pin a previous local build. A new render
     # must use the supplied digests, never silently keep that previous build.
-    for field, component in [("API_IMAGE", "web"), ("MEDIA_IMAGE", "media")]:
+    for field, component in [("API_IMAGE", "web")]:
         text = re.sub(r'(?m)^(\s+image: )"?preview\.local/atelier/' + component + r'@sha256:[a-f0-9]{64}"?$',
                       lambda match: match[1] + "REQUIRED_" + field, text)
     replacements = dict(values)

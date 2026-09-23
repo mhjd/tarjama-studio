@@ -1,5 +1,12 @@
 # Frontières et limites vérifiables
 
+La recette VPS actuelle utilise le moteur `isolated-jobs`, décrit dans
+[ISOLATED_JOBS.md](ISOLATED_JOBS.md). Son worker ne lance aucun outil média local.
+Les paragraphes Bubblewrap/RPC/Compose ci-dessous décrivent le moteur historique
+conservé, dont les contrôles ne sont pas désactivés. Ils ne constituent pas une
+qualification du nouveau chemin administré. Les invariants métier/fournisseurs
+restent communs aux deux moteurs.
+
 Le service API et le worker sont de confiance. PostgreSQL stocke l'état courant, les leases et les morceaux validés. Le média reçoit par RPC uniquement les fichiers et paramètres de son opération. Il possède son token RPC mais aucune clé IA, aucun credential DB ni volume de bibliothèque. Les sous-processus Bubblewrap voient `/usr`, les bibliothèques, certificats/polices et leur seul `/job`. Leur environnement est nettoyé ; les secrets du service n'y sont pas copiés. FFmpeg est sans réseau ; protocoles limités à `file,pipe`. Le code n'exécute aucun shell avec du texte utilisateur.
 
 Le downloader conserve le réseau interne, nécessaire à son proxy, mais ne dispose d'aucune route Internet directe dans le Compose. Il utilise le proxy filtrant pour toute extraction et chaque sous-requête. Le proxy accepte seulement CONNECT 443 vers YouTube/Googlevideo/Ytimg/YouTubei ; il résout chaque destination, refuse toute réponse DNS non publique et passe une IP épinglée au proxy WARP. SNI/TLS conserve le nom d'origine dans le tunnel. Redirections vers une autre destination doivent ouvrir un nouveau tunnel contrôlé. L'arrêt WARP ne déclenche jamais une connexion directe. L'efficacité des réseaux internes et le profil de sandbox doivent encore être validés avec la configuration réelle du VPS : les tests de parseur et de proxy ne prouvent pas cette frontière système.

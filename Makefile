@@ -161,3 +161,7 @@ web-ghcr-test:
 web-preview-import:
 	vps-preview image-import atelier --name web --image tarjama-web:review
 	vps-preview image-import atelier --name media --image tarjama-media:review
+
+.PHONY: web-isolated-image-test
+web-isolated-image-test:
+	sh web/scripts/isolated-image-test.sh

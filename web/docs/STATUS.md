@@ -129,3 +129,41 @@ existant `TestSSRFAndWARPFailClosed` réussis ; aucune requête réelle au proxy
 Ne pas en déduire que les autres prérequis sont validés. OIDC, sandbox média,
 téléchargements YouTube réels, fournisseurs et stockage/sauvegardes restent à
 qualifier. Les cinq services restent désactivés ; `atelier` est à0 replica/0 ready.
+
+
+## Moteur d'opérations isolées — 23 septembre 2026
+
+Intégration applicative du service administré `vps-jobs` : client HTTPS avec CA
+privée, aucun credential Kubernetes/Docker, worker orchestrateur, outils dans des
+opérations distinctes. Migration002 pour clés/IDs distants, définitions avec
+empreintes, caches durables, reprises Range et clôture après annulation. Un résultat
+périmé ou expiré n'est pas relancé implicitement. Les contrôles génération/version/
+lease encadrent cache et publication métier. Les intentions de nettoyage survivent
+à la suppression du projet. Le moteur Bubblewrap conserve ses contrôles existants.
+
+Les profils supplémentaires et l'exécuteur fixe sont livrés pour revue, **pas
+installés**. FLAC16kHz/16bits et offsets milliseconde ; normalisation et exports
+arabe/français Low/High ; pistes YouTube récupérées séparément avant assemblage
+sans relais. Le filtre SSRF/TLS/WARP est conservé ; son raccordement au relais
+administré et les vrais téléchargements restent à qualifier.
+
+Vérifications sur les sources de cet incrément : **34 tests Go** avec `-race`,
+`go vet`, build frontend, **6 scénarios Playwright**, dump/restore PostgreSQL
+synthétique, **4 tests de recette**. Dix nouveaux tests Go couvrent notamment
+pertes de réponses et transferts, reprise/Range, intégrité, génération et lease,
+annulation après suppression, expiration, réessai explicite, TLS/redirections,
+paramètres et vraie chaîne FFmpeg avec un double HTTPS du broker. Aucun appel au
+service réel, à YouTube ou aux API fournisseurs avec des credentials réels.
+
+La recette passe à quatre services désactivés (web, worker, egress, DB) et deux
+jobs explicites (bootstrap-db, migrate). Le secret administré `isolated-jobs`
+est monté uniquement sur le worker. L'ancien service média et son job Bubblewrap
+sont retirés de cette recette parce que les outils ne s'y exécutent plus.
+
+Dossier : [ISOLATED_JOBS.md](ISOLATED_JOBS.md) et
+[propositions de profils](../deploy/preview/isolated-profiles.proposal.json).
+Le schéma JSON réel des réponses doit encore être confirmé par des exemples
+anonymisés administrateur. Les autres prérequis restent : enregistrement des
+profils, relais filtré, qualification depuis K3s, tailles/ressources/rétention
+(plafond1000 IDs), OIDC, fournisseurs, persistance et sauvegardes.
+`atelier` a été vérifié à0 replica/0 ready. Aucun déploiement ni profil modifié.

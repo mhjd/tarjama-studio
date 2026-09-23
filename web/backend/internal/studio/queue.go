@@ -20,10 +20,10 @@ func (s *Store) Claim(ctx context.Context) (Job, error) {
 	}
 	var j Job
 	var b []byte
-	e = tx.QueryRow(ctx, `SELECT j.id,j.project_id,j.owner_id,j.kind,j.source_version,j.generation,j.input,j.attempts FROM jobs j JOIN users u ON u.id=j.owner_id
+	e = tx.QueryRow(ctx, `SELECT j.id,j.project_id,j.owner_id,j.kind,j.source_version,j.generation,j.input,j.attempts,j.media_attempt FROM jobs j JOIN users u ON u.id=j.owner_id
  WHERE ((j.state IN ('queued','waiting_provider') AND j.next_attempt_at<=now()) OR (j.state='running' AND j.lease_until<now()))
  AND NOT EXISTS(SELECT 1 FROM jobs a WHERE a.owner_id=j.owner_id AND a.state='running' AND a.lease_until>=now())
- ORDER BY u.last_served,j.updated_at,j.created_at LIMIT 1 FOR UPDATE OF j SKIP LOCKED`).Scan(&j.ID, &j.ProjectID, &j.Owner, &j.Kind, &j.SourceVersion, &j.Generation, &b, &j.Attempts)
+ ORDER BY u.last_served,j.updated_at,j.created_at LIMIT 1 FOR UPDATE OF j SKIP LOCKED`).Scan(&j.ID, &j.ProjectID, &j.Owner, &j.Kind, &j.SourceVersion, &j.Generation, &b, &j.Attempts, &j.MediaAttempt)
 	if e != nil {
 		return j, e
 	}

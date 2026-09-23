@@ -180,6 +180,9 @@ func (m LocalMedia) probe(ctx context.Context, dir, input string) (MediaInfo, er
 	if e != nil {
 		return MediaInfo{}, e
 	}
+	return parseMediaProbe(raw)
+}
+func parseMediaProbe(raw []byte) (MediaInfo, error) {
 	var data struct {
 		Streams []struct {
 			CodecType         string `json:"codec_type"`

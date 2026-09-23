@@ -55,7 +55,7 @@ func TestMigrationNeedsOnlyDatabaseAndCanBeRepeated(t *testing.T) {
 		}
 	}
 	var count int
-	if err = db.QueryRow(ctx, "SELECT count(*) FROM "+schema+".schema_migrations").Scan(&count); err != nil || count != 1 {
+	if err = db.QueryRow(ctx, "SELECT count(*) FROM "+schema+".schema_migrations").Scan(&count); err != nil || count != 2 {
 		t.Fatalf("migration not applied exactly once: count=%d err=%v", count, err)
 	}
 }

@@ -45,6 +45,9 @@ func run() error {
 	if command == "sandbox-check" {
 		return studio.CheckMediaSandbox(ctx)
 	}
+	if command == "isolated-tool" {
+		return studio.RunIsolatedTool(ctx, os.Args[2:])
+	}
 	if command == "migrate" {
 		dsn, e := studio.LoadDatabaseURL()
 		if e != nil {

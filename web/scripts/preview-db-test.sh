@@ -44,5 +44,5 @@ if [ "$code" != 0 ]; then
 fi
 docker exec -e PGHOST=127.0.0.1 -e PGUSER=tarjama -e PGDATABASE=tarjama \
   -e PGPASSWORD=preview-test-only "$name-db" \
-  env -u PGSERVICE -u PGSERVICEFILE psql -X -w --set ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF (SELECT count(*) FROM schema_migrations) <> 1 OR EXISTS (SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) THEN RAISE EXCEPTION 'invalid migration or excessive privileges'; END IF; END \$\$;"
+  env -u PGSERVICE -u PGSERVICEFILE psql -X -w --set ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF (SELECT count(*) FROM schema_migrations) <> 2 OR EXISTS (SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) THEN RAISE EXCEPTION 'invalid migration or excessive privileges'; END IF; END \$\$;"
 echo 'Preview DB: restricted initialization, repeated bootstrap and delayed migration passed'

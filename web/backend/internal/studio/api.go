@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -463,22 +464,29 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 	jsonOut(w, p)
 }
 func storageRoom(root string, reserve int64) error {
-	var fs syscall.Statfs_t
-	if e := syscall.Statfs(root, &fs); e != nil {
+	var stats syscall.Statfs_t
+	if e := syscall.Statfs(root, &stats); e != nil {
 		return e
 	}
-	if int64(fs.Bavail)*int64(fs.Bsize) < reserve+2*1024*1024*1024 {
+	if int64(stats.Bavail)*int64(stats.Bsize) < reserve+2*1024*1024*1024 {
 		return errors.New("Espace disque insuffisant")
 	}
 	var size int64
-	entries, e := os.ReadDir(root)
-	if e != nil {
-		return e
-	}
-	for _, x := range entries {
-		if info, e := x.Info(); e == nil {
+	e := filepath.WalkDir(root, func(_ string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.Type().IsRegular() {
+			info, e := entry.Info()
+			if e != nil {
+				return e
+			}
 			size += info.Size()
 		}
+		return nil
+	})
+	if e != nil {
+		return e
 	}
 	if size+reserve > MaxStorageBytes {
 		return errors.New("Stockage du service plein ; contactez l’administrateur")
@@ -543,7 +551,7 @@ func (a *API) cancel(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) retry(w http.ResponseWriter, r *http.Request) {
 	_, e := a.Store.Mutate(r.Context(), who(r).User, r.PathValue("id"), func(p *Project, tx pgx.Tx) error {
-		tag, e := tx.Exec(r.Context(), "UPDATE jobs SET state='queued',next_attempt_at=now(),attempts=0,message='' WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND state IN ('failed','cancelled','waiting_provider') AND generation=$4 AND (kind LIKE 'export_%' OR source_version=$5)", r.PathValue("job"), p.ID, who(r).User, p.Generation, p.Version)
+		tag, e := tx.Exec(r.Context(), "UPDATE jobs SET media_attempt=media_attempt+CASE WHEN state IN ('failed','cancelled') THEN 1 ELSE 0 END,state='queued',next_attempt_at=now(),attempts=0,message='' WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND state IN ('failed','cancelled','waiting_provider') AND generation=$4 AND (kind LIKE 'export_%' OR source_version=$5)", r.PathValue("job"), p.ID, who(r).User, p.Generation, p.Version)
 		if e != nil {
 			return e
 		}

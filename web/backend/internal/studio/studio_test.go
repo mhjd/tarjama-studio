@@ -572,7 +572,7 @@ func TestMigrationRepeatAndReadiness(t *testing.T) {
 	}
 	var count int
 	s.DB.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count)
-	if count != 1 {
+	if count != 2 {
 		t.Fatal(count)
 	}
 }

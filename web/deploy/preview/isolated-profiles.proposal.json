@@ -1,0 +1,226 @@
+{
+  "status": "proposal-not-installed",
+  "image_source": "images.lock.json: images.media (Docker runtime requires docker_id, not the K3s manifest reference)",
+  "docker_image_id": "REQUIRED_CURRENT_TESTED_BUILD",
+  "k3s_import_reference": "REQUIRED_CURRENT_TESTED_IMPORT",
+  "entrypoint": [
+    "/usr/local/bin/tarjama",
+    "isolated-tool"
+  ],
+  "paths": {
+    "inputs": "/inputs (read-only)",
+    "outputs": "/outputs"
+  },
+  "security": {
+    "network": "none",
+    "uid": 10002,
+    "gid": 10002,
+    "capabilities": [],
+    "no_new_privileges": true,
+    "seccomp": "runtime default",
+    "apparmor": "runtime default",
+    "read_only_root": true,
+    "application_secrets": false,
+    "runtime_socket": false
+  },
+  "concurrency_proposal": 1,
+  "profiles": [
+    {
+      "name": "tarjama-probe-v1",
+      "argv": [
+        "probe"
+      ],
+      "parameters": {},
+      "inputs": {
+        "media": 1073741824
+      },
+      "max_input_bytes": 1073741824,
+      "outputs": {
+        "stdout": 1048576
+      },
+      "max_output_bytes": 1048576,
+      "timeout_seconds": 30,
+      "memory_mib_proposal": 1536,
+      "cpu_proposal": 2,
+      "pids_proposal": 128,
+      "relay": null
+    },
+    {
+      "name": "tarjama-audio-v1",
+      "argv": [
+        "audio",
+        "{start_ms}",
+        "{duration_ms}"
+      ],
+      "parameters": {
+        "start_ms": {
+          "type": "integer-string",
+          "min": 0,
+          "max": 10800000
+        },
+        "duration_ms": {
+          "type": "integer-string",
+          "min": 1,
+          "max": 600000
+        }
+      },
+      "inputs": {
+        "media": 1073741824
+      },
+      "max_input_bytes": 1073741824,
+      "outputs": {
+        "audio.flac": 24117248
+      },
+      "max_output_bytes": 24117248,
+      "timeout_seconds": 14400,
+      "memory_mib_proposal": 1536,
+      "cpu_proposal": 2,
+      "pids_proposal": 128,
+      "relay": null
+    },
+    {
+      "name": "tarjama-normalize-v1",
+      "argv": [
+        "normalize",
+        "{width}",
+        "{height}",
+        "{quality}"
+      ],
+      "parameters": {
+        "width": {
+          "type": "integer-string",
+          "min": 2,
+          "max": 8192,
+          "multiple_of": 2
+        },
+        "height": {
+          "type": "integer-string",
+          "min": 2,
+          "max": 8192,
+          "multiple_of": 2
+        },
+        "quality": {
+          "type": "enum-string",
+          "values": [
+            "high"
+          ]
+        }
+      },
+      "inputs": {
+        "media": 1073741824
+      },
+      "max_input_bytes": 1073741824,
+      "outputs": {
+        "result.mp4": 1073741824
+      },
+      "max_output_bytes": 1073741824,
+      "timeout_seconds": 14400,
+      "memory_mib_proposal": 3072,
+      "cpu_proposal": 2,
+      "pids_proposal": 128,
+      "relay": null
+    },
+    {
+      "name": "tarjama-export-v1",
+      "argv": [
+        "export",
+        "{width}",
+        "{height}",
+        "{quality}"
+      ],
+      "parameters": {
+        "width": {
+          "type": "integer-string",
+          "min": 2,
+          "max": 8192,
+          "multiple_of": 2
+        },
+        "height": {
+          "type": "integer-string",
+          "min": 2,
+          "max": 8192,
+          "multiple_of": 2
+        },
+        "quality": {
+          "type": "enum-string",
+          "values": [
+            "low",
+            "high"
+          ]
+        }
+      },
+      "inputs": {
+        "media": 1073741824,
+        "subtitles.ass": 16777216
+      },
+      "max_input_bytes": 1090519040,
+      "outputs": {
+        "result.mp4": 1073741824
+      },
+      "max_output_bytes": 1073741824,
+      "timeout_seconds": 14400,
+      "memory_mib_proposal": 3072,
+      "cpu_proposal": 2,
+      "pids_proposal": 128,
+      "relay": null
+    },
+    {
+      "name": "tarjama-download-v1",
+      "argv": [
+        "download",
+        "{url}",
+        "{track}"
+      ],
+      "parameters": {
+        "url": {
+          "type": "string",
+          "max_length": 2048,
+          "pattern": "^https://www\\.youtube\\.com/watch\\?v=[a-zA-Z0-9_-]{11}$"
+        },
+        "track": {
+          "type": "enum-string",
+          "values": [
+            "video",
+            "audio"
+          ]
+        }
+      },
+      "inputs": {},
+      "max_input_bytes": 0,
+      "outputs": {
+        "media": 1073741824
+      },
+      "max_output_bytes": 1073741824,
+      "timeout_seconds": 1800,
+      "memory_mib_proposal": 1536,
+      "cpu_proposal": 2,
+      "pids_proposal": 128,
+      "relay": {
+        "listen": "127.0.0.1:18080",
+        "destination": "REQUIRED_ADMINISTERED_TARJAMA_DOMAIN_FILTER_THEN_WARP",
+        "direct_fallback": false
+      }
+    },
+    {
+      "name": "tarjama-mux-v1",
+      "argv": [
+        "mux"
+      ],
+      "parameters": {},
+      "inputs": {
+        "media": 1073741824,
+        "audio": 1073741824
+      },
+      "max_input_bytes": 2147483648,
+      "outputs": {
+        "result.mkv": 1073741824
+      },
+      "max_output_bytes": 1073741824,
+      "timeout_seconds": 14400,
+      "memory_mib_proposal": 4096,
+      "cpu_proposal": 2,
+      "pids_proposal": 128,
+      "relay": null
+    }
+  ]
+}

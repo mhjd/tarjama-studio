@@ -551,7 +551,7 @@ func (a *API) cancel(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) retry(w http.ResponseWriter, r *http.Request) {
 	_, e := a.Store.Mutate(r.Context(), who(r).User, r.PathValue("id"), func(p *Project, tx pgx.Tx) error {
-		tag, e := tx.Exec(r.Context(), "UPDATE jobs SET media_attempt=media_attempt+CASE WHEN state IN ('failed','cancelled') THEN 1 ELSE 0 END,state='queued',next_attempt_at=now(),attempts=0,message='' WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND state IN ('failed','cancelled','waiting_provider') AND generation=$4 AND (kind LIKE 'export_%' OR source_version=$5)", r.PathValue("job"), p.ID, who(r).User, p.Generation, p.Version)
+		tag, e := tx.Exec(r.Context(), "UPDATE jobs SET progress=CASE WHEN state IN ('failed','cancelled') AND (kind IN ('prepare','download') OR kind LIKE 'export_%') THEN 0 ELSE progress END,media_attempt=media_attempt+CASE WHEN state IN ('failed','cancelled') THEN 1 ELSE 0 END,state='queued',next_attempt_at=now(),attempts=0,message='' WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND state IN ('failed','cancelled','waiting_provider') AND generation=$4 AND (kind LIKE 'export_%' OR source_version=$5)", r.PathValue("job"), p.ID, who(r).User, p.Generation, p.Version)
 		if e != nil {
 			return e
 		}

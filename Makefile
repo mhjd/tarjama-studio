@@ -118,9 +118,11 @@ web-gc:
 	@test "$(DEPLOY_AUTHORIZED)" = "yes"
 	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml run --rm api gc
 
-.PHONY: web-images web-audit
-web-images:
+.PHONY: web-images web-api-image web-audit
+web-api-image:
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target api -t tarjama-web:review web
+
+web-images: web-api-image
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target media -t tarjama-media:review web
 
 web-audit:

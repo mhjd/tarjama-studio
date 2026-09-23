@@ -10,6 +10,7 @@ import {
   type Field,
 } from "./api";
 import { Drafts } from "./drafts";
+import { JobProgress } from "./JobProgress";
 export function Editor({
   initial,
   user,
@@ -32,6 +33,7 @@ export function Editor({
   const d = draft.current,
     p = d.project;
   const [jobs, setJobs] = useState<Job[]>([]),
+    [connectionLost, setConnectionLost] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [uploading, setUploading] = useState(false),
@@ -54,6 +56,7 @@ export function Editor({
       `/api/projects/${p.id}`,
     );
     if (!mounted.current) return;
+    setConnectionLost(false);
     setJobs(x.jobs);
     if (!d.dirty) d.adopt(x.project);
   }
@@ -70,7 +73,13 @@ export function Editor({
   }
   useEffect(() => {
     register(flush);
-    const timer = setInterval(() => void refresh().catch(() => {}), 2000);
+    const timer = setInterval(
+      () =>
+        void refresh().catch(() => {
+          if (mounted.current) setConnectionLost(true);
+        }),
+      2000,
+    );
     void refresh().catch((e) => setError(String(e)));
     if (initialFile) {
       const f = initialFile;
@@ -255,30 +264,11 @@ export function Editor({
           )}
         </section>
       )}
-      {!p.media && (
-        <section className="panel">
-          <h2>{uploading ? "Envoi de la vidéo…" : "Ajouter votre vidéo"}</h2>
-          <p>
-            Vous pouvez importer un fichier ici, même si le téléchargement du
-            lien est en attente.
-          </p>
-          <label className="button">
-            Importer la vidéo depuis mon appareil
-            <input
-              disabled={uploading}
-              type="file"
-              accept="video/*"
-              onChange={(e) => {
-                if (e.target.files?.[0]) void sendFile(e.target.files[0]);
-              }}
-            />
-          </label>
-          {uploading && (
-            <p role="status">
-              Gardez cette page ouverte jusqu’à la fin de l’envoi.
-            </p>
-          )}
-        </section>
+      {connectionLost && (
+        <p className="error" role="alert">
+          Connexion interrompue : la progression affichée n’est plus à jour.
+          Reconnexion automatique…
+        </p>
       )}
       {jobs
         .filter((j) => !["succeeded", "cancelled"].includes(j.state))
@@ -295,13 +285,7 @@ export function Editor({
                 }[j.kind] ||
                 "Création de la vidéo sous-titrée"}
             </p>
-            <small>
-              {j.state === "waiting_provider"
-                ? "En attente — reprise automatique"
-                : j.state === "failed"
-                  ? "Intervention nécessaire"
-                  : `${j.progress}% des morceaux terminés`}
-            </small>
+            {!connectionLost && <JobProgress job={j} />}
             {j.state === "failed" || j.state === "waiting_provider" ? (
               <button
                 onClick={() =>
@@ -331,6 +315,31 @@ export function Editor({
             )}
           </section>
         ))}
+      {!p.media && (
+        <section className="panel">
+          <h2>{uploading ? "Envoi de la vidéo…" : "Ajouter votre vidéo"}</h2>
+          <p>
+            Vous pouvez importer un fichier ici, même si le téléchargement du
+            lien est en attente.
+          </p>
+          <label className="button">
+            Importer la vidéo depuis mon appareil
+            <input
+              disabled={uploading}
+              type="file"
+              accept="video/*"
+              onChange={(e) => {
+                if (e.target.files?.[0]) void sendFile(e.target.files[0]);
+              }}
+            />
+          </label>
+          {uploading && (
+            <p role="status">
+              Gardez cette page ouverte jusqu’à la fin de l’envoi.
+            </p>
+          )}
+        </section>
+      )}
       {jobs
         .filter((j) => j.state === "cancelled")
         .slice(-1)

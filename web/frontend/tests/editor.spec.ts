@@ -6,6 +6,59 @@ async function login(page: Page, user = "alice") {
     page.getByRole("heading", { name: "Mes projets" }),
   ).toBeVisible();
 }
+test("download shows durable stages and stops claiming activity when polling fails", async ({
+  page,
+}) => {
+  await login(page);
+  let progress = 0;
+  let disconnected = false;
+  await page.route("**/api/projects/fixture", async (route) => {
+    if (disconnected) return route.abort();
+    const response = await route.fetch();
+    const data = await response.json();
+    data.project.media = "";
+    data.project.stage = "preparing";
+    data.jobs = [
+      {
+        id: "progress-fixture",
+        kind: "download",
+        state: "running",
+        progress,
+        message: progress
+          ? "Téléchargement de l’audio…"
+          : "Téléchargement de la vidéo…",
+      },
+    ];
+    await route.fulfill({ response, json: data });
+  });
+  await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+  const job = page.locator(".job");
+  await expect(job).toContainText("Téléchargement de la vidéo…");
+  await expect(job).toContainText("0 sur 6 étapes terminées");
+  await expect(job).not.toContainText("% des morceaux");
+  await expect(job.locator(".activity-spinner")).toBeVisible();
+  progress = 16;
+  await expect(job).toContainText("1 sur 6 étapes terminées");
+  await expect(job).toContainText("Téléchargement de l’audio…");
+  await expect(job.getByRole("progressbar")).toHaveAttribute("value", "1");
+  disconnected = true;
+  await expect(page.getByRole("alert")).toContainText(
+    "progression affichée n’est plus à jour",
+  );
+  await expect(job.locator(".activity-spinner")).toHaveCount(0);
+  disconnected = false;
+  await expect(job.locator(".activity-spinner")).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.screenshot({
+    path: "test-results/mobile-download-progress.png",
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBeTruthy();
+});
 test("private projects, unchanged blur, offline draft, IME flush, review and real export", async ({
   page,
   browser,

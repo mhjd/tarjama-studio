@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -33,6 +34,48 @@ func (m *IsolatedMedia) ForJob(j Job, unit int) Media {
 }
 func (m *IsolatedMedia) operationDir(key string) string {
 	return filepath.Join(m.Storage, "operations", key)
+}
+
+// Count completed durable stages, never estimated download bytes or elapsed time.
+// Keep these updates behind the same ownership/version/lease fence as results.
+func (m *IsolatedMedia) reportProgress(ctx context.Context, step string, complete bool) error {
+	type phase struct{ key, label string }
+	steps := []phase{}
+	if m.Job.Kind == "download" {
+		steps = append(steps, phase{"download-video", "Téléchargement de la vidéo…"},
+			phase{"download-audio", "Téléchargement de l’audio…"},
+			phase{"mux", "Assemblage de la vidéo et de l’audio…"})
+	} else if m.Job.Kind != "prepare" && !strings.HasPrefix(m.Job.Kind, "export_") {
+		return nil // Transcription/text jobs already report completed chunks.
+	}
+	render := "Préparation de la vidéo pour la lecture…"
+	if strings.HasPrefix(m.Job.Kind, "export_") {
+		render = "Création de la vidéo sous-titrée…"
+	}
+	steps = append(steps, phase{"source-probe", "Vérification de la vidéo…"},
+		phase{"render", render},
+		phase{"result-probe", "Vérification du résultat…"})
+	for i, phase := range steps {
+		if phase.key != step {
+			continue
+		}
+		count := i
+		if complete {
+			count++
+		}
+		message := phase.label
+		if count == len(steps) {
+			message = "Finalisation de la vidéo…"
+		}
+		progress := count * 100 / len(steps)
+		return m.mutate(ctx, func(tx pgx.Tx) error {
+			_, e := tx.Exec(ctx, `UPDATE jobs SET
+ message=CASE WHEN progress<=$3 THEN $2 ELSE message END,
+ progress=GREATEST(progress,$3),updated_at=now() WHERE id=$1`, m.Job.ID, message, progress)
+			return e
+		})
+	}
+	return nil
 }
 
 func (m *IsolatedMedia) operation(ctx context.Context, step, profile string, params map[string]string, inputs map[string]string, output string, maxOutput int64) (string, error) {
@@ -67,7 +110,10 @@ func (m *IsolatedMedia) operation(ctx context.Context, step, profile string, par
 			return "", errors.New("Résultat durable perdu ou altéré ; réessai explicite requis")
 		}
 		ack()
-		return result, nil
+		return result, m.reportProgress(ctx, step, true)
+	}
+	if e = m.reportProgress(ctx, step, false); e != nil {
+		return "", e
 	}
 	var remote remoteOperation
 	if op.RemoteID == "" {
@@ -168,7 +214,7 @@ func (m *IsolatedMedia) operation(ctx context.Context, step, profile string, par
 		return "", e
 	}
 	ack()
-	return result, nil
+	return result, m.reportProgress(ctx, step, true)
 }
 
 func (m *IsolatedMedia) probe(ctx context.Context, step, input string) (MediaInfo, error) {

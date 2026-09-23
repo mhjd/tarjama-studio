@@ -417,11 +417,18 @@ func TestIsolatedRetryUsesNewKeyAndCacheLossDoesNotRerun(t *testing.T) {
 		t.Fatal("cache loss silently rerun")
 	}
 	m.Store.Fail(context.Background(), m.Job, fmt.Errorf("fixture failure"))
+	if _, e = m.Store.DB.Exec(context.Background(), "UPDATE jobs SET progress=66 WHERE id=$1", m.Job.ID); e != nil {
+		t.Fatal(e)
+	}
 	_, server := testAPI(t, m.Store)
 	token, csrf := sessionFor(t, m.Store, m.Job.Owner)
 	status, _ := call(t, server, token, csrf, "POST", "/api/projects/"+m.Job.ProjectID+"/jobs/"+m.Job.ID+"/retry", nil)
 	if status != 204 {
 		t.Fatal(status)
+	}
+	jobs, e := m.Store.Jobs(context.Background(), m.Job.Owner, m.Job.ProjectID)
+	if e != nil || jobs[0].Progress != 0 {
+		t.Fatal("explicit retry kept progress from old media attempt", jobs, e)
 	}
 	j, e := m.Store.Claim(context.Background())
 	if e != nil {
@@ -478,6 +485,42 @@ func TestIsolatedToolContracts(t *testing.T) {
 		t.Fatal("online FFmpeg or uncontrolled proxy", joined, e)
 	}
 }
+func TestMediaStageProgressIsDurableAndLeaseFenced(t *testing.T) {
+	b := newTestBroker(t)
+	m := isolatedFixture(t, b)
+	m.Job.Kind = "download"
+	ctx := context.Background()
+	if _, e := m.Store.DB.Exec(ctx, "UPDATE jobs SET kind='download' WHERE id=$1", m.Job.ID); e != nil {
+		t.Fatal(e)
+	}
+	input := testInput(t, m)
+	if _, e := m.operation(ctx, "download-video", "media-probe", map[string]string{}, map[string]string{"media": input}, "stdout", 1024); e != nil {
+		t.Fatal(e)
+	}
+	jobs, e := m.Store.Jobs(ctx, m.Job.Owner, m.Job.ProjectID)
+	if e != nil || len(jobs) != 1 || jobs[0].Progress != 16 {
+		t.Fatal("completed stage not reported", jobs, e)
+	}
+	if e := m.reportProgress(ctx, "download-audio", false); e != nil {
+		t.Fatal(e)
+	}
+	n := reclaim(t, m)
+	if e := m.reportProgress(ctx, "mux", true); e != ErrConflict {
+		t.Fatal("stale worker changed progress", e)
+	}
+	if e := n.reportProgress(ctx, "mux", false); e != nil {
+		t.Fatal(e)
+	}
+	// Replaying an already cached stage cannot regress the visible progress.
+	if _, e := n.operation(ctx, "download-video", "media-probe", map[string]string{}, map[string]string{"media": input}, "stdout", 1024); e != nil {
+		t.Fatal(e)
+	}
+	jobs, e = n.Store.Jobs(ctx, n.Job.Owner, n.Job.ProjectID)
+	if e != nil || jobs[0].Progress != 33 || !strings.Contains(jobs[0].Message, "Assemblage") {
+		t.Fatal("replay regressed progress", jobs, e)
+	}
+}
+
 func TestIsolatedRealOfflinePipeline(t *testing.T) {
 	b := newTestBroker(t)
 	m := isolatedFixture(t, b)

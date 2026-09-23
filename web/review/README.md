@@ -64,3 +64,11 @@ résultats ainsi que les noms/tailles/empreintes des vidéos. Les journaux du co
 étant bornés, les fichiers binaires restent sur le volume ; ne pas les encoder dans
 les logs. La recette monte ces deux scripts publics en ConfigMap sur le navigateur
 ou lecteur sans secret, avec uniquement une connexion au service `review`.
+
+## Relances indépendantes
+
+Le serveur de qualification accepte `UI_REVIEW_RUN` (minuscules, chiffres et
+underscores, 40 caractères maximum). Chaque run dispose de son schéma et de son
+répertoire `/storage/ui-review-RUN`. Les uploads d'artefacts refusent désormais
+d'écraser un nom déjà présent. Employer un run nouveau pour chaque enregistrement
+complet ; conserver les anciennes preuves. Le défaut historique reste `20260923`.

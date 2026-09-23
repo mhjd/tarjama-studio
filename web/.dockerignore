@@ -6,6 +6,8 @@
 !frontend/**
 !review/
 !review/*.mjs
+!review/translation-lite/
+!review/translation-lite/*.json
 !deploy/
 !deploy/Dockerfile
 !deploy/Dockerfile.tools

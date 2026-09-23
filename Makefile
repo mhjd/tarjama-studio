@@ -186,3 +186,7 @@ web-isolated-image-test:
 web-review-images:
 	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target ui-review -t tarjama-ui-review:review web
 	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target ui-recorder -t tarjama-ui-recorder:review web
+
+.PHONY: web-text-benchmark-image
+web-text-benchmark-image:
+	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target text-benchmark -t tarjama-text-benchmark:review web

@@ -119,13 +119,20 @@ func VideoURL(raw string) (string, error) {
 	return "https://www.youtube.com/watch?v=" + video, nil
 }
 
-// Chunk at segment boundaries, bounded by time and output size, independently of ASR chunks.
+// Text chunks target twenty minutes, independently of the ten-minute ASR chunks.
+// Dense inputs may stop earlier: keep room for JSON IDs and expanded French text
+// within the provider output budget. These are byte/count guards, not a tokenizer.
+const textChunkDurationMS = 20 * 60 * 1000
+const textChunkMaxSegments = 600
+const textChunkMaxBytes = 64000
+
+// Chunk only at segment boundaries; never split an individual subtitle.
 func TextChunks(s []Segment) [][]Segment {
 	var out [][]Segment
 	for len(s) > 0 {
 		n := 1
 		chars := len(s[0].Arabic)
-		for n < len(s) && n < 120 && s[n].End-s[0].Start <= 1200000 && chars+len(s[n].Arabic) <= 18000 {
+		for n < len(s) && n < textChunkMaxSegments && s[n].End-s[0].Start <= textChunkDurationMS && chars+len(s[n].Arabic) <= textChunkMaxBytes {
 			chars += len(s[n].Arabic)
 			n++
 		}

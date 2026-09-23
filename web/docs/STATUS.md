@@ -271,3 +271,10 @@ validate/plan réussis puis mise à jour via vps-preview. Aucune migration requi
 aucun changement de profils/seccomp/AppArmor/WARP/OIDC. La recette racine reste
 désactivée, avec le nouveau digest. Les images et recettes précédentes sont
 conservées pour retour arrière.
+
+## 23 septembre 2026 — Flash-Lite et cible de 20 minutes
+
+Le choix utilisateur remplace Gemini 3.8 par `gemini-3.5-flash-lite`. Les garde-fous
+texte passent de 120 segments/18 ko à 600 segments/64 000 octets, avec une cible
+inchangée de 20 minutes et un budget de réponse de 32 768 tokens. La reprise
+préserve les anciens chunks validés. Voir le [test qualitatif réel](../review/translation-lite/RESULTS-20260923.md) : structure correcte, mais erreurs linguistiques et déplacements de sens entre segments observés. Le propriétaire accepte un premier jet corrigible ; aucune équivalence à GPT n'est démontrée. La livraison et les parcours UI sont documentés séparément.

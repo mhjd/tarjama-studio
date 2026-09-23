@@ -59,3 +59,12 @@ RUN ln -s /src/frontend/node_modules /review/node_modules
 USER 10004:10004
 ENV HOME=/tmp
 ENTRYPOINT ["node", "/review/record.mjs"]
+
+# Standalone real-provider quality benchmark. No app database or web endpoint.
+FROM backend AS text-benchmark-build
+RUN CGO_ENABLED=0 go build -trimpath -o /text-benchmark ./cmd/text-benchmark
+FROM api AS text-benchmark
+COPY --from=text-benchmark-build /text-benchmark /usr/local/bin/text-benchmark
+COPY --chown=10001:10001 review/translation-lite/*.json /benchmark-inputs/
+ENTRYPOINT ["/usr/local/bin/text-benchmark"]
+CMD []

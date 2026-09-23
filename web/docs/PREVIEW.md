@@ -79,7 +79,7 @@ les valeurs sont fournies uniquement par l'administrateur, jamais en YAML/Git/ch
 | `tarjama-db-app` | `app_db_password` : mot de passe aléatoire du rôle non superuser `tarjama` ; `database_url` : `postgres://tarjama:<mot-de-passe-percent-encodé>@pv-db:5432/tarjama?sslmode=disable` | API, worker, migration ; bootstrap reçoit seulement le mot de passe |
 | `tarjama-encryption` | `encryption_key` : exactement 32 octets aléatoires encodés en base64 standard | API, worker |
 | `tarjama-oidc` | `client_secret` : secret du client confidentiel OIDC dédié | API seule |
-| `tarjama-gemini` | `api_key` : clé serveur dédiée, accès au modèle fixe `gemini-3.8-flash` à vérifier | worker seul |
+| `tarjama-gemini` | `api_key` : clé serveur dédiée, accès au modèle fixe `gemini-3.5-flash-lite` à vérifier | worker seul |
 | `tarjama-groq` | `api_key` : clé serveur dédiée, accès à `whisper-large-v3` à vérifier | worker seul |
 | `isolated-jobs` | `token` : jeton dédié du broker ; `ca.crt` : CA privée PEM | worker de confiance seul |
 

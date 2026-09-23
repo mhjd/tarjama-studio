@@ -96,7 +96,15 @@ func run() error {
 	if c.Mode != "test" || c.MediaEngine != "isolated-jobs" {
 		return errors.New("real isolated engine and test identity required")
 	}
-	c.Storage = "/storage/ui-review-20260923"
+	runID := os.Getenv("UI_REVIEW_RUN")
+	if runID == "" {
+		runID = "20260923"
+	}
+	if !regexp.MustCompile(`^[a-z0-9][a-z0-9_]{0,39}$`).MatchString(runID) {
+		return errors.New("invalid review run ID")
+	}
+	schema := "ui_review_" + runID
+	c.Storage = "/storage/ui-review-" + runID
 	if err = os.MkdirAll(filepath.Join(c.Storage, "artifacts"), 0700); err != nil {
 		return err
 	}
@@ -106,7 +114,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	_, err = root.DB.Exec(ctx, "CREATE SCHEMA IF NOT EXISTS ui_review_20260923")
+	_, err = root.DB.Exec(ctx, "CREATE SCHEMA IF NOT EXISTS "+schema)
 	root.DB.Close()
 	if err != nil {
 		return errors.New("test schema creation failed")
@@ -115,7 +123,7 @@ func run() error {
 	if err != nil {
 		return errors.New("test database configuration failed")
 	}
-	cfg.ConnConfig.RuntimeParams["search_path"] = "ui_review_20260923"
+	cfg.ConnConfig.RuntimeParams["search_path"] = schema
 	cfg.MaxConns = 5
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
@@ -146,7 +154,7 @@ func run() error {
 			return
 		}
 		path := filepath.Join(c.Storage, "artifacts", name)
-		f, e := os.OpenFile(path+".part", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+		f, e := os.OpenFile(path+".part", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 		if e != nil {
 			http.Error(w, "storage", 500)
 			return
@@ -158,10 +166,12 @@ func run() error {
 			http.Error(w, "upload", 400)
 			return
 		}
-		if os.Rename(path+".part", path) != nil {
+		if os.Link(path+".part", path) != nil {
+			os.Remove(path + ".part")
 			http.Error(w, "storage", 500)
 			return
 		}
+		os.Remove(path + ".part")
 		w.WriteHeader(204)
 	})
 	mux.HandleFunc("GET /review-artifacts/{name}", func(w http.ResponseWriter, r *http.Request) {

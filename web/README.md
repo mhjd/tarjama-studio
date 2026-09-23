@@ -43,7 +43,7 @@ Textes sauvegardés au blur uniquement lorsqu'ils ont changé. Navigation, valid
 
 Chaque média/segment/job/export appartient au propriétaire du projet. Les sessions ne prennent aucun ID utilisateur du navigateur. Les URL de vidéos sont normalisées vers des vidéos YouTube individuelles ; import de fichier disponible dès la création ou dans le même projet après échec d'un lien.
 
-Les modèles sont fixes : `whisper-large-v3` et `gemini-3.8-flash`. Clé partagée par défaut, personnelle facultative, aucune bascule silencieuse d'une clé personnelle invalide. Pas d'OpenRouter, crédits, prompts personnalisés, historique utilisateur ou sauvegarde manuelle.
+Les modèles sont fixes : `whisper-large-v3` et `gemini-3.5-flash-lite`. Clé partagée par défaut, personnelle facultative, aucune bascule silencieuse d'une clé personnelle invalide. Pas d'OpenRouter, crédits, prompts personnalisés, historique utilisateur ou sauvegarde manuelle.
 
 ## Aperçu privé administré
 
@@ -51,3 +51,15 @@ La recette du moteur générique `vps-preview` et ses prérequis sont décrits d
 [docs/PREVIEW.md](docs/PREVIEW.md). Le modèle racine `deploy.preview.yml` conserve
 tous les services arrêtés ; aucune activation sans images privées, secrets,
 identité, réseau et sandbox qualifiés.
+
+### Découpage texte et modèle (23 septembre 2026)
+
+Correction et traduction utilisent Gemini 3.5 Flash-Lite. Les chunks visent
+20 minutes, aux frontières des segments, avec des garde-fous de 600 segments et
+64 000 octets arabes. Le budget de réponse est de 32 768 tokens ; une réponse
+tronquée ou mal alignée est toujours refusée. La limite temporelle est une cible,
+les entrées denses peuvent être coupées plus tôt. Les appels restent bornés à
+5 minutes et annulables. Le découpage Groq demeure indépendant (10 minutes).
+Les anciens morceaux validés conservent leurs frontières ; seule la suite encore
+à traiter adopte les nouveaux plafonds. Les quotas du compte ne sont pas codés en
+dur : les 429 conservent la file d’attente et la reprise automatique.

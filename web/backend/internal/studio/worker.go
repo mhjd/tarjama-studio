@@ -346,7 +346,10 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 	if e != nil {
 		return e
 	}
-	chunks := TextChunks(j.Input.Segments)
+	chunks, e := resumeTextChunks(j.Input.Segments, raw)
+	if e != nil {
+		return e
+	}
 	if len(raw) == len(chunks) {
 		segments := append([]Segment{}, j.Input.Segments...)
 		n := 0
@@ -407,4 +410,28 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 		return e
 	}
 	return w.Store.Chunk(ctx, j, i, result, GeminiModel, j.Kind+"-v1", (i+1)*99/len(chunks))
+}
+
+// Saved results define immutable completed boundaries, including those written by
+// an older chunk policy. Repartition only the unprocessed suffix after an upgrade.
+func resumeTextChunks(segments []Segment, saved []json.RawMessage) ([][]Segment, error) {
+	chunks := [][]Segment{}
+	offset := 0
+	for _, raw := range saved {
+		var result TextResult
+		if err := json.Unmarshal(raw, &result); err != nil {
+			return nil, err
+		}
+		n := len(result.Segments)
+		if n == 0 || n > len(segments)-offset {
+			return nil, errors.New("Morceaux incohérents")
+		}
+		source := segments[offset : offset+n]
+		if err := ValidateText(result, source); err != nil {
+			return nil, err
+		}
+		chunks = append(chunks, source)
+		offset += n
+	}
+	return append(chunks, TextChunks(segments[offset:])...), nil
 }

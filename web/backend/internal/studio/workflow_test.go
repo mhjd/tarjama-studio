@@ -217,3 +217,48 @@ func TestGroqMultipartContract(t *testing.T) {
 		t.Fatal(response, e)
 	}
 }
+
+func TestWorkerResumesLegacyTextChunkAfterUpgrade(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	owner, p := fixture(t, s)
+	p.Segments = twentyMinuteSegments()
+	p.Duration = 1200000
+	_, err := s.Mutate(ctx, owner, p.ID, func(q *Project, tx pgx.Tx) error {
+		*q = p
+		q.Stage = "translating"
+		return enqueue(ctx, tx, owner, *q, "translate")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldJob, err := s.Claim(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider := &scriptedProvider{}
+	oldResult, _ := provider.Text(ctx, "", "translate", p.Segments[:120], nil)
+	if err = s.Chunk(ctx, oldJob, 0, oldResult, "gemini-3.8-flash", "translate-v1", 30); err != nil {
+		t.Fatal(err)
+	}
+	provider.calls = 0
+	worker := Worker{Store: s, Config: Config{GeminiKey: "fixture"}, Providers: provider}
+	for i := 0; i < 2; i++ {
+		if worked, e := worker.Once(ctx); e != nil || !worked {
+			t.Fatal(worked, e)
+		}
+	}
+	actual, err := s.Get(ctx, owner, p.ID)
+	if err != nil || actual.Stage != "review" || len(actual.Segments) != 400 || provider.calls != 1 {
+		t.Fatalf("resume failed: stage=%s calls=%d err=%v", actual.Stage, provider.calls, err)
+	}
+	for i, x := range actual.Segments {
+		if x.ID != p.Segments[i].ID || x.Start != p.Segments[i].Start || x.End != p.Segments[i].End || x.French != "Bonjour" {
+			t.Fatalf("segment %d corrupted", i)
+		}
+	}
+	saved, err := s.Chunks(ctx, oldJob)
+	if err != nil || len(saved) != 2 {
+		t.Fatal("old completed chunk lost", err)
+	}
+}

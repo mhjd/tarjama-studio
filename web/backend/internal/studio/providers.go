@@ -20,7 +20,8 @@ import (
 //go:embed prompts/*.txt
 var prompts embed.FS
 
-const GeminiModel = "gemini-3.8-flash"
+const GeminiModel = "gemini-3.5-flash-lite"
+const GeminiMaxOutputTokens = 32768
 const GroqModel = "whisper-large-v3"
 
 type ProviderError struct {
@@ -61,7 +62,7 @@ type HTTPProviders struct {
 }
 
 func NewProviders() *HTTPProviders {
-	return &HTTPProviders{Client: &http.Client{Timeout: 100 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, GeminiURL: "https://generativelanguage.googleapis.com/v1beta/models/" + GeminiModel + ":generateContent", GroqURL: "https://api.groq.com/openai/v1/audio/transcriptions"}
+	return &HTTPProviders{Client: &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, GeminiURL: "https://generativelanguage.googleapis.com/v1beta/models/" + GeminiModel + ":generateContent", GroqURL: "https://api.groq.com/openai/v1/audio/transcriptions"}
 }
 func providerError(r *http.Response) *ProviderError {
 	e := &ProviderError{Public: "Le fournisseur a refusé la requête. Vérifiez la configuration du service."}
@@ -149,7 +150,7 @@ func (p *HTTPProviders) Text(ctx context.Context, key, kind string, s, contextSe
 	}
 	input, _ := json.Marshal(map[string]any{"segments": target, "context_only": contextText})
 	schema := map[string]any{"type": "object", "properties": map[string]any{"segments": map[string]any{"type": "array", "items": map[string]any{"type": "object", "properties": map[string]any{"id": map[string]string{"type": "string"}, "text": map[string]string{"type": "string"}}, "required": []string{"id", "text"}}}}, "required": []string{"segments"}}
-	body, _ := json.Marshal(map[string]any{"systemInstruction": map[string]any{"parts": []any{map[string]string{"text": string(prompt)}}}, "contents": []any{map[string]any{"role": "user", "parts": []any{map[string]string{"text": string(input)}}}}, "generationConfig": map[string]any{"responseMimeType": "application/json", "responseJsonSchema": schema, "maxOutputTokens": 16384}})
+	body, _ := json.Marshal(map[string]any{"systemInstruction": map[string]any{"parts": []any{map[string]string{"text": string(prompt)}}}, "contents": []any{map[string]any{"role": "user", "parts": []any{map[string]string{"text": string(input)}}}}, "generationConfig": map[string]any{"responseMimeType": "application/json", "responseJsonSchema": schema, "maxOutputTokens": GeminiMaxOutputTokens}})
 	req, e := http.NewRequestWithContext(ctx, "POST", p.GeminiURL, bytes.NewReader(body))
 	if e != nil {
 		return TextResult{}, e

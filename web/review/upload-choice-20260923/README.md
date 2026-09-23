@@ -66,7 +66,9 @@ Recette active : `web/deploy/preview/active-upload-20260923.yml`.
 Révision : `da745224a015087f` ; validate/plan puis déploiement autorisé réussis.
 API/worker et diagnostic :
 `preview.local/atelier/web@sha256:99ed8d1d4bd03b59f6d5d592c07aa20d7de0410f31ae186a860f3a97b2c291e5`.
-Docker image ID : `sha256:87e1b479643f97f62e6143f90db4248976ded28f55034b314a4669446bf66395`.
+Docker image ID (index OCI) : `sha256:579f6c361955a85fd2f977972a676b795c814cc606325d4b60a03071141243c6`.
+Le digest `87e1b479…` visible dans le log de build est celui de la configuration,
+pas le Docker image ID.
 Les profils média administrés, egress et schéma SQL sont inchangés.
 
 Le job explicite `media-diagnostic` utilise une session SQL en lecture seule et

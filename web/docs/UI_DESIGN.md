@@ -82,3 +82,12 @@ Complément : la suite vérifie aussi la correction après export, l’invalidat
 rendu proposé, la création d’un nouveau MP4, la conservation du précédent fichier
 et de la traduction lorsque l’arabe change. Voir le rapport de relecture desktop
 pour la dernière recette active ; le précédent rapport mobile reste historique.
+
+## Extension de vitesse — décision finale
+
+Pas de réglage ni de raccourcis de vitesse applicatifs, sur demande du propriétaire.
+La vitesse initiale reste 1× ; cela ne bloque pas les extensions du navigateur.
+Le `<video>` dispose d'un conteneur d'aperçu aux dimensions explicites pour que
+les contrôles injectés à côté par une extension ne décalent pas la grille.
+La régression et les nouveaux parcours filmés sont documentés dans
+[le rapport du lecteur](../review/player-layout-20260923/RESULTS.md).

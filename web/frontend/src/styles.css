@@ -541,13 +541,26 @@ textarea.project-title {
   border: 1px solid #425650;
   border-radius: 18px;
 }
-.player video {
+.player .video-preview {
+  /* Extension hosts inserted beside video stay inside this fixed preview cell. */
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   width: 112px;
   height: 70px;
   max-height: none;
   object-fit: contain;
   background: #080d0e;
   border-radius: 8px;
+}
+.video-preview video {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
 }
 .player-controls {
   display: grid;
@@ -586,7 +599,7 @@ textarea.project-title {
   padding: 0;
   accent-color: #b2d89d;
 }
-.player.expanded video {
+.player.expanded .video-preview {
   grid-column: 1 / -1;
   width: 100%;
   height: min(40vh, 340px);
@@ -611,7 +624,7 @@ textarea.project-title {
     padding: 10px;
     box-shadow: 0 -8px 32px #080d0e66;
   }
-  .player video {
+  .player .video-preview {
     width: 76px;
     height: 60px;
   }
@@ -628,7 +641,7 @@ textarea.project-title {
   .player-controls input[type="range"] {
     grid-column: 1 / -1;
   }
-  .player.expanded video {
+  .player.expanded .video-preview {
     height: min(30vh, 220px);
   }
   .player.expanded .player-controls {
@@ -683,7 +696,7 @@ textarea.project-title {
     grid-template-columns: 60px minmax(0, 1fr) 44px;
     gap: 4px;
   }
-  .player video {
+  .player .video-preview {
     width: 60px;
   }
 }

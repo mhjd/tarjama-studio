@@ -309,3 +309,12 @@ Le 431 du navigateur propriétaire n'a pas été reproduit : le chemin HTTPS pub
 n'est pas joignable depuis le compte agent. La santé Kubernetes ne démontre pas
 sa résolution. Un essai en navigation privée permet de distinguer un problème
 d'en-têtes/cookies de la session habituelle avant investigation du proxy/SSO.
+
+## 23 septembre 2026 — confinement de la mise en page du lecteur
+
+Frontend actif : recette `active-player-20260923.yml`, révision `e5670e07fcb2f8c0`.
+Les éléments injectés près de la vidéo par une extension ne déplacent plus les
+commandes. Aucun contrôle de vitesse ajouté. Vingt tests UI réussis, trois
+nouveaux parcours vidéo locaux et exports High synthétiques préparés pour remise.
+Voir [le rapport et ses limites](../review/player-layout-20260923/RESULTS.md).
+Le backend d'import corrigé reste inchangé et les quatre services sont prêts.

@@ -673,15 +673,17 @@ export function Editor({
           className={`player ${expanded ? "expanded" : ""}`}
           aria-label="Lecteur vidéo"
         >
-          <video
-            playsInline
-            preload="metadata"
-            ref={media}
-            src={`/api/projects/${p.id}/media`}
-            onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-          />
+          <div className="video-preview">
+            <video
+              playsInline
+              preload="metadata"
+              ref={media}
+              src={`/api/projects/${p.id}/media`}
+              onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+              onPlay={() => setPlaying(true)}
+              onPause={() => setPlaying(false)}
+            />
+          </div>
           <div className="player-controls">
             <button onClick={() => seek(-5)} aria-label="Reculer de 5 secondes">
               <RotateCcw size={20} aria-hidden="true" />

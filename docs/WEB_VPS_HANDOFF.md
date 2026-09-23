@@ -36,6 +36,13 @@ livraison frontend conserve le binaire backend qualifié b69c700 et n'active pas
 le candidat de recherche. Ces décisions récentes priment sur l'ancien sélecteur
 arabe/français et l'ancien emplacement du lecteur.
 
+Complément desktop après revue des captures : français sous l’arabe à toutes les
+tailles, commandes du lecteur desktop agrandies/centrées, étape suivante en haut
+et en bas, URL YouTube sous le titre et copiable. La correction après export est
+qualifiée sur fixture jusqu’à un nouveau MP4. Dernière recette active :
+`web/deploy/preview/active-desktop-20260923.yml` ;
+[rapport](../web/review/ui-desktop-20260923/RESULTS.md).
+
 Date : 21 septembre 2026. Destinataire : un nouvel agent Codex travaillant sur le VPS de l'utilisateur, dans le même dépôt, sans accès à la conversation précédente.
 
 Complément de décision après la passation initiale : l'utilisateur indique que l'IP de son serveur est bloquée par YouTube, mais qu'il a réussi avec Cloudflare WARP + yt-dlp. Il approuve une sortie WARP réservée aux téléchargements vidéo. L'import de fichier est désormais un choix de premier niveau à la création d'un projet, et doit aussi être proposé lorsqu'un téléchargement échoue. Ces décisions sont intégrées ci-dessous ; elles ne décrivent pas une implémentation déjà livrée.

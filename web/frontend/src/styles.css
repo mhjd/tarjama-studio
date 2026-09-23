@@ -277,7 +277,7 @@ label small {
 }
 .fields.bilingual {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 18px;
 }
 .arabic textarea {
@@ -708,4 +708,94 @@ textarea.project-title {
   .export-panel .primary {
     width: 100%;
   }
+}
+
+/* Wide screens: the main transport controls are centered independently of the preview. */
+@media (min-width: 641px) {
+  .player {
+    grid-template-columns: minmax(112px, 1fr) auto minmax(112px, 1fr);
+    align-items: center;
+  }
+  .player-controls {
+    grid-template-columns: 64px 76px 64px;
+    gap: 12px 16px;
+  }
+  .player-controls button {
+    width: 64px;
+    height: 64px;
+  }
+  .player-controls .play-button {
+    width: 76px;
+    height: 76px;
+  }
+  .player-controls button svg {
+    width: 28px;
+    height: 28px;
+  }
+  .player-controls .play-button svg {
+    width: 32px;
+    height: 32px;
+  }
+  .player-controls button span {
+    font-size: 15px;
+  }
+  .player-controls .playback-time {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 13px;
+  }
+  .expand-player {
+    justify-self: end;
+  }
+  .player.expanded .player-controls {
+    grid-column: 2;
+  }
+  .segment {
+    scroll-margin-top: 220px;
+  }
+}
+
+.source-link {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 8px;
+}
+.copy-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  color: #b3c2bd;
+  font-size: 13px;
+  min-width: 0;
+  max-width: calc(100% - 52px);
+  text-align: left;
+}
+.copy-source svg {
+  flex-shrink: 0;
+}
+.copy-source span {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.source-link a {
+  width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.source-link small {
+  flex-basis: 100%;
+  font-size: 12px;
+}
+.source-link small:empty {
+  display: none;
+}
+.export-edit-help {
+  font-size: 13px;
 }

@@ -169,6 +169,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   await text.dispatchEvent("compositionend", { data: "الله" });
   await page
     .getByRole("button", { name: "Étape suivante · Traduire →" })
+    .first()
     .click();
   await expect(
     page.getByRole("textbox", { name: "Français one", exact: true }),
@@ -181,6 +182,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
     .fill("Bonjour à toutes et à tous.");
   await page
     .getByRole("button", { name: "Étape suivante · Exporter →", exact: true })
+    .last()
     .click();
   await expect(
     page.getByRole("heading", { name: "Votre vidéo sous-titrée" }),
@@ -194,6 +196,49 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   expect(download.status()).toBe(200);
   expect(download.headers()["content-type"]).toContain("video/mp4");
   expect((await download.body()).length).toBeGreaterThan(1000);
+  // Correcting an already rendered project invalidates that render without losing it.
+  const originalExport = await link.getAttribute("href");
+  const revisedFrench = page.getByRole("textbox", {
+    name: "Français one",
+    exact: true,
+  });
+  await revisedFrench.fill(
+    "Bonjour, voici la traduction corrigée après export.",
+  );
+  await revisedFrench.blur();
+  await expect(
+    page.getByRole("button", { name: "Étape suivante · Exporter →" }).last(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Télécharger · Low/ }),
+  ).toHaveCount(0);
+  expect((await page.request.get(originalExport!)).status()).toBe(200);
+  await page
+    .getByRole("button", { name: "Étape suivante · Exporter →" })
+    .last()
+    .click();
+  await page.getByRole("button", { name: "Créer la vidéo" }).click();
+  await expect(link).toBeVisible({ timeout: 30000 });
+  expect(await link.getAttribute("href")).not.toBe(originalExport);
+  const revisedArabic = page.getByRole("textbox", {
+    name: "Arabe one",
+    exact: true,
+  });
+  await revisedArabic.fill("السلام عليكم ورحمة الله وبركاته");
+  await revisedArabic.blur();
+  await expect(
+    page.getByRole("heading", { name: "Correction arabe", exact: true }),
+  ).toBeVisible();
+  const confirmation = page.getByRole("checkbox", {
+    name: "Je confirme le remplacement de la traduction française.",
+  });
+  await expect(confirmation).toHaveCount(2);
+  await confirmation.last().check();
+  await expect(confirmation.first()).toBeChecked();
+  const state = await (await page.request.get("/api/projects/fixture")).json();
+  expect(state.project.segments[0].french).toBe(
+    "Bonjour, voici la traduction corrigée après export.",
+  );
   await page.screenshot({
     path: "test-results/mobile-review.png",
     fullPage: true,
@@ -294,6 +339,7 @@ test("step waits for compositionend when clicked while Arabic composition is act
   });
   await page
     .getByRole("button", { name: "Étape suivante · Traduire →" })
+    .last()
     .evaluate((button: HTMLButtonElement) => button.click());
   await page.waitForTimeout(100);
   expect(advanced).toBe(false);
@@ -367,4 +413,37 @@ test("desktop arrows seek without interfering with text or native range editing"
   await slider.focus();
   await page.keyboard.press("ArrowRight");
   await expect(slider).toHaveValue("0.1");
+});
+
+test("source link copies the exact URL and reports clipboard refusal", async ({
+  page,
+  context,
+}) => {
+  const source = "https://www.youtube.com/watch?v=b1MKJ5gHig0";
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.route("**/api/projects/fixture", async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    data.project.url = source;
+    await route.fulfill({ response, json: data });
+  });
+  await login(page);
+  await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+  const copy = page.getByRole("button", { name: "Copier le lien YouTube" });
+  await expect(copy).toContainText(source);
+  await copy.click();
+  await expect(page.getByText("Lien copié", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    source,
+  );
+  await expect(
+    page.getByRole("link", { name: "Ouvrir la vidéo YouTube" }),
+  ).toHaveAttribute("href", source);
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = async () => {
+      throw new Error("denied");
+    };
+  });
+  await copy.click();
+  await expect(page.getByText(/Copie indisponible/)).toBeVisible();
 });

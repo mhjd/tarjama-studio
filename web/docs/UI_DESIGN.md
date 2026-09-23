@@ -19,11 +19,15 @@ globale, de template marketing ni de remplacement du produit par un kit généri
 - Identité sombre et sauge conservée ; texte principal clair, contraste et focus
   visibles. Espacements réguliers, cartes de segments simples, pas de chrome inutile.
 - Quatre étapes en colonnes égales, chiffres et libellés centrés. Action suivante
-  visible avant les segments, qui attend toujours le flush et sa réussite.
+  visible avant et après les segments, qui attend toujours le flush et sa réussite.
+  Les deux emplacements partagent confirmations et état occupé.
 - Titre modifiable sur plusieurs lignes, hauteur ajustée au texte et au viewport.
+  Lien YouTube juste dessous, copiable au clic avec retour de succès/échec, et
+  ouverture de la source dans un autre onglet. Les imports sans URL n’en inventent pas.
 - Sur téléphone : lecteur fixé en bas avec marge safe-area, timeline pleine largeur,
   commandes de 44–48 px et aperçu agrandissable. Marge de défilement pour que le
-  segment recherché reste au-dessus du lecteur. Sur ordinateur : lecteur sticky.
+  segment recherché reste au-dessus du lecteur. Sur ordinateur : lecteur sticky, commandes centrées de 64 px et lecture/pause
+  de 76 px. Le français est sous l’arabe sur toutes les tailles d’écran.
 - Suivi dans la barre de l'éditeur, séparé du lecteur ; actif par défaut, conservé
   lors d'un scroll manuel, suspendu pendant la saisie. L'ouverture ne défile plus
   automatiquement jusqu'au premier segment et ne masque plus le contexte du projet.
@@ -69,3 +73,8 @@ Le script vérifie l'identité immuable de la base locale avant de lui donner un
 de build ; aucun backend de HEAD n'est compilé dans cette livraison. Les anciens
 artefacts et paramètres réseau/secrets sont conservés. L'image finale et la recette
 active sont consignées dans le rapport de livraison associé.
+
+Complément : la suite vérifie aussi la correction après export, l’invalidation du
+rendu proposé, la création d’un nouveau MP4, la conservation du précédent fichier
+et de la traduction lorsque l’arabe change. Voir le rapport de relecture desktop
+pour la dernière recette active ; le précédent rapport mobile reste historique.

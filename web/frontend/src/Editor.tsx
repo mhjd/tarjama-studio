@@ -5,6 +5,9 @@ import {
   RotateCw,
   Maximize2,
   Minimize2,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -54,7 +57,8 @@ export function Editor({
     [quality, setQuality] = useState("low"),
     [title, setTitle] = useState(p.title),
     [replace, setReplace] = useState(false),
-    [deleteOpen, setDeleteOpen] = useState(false);
+    [deleteOpen, setDeleteOpen] = useState(false),
+    [copyNotice, setCopyNotice] = useState("");
   const titleField = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const el = titleField.current;
@@ -234,6 +238,84 @@ export function Editor({
       </label>
     );
   }
+  function nextStep(position: "top" | "bottom") {
+    return (
+      <>
+        {p.stage === "arabic" && (
+          <section
+            className="next-step"
+            data-position={position}
+            aria-label={`Étape suivante — ${position === "top" ? "haut" : "bas"}`}
+          >
+            {p.translation_source > 0 &&
+              p.translation_source !== p.arabic_version && (
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={replace}
+                    onChange={(e) => setReplace(e.target.checked)}
+                  />{" "}
+                  Je confirme le remplacement de la traduction française.
+                </label>
+              )}
+            <button
+              className="primary"
+              disabled={
+                busy ||
+                (p.translation_source > 0 &&
+                  p.translation_source !== p.arabic_version &&
+                  !replace)
+              }
+              onClick={() =>
+                void action(async () => {
+                  d.adopt(
+                    await request<Project>(
+                      `/api/projects/${p.id}/advance`,
+                      "POST",
+                      {
+                        version: d.project.version,
+                        stage: "arabic",
+                        replace_translation: replace,
+                      },
+                    ),
+                  );
+                })
+              }
+            >
+              {p.translation_source === p.arabic_version
+                ? "Étape suivante · Relire la traduction →"
+                : "Étape suivante · Traduire →"}
+            </button>
+          </section>
+        )}
+        {p.stage === "review" && (
+          <section
+            className="next-step"
+            data-position={position}
+            aria-label={`Étape suivante — ${position === "top" ? "haut" : "bas"}`}
+          >
+            <button
+              className="primary"
+              disabled={busy}
+              onClick={() =>
+                void action(async () => {
+                  d.adopt(
+                    await request<Project>(
+                      `/api/projects/${p.id}/advance`,
+                      "POST",
+                      { version: d.project.version, stage: "review" },
+                    ),
+                  );
+                })
+              }
+            >
+              Étape suivante · Exporter →
+            </button>
+          </section>
+        )}
+      </>
+    );
+  }
   return (
     <div className={p.media ? "editor has-media" : "editor"}>
       <button className="back" onClick={() => void action(back)}>
@@ -258,6 +340,40 @@ export function Editor({
                   .catch((e) => setError(String(e)));
             }}
           />
+          {p.url && /^https?:\/\//.test(p.url) && (
+            <div className="source-link">
+              <button
+                className="copy-source"
+                aria-label="Copier le lien YouTube"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(p.url!);
+                    setCopyNotice("Lien copié");
+                  } catch {
+                    setCopyNotice(
+                      "Copie indisponible. Vous pouvez sélectionner le lien pour le copier.",
+                    );
+                  }
+                }}
+              >
+                {copyNotice === "Lien copié" ? (
+                  <Check size={18} aria-hidden="true" />
+                ) : (
+                  <Copy size={18} aria-hidden="true" />
+                )}
+                <span>{p.url}</span>
+              </button>
+              <a
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Ouvrir la vidéo YouTube"
+              >
+                <ExternalLink size={18} aria-hidden="true" />
+              </a>
+              <small aria-live="polite">{copyNotice}</small>
+            </div>
+          )}
         </div>
         <small role="status">{d.status}</small>
       </div>
@@ -422,73 +538,14 @@ export function Editor({
             </button>
           </p>
         ))}
-      {p.stage === "arabic" && (
-        <section className="next-step">
-          {p.translation_source > 0 &&
-            p.translation_source !== p.arabic_version && (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={replace}
-                  onChange={(e) => setReplace(e.target.checked)}
-                />{" "}
-                Je confirme le remplacement de la traduction française.
-              </label>
-            )}
-          <button
-            className="primary"
-            disabled={
-              busy ||
-              (p.translation_source > 0 &&
-                p.translation_source !== p.arabic_version &&
-                !replace)
-            }
-            onClick={() =>
-              void action(async () => {
-                d.adopt(
-                  await request<Project>(
-                    `/api/projects/${p.id}/advance`,
-                    "POST",
-                    {
-                      version: d.project.version,
-                      stage: "arabic",
-                      replace_translation: replace,
-                    },
-                  ),
-                );
-              })
-            }
-          >
-            {p.translation_source === p.arabic_version
-              ? "Étape suivante · Relire la traduction →"
-              : "Étape suivante · Traduire →"}
-          </button>
-        </section>
-      )}
-      {p.stage === "review" && (
-        <section className="next-step">
-          <button
-            className="primary"
-            disabled={busy}
-            onClick={() =>
-              void action(async () => {
-                d.adopt(
-                  await request<Project>(
-                    `/api/projects/${p.id}/advance`,
-                    "POST",
-                    { version: d.project.version, stage: "review" },
-                  ),
-                );
-              })
-            }
-          >
-            Étape suivante · Exporter →
-          </button>
-        </section>
-      )}
+      {nextStep("top")}
       {p.stage === "ready" && (
         <section className="panel export-panel">
           <h2>Votre vidéo sous-titrée</h2>
+          <p className="export-edit-help">
+            Une correction ? Modifiez les textes ci-dessous, puis validez à
+            nouveau pour créer une vidéo à jour.
+          </p>
           <div className="row">
             <p className="export-language">Sous-titres français</p>
             <label>
@@ -667,6 +724,7 @@ export function Editor({
           </div>
         </>
       )}
+      {nextStep("bottom")}
       <section className="danger">
         {deleteOpen ? (
           <>

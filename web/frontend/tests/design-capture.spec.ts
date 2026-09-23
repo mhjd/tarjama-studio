@@ -20,6 +20,7 @@ for (const size of sizes)
       x.project.title =
         "France 24 · Une longue édition internationale à relire et traduire";
       x.project.stage = stage;
+      x.project.url = "https://www.youtube.com/watch?v=b1MKJ5gHig0";
       x.project.segments = Array.from({ length: 8 }, (_, i) => ({
         id: `visual-${i}`,
         start_ms: i * 400,
@@ -38,7 +39,7 @@ for (const size of sizes)
       page.getByRole("textbox", { name: "Arabe visual-0", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Étape suivante · Traduire →" }),
+      page.getByRole("button", { name: "Étape suivante · Traduire →" }).first(),
     ).toBeInViewport();
     expect(
       await page.evaluate(
@@ -75,11 +76,37 @@ for (const size of sizes)
     await expect(
       page.getByRole("textbox", { name: "Français visual-0", exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Étape suivante · Exporter →" }),
+    ).toHaveCount(2);
+    const arabicBox = await page
+      .getByRole("textbox", { name: "Arabe visual-0", exact: true })
+      .boundingBox();
+    const frenchBox = await page
+      .getByRole("textbox", { name: "Français visual-0", exact: true })
+      .boundingBox();
+    expect(frenchBox!.y).toBeGreaterThanOrEqual(
+      arabicBox!.y + arabicBox!.height,
+    );
+    if (size.width > 640) {
+      const player = await page.locator(".player").boundingBox();
+      const play = await page
+        .getByRole("button", { name: "Lecture", exact: true })
+        .boundingBox();
+      expect(play!.width).toBeGreaterThanOrEqual(76);
+      expect(
+        Math.abs(play!.x + play!.width / 2 - player!.x - player!.width / 2),
+      ).toBeLessThan(2);
+    }
     await page.screenshot({ path: `${dir}/02-traduction.png` });
     await page
       .getByRole("textbox", { name: "Français visual-5", exact: true })
       .scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${dir}/03-relecture.png` });
+    await page
+      .locator('.next-step[data-position="bottom"]')
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${dir}/06-next-step-bottom.png` });
     stage = "ready";
     await expect(
       page.getByRole("heading", { name: "Votre vidéo sous-titrée" }),

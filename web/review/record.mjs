@@ -35,7 +35,7 @@ for(const device of devices){
   await page.getByRole('button',{name:'Commencer',exact:true}).click();
   await mark('preparing');
   // Observe actual persistent queue; never fake success or bypass provider cooldown.
-  await expect(page.getByRole('button',{name:'Terminer la correction arabe · Traduire',exact:true})).toBeVisible({timeout:18*60000});
+  await expect(page.getByRole('button',{name:'Étape suivante · Traduire →',exact:true})).toBeVisible({timeout:18*60000});
   await page.getByRole('heading',{name:'Correction arabe',exact:true}).scrollIntoViewIfNeeded();
   await mark('arabic');
   const follow=page.getByRole('button',{name:'Suivi activé',exact:true});
@@ -60,8 +60,8 @@ for(const device of devices){
   await page.reload();await page.getByRole('button',{name:new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
   await expect(page.locator('textarea[lang="ar"]').first()).toHaveValue(editedArabic);
   await mark('saved');
-  await page.getByRole('button',{name:'Terminer la correction arabe · Traduire',exact:true}).click();
-  await expect(page.getByRole('button',{name:'Terminer la relecture',exact:true})).toBeVisible({timeout:18*60000});
+  await page.getByRole('button',{name:'Étape suivante · Traduire →',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Étape suivante · Exporter →',exact:true})).toBeVisible({timeout:18*60000});
   await page.getByRole('heading',{name:'Relire arabe et français'}).scrollIntoViewIfNeeded();
   await mark('translation');
   const french=page.locator('textarea[lang="fr"]').first();
@@ -70,14 +70,13 @@ for(const device of devices){
   if(editedFrench===originalFrench)throw Error('French edit must change the text');
   await french.fill(editedFrench);
   // Advancing must flush the focused edit before exporting.
-  await page.getByRole('button',{name:'Terminer la relecture',exact:true}).click();
+  await page.getByRole('button',{name:'Étape suivante · Exporter →',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Votre vidéo sous-titrée'})).toBeVisible();
   await page.reload();
   await page.getByRole('button',{name:new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
   await expect(page.locator('textarea[lang="fr"]').first()).toHaveValue(editedFrench);
   await page.getByRole('combobox',{name:/Qualité/}).selectOption('high');
-  for(const [track,label] of [['fr','français'],['ar','arabe']]) {
-   await page.getByRole('combobox',{name:/Sous-titres/}).selectOption(track);
+  for(const [track,label] of [['fr','français']]) {
    await mark('export-'+track);
    await page.getByRole('button',{name:'Créer la vidéo',exact:true}).click();
    const link=page.getByRole('link',{name:`Télécharger · High · ${label}`,exact:true});
@@ -87,7 +86,7 @@ for(const device of devices){
    const path=root+'/'+filename;await download.saveAs(path);await upload(path,filename);await fs.unlink(path);await download.delete();
    await mark('downloaded-'+track);
   }
-  for (const track of ['fr','ar']) {
+  for (const track of ['fr']) {
    const filename=`tarjama-b1MKJ5gHig0-${name}-${track}-high.mp4`;
    await page.goto('/review-artifacts/'+filename);
    const rendered=page.locator('video');

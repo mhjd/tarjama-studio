@@ -248,41 +248,7 @@ label small {
   color: #cbeab6;
   border-bottom: 2px solid #b2d89d;
 }
-.player {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #17201ff5;
-  padding: 12px;
-  border: 1px solid #3c4d44;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  display: flex;
-  gap: 18px;
-  align-items: center;
-}
-.player video {
-  width: 140px;
-  max-height: 110px;
-  background: #080d0b;
-  border-radius: 7px;
-}
-.player-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  flex: 1;
-}
-.player-controls input {
-  width: 100%;
-  accent-color: #b2d89d;
-}
-.player-controls span {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-  font-size: 13px;
-}
+
 .notice {
   font-size: 13px;
   border-left: 2px solid #7f985f;
@@ -471,26 +437,7 @@ summary {
     display: block;
     margin-bottom: 7px;
   }
-  .player {
-    padding: 10px;
-    gap: 10px;
-  }
-  .player video {
-    width: 72px;
-    max-height: 100px;
-  }
-  .player-controls {
-    gap: 7px;
-  }
-  .player-controls button {
-    padding: 7px 10px;
-  }
-  .player-controls span {
-    font-size: 11px;
-  }
-  .player-controls input {
-    margin: 0;
-  }
+
   .segment {
     padding: 14px;
     scroll-margin-top: 145px;
@@ -524,14 +471,241 @@ summary {
   border-color: #b2d89d;
   color: #cbeab6;
 }
+
+/* Editor: keep the transcript central and playback within thumb reach. */
+.page-title > div {
+  min-width: 0;
+  width: 100%;
+}
+textarea.project-title {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.3;
+  font-weight: 600;
+  border-color: transparent;
+  overflow-wrap: anywhere;
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.steps li {
+  text-align: center;
+  padding: 12px 2px;
+}
+.steps li span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px;
+}
+.next-step {
+  margin: 16px 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 28px;
+}
+.editor-toolbar h2 {
+  order: -1;
+  margin: 0;
+}
+.translation-help {
+  color: #aebdb6;
+  font-size: 13px;
+  margin: 12px 0 20px;
+}
+.translation-help summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.player {
+  position: sticky;
+  top: 12px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) 44px;
+  gap: 16px;
+  padding: 16px;
+  background: #1b2726;
+  border: 1px solid #425650;
+  border-radius: 18px;
+}
+.player video {
+  width: 112px;
+  height: 70px;
+  max-height: none;
+  object-fit: contain;
+  background: #080d0e;
+  border-radius: 8px;
+}
+.player-controls {
+  display: grid;
+  grid-template-columns: 44px 48px 44px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.player-controls button,
+.expand-player {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
+}
+.player-controls button span {
+  font-size: 11px;
+}
+.player-controls .play-button {
+  height: 48px;
+}
+.player-controls .playback-time {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.player-controls input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  min-height: 24px;
+  padding: 0;
+  accent-color: #b2d89d;
+}
+.player.expanded video {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: min(40vh, 340px);
+}
+.player.expanded .player-controls {
+  grid-column: 1 / 3;
+}
+.segment {
+  scroll-margin-bottom: 24px;
+}
 @media (max-width: 640px) {
-  .player {
-    flex-wrap: wrap;
+  .editor.has-media {
+    padding-bottom: calc(160px + env(safe-area-inset-bottom));
   }
-  .follow-toggle {
-    margin-left: auto;
+  .player {
+    position: fixed;
+    inset: auto 8px 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 10;
+    grid-template-columns: 76px minmax(0, 1fr) 44px;
+    gap: 8px;
+    padding: 10px;
+    box-shadow: 0 -8px 32px #080d0e66;
+  }
+  .player video {
+    width: 76px;
+    height: 60px;
+  }
+  .player-controls {
+    grid-template-columns: 44px 48px 44px;
+    justify-content: center;
+    gap: 4px;
+  }
+  .player-controls .playback-time {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 11px;
+  }
+  .player-controls input[type="range"] {
+    grid-column: 1 / -1;
+  }
+  .player.expanded video {
+    height: min(30vh, 220px);
+  }
+  .player.expanded .player-controls {
+    grid-template-columns: 44px 48px 44px 1fr;
+  }
+  .player.expanded .playback-time {
+    grid-column: auto;
   }
   .segment {
-    scroll-margin-top: 210px;
+    scroll-margin-top: 20px;
+    scroll-margin-bottom: 180px;
+  }
+  .editor:has(.player.expanded) .segment {
+    scroll-margin-bottom: 400px;
+  }
+  .editor-toolbar {
+    align-items: flex-start;
+  }
+  .editor-toolbar h2 {
+    font-size: 18px;
+    line-height: 1.4;
+  }
+  .follow-toggle {
+    margin: 0;
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  .steps {
+    margin-top: 20px;
+  }
+  .next-step .primary {
+    font-size: 14px;
+    min-height: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+.player > input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  min-height: 24px;
+  padding: 0;
+  accent-color: #b2d89d;
+}
+
+@media (max-width: 360px) {
+  .player {
+    grid-template-columns: 60px minmax(0, 1fr) 44px;
+    gap: 4px;
+  }
+  .player video {
+    width: 60px;
+  }
+}
+
+@media (max-width: 640px) {
+  html:has(.editor.has-media) {
+    scroll-padding-bottom: calc(160px + env(safe-area-inset-bottom));
+  }
+  html:has(.player.expanded) {
+    scroll-padding-bottom: calc(400px + env(safe-area-inset-bottom));
+  }
+  .segment,
+  .editor:has(.player.expanded) .segment {
+    scroll-margin-bottom: 16px;
+  }
+  .export-panel {
+    scroll-margin: 16px 0;
+  }
+  .export-panel .row {
+    display: block;
+  }
+  .export-panel .primary {
+    width: 100%;
   }
 }

@@ -1,4 +1,8 @@
 import { defineConfig } from "@playwright/test";
+import { fileURLToPath } from "node:url";
+process.env.PLAYWRIGHT_BROWSERS_PATH ||= fileURLToPath(
+  new URL("../.cache/playwright", import.meta.url),
+);
 export default defineConfig({
   testDir: "./tests",
   workers: 1,

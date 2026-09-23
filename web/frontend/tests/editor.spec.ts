@@ -113,7 +113,7 @@ test("follow stays enabled on manual scroll, is explicit, and seeks the same sub
           .querySelector(".player")!
           .getBoundingClientRect();
         const rect = el.getBoundingClientRect();
-        return rect.top >= player.bottom && rect.top < window.innerHeight;
+        return rect.top >= 0 && rect.top < player.top;
       }),
     )
     .toBeTruthy();
@@ -168,7 +168,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   await text.fill("السلام عليكم ورحمة الله");
   await text.dispatchEvent("compositionend", { data: "الله" });
   await page
-    .getByRole("button", { name: "Terminer la correction arabe · Traduire" })
+    .getByRole("button", { name: "Étape suivante · Traduire →" })
     .click();
   await expect(
     page.getByRole("textbox", { name: "Français one", exact: true }),
@@ -180,7 +180,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
     .getByRole("textbox", { name: "Français one", exact: true })
     .fill("Bonjour à toutes et à tous.");
   await page
-    .getByRole("button", { name: "Terminer la relecture", exact: true })
+    .getByRole("button", { name: "Étape suivante · Exporter →", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Votre vidéo sous-titrée" }),
@@ -293,7 +293,7 @@ test("step waits for compositionend when clicked while Arabic composition is act
     if (r.url().endsWith("/advance")) advanced = true;
   });
   await page
-    .getByRole("button", { name: "Terminer la correction arabe · Traduire" })
+    .getByRole("button", { name: "Étape suivante · Traduire →" })
     .evaluate((button: HTMLButtonElement) => button.click());
   await page.waitForTimeout(100);
   expect(advanced).toBe(false);
@@ -332,4 +332,39 @@ test("audio keeps playing while editing without stealing focus", async ({
     )
     .toBe(false);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
+});
+
+test("desktop arrows seek without interfering with text or native range editing", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 932 });
+  await login(page);
+  await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+  const video = page.locator("video");
+  await expect
+    .poll(() => video.evaluate((v) => (v as HTMLVideoElement).readyState))
+    .toBeGreaterThan(0);
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(() => video.evaluate((v) => (v as HTMLVideoElement).currentTime))
+    .toBeCloseTo(4, 0);
+  await page.keyboard.press("ArrowLeft");
+  await expect
+    .poll(() => video.evaluate((v) => (v as HTMLVideoElement).currentTime))
+    .toBe(0);
+  await page.getByRole("textbox", { name: "Titre du projet" }).focus();
+  await page.keyboard.press("ArrowRight");
+  expect(await video.evaluate((v) => (v as HTMLVideoElement).currentTime)).toBe(
+    0,
+  );
+  await page.getByRole("textbox", { name: "Arabe one", exact: true }).focus();
+  await page.keyboard.press("ArrowRight");
+  expect(await video.evaluate((v) => (v as HTMLVideoElement).currentTime)).toBe(
+    0,
+  );
+  const slider = page.getByRole("slider", { name: "Position de lecture" });
+  await slider.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(slider).toHaveValue("0.1");
 });

@@ -76,7 +76,7 @@ web-tools:
 
 web-deps:
 	web/scripts/tools.sh go mod download
-	web/scripts/tools.sh sh -c 'cd /work/web/frontend && npm ci'
+	web/scripts/tools.sh sh -c 'cd /work/web/frontend && npm ci && PLAYWRIGHT_BROWSERS_PATH=/work/web/.cache/playwright npx playwright install ffmpeg'
 
 web-test: web-prompts-check
 	web/scripts/test.sh
@@ -210,3 +210,8 @@ web-prompts-sync:
 web-prompts-check:
 	python3 -B web/scripts/sync_translation_prompt.py --check
 	python3 -B -m unittest discover -s web/scripts -p test_translation_prompt.py -v
+
+.PHONY: web-ui-release-build
+# Keep the qualified runtime while the research backend remains a candidate.
+web-ui-release-build:
+	web/scripts/build-ui-release.sh

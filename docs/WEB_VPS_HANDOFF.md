@@ -26,6 +26,16 @@ avec adaptation JSON uniquement ; voir
 active, qui conserve son image antérieure. Finaliser la qualification réelle et
 l'affichage des références/Search Suggestions avant cette mise en service.
 
+Complément UI du 23 septembre : lecteur mobile inférieur agrandissable, titre
+multiligne, étapes centrées, actions suivantes explicites, suivi séparé et
+raccourcis ±5 s hors saisie. Le nouvel export proposé est français uniquement ;
+les fichiers historiques sont conservés. Voir
+[le rapport visuel](../web/review/ui-mobile-20260923/RESULTS.md).
+La recette active est `web/deploy/preview/active-mobile-20260923.yml` ; cette
+livraison frontend conserve le binaire backend qualifié b69c700 et n'active pas
+le candidat de recherche. Ces décisions récentes priment sur l'ancien sélecteur
+arabe/français et l'ancien emplacement du lecteur.
+
 Date : 21 septembre 2026. Destinataire : un nouvel agent Codex travaillant sur le VPS de l'utilisateur, dans le même dépôt, sans accès à la conversation précédente.
 
 Complément de décision après la passation initiale : l'utilisateur indique que l'IP de son serveur est bloquée par YouTube, mais qu'il a réussi avec Cloudflare WARP + yt-dlp. Il approuve une sortie WARP réservée aux téléchargements vidéo. L'import de fichier est désormais un choix de premier niveau à la création d'un projet, et doit aussi être proposé lorsqu'un téléchargement échoue. Ces décisions sont intégrées ci-dessous ; elles ne décrivent pas une implémentation déjà livrée.

@@ -1,3 +1,11 @@
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  RotateCw,
+  Maximize2,
+  Minimize2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   request,
@@ -42,11 +50,23 @@ export function Editor({
     [playing, setPlaying] = useState(false),
     [follow, setFollow] = useState(true),
     [focused, setFocused] = useState(false),
-    [track, setTrack] = useState("fr"),
+    [expanded, setExpanded] = useState(false),
     [quality, setQuality] = useState("low"),
     [title, setTitle] = useState(p.title),
     [replace, setReplace] = useState(false),
     [deleteOpen, setDeleteOpen] = useState(false);
+  const titleField = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = titleField.current;
+    if (!el) return;
+    const resize = () => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, [title]);
   const media = useRef<HTMLVideoElement>(null),
     fields = useRef(new Map<string, HTMLTextAreaElement>()),
     composing = useRef(new Set<string>()),
@@ -127,7 +147,12 @@ export function Editor({
     (s) => current * 1000 >= s.start_ms && current * 1000 < s.end_ms,
   )?.id;
   useEffect(() => {
-    if (follow && !focused && active)
+    if (
+      follow &&
+      !focused &&
+      active &&
+      (current > 0 || seekVersion > 0 || playing)
+    )
       document
         .getElementById(`segment-${active}`)
         ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -146,6 +171,29 @@ export function Editor({
   function seek(delta: number) {
     if (media.current) seekTo(media.current.currentTime + delta);
   }
+  useEffect(() => {
+    function keydown(event: KeyboardEvent) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || event.isComposing) return;
+      if (
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        target.closest(
+          'input, textarea, select, [contenteditable="true"], [role="slider"]',
+        )
+      )
+        return;
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        if (!media.current) return;
+        event.preventDefault();
+        seek(event.key === "ArrowLeft" ? -5 : 5);
+      }
+    }
+    window.addEventListener("keydown", keydown);
+    return () => window.removeEventListener("keydown", keydown);
+  }, [p.duration_ms]);
   const editable = ["arabic", "review", "ready"].includes(p.stage),
     french = p.stage === "review" || p.stage === "ready";
   function field(s: Segment, f: Field) {
@@ -187,14 +235,16 @@ export function Editor({
     );
   }
   return (
-    <>
+    <div className={p.media ? "editor has-media" : "editor"}>
       <button className="back" onClick={() => void action(back)}>
         ← Mes projets
       </button>
       <div className="page-title">
         <div>
           <p className="eyebrow">{stageNames[p.stage]}</p>
-          <input
+          <textarea
+            ref={titleField}
+            rows={1}
             className="project-title"
             aria-label="Titre du projet"
             value={title}
@@ -372,110 +422,6 @@ export function Editor({
             </button>
           </p>
         ))}
-      {p.media && (
-        <section className="player">
-          <video
-            playsInline
-            preload="metadata"
-            ref={media}
-            src={`/api/projects/${p.id}/media`}
-            onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-          />
-          <div className="player-controls">
-            <button onClick={() => seek(-5)} aria-label="Reculer de 5 secondes">
-              −5 s
-            </button>
-            <button
-              className="primary"
-              onClick={() => {
-                const v = media.current;
-                if (v)
-                  void (v.paused ? v.play() : Promise.resolve(v.pause())).catch(
-                    () => setError("Lecture impossible"),
-                  );
-              }}
-            >
-              {playing ? "Pause" : "Lecture"}
-            </button>
-            <button onClick={() => seek(5)} aria-label="Avancer de 5 secondes">
-              +5 s
-            </button>
-            <span>
-              {time(current * 1000)} / {time(p.duration_ms)}
-            </span>
-            <input
-              aria-label="Position de lecture"
-              type="range"
-              min={0}
-              max={p.duration_ms / 1000 || 1}
-              step={0.1}
-              value={current}
-              onChange={(e) => {
-                seekTo(Number(e.target.value));
-              }}
-            />
-          </div>
-          {p.segments.length > 0 && (
-            <button
-              className="follow-toggle"
-              aria-pressed={follow}
-              onClick={() => setFollow((value) => !value)}
-              title={
-                focused && follow
-                  ? "Le défilement attend la fin de votre saisie"
-                  : undefined
-              }
-            >
-              Suivi {follow ? "activé" : "désactivé"}
-            </button>
-          )}
-        </section>
-      )}
-      {p.segments.length > 0 && (
-        <>
-          <div className="row">
-            <h2>{french ? "Relire arabe et français" : "Correction arabe"}</h2>
-          </div>
-          <p className="notice">
-            Vérifiez les citations religieuses et leurs références. Elles ne
-            sont pas vérifiées automatiquement ; les citations coraniques
-            françaises ne sont pas certifiées Hamidullah.
-          </p>
-          {p.stage === "arabic" &&
-            p.translation_source > 0 &&
-            p.translation_source !== p.arabic_version && (
-              <p className="notice">
-                L’arabe a changé. La traduction précédente est conservée ; une
-                nouvelle traduction remplacera les retouches françaises après
-                votre confirmation.
-              </p>
-            )}
-          <div className="segments">
-            {p.segments.map((s) => (
-              <article
-                id={`segment-${s.id}`}
-                key={s.id}
-                className={`segment ${s.id === active ? "active" : ""}`}
-              >
-                <button
-                  className="timestamp"
-                  onClick={() => {
-                    seekTo(s.start_ms / 1000);
-                  }}
-                >
-                  {time(s.start_ms)} — {time(s.end_ms)}
-                </button>
-                <div className={french ? "fields bilingual" : "fields"}>
-                  {field(s, "arabic")}
-                  {french && field(s, "french")}
-                </div>
-              </article>
-            ))}
-          </div>
-        </>
-      )}
       {p.stage === "arabic" && (
         <section className="next-step">
           {p.translation_source > 0 &&
@@ -514,8 +460,8 @@ export function Editor({
             }
           >
             {p.translation_source === p.arabic_version
-              ? "Terminer la correction arabe · Relire la traduction"
-              : "Terminer la correction arabe · Traduire"}
+              ? "Étape suivante · Relire la traduction →"
+              : "Étape suivante · Traduire →"}
           </button>
         </section>
       )}
@@ -536,21 +482,15 @@ export function Editor({
               })
             }
           >
-            Terminer la relecture
+            Étape suivante · Exporter →
           </button>
         </section>
       )}
       {p.stage === "ready" && (
-        <section className="panel">
+        <section className="panel export-panel">
           <h2>Votre vidéo sous-titrée</h2>
           <div className="row">
-            <label>
-              Sous-titres
-              <select value={track} onChange={(e) => setTrack(e.target.value)}>
-                <option value="fr">Français</option>
-                <option value="ar">Arabe</option>
-              </select>
-            </label>
+            <p className="export-language">Sous-titres français</p>
             <label>
               Qualité
               <select
@@ -573,7 +513,7 @@ export function Editor({
               void action(async () => {
                 await request(`/api/projects/${p.id}/exports`, "POST", {
                   version: d.project.version,
-                  track,
+                  track: "fr",
                   quality,
                 });
               })
@@ -597,6 +537,135 @@ export function Editor({
               </p>
             ))}
         </section>
+      )}
+      {p.media && (
+        <section
+          className={`player ${expanded ? "expanded" : ""}`}
+          aria-label="Lecteur vidéo"
+        >
+          <video
+            playsInline
+            preload="metadata"
+            ref={media}
+            src={`/api/projects/${p.id}/media`}
+            onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+          />
+          <div className="player-controls">
+            <button onClick={() => seek(-5)} aria-label="Reculer de 5 secondes">
+              <RotateCcw size={20} aria-hidden="true" />
+              <span>5</span>
+            </button>
+            <button
+              className="primary play-button"
+              aria-label={playing ? "Pause" : "Lecture"}
+              onClick={() => {
+                const v = media.current;
+                if (v)
+                  void (v.paused ? v.play() : Promise.resolve(v.pause())).catch(
+                    () => setError("Lecture impossible"),
+                  );
+              }}
+            >
+              {playing ? (
+                <Pause size={23} aria-hidden="true" />
+              ) : (
+                <Play size={23} aria-hidden="true" />
+              )}
+            </button>
+            <button onClick={() => seek(5)} aria-label="Avancer de 5 secondes">
+              <RotateCw size={20} aria-hidden="true" />
+              <span>5</span>
+            </button>
+            <span className="playback-time">
+              {time(current * 1000)} / {time(p.duration_ms)}
+            </span>
+          </div>
+          <button
+            className="expand-player"
+            aria-label={expanded ? "Réduire la vidéo" : "Agrandir la vidéo"}
+            aria-expanded={expanded}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? (
+              <Minimize2 size={20} aria-hidden="true" />
+            ) : (
+              <Maximize2 size={20} aria-hidden="true" />
+            )}
+          </button>
+          <input
+            aria-label="Position de lecture"
+            type="range"
+            min={0}
+            max={p.duration_ms / 1000 || 1}
+            step={0.1}
+            value={current}
+            onChange={(e) => {
+              seekTo(Number(e.target.value));
+            }}
+          />
+        </section>
+      )}
+      {p.segments.length > 0 && (
+        <>
+          <div className="editor-toolbar">
+            {p.segments.length > 0 && (
+              <button
+                className="follow-toggle"
+                aria-pressed={follow}
+                onClick={() => setFollow((value) => !value)}
+                title={
+                  focused && follow
+                    ? "Le défilement attend la fin de votre saisie"
+                    : undefined
+                }
+              >
+                Suivi {follow ? "activé" : "désactivé"}
+              </button>
+            )}
+            <h2>{french ? "Relire arabe et français" : "Correction arabe"}</h2>
+          </div>
+          <details className="translation-help">
+            <summary>À propos de la traduction</summary>
+            <p>
+              La traduction reste modifiable. La vérification automatique des
+              citations religieuses n’est pas activée ; vérifiez les références
+              avant publication.
+            </p>
+          </details>
+          {p.stage === "arabic" &&
+            p.translation_source > 0 &&
+            p.translation_source !== p.arabic_version && (
+              <p className="notice">
+                L’arabe a changé. La traduction précédente est conservée ; une
+                nouvelle traduction remplacera les retouches françaises après
+                votre confirmation.
+              </p>
+            )}
+          <div className="segments">
+            {p.segments.map((s) => (
+              <article
+                id={`segment-${s.id}`}
+                key={s.id}
+                className={`segment ${s.id === active ? "active" : ""}`}
+              >
+                <button
+                  className="timestamp"
+                  onClick={() => {
+                    seekTo(s.start_ms / 1000);
+                  }}
+                >
+                  {time(s.start_ms)} — {time(s.end_ms)}
+                </button>
+                <div className={french ? "fields bilingual" : "fields"}>
+                  {field(s, "arabic")}
+                  {french && field(s, "french")}
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
       )}
       <section className="danger">
         {deleteOpen ? (
@@ -625,6 +694,6 @@ export function Editor({
           </button>
         )}
       </section>
-    </>
+    </div>
   );
 }

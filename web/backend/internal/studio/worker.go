@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -28,10 +29,16 @@ type ASRChunk struct {
 func PrepareASR(response ASRResponse) ([]ASRSegment, error) {
 	out := []ASRSegment{}
 	for _, s := range response.Segments {
-		if math.IsNaN(s.Start) || math.IsInf(s.Start, 0) || math.IsNaN(s.End) || math.IsInf(s.End, 0) || s.Start < 0 || s.End <= s.Start || strings.TrimSpace(s.Text) == "" {
+		if math.IsNaN(s.Start) || math.IsInf(s.Start, 0) || math.IsNaN(s.End) || math.IsInf(s.End, 0) || s.Start < 0 || s.End < s.Start {
 			return nil, errors.New("Segment Groq invalide")
 		}
-		if s.End-s.Start <= 8 {
+		// Recover blank segment text from word timestamps before rejecting it,
+		// as desktop does. Never silently discard a possibly spoken passage.
+		if s.End == s.Start {
+			continue
+		}
+		hasText := strings.TrimSpace(s.Text) != ""
+		if hasText && s.End-s.Start <= 8 {
 			out = append(out, s)
 			continue
 		}
@@ -43,6 +50,9 @@ func PrepareASR(response ASRResponse) ([]ASRSegment, error) {
 			}
 		}
 		if len(words) == 0 {
+			if !hasText {
+				return nil, errors.New("Segment Groq invalide")
+			}
 			out = append(out, s)
 			continue
 		}
@@ -195,10 +205,40 @@ func (w *Worker) Once(ctx context.Context) (bool, error) {
 	cancel()
 	<-done
 	if e != nil {
+		log.Printf("job failed id=%s kind=%s reason=%s", j.ID, j.Kind, jobFailureReason(e))
 		w.Store.Fail(ctx, j, e)
 	}
 	return true, nil
 }
+
+// Fixed diagnostic labels only: never log provider payloads, URLs or credentials.
+func jobFailureReason(err error) string {
+	var provider *ProviderError
+	if errors.As(err, &provider) {
+		return "provider"
+	}
+	if errors.Is(err, ErrConflict) {
+		return "conflict"
+	}
+	switch err.Error() {
+	case "Segment Groq invalide":
+		return "asr_invalid_segment"
+	case "Timestamp Groq hors morceau":
+		return "asr_timestamp_outside_chunk"
+	case "Réponse Groq sans segments":
+		return "asr_missing_segments"
+	case "Morceau audio trop grand":
+		return "asr_audio_too_large"
+	case "Réponse fournisseur trop grande":
+		return "provider_response_too_large"
+	case "Nombre de segments invalide":
+		return "asr_segment_count"
+	case "Segments qui se chevauchent":
+		return "asr_overlapping_segments"
+	}
+	return "unclassified"
+}
+
 func (w *Worker) provider(ctx context.Context, j Job, provider string) (string, string, error) {
 	key, scope, e := w.Store.Key(ctx, w.Config, j.Owner, provider)
 	if e != nil {
@@ -337,6 +377,12 @@ func (w *Worker) transcribe(ctx context.Context, j Job) error {
 		return w.providerFailure(ctx, j, scope, e)
 	}
 	if _, e = PrepareASR(response); e != nil {
+		for i, segment := range response.Segments {
+			if math.IsNaN(segment.Start) || math.IsInf(segment.Start, 0) || math.IsNaN(segment.End) || math.IsInf(segment.End, 0) || segment.Start < 0 || segment.End < segment.Start {
+				log.Printf("ASR invalid timestamp job=%s segment=%d start=%g end=%g blank=%t", j.ID, i, segment.Start, segment.End, strings.TrimSpace(segment.Text) == "")
+				break
+			}
+		}
 		return e
 	}
 	return w.Store.Chunk(ctx, j, len(chunks), ASRChunk{Start: start, Duration: info.ChunkDuration, Response: response, Raw: audit}, GroqModel, "asr-desktop-v1", min(99, int(100*(start+info.ChunkDuration)/duration)))

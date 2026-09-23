@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage the qualified runtime plus the upload fix and safe broker diagnostics.
+"""Stage the qualified runtime plus qualified upload/ASR fixes and safe diagnostics.
 
 The pending translation/research backend is deliberately excluded from this release.
 """
@@ -21,10 +21,17 @@ def archive(revision, path):
 
 archive("b69c700", "web/backend")
 archive("HEAD", "web/frontend")
-# These files matched the qualified base before this change. Keep the list explicit.
-for name in ["api.go", "studio_test.go", "isolated_client.go", "isolated_test.go"]:
+# Explicitly reviewed additions/fixes; do not copy the pending backend wholesale.
+for name in ["api.go", "studio_test.go", "isolated_client.go", "isolated_test.go", "asr_test.go"]:
     relative = Path("web/backend/internal/studio") / name
     shutil.copy2(root / relative, stage / relative)
+# 8b25d68 is the pre-incident source; its candidate prompt version remains excluded.
+worker_patch = subprocess.check_output([
+    "git", "diff", "8b25d68", "--", "web/backend/internal/studio/worker.go"
+], cwd=root)
+if worker_patch:
+    subprocess.run(["git", "apply", "--directory", str(stage.relative_to(root))],
+                   input=worker_patch, cwd=root, check=True)
 shutil.copytree(root / "web/backend/cmd/media-diagnostic", stage / "web/backend/cmd/media-diagnostic")
 # Include frontend edits without dependencies, build output or runtime data.
 shutil.copytree(root / "web/frontend/src", stage / "web/frontend/src", dirs_exist_ok=True)

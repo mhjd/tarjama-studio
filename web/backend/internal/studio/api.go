@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"io"
@@ -389,22 +390,6 @@ func (a *API) export(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 	owner, pid := who(r).User, r.PathValue("id")
-	var generation int64
-	_, e := a.Store.Mutate(r.Context(), owner, pid, func(p *Project, tx pgx.Tx) error {
-		if p.Media != "" || len(p.Segments) > 0 {
-			return errors.New("Ce projet possède déjà une vidéo")
-		}
-		p.Generation++
-		p.Version++
-		p.Stage = "upload"
-		generation = p.Generation
-		_, e := tx.Exec(r.Context(), "UPDATE jobs SET state='cancelled',lease='' WHERE project_id=$1 AND state IN ('queued','running','waiting_provider','failed')", pid)
-		return e
-	})
-	if e != nil {
-		apiError(w, e)
-		return
-	}
 	// Reserve disk budget across upload processes; lock is released even on interrupted uploads.
 	conn, e := a.Store.DB.Acquire(r.Context())
 	if e != nil {
@@ -418,7 +403,41 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Un import est en cours. Réessayez dans un instant.", 429)
 		return
 	}
-	defer conn.Exec(r.Context(), "SELECT pg_advisory_unlock(91372611)")
+	defer func() {
+		unlockCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if _, err := conn.Exec(unlockCtx, "SELECT pg_advisory_unlock(91372611)"); err != nil {
+			// Never return a session with an advisory lock to the pool.
+			conn.Conn().Close(unlockCtx)
+		}
+	}()
+	var generation int64
+	_, e = a.Store.Mutate(r.Context(), owner, pid, func(p *Project, tx pgx.Tx) error {
+		if p.Media != "" || len(p.Segments) > 0 {
+			return errors.New("Ce projet possède déjà une vidéo")
+		}
+		// The project row lock serializes this choice with retry/cancel and publication.
+		var active, fallback bool
+		e := tx.QueryRow(r.Context(), `SELECT
+			EXISTS(SELECT 1 FROM jobs WHERE project_id=$1 AND generation=$2 AND kind IN ('download','prepare') AND state IN ('queued','running','waiting_provider')),
+			EXISTS(SELECT 1 FROM jobs WHERE project_id=$1 AND generation=$2 AND kind IN ('download','prepare') AND state IN ('failed','cancelled'))`, pid, p.Generation).Scan(&active, &fallback)
+		if e != nil {
+			return e
+		}
+		if active || (p.Stage != "upload" && !fallback) {
+			return fmt.Errorf("%w : annulez le traitement en cours avant d’importer un fichier", ErrConflict)
+		}
+		p.Generation++
+		p.Version++
+		p.Stage = "upload"
+		generation = p.Generation
+		_, e = tx.Exec(r.Context(), "UPDATE jobs SET state='cancelled',lease='' WHERE project_id=$1 AND state IN ('queued','running','waiting_provider','failed')", pid)
+		return e
+	})
+	if e != nil {
+		apiError(w, e)
+		return
+	}
 	if e = storageRoom(a.Config.Storage, MaxMediaBytes); e != nil {
 		apiError(w, e)
 		return

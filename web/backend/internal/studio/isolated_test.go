@@ -1,13 +1,16 @@
 package studio
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -590,6 +593,32 @@ func TestIsolatedRealOfflinePipeline(t *testing.T) {
 			if e != nil {
 				t.Fatal(track, quality, e)
 			}
+		}
+	}
+}
+
+func TestBrokerRefusalKeepsPrivateDetailsOutOfLogs(t *testing.T) {
+	var logs bytes.Buffer
+	old := log.Writer()
+	log.SetOutput(&logs)
+	defer log.SetOutput(old)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(429)
+		fmt.Fprint(w, `{"error":"disk reserve exhausted", "private":"https://private.example/video bearer-secret"}`)
+	}))
+	defer server.Close()
+	client := &IsolatedClient{URL: server.URL, Token: "bearer-secret", HTTP: server.Client()}
+	_, err := client.do(context.Background(), "POST", "/v1/jobs", nil, 0, nil)
+	var provider *ProviderError
+	if !errors.As(err, &provider) || !provider.Temporary {
+		t.Fatalf("capacity refusal must preserve automatic retry: %v", err)
+	}
+	if !strings.Contains(logs.String(), "status=429 reason=disk_capacity") {
+		t.Fatalf("missing operational category: %s", logs.String())
+	}
+	for _, private := range []string{"private.example", "bearer-secret", "reserve exhausted"} {
+		if strings.Contains(logs.String(), private) || strings.Contains(err.Error(), private) {
+			t.Fatal("upstream detail leaked")
 		}
 	}
 }

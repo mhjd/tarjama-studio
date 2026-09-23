@@ -655,3 +655,16 @@ Les contrôles de cette section prouvent uniquement la non-régression de la bas
 ## 21. Instruction de démarrage à donner au nouvel agent
 
 > Travaille sur `web-vps` dans ce dépôt. Lis d'abord `AGENTS.md`, puis intégralement `docs/WEB_VPS_HANDOFF.md`. Vérifie que ta branche descend du desktop `9b3cc9fb1584ea195cfd2b8065a688a2bfca0cb7` et contient les dernières mises à jour de la passation. La référence métier est exclusivement le desktop actuel (`DesktopApp` dans `ui/src/main.tsx` et `ui/electron/`). Ignore comme base l'ancien FastAPI, l'ancien `App` web et le workflow CLI local. Inspecte le VPS sans perturber ses services, puis commence par le premier incrément vertical Go/PostgreSQL/React décrit en phase 1. Respecte les décisions finales : Gemini et Groq partagés, attente ou clé personnelle facultative, aucun OpenRouter/crédit, prompts fixes, mobile sombre simple, sauvegarde sur blur et flush avant étape suivante, aucun historique utilisateur. Préserve les données desktop. Réalise et teste les incréments sur `web-vps`, puis prépare la livraison. Arrête-toi avant tout déploiement ou modification des services du VPS : je te donnerai séparément les instructions de mise en service. Remets le commit testé et un bilan distinguant implémenté, testé, simulé et prérequis encore manquants.
+
+
+### Décision utilisateur du 23 septembre — entrées vidéo exclusives
+
+Cette décision remplace la possibilité historique d'importer pendant qu'un lien
+est encore traité/en attente. Pendant un téléchargement ou une préparation
+`queued`, `running` ou `waiting_provider`, masquer l'import et le refuser côté API.
+Après échec ou annulation explicite, proposer l'import dans le même projet.
+Un traitement en attente peut être annulé sans devoir patienter pour son réessai.
+Le changement d'entrée conserve la barrière de génération contre les résultats
+retardataires. Une deuxième requête d'upload doit être refusée avant de modifier
+la génération de la première. Voir `web/review/upload-choice-20260923/README.md`
+pour les tests et le diagnostic de l'incident média contemporain.

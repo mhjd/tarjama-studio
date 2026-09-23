@@ -215,3 +215,9 @@ web-prompts-check:
 # Keep the qualified runtime while the research backend remains a candidate.
 web-ui-release-build:
 	web/scripts/build-ui-release.sh
+
+.PHONY: web-upload-release-build
+# Qualified backend + the reviewed upload API fix, without activating research.
+web-upload-release-build:
+	python3 web/scripts/prepare-upload-release.py
+	docker build --platform linux/amd64 --target upload-release -f "$$(cat web/.cache/upload-release-path)/web/Dockerfile" -t tarjama-web:upload-review "$$(cat web/.cache/upload-release-path)/web"

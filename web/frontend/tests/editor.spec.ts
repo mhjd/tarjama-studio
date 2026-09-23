@@ -485,3 +485,44 @@ test("source link copies the exact URL and reports clipboard refusal", async ({
   await copy.click();
   await expect(page.getByText(/Copie indisponible/)).toBeVisible();
 });
+
+test("link download offers upload only after failure or cancellation", async ({
+  page,
+}) => {
+  await login(page);
+  let state = "queued";
+  await page.route("**/api/projects/fixture", async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    data.project.media = "";
+    data.project.segments = [];
+    data.project.stage = "preparing";
+    data.project.url = "https://www.youtube.com/watch?v=b1MKJ5gHig0";
+    data.jobs = [
+      { id: "choice", kind: "download", state, progress: 0, message: state },
+    ];
+    await route.fulfill({ response, json: data });
+  });
+  await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+  const file = page.getByLabel("Importer la vidéo depuis mon appareil");
+  for (const active of ["queued", "running", "waiting_provider"]) {
+    state = active;
+    await expect(page.locator(".job")).toContainText(active);
+    await expect(file).toHaveCount(0);
+    if (active === "waiting_provider")
+      await expect(
+        page.getByRole("button", { name: "Annuler", exact: true }),
+      ).toBeVisible();
+  }
+  state = "failed";
+  await expect(file).toBeVisible();
+  await page.screenshot({ path: "test-results/download-fallback.png" });
+  state = "cancelled";
+  await expect(
+    page.getByText("Traitement annulé.", { exact: false }),
+  ).toBeVisible();
+  await expect(file).toBeVisible();
+  state = "running";
+  await expect(file).toHaveCount(0);
+  await page.screenshot({ path: "test-results/download-exclusive.png" });
+});

@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 # Do not activate the pending research backend as a side effect of a UI release.
-base_id=sha256:a5abf964c6a22baf4255b7ef5eee7ef89315bae830b92dd4a950fad529490875
-base_tag=tarjama-qualified-runtime:b69c700
+base_id=sha256:87e1b479643f97f62e6143f90db4248976ded28f55034b314a4669446bf66395
+base_tag=tarjama-qualified-runtime:upload-fix
 actual=$(docker image inspect --format '{{.Id}}' "$base_id")
 [ "$actual" = "$base_id" ] || exit 1
 docker tag "$base_id" "$base_tag"

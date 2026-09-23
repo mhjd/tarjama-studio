@@ -280,3 +280,20 @@ inchangée de 20 minutes et un budget de réponse de 32 768 tokens. La reprise
 préserve les anciens chunks validés. Voir le [test qualitatif réel](../review/translation-lite/RESULTS-20260923.md) : structure correcte, mais erreurs linguistiques et déplacements de sens entre segments observés. Le propriétaire accepte un premier jet corrigible ; aucune équivalence à GPT n'est démontrée. La livraison et les parcours UI sont documentés séparément.
 
 La [qualification UI réelle](../review/UI_RESULTS_20260923.md) est réussie sur les trois formats émulés, avec trois enregistrements et six exports High. Le service temporaire est arrêté après récupération du manifeste ; les fichiers attendent la procédure de remise du propriétaire.
+
+## 23 septembre 2026 — import exclusif et incident d'assemblage
+
+Livraison active : `web/deploy/preview/active-upload-20260923.yml`, révision
+`da745224a015087f`. Le téléchargement d'un lien et l'import de fichier sont
+exclusifs dans l'interface et l'API. L'import de secours reste disponible après
+échec ou annulation ; les générations protègent contre les résultats tardifs.
+Le verrou d'upload précède maintenant toute mutation et survit correctement
+aux interruptions HTTP pour son nettoyage.
+
+Deux vrais téléchargements ont révélé un refus HTTP 429 avant l'assemblage.
+Après récupération d'espace dans les seuls caches de compilation identifiés,
+l'assemblage a repris automatiquement. Détails, limites et preuves dans le
+[bilan de correction](../review/upload-choice-20260923/README.md).
+Le runtime conserve le backend fournisseur qualifié `b69c700`, auquel seuls
+les correctifs d'import et de diagnostic ont été appliqués ; aucun changement
+implicite de recherche web/prompt/modèle n'a été déployé.

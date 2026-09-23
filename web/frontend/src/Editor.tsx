@@ -118,7 +118,7 @@ export function Editor({
     };
   }, []);
   async function action(fn: () => Promise<void>) {
-    if (busy) return;
+    if (busy || uploading) return;
     setBusy(true);
     setError("");
     try {
@@ -257,6 +257,21 @@ export function Editor({
       </label>
     );
   }
+  const sourceJobs = jobs.filter((j) =>
+    ["download", "prepare"].includes(j.kind),
+  );
+  const latestSourceJob = sourceJobs.at(-1);
+  const sourceActive = sourceJobs.some((j) =>
+    ["queued", "running", "waiting_provider"].includes(j.state),
+  );
+  const canImport =
+    !p.media &&
+    !p.segments.length &&
+    !connectionLost &&
+    !sourceActive &&
+    (p.stage === "upload" ||
+      (latestSourceJob &&
+        ["failed", "cancelled"].includes(latestSourceJob.state)));
   function nextStep() {
     return (
       <>
@@ -514,19 +529,35 @@ export function Editor({
                 Annuler
               </button>
             )}
+            {j.state === "waiting_provider" && (
+              <button
+                disabled={busy || uploading}
+                onClick={() =>
+                  void action(async () => {
+                    await request(
+                      `/api/projects/${p.id}/jobs/${j.id}/cancel`,
+                      "POST",
+                    );
+                  })
+                }
+              >
+                Annuler
+              </button>
+            )}
           </section>
         ))}
-      {!p.media && (
+      {canImport && (
         <section className="panel">
           <h2>{uploading ? "Envoi de la vidéo…" : "Ajouter votre vidéo"}</h2>
           <p>
-            Vous pouvez importer un fichier ici, même si le téléchargement du
-            lien est en attente.
+            {p.url
+              ? "Après l’échec ou l’annulation du téléchargement, vous pouvez choisir une vidéo de votre appareil."
+              : "Choisissez une vidéo depuis votre appareil."}
           </p>
           <label className="button">
             Importer la vidéo depuis mon appareil
             <input
-              disabled={uploading}
+              disabled={uploading || busy}
               type="file"
               accept="video/*"
               onChange={(e) => {
@@ -542,7 +573,12 @@ export function Editor({
         </section>
       )}
       {jobs
-        .filter((j) => j.state === "cancelled")
+        .filter(
+          (j) =>
+            j.state === "cancelled" &&
+            (!["download", "prepare"].includes(j.kind) ||
+              (!p.media && j === latestSourceJob && !sourceActive)),
+        )
         .slice(-1)
         .map((j) => (
           <p key={j.id}>

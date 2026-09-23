@@ -287,7 +287,7 @@ func TestLeaseCrashFairnessAndLateResults(t *testing.T) {
 		t.Fatal("resurrection", e)
 	}
 }
-func TestUploadReplacesDownloadGeneration(t *testing.T) {
+func TestUploadRequiresCancellationAndRejectsLateDownload(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
 	owner, p := fixture(t, s)
@@ -304,6 +304,18 @@ func TestUploadReplacesDownloadGeneration(t *testing.T) {
 	_, server := testAPI(t, s)
 	token, csrf := sessionFor(t, s, owner)
 	status, b := call(t, server, token, csrf, "PUT", "/api/projects/"+p.ID+"/media", strings.Repeat("media", 100))
+	if status != 409 {
+		t.Fatal("active download must block upload", status, string(b))
+	}
+	before, _ := s.Get(ctx, owner, p.ID)
+	if before.Generation != p.Generation {
+		t.Fatal("rejected upload changed generation")
+	}
+	status, b = call(t, server, token, csrf, "POST", "/api/projects/"+p.ID+"/jobs/"+j.ID+"/cancel", nil)
+	if status != 204 {
+		t.Fatal(status, string(b))
+	}
+	status, b = call(t, server, token, csrf, "PUT", "/api/projects/"+p.ID+"/media", strings.Repeat("media", 100))
 	if status != 200 {
 		t.Fatal(status, string(b))
 	}
@@ -574,5 +586,80 @@ func TestMigrationRepeatAndReadiness(t *testing.T) {
 	s.DB.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count)
 	if count != 2 {
 		t.Fatal(count)
+	}
+}
+
+func TestUploadChoicesAreExclusive(t *testing.T) {
+	for _, state := range []string{"queued", "waiting_provider", "failed", "cancelled"} {
+		t.Run(state, func(t *testing.T) {
+			s := testStore(t)
+			ctx := context.Background()
+			owner, p := fixture(t, s)
+			p.Segments = []Segment{}
+			p.Stage = "preparing"
+			p.URL = "https://www.youtube.com/watch?v=b1MKJ5gHig0"
+			_, err := s.Mutate(ctx, owner, p.ID, func(q *Project, tx pgx.Tx) error { *q = p; return enqueue(ctx, tx, owner, p, "download") })
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = s.DB.Exec(ctx, "UPDATE jobs SET state=$1 WHERE project_id=$2", state, p.ID); err != nil {
+				t.Fatal(err)
+			}
+			_, server := testAPI(t, s)
+			token, csrf := sessionFor(t, s, owner)
+			status, body := call(t, server, token, csrf, "PUT", "/api/projects/"+p.ID+"/media", strings.Repeat("media", 100))
+			want := 409
+			if state == "failed" || state == "cancelled" {
+				want = 200
+			}
+			if status != want {
+				t.Fatal(state, status, string(body))
+			}
+			if want == 409 {
+				q, _ := s.Get(ctx, owner, p.ID)
+				if q.Generation != p.Generation || q.Version != p.Version {
+					t.Fatal("rejected upload mutated project")
+				}
+			}
+		})
+	}
+}
+func TestCompetingUploadDoesNotInvalidateFirst(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	owner, p := fixture(t, s)
+	p.Segments = []Segment{}
+	p.Stage = "upload"
+	if _, err := s.Mutate(ctx, owner, p.ID, func(q *Project, _ pgx.Tx) error { *q = p; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	conn, err := s.DB.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Release()
+	if _, err = conn.Exec(ctx, "SELECT pg_advisory_lock(91372611)"); err != nil {
+		t.Fatal(err)
+	}
+	_, server := testAPI(t, s)
+	token, csrf := sessionFor(t, s, owner)
+	status, body := call(t, server, token, csrf, "PUT", "/api/projects/"+p.ID+"/media", strings.Repeat("media", 100))
+	if status != 429 {
+		t.Fatal(status, string(body))
+	}
+	q, _ := s.Get(ctx, owner, p.ID)
+	if q.Generation != p.Generation || q.Version != p.Version {
+		t.Fatal("competing upload invalidated first")
+	}
+	if _, err = conn.Exec(ctx, "SELECT pg_advisory_unlock(91372611)"); err != nil {
+		t.Fatal(err)
+	}
+	status, body = call(t, server, token, csrf, "PUT", "/api/projects/"+p.ID+"/media", strings.Repeat("media", 100))
+	if status != 200 {
+		t.Fatal(status, string(body))
+	}
+	status, body = call(t, server, token, csrf, "PUT", "/api/projects/"+p.ID+"/media", strings.Repeat("media", 100))
+	if status != 409 {
+		t.Fatal("active preparation must block another upload", status, string(body))
 	}
 }

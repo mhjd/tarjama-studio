@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -98,11 +99,37 @@ func (c *IsolatedClient) do(ctx context.Context, method, path string, body io.Re
 		return nil, mediaUnavailable() // never return transport errors containing credentials/URLs
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// Log only a fixed category, never upstream text, URLs or credentials.
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		resp.Body.Close()
+		log.Printf("isolated operation refused method=%s status=%d reason=%s", method, resp.StatusCode, brokerReason(body))
 		return nil, brokerError(resp.StatusCode)
 	}
 	return resp, nil
 }
+
+// Broker error details are operational hints only, not user-controlled log text.
+func brokerReason(body []byte) string {
+	s := strings.ToLower(string(body))
+	for _, group := range []struct {
+		reason string
+		words  []string
+	}{
+		{"disk_capacity", []string{"disk", "space", "reserve", "storage"}},
+		{"quota", []string{"quota", "limit", "capacity"}},
+		{"idempotency", []string{"key", "idempoten", "definition"}},
+		{"admission", []string{"admission", "saturat", "busy"}},
+		{"state", []string{"state", "conflict"}},
+	} {
+		for _, word := range group.words {
+			if strings.Contains(s, word) {
+				return group.reason
+			}
+		}
+	}
+	return "unspecified"
+}
+
 func operationPath(id string) (string, error) {
 	if !safeID.MatchString(id) {
 		return "", errors.New("Identifiant distant invalide")

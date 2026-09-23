@@ -1,0 +1,31 @@
+broker_profiles_http 200
+job=4b6300c43d6c14c013513c8706047b15 kind=download state=running progress=66 media_attempt=0 tries=8 next=2026-09-23 22:02:23.996397+00
+job=1efbe08b2ae46c6ba3332fb65e83ba68 kind=download state=waiting_provider progress=33 media_attempt=0 tries=13 next=2026-09-23 22:02:25.555541+00
+job=67e1616c92eb9fb23e1058a0bc0fd6d4 kind=download state=succeeded progress=100 media_attempt=0 tries=0 next=2026-09-23 16:14:36.161273+00
+operation job=4b6300c43d6c14c013513c8706047b15 id=00e444e149d650abd1c304269bb9d42c unit=-1 attempt=0 profile=media-probe cached=true ack=true retired=false
+remote http=200 state=acknowledged exit=0 error=
+operation job=4b6300c43d6c14c013513c8706047b15 id=5ab0b835175a97662b2c5f73f09b525f unit=-1 attempt=0 profile=tarjama-mux-v1 cached=true ack=true retired=false
+remote http=200 state=acknowledged exit=0 error=
+operation job=4b6300c43d6c14c013513c8706047b15 id=e6198951878e79c7555b102e35fb0c8d unit=-1 attempt=0 profile=tarjama-download-v1 cached=true ack=true retired=false
+remote http=200 state=acknowledged exit=0 error=
+operation job=1efbe08b2ae46c6ba3332fb65e83ba68 id=b8b887575fad0b3de31441d3cf5fbb0f unit=-1 attempt=0 profile=tarjama-download-v1 cached=true ack=true retired=false
+remote http=200 state=acknowledged exit=0 error=
+operation job=1efbe08b2ae46c6ba3332fb65e83ba68 id=2abed0f592f64b0577136896d1330324 unit=-1 attempt=0 profile=tarjama-download-v1 cached=true ack=true retired=false
+remote http=200 state=acknowledged exit=0 error=
+operation job=4b6300c43d6c14c013513c8706047b15 id=9d2722b8ca3b060dda9d30f2340b41a7 unit=-1 attempt=0 profile=tarjama-download-v1 cached=true ack=true retired=false
+remote http=200 state=acknowledged exit=0 error=
+operation job=1efbe08b2ae46c6ba3332fb65e83ba68 id= unit=-1 attempt=0 profile=tarjama-mux-v1 cached=false ack=false retired=false
+operation job=4b6300c43d6c14c013513c8706047b15 id=e9799a17897af59c1824a46050ba2e09 unit=-1 attempt=0 profile=tarjama-normalize-v1 cached=false ack=false retired=false
+remote http=200 state=running exit=<nil> error=
+operation job=67e1616c92eb9fb23e1058a0bc0fd6d4 id=26d1a3c446f68de970fad6e31d6fd267 unit=-1 attempt=0 profile=media-probe cached=true ack=true retired=true
+remote http=200 state=acknowledged exit=0 error=
+operation job=67e1616c92eb9fb23e1058a0bc0fd6d4 id=ad73ca51d15be8e55feae6d5ce9314f5 unit=-1 attempt=0 profile=tarjama-normalize-v1 cached=true ack=true retired=true
+remote http=200 state=acknowledged exit=0 error=
+operation job=67e1616c92eb9fb23e1058a0bc0fd6d4 id=4c155081779503e92be69ad4fd255384 unit=-1 attempt=0 profile=media-probe cached=true ack=true retired=true
+remote http=200 state=acknowledged exit=0 error=
+operation job=67e1616c92eb9fb23e1058a0bc0fd6d4 id=6aa7bdf8eee9e71537c67fb810bce85e unit=-1 attempt=0 profile=tarjama-mux-v1 cached=true ack=true retired=true
+remote http=200 state=acknowledged exit=0 error=
+operation job=67e1616c92eb9fb23e1058a0bc0fd6d4 id=4c5a1884b44e2dd9bc07c09e7cbad97f unit=-1 attempt=0 profile=tarjama-download-v1 cached=true ack=true retired=true
+remote http=200 state=acknowledged exit=0 error=
+operation job=67e1616c92eb9fb23e1058a0bc0fd6d4 id=05142f5cfef39321e21af443c0be972b unit=-1 attempt=0 profile=tarjama-download-v1 cached=true ack=true retired=true
+remote http=200 state=acknowledged exit=0 error=

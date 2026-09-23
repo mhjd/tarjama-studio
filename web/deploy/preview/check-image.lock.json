@@ -1,0 +1,13 @@
+{
+  "purpose": "Explicit preview qualification only; never the service or administered tool image",
+  "application_source_commit": "f897ac635f1e92d4a46bbbac59c79def9bf1b1ed",
+  "image": "preview.local/atelier/web@sha256:8f42e12ceaaa74278982b7352576d4e964aafd532277dfca41cb8b270a1cfd82",
+  "docker_id": "sha256:48ded0feec33d59035e68c08b923558a58a52857081d3a01c494f4a5ca5d5fdc",
+  "imported_at": "2026-09-23T11:52:47.753074+00:00",
+  "platform": "linux/amd64",
+  "source_sha256": {
+    "web/backend/internal/studio/preview_live_test.go": "91b985dc7f602c9b283d4ad76a2ab673eac72faecbc19a34ac19ce0bf7cb0eaf",
+    "web/backend/internal/studio/testdata/preview.mp4": "a7fb1acb4473971e402f58cf0862f158889072cf79dd88a9346c6ee18e66c2b4",
+    "web/deploy/Dockerfile": "2ca771aea15d9e4423ec4883e76064b93eb62786f2593af008ba1e779312e8f3"
+  }
+}

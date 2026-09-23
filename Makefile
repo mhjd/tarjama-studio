@@ -145,6 +145,19 @@ web-preview-plan:
 web-preview-status:
 	vps-preview status atelier
 
+# Activation is explicit; use the reviewed active recipe, never the stopped default.
+.PHONY: web-preview-deploy web-preview-run web-preview-check-image
+web-preview-deploy:
+	vps-preview deploy atelier --file "$(PREVIEW_FILE)"
+
+PREVIEW_JOB ?= preview-check
+web-preview-run:
+	vps-preview run atelier "$(PREVIEW_JOB)"
+
+web-preview-check-image:
+	docker build --platform linux/amd64 --target preview-check -f web/deploy/Dockerfile -t tarjama-preview-check:review web
+	vps-preview image-import atelier --name web --image tarjama-preview-check:review
+
 web-preview-test:
 	python3 -B -m unittest discover -s web/scripts -p 'test_preview.py' -v
 

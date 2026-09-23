@@ -50,6 +50,9 @@ def render(values, phase="stopped"):
         text = text.replace("enabled: false", "enabled: true")
     elif phase != "stopped":
         raise ValueError("Unknown preparation phase")
+    if phase != "stopped":
+        text = text.replace("# All services remain stopped; jobs require a separate, explicit activation.",
+                            f"# Phase: {phase}. Applying this recipe starts services; jobs remain explicit.")
     if len(text.encode()) > 65536:
         raise ValueError("Recipe exceeds broker size limit")
     return text

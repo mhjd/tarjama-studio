@@ -1,0 +1,25 @@
+# Explicit qualification job; append under jobs in an active reviewed recipe.
+  preview-check:
+    image: preview.local/atelier/web@sha256:8f42e12ceaaa74278982b7352576d4e964aafd532277dfca41cb8b270a1cfd82
+    uid: 10001
+    gid: 10001
+    env:
+      PREVIEW_LIVE: atelier
+      DATABASE_URL_FILE: /run/db/database_url
+      GEMINI_API_KEY_FILE: /run/gemini/api_key
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
+      GOMAXPROCS: '1'
+    secrets:
+      - {name: tarjama-db-app, path: /run/db}
+      - {name: tarjama-gemini, path: /run/gemini}
+      - {name: tarjama-groq, path: /run/groq}
+      - {name: isolated-jobs, path: /run/isolated-jobs}
+    volumes: [{name: library, path: /storage}]
+    connect: [db, web]
+    egress: [public-web, isolated-jobs, oidc]
+    resources: {cpu: 500m, memory: 512Mi}
+    tmp: 64Mi
+    timeout: 780

@@ -31,3 +31,12 @@ COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
 USER 10002:10002
 ENTRYPOINT ["/usr/local/bin/tarjama"]
 CMD ["media"]
+
+# Explicit qualification job, never the image used by the web service or media profiles.
+FROM backend AS preview-check-build
+RUN CGO_ENABLED=0 go test -c -tags preview_live -o /preview-check ./internal/studio
+
+FROM api AS preview-check
+COPY --from=preview-check-build /preview-check /usr/local/bin/preview-check
+ENTRYPOINT ["/usr/local/bin/preview-check"]
+CMD ["-test.v", "-test.run", "^TestPreviewLive$", "-test.timeout", "12m"]

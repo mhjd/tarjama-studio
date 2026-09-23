@@ -1,6 +1,9 @@
 # Aperçu privé Tarjama — traitements isolés, 23 septembre 2026
 
-Cible : `atelier`, `https://atelier.preview.runagen.com`. Tout reste arrêté.
+Cible : `atelier`, `https://atelier.preview.runagen.com`. **Activation autorisée et effectuée le23septembre.**
+Voir le [bilan réel de qualification](PREVIEW_QUALIFICATION_20260923.md) pour l’état courant,
+les résultats et les limites. Les indications d’arrêt ci-dessous décrivent la préparation
+antérieure et la recette racine désactivée, pas l’état courant du VPS.
 Le moteur applicatif retenu est désormais `MEDIA_ENGINE=isolated-jobs`.
 L'ancien service Bubblewrap conserve ses contrôles dans le code et dans la
 configuration Compose historique ; il n'est plus dans la recette VPS.

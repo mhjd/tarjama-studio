@@ -212,3 +212,25 @@ réservent pas physiquement le disque. Sauvegarde OVH retenue par le propriétai
 fraîcheur non recontrôlée ; copie indépendante reportée, restauration applicative
 encore à qualifier. Le compte de test reste désactivé à sa demande : aucune action
 humaine supplémentaire sollicitée maintenant. L’activation attend une instruction distincte.
+
+
+## 23 septembre 2026 — activation privée autorisée et intégrations réelles
+
+Après autorisation distincte du propriétaire, `atelier` est activé avec les
+images locales testées de `f897ac6`. Bootstrap puis migrations explicites réussis ;
+quatre services prêts. Recette d’exploitation `active-20260923.yml`, révision
+`1bf643edbce36753`. `deploy.preview.yml` reste un rendu de préparation arrêté.
+
+Qualification réelle réussie : HTTP/PKCE/cookies, redirections HTTPS vers
+Authelia, Groq sur signal synthétique, correction/traduction Gemini (HTTP503
+transitoires puis succès), préparation média, quatre exports arabe/français
+Low/High, récupération durable/ACK/relecture, YouTube via WARP, nettoyage.
+Les résultats sont cumulés sur trois jobs : les premiers échecs diagnostiques
+restent archivés, sans être présentés comme succès. Aucun outil média ne reçoit
+les secrets du job de qualification ; les protections administrées sont conservées.
+
+Le parcours navigateur complet avec MFA, deux identités OIDC réelles, la qualité
+de transcription arabe, les tailles maximales et la restauration cohérente des
+sauvegardes du VPS restent à qualifier. Le compte de test demeure désactivé.
+Bilan, références d’images, limites et commandes :
+[PREVIEW_QUALIFICATION_20260923.md](PREVIEW_QUALIFICATION_20260923.md).

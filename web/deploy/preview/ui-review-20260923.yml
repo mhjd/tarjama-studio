@@ -1,0 +1,332 @@
+# HISTORICAL QUALIFICATION: do not reapply unchanged; public services pin an older image.
+# See web/review/RESULTS-20260923.md for resuming with current images.
+# Private real UI qualification; public web remains protected by production OIDC.
+version: 1
+services:
+  web:
+    enabled: true
+    image: preview.local/atelier/web@sha256:8474319991802cb0f5bb68b7c33c523ecc16dca580e6d1da2361aa8e9b64650a
+    args:
+    - api
+    uid: 10001
+    gid: 10001
+    port: 8090
+    env:
+      APP_MODE: production
+      LISTEN_ADDR: 0.0.0.0:8090
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      OIDC_ISSUER: https://auth.runagen.com
+      OIDC_CLIENT_ID: preview-atelier-tarjama
+      OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-oidc
+      path: /run/oidc
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - oidc
+    resources:
+      cpu: 500m
+      memory: 512Mi
+    tmp: 64Mi
+    health:
+      path: /readyz
+  worker:
+    enabled: true
+    image: preview.local/atelier/web@sha256:8474319991802cb0f5bb68b7c33c523ecc16dca580e6d1da2361aa8e9b64650a
+    args:
+    - worker
+    uid: 10001
+    gid: 10001
+    env:
+      APP_MODE: production
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      GEMINI_API_KEY_FILE: /run/gemini/api_key
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      MEDIA_ENGINE: isolated-jobs
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-gemini
+      path: /run/gemini
+    - name: tarjama-groq
+      path: /run/groq
+    - name: isolated-jobs
+      path: /run/isolated-jobs
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - public-web
+    - isolated-jobs
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+  egress:
+    enabled: true
+    image: preview.local/atelier/web@sha256:8474319991802cb0f5bb68b7c33c523ecc16dca580e6d1da2361aa8e9b64650a
+    args:
+    - egress
+    uid: 10003
+    gid: 10003
+    port: 8092
+    env:
+      LISTEN_ADDR: 0.0.0.0:8092
+      WARP_HTTP_PROXY: 172.31.250.2:40001
+      GOMAXPROCS: '1'
+    egress:
+    - warp-downloads
+    resources:
+      cpu: 250m
+      memory: 128Mi
+    tmp: 16Mi
+  db:
+    enabled: true
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 70
+    gid: 70
+    port: 5432
+    args:
+    - postgres
+    - -c
+    - unix_socket_directories=/tmp
+    - -c
+    - max_connections=40
+    - -c
+    - shared_buffers=128MB
+    env:
+      POSTGRES_DB: tarjama
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/db-admin/postgres_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=peer
+      PGDATA: /data/pgdata
+      PGSERVICE: preview-init
+      PGSERVICEFILE: /configuration/pg_service.conf
+    secrets:
+    - name: tarjama-db-admin
+      path: /run/db-admin
+    configs:
+    - name: postgres-client
+      path: /configuration
+    volumes:
+    - name: database
+      path: /data
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+  review:
+    enabled: true
+    image: preview.local/atelier/web@sha256:06aa8d3ea31a72c43f47bbc9537d7e1a86ddaf184d1ecf0e07300402a147b48b
+    args: []
+    uid: 10001
+    gid: 10001
+    env:
+      APP_MODE: test
+      PUBLIC_ORIGIN: http://127.0.0.1:8090
+      DATABASE_URL_FILE: /run/db/database_url
+      GEMINI_API_KEY_FILE: /run/gemini/api_key
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      MEDIA_ENGINE: isolated-jobs
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+      LISTEN_ADDR: 0.0.0.0:8095
+      UI_REVIEW: atelier-20260923
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-gemini
+      path: /run/gemini
+    - name: tarjama-groq
+      path: /run/groq
+    - name: isolated-jobs
+      path: /run/isolated-jobs
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - public-web
+    - isolated-jobs
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+    port: 8095
+    health:
+      path: /readyz
+jobs:
+  migrate:
+    image: preview.local/atelier/web@sha256:8474319991802cb0f5bb68b7c33c523ecc16dca580e6d1da2361aa8e9b64650a
+    uid: 10001
+    gid: 10001
+    args:
+    - migrate
+    env:
+      DATABASE_URL_FILE: /run/db/database_url
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    connect:
+    - db
+    resources:
+      cpu: 250m
+      memory: 256Mi
+    timeout: 300
+  ui-record:
+    image: preview.local/atelier/web@sha256:452d80ea119f2e31148190c902390fcaa88241f63ec3c07c9e64ad07085c3bdc
+    uid: 10004
+    gid: 10004
+    connect:
+    - review
+    resources:
+      cpu: 2000m
+      memory: 2048Mi
+    tmp: 1024Mi
+    timeout: 3600
+  review-state:
+    image: preview.local/atelier/web@sha256:452d80ea119f2e31148190c902390fcaa88241f63ec3c07c9e64ad07085c3bdc
+    uid: 10004
+    gid: 10004
+    connect:
+    - review
+    command:
+    - /usr/local/bin/node
+    args:
+    - /recording/summarize.mjs
+    configs:
+    - name: ui-summary
+      path: /recording
+    resources:
+      cpu: 100m
+      memory: 128Mi
+    timeout: 120
+  ui-playback:
+    image: preview.local/atelier/web@sha256:452d80ea119f2e31148190c902390fcaa88241f63ec3c07c9e64ad07085c3bdc
+    uid: 10004
+    gid: 10004
+    connect:
+    - review
+    command:
+    - /usr/local/bin/node
+    args:
+    - /recording/playback.mjs
+    configs:
+    - name: ui-playback
+      path: /recording
+    resources:
+      cpu: 750m
+      memory: 1024Mi
+    tmp: 512Mi
+    timeout: 600
+volumes:
+  library:
+    size: 14Gi
+  database:
+    size: 2Gi
+configs:
+  postgres-client:
+    pg_service.conf: '[preview-init]
+
+      host=/tmp
+
+      '
+  bootstrap:
+    bootstrap-db.sh: "#!/bin/sh\nset -eu\n# Explicit job; no secrets in command arguments\
+      \ or output.\nexport PGCONNECT_TIMEOUT=2\nattempt=0\nuntil psql -X -w --set\
+      \ ON_ERROR_STOP=1 -Atqc 'SELECT 1' >/dev/null 2>&1; do\n  attempt=$((attempt\
+      \ + 1))\n  if [ \"$attempt\" -ge 45 ]; then\n    echo 'PostgreSQL unavailable\
+      \ after bounded startup wait' >&2\n    exit 1\n  fi\n  sleep 2\ndone\npsql -X\
+      \ -w --set ON_ERROR_STOP=1 <<'SQL'\n\\getenv app_password APP_DB_PASSWORD\n\
+      BEGIN;\nSELECT pg_advisory_xact_lock(91372611);\nSELECT 'CREATE ROLE tarjama\
+      \ LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE'\nWHERE NOT EXISTS (SELECT 1 FROM\
+      \ pg_roles WHERE rolname = 'tarjama')\n\\gexec\nALTER ROLE tarjama LOGIN PASSWORD\
+      \ :'app_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;\n\
+      ALTER DATABASE tarjama OWNER TO tarjama;\nGRANT USAGE, CREATE ON SCHEMA public\
+      \ TO tarjama;\nCOMMIT;\nSQL\n"
+  ui-playback:
+    playback.mjs: "// Partial real-media qualification when an external provider blocks\
+      \ the full journey.\n// This deliberately does not claim correction, translation\
+      \ or export succeeded.\nimport {chromium,expect} from '/src/frontend/node_modules/@playwright/test/index.mjs';\n\
+      import http from 'node:http';\nimport fs from 'node:fs/promises';\nimport {createReadStream}\
+      \ from 'node:fs';\nimport {createHash} from 'node:crypto';\nconst upstream='http://pv-review:8095',root='/tmp/playback';\n\
+      await fs.mkdir(root,{recursive:true});\nconst sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));\n\
+      for(let i=0;;i++){\n try{if((await fetch(upstream+'/readyz')).status===204)break;}catch{}\n\
+      \ if(i===59)throw Error('Review readiness deadline');await sleep(1000);\n}\n\
+      const proxy=http.createServer((req,res)=>{\n const target=http.request(upstream+req.url,{method:req.method,headers:req.headers},r=>{res.writeHead(r.statusCode,r.headers);r.pipe(res);});\n\
+      \ target.on('error',()=>{res.writeHead(502);res.end();});req.pipe(target);\n\
+      });\nawait new Promise(resolve=>proxy.listen(8090,'127.0.0.1',resolve));\nconst\
+      \ browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage'],slowMo:200});\n\
+      const artifacts=[],outcomes=[];\nasync function upload(path,name){\n const stat=await\
+      \ fs.stat(path),hash=createHash('sha256');for await(const chunk of createReadStream(path))hash.update(chunk);\n\
+      \ const response=await fetch(upstream+'/review-artifacts/'+name,{method:'PUT',body:createReadStream(path),duplex:'half'});\n\
+      \ if(!response.ok)throw Error('Artifact persistence failed');\n artifacts.push({name,bytes:stat.size,sha256:hash.digest('hex')});console.log('ARTIFACT\
+      \ '+JSON.stringify(artifacts.at(-1)));\n}\nfor(const [name,width,height,dpr,mobile]\
+      \ of [['macbook-air15-m4',1440,932,2,false],['pixel6',412,915,2.625,true],['iphone15',393,852,3,true]]){\n\
+      \ const context=await browser.newContext({baseURL:'http://127.0.0.1:8090',viewport:{width,height},deviceScaleFactor:dpr,isMobile:mobile,hasTouch:mobile,recordVideo:{dir:root,size:{width,height}}});\n\
+      \ const page=await context.newPage();page.setDefaultTimeout(20000);\n try{\n\
+      \  await page.goto('/');await page.getByRole('button',{name:'Compte test alice'}).click();\n\
+      \  await page.getByRole('button',{name:/France 24/}).first().click();\n  const\
+      \ follow=page.getByRole('button',{name:'Suivi activé',exact:true});\n  await\
+      \ expect(follow).toHaveAttribute('aria-pressed','true');\n  const timestamps=page.locator('.timestamp');const\
+      \ target=timestamps.nth(Math.floor(await timestamps.count()/2));\n  await target.click();await\
+      \ sleep(1200);\n  await page.getByRole('button',{name:'Lecture',exact:true}).click();await\
+      \ sleep(5000);\n  await page.mouse.wheel(0,700);await expect(follow).toHaveAttribute('aria-pressed','true');\n\
+      \  await sleep(8000);\n  await page.getByRole('button',{name:'Pause',exact:true}).click();\n\
+      \  const position=await page.locator('video').evaluate(v=>v.currentTime);\n\
+      \  await page.mouse.wheel(0,2000);await sleep(1200);\n  await page.getByRole('slider',{name:'Position\
+      \ de lecture'}).fill(String((Math.floor(position*10)+1)/10));\n  await expect.poll(()=>page.locator('.segment.active').evaluate(el=>{\n\
+      \   const rect=el.getBoundingClientRect(),player=document.querySelector('.player').getBoundingClientRect();\n\
+      \   return rect.top>=player.bottom&&rect.top<innerHeight;\n  })).toBeTruthy();\n\
+      \  await follow.click();await expect(page.getByRole('button',{name:'Suivi désactivé'})).toHaveAttribute('aria-pressed','false');\n\
+      \  await page.getByRole('button',{name:'Suivi désactivé'}).click();await sleep(1500);\n\
+      \  if(!await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))throw\
+      \ Error('Horizontal overflow');\n  const screenshot=`${root}/${name}.png`;await\
+      \ page.screenshot({path:screenshot});await upload(screenshot,`lecture-suivi-validation-${name}.png`);\n\
+      \  await page.evaluate(()=>window.scrollTo(0,0));await sleep(3000);\n  outcomes.push({device:name,status:'playback-and-follow-passed',viewport:{width,height},engine:'Chromium',fullJourney:'not-qualified-provider-waiting'});\n\
+      \ }catch(error){outcomes.push({device:name,status:'failed',error:String(error)});console.log('FAIL\
+      \ '+JSON.stringify(outcomes.at(-1)));}\n finally{const video=page.video();await\
+      \ context.close();await upload(await video.path(),`lecture-suivi-validation-${name}.webm`);}\n\
+      \ console.log('OUTCOME '+JSON.stringify(outcomes.at(-1)));await sleep(17000);\n\
+      }\nawait fs.writeFile(root+'/playback-manifest-validation.json',JSON.stringify({sourceVideo:'https://www.youtube.com/watch?v=b1MKJ5gHig0',scope:'Partial\
+      \ real-media playback and follow only. No claim of successful correction, translation\
+      \ or export.',outcomes,artifacts},null,2));\nawait upload(root+'/playback-manifest-validation.json','playback-manifest-validation.json');\n\
+      console.log('RESULT '+JSON.stringify({outcomes,artifacts}));await browser.close();proxy.close();\n\
+      process.exitCode=outcomes.every(x=>x.status==='playback-and-follow-passed')?0:1;\n"
+  ui-summary:
+    summarize.mjs: "// Read only qualification artifacts; no application credentials\
+      \ or database access.\nconst base='http://pv-review:8095/review-artifacts/';\n\
+      const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));\nfor(let attempt=0;;attempt++){\n\
+      \ try{if((await fetch('http://pv-review:8095/readyz',{signal:AbortSignal.timeout(2000)})).status===204)break;}catch{}\n\
+      \ if(attempt>=24)throw Error('Review unavailable');await sleep(1000);\n}\nfor(const\
+      \ name of ['manifest.json','playback-manifest-validation.json']){\n const response=await\
+      \ fetch(base+name,{signal:AbortSignal.timeout(10000)});\n if(!response.ok){console.log(JSON.stringify({manifest:name,status:response.status}));continue;}\n\
+      \ const data=await response.json();\n console.log(JSON.stringify({manifest:name,outcomes:data.outcomes.map(x=>({...x,error:x.error?.slice(0,700)})),videos:data.artifacts.filter(x=>/\\\
+      .(webm|mp4)$/.test(x.name))}));\n}\n"

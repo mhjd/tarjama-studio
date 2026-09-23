@@ -1,0 +1,71 @@
+{
+  "outcomes": [
+    {
+      "device": "macbook-air15-m4",
+      "status": "playback-and-follow-passed",
+      "viewport": {
+        "width": 1440,
+        "height": 932
+      },
+      "engine": "Chromium",
+      "fullJourney": "not-qualified-provider-waiting"
+    },
+    {
+      "device": "pixel6",
+      "status": "playback-and-follow-passed",
+      "viewport": {
+        "width": 412,
+        "height": 915
+      },
+      "engine": "Chromium",
+      "fullJourney": "not-qualified-provider-waiting"
+    },
+    {
+      "device": "iphone15",
+      "status": "playback-and-follow-passed",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "engine": "Chromium",
+      "fullJourney": "not-qualified-provider-waiting"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "lecture-suivi-validation-macbook-air15-m4.png",
+      "bytes": 202145,
+      "sha256": "5030accadedf65b67b8323d9e9904cfda6cc02012813e4f31cfbb7a1ebd0a297"
+    },
+    {
+      "name": "lecture-suivi-validation-macbook-air15-m4.webm",
+      "bytes": 2515501,
+      "sha256": "8c735f5e968fa0fc3444ced09e4524a3e16821dd647ee251162ef554c5928e65"
+    },
+    {
+      "name": "lecture-suivi-validation-pixel6.png",
+      "bytes": 172652,
+      "sha256": "8fddb04ce20ff2ce390a78f9d183b2879006c130f471bb0a531a172b581940e7"
+    },
+    {
+      "name": "lecture-suivi-validation-pixel6.webm",
+      "bytes": 1305332,
+      "sha256": "94b8b887e2339fa854dcea11e191ec57461938cfa5bb94b88d6986c880ba02a8"
+    },
+    {
+      "name": "lecture-suivi-validation-iphone15.png",
+      "bytes": 193935,
+      "sha256": "9d71a1fc9e71e100eddc85d7a7020c5c0ebe40cb9bef1532e0c05008ab4dae62"
+    },
+    {
+      "name": "lecture-suivi-validation-iphone15.webm",
+      "bytes": 1296062,
+      "sha256": "7ec96e206bf6fcc1db4cec7fe5beaa919d831347bc64bf39d63db24c1ce47fcf"
+    },
+    {
+      "name": "playback-manifest-validation.json",
+      "bytes": 2019,
+      "sha256": "299c6a9c86e33e0b055af89f851592c05abb5cfa06913c6315eea75641c9732c"
+    }
+  ]
+}

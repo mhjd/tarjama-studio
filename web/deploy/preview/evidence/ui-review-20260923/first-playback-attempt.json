@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-review-state-2282f502-n4vxw",
+      "log": "{\"manifest\":\"manifest.json\",\"outcomes\":[{\"device\":\"macbook-air15-m4\",\"status\":\"failed\",\"step\":\"preparing\",\"error\":\"Error: expect(locator).toBeVisible() failed\\n\\nLocator:  getByRole('button', { name: 'Terminer la correction arabe · Traduire', exact: true })\\nExpected: visible\\nReceived: <element(s) not found>\\nTimeout:  1080000ms\\n\\nCall log:\\n  - Expect \\\"to.be.visible\\\" with timeout 1080000ms\\n  - waiting for getByRole('button', { name: 'Terminer la correction arabe · Traduire', exact: true })\\n\",\"elapsedSeconds\":1086}],\"videos\":[{\"name\":\"parcours-macbook-air15-m4.webm\",\"bytes\":55182002,\"sha256\":\"49a61ec2cd43c174941038aff8129be82a09913a2610cbcb448ee0e91d288268\"}]}\n{\"manifest\":\"playback-manifest.json\",\"outcomes\":[{\"device\":\"macbook-air15-m4\",\"status\":\"playback-and-follow-passed\",\"viewport\":{\"width\":1440,\"height\":932},\"engine\":\"Chromium\",\"fullJourney\":\"not-qualified-provider-waiting\"},{\"device\":\"pixel6\",\"status\":\"playback-and-follow-passed\",\"viewport\":{\"width\":412,\"height\":915},\"engine\":\"Chromium\",\"fullJourney\":\"not-qualified-provider-waiting\"},{\"device\":\"iphone15\",\"status\":\"failed\",\"error\":\"Error: locator.fill: Error: Malformed value\\nCall log:\\n  - waiting for getByRole('slider', { name: 'Position de lecture' })\\n    - locator resolved to <input min=\\\"0\\\" step=\\\"0.1\\\" max=\\\"114.96\\\" type=\\\"range\\\" value=\\\"64.113637\\\" aria-label=\\\"Position de lecture\\\"/>\\n    - fill(\\\"64.19999999999999\\\")\\n  - attempting fill action\\n    - waiting for element to be visible, enabled and editable\\n\"}],\"videos\":[{\"name\":\"lecture-suivi-macbook-air15-m4.webm\",\"bytes\":2544999,\"sha256\":\"4fb56d228294e3c0f88b86201aaa5b3dc0de1c8051555a54b7c77cbd824da122\"},{\"name\":\"lecture-suivi-pixel6.webm\",\"bytes\":1338833,\"sha256\":\"e37e85b0f130fdd1e0aa1296b445fb19b9ae34cd64c5eda7bb8191dfbc25fd5b\"},{\"name\":\"lecture-suivi-iphone15.webm\",\"bytes\":808610,\"sha256\":\"29be16267e29c3ec05688b944b22c151bdfe58c192ec48c86fbfff07ef722812\"}]}\n"
+    },
+    {
+      "pod": "pv-job-review-state-49a36867-p4lz4",
+      "log": "    kind    |      state       | attempts |        next_attempt_at        | lease_until | progress \n------------+------------------+----------+-------------------------------+-------------+----------\n download   | succeeded        |        2 | 2026-09-23 16:48:18.080194+00 |             |      100\n transcribe | succeeded        |        0 | 2026-09-23 16:50:04.390773+00 |             |      100\n cleanup    | waiting_provider |        6 | 2026-09-23 17:00:53.051457+00 |             |        0\n(3 rows)\n\n           until_at            \n-------------------------------\n 2026-09-23 17:00:53.050111+00\n(1 row)\n\n"
+    },
+    {
+      "pod": "pv-job-review-state-93559dda-5hbgg",
+      "log": "psql: error: connection to server at \"pv-db\" (10.43.127.126), port 5432 failed: Connection refused\n\tIs the server running on that host and accepting TCP/IP connections?\n"
+    }
+  ]
+}

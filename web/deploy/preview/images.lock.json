@@ -2,11 +2,11 @@
   "platform": "linux/amd64",
   "images": {
     "web": {
-      "image": "preview.local/atelier/web@sha256:8474319991802cb0f5bb68b7c33c523ecc16dca580e6d1da2361aa8e9b64650a",
-      "docker_id": "sha256:86d36c7efae4da8ae79032139227572b46de591804d61eeac9ca4de6a927fe26",
-      "imported_at": "2026-09-23T16:23:11.886734+00:00",
+      "image": "preview.local/atelier/web@sha256:f7858c799487f9753b644e5bde6731c4cdae710e6d55a9ce8bc3655a879e7b0e",
+      "docker_id": "sha256:644a91038fdc5221211d61c0081a8c843bfc1122a17526c1f904ee1337044c76",
+      "imported_at": "2026-09-23T17:11:33.612473+00:00",
       "platform": "linux/amd64",
-      "source_commit": "ae764017f4f0d3054e0ff1a96f8368ff83e514dd"
+      "source_commit": "f98422ae072dd7465966ee75e3e97a8089b8608d"
     },
     "media": {
       "image": "preview.local/atelier/media@sha256:3ee5314e110eb8b1ad817b725bf3e113c9182af963a7b28aaf91ddd3351ed554",

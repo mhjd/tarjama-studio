@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-review-state-49a36867-p4lz4",
+      "log": "    kind    |      state       | attempts |        next_attempt_at        | lease_until | progress \n------------+------------------+----------+-------------------------------+-------------+----------\n download   | succeeded        |        2 | 2026-09-23 16:48:18.080194+00 |             |      100\n transcribe | succeeded        |        0 | 2026-09-23 16:50:04.390773+00 |             |      100\n cleanup    | waiting_provider |        6 | 2026-09-23 17:00:53.051457+00 |             |        0\n(3 rows)\n\n           until_at            \n-------------------------------\n 2026-09-23 17:00:53.050111+00\n(1 row)\n\n"
+    },
+    {
+      "pod": "pv-job-review-state-93559dda-5hbgg",
+      "log": "psql: error: connection to server at \"pv-db\" (10.43.127.126), port 5432 failed: Connection refused\n\tIs the server running on that host and accepting TCP/IP connections?\n"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "application_source_commit": "f98422a",
+  "application_image": "preview.local/atelier/web@sha256:f7858c799487f9753b644e5bde6731c4cdae710e6d55a9ce8bc3655a879e7b0e",
+  "qualification_review_initial": "preview.local/atelier/web@sha256:af0003c727534147b849b822f208a1f1c088659092761130e8f491045f6c182a",
+  "qualification_review_with_diagnostics": "preview.local/atelier/web@sha256:06aa8d3ea31a72c43f47bbc9537d7e1a86ddaf184d1ecf0e07300402a147b48b",
+  "qualification_recorder": "preview.local/atelier/web@sha256:452d80ea119f2e31148190c902390fcaa88241f63ec3c07c9e64ad07085c3bdc",
+  "provenance_note": "Qualification frontend is the follow-state change from ef730b6. Browser playback and summary scripts are mounted from the historical qualification recipe. The daily-quota classification added in f98422a passed local tests and is in the final application image; it was added after the real provider quota diagnosis. Recorder file ownership was fixed after an initial launch failure, without changing runtime protections."
+}

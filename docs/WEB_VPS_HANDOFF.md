@@ -43,6 +43,15 @@ qualifiée sur fixture jusqu’à un nouveau MP4. Dernière recette active :
 `web/deploy/preview/active-desktop-20260923.yml` ;
 [rapport](../web/review/ui-desktop-20260923/RESULTS.md).
 
+Décision suivante sur la validation : le propriétaire remplace l’action principale
+du haut par le lien discret « Aller à la validation ». Celui-ci descend et place
+le focus sur la validation sans lancer l’étape. Sur ordinateur, Espace alterne
+lecture/pause hors saisie, en préservant l’activation native des boutons. Les seuls boutons de confirmation
+restent en bas : « Valider et traduire » / « Valider et exporter » (ou relire une
+traduction déjà courante). Cette décision remplace les deux boutons précédents. Recette active :
+`web/deploy/preview/active-validation-20260923.yml` ;
+[rapport](../web/review/ui-validation-20260923/RESULTS.md).
+
 Date : 21 septembre 2026. Destinataire : un nouvel agent Codex travaillant sur le VPS de l'utilisateur, dans le même dépôt, sans accès à la conversation précédente.
 
 Complément de décision après la passation initiale : l'utilisateur indique que l'IP de son serveur est bloquée par YouTube, mais qu'il a réussi avec Cloudflare WARP + yt-dlp. Il approuve une sortie WARP réservée aux téléchargements vidéo. L'import de fichier est désormais un choix de premier niveau à la création d'un projet, et doit aussi être proposé lorsqu'un téléchargement échoue. Ces décisions sont intégrées ci-dessous ; elles ne décrivent pas une implémentation déjà livrée.

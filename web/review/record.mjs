@@ -35,7 +35,7 @@ for(const device of devices){
   await page.getByRole('button',{name:'Commencer',exact:true}).click();
   await mark('preparing');
   // Observe actual persistent queue; never fake success or bypass provider cooldown.
-  await expect(page.getByRole('button',{name:'Étape suivante · Traduire →',exact:true}).first()).toBeVisible({timeout:18*60000});
+  await expect(page.getByRole('button',{name:'Valider et traduire',exact:true}).first()).toBeVisible({timeout:18*60000});
   await page.getByRole('heading',{name:'Correction arabe',exact:true}).scrollIntoViewIfNeeded();
   await mark('arabic');
   const follow=page.getByRole('button',{name:'Suivi activé',exact:true});
@@ -60,8 +60,8 @@ for(const device of devices){
   await page.reload();await page.getByRole('button',{name:new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
   await expect(page.locator('textarea[lang="ar"]').first()).toHaveValue(editedArabic);
   await mark('saved');
-  await page.getByRole('button',{name:'Étape suivante · Traduire →',exact:true}).first().click();
-  await expect(page.getByRole('button',{name:'Étape suivante · Exporter →',exact:true}).first()).toBeVisible({timeout:18*60000});
+  await page.getByRole('button',{name:'Valider et traduire',exact:true}).first().click();
+  await expect(page.getByRole('button',{name:'Valider et exporter',exact:true}).first()).toBeVisible({timeout:18*60000});
   await page.getByRole('heading',{name:'Relire arabe et français'}).scrollIntoViewIfNeeded();
   await mark('translation');
   const french=page.locator('textarea[lang="fr"]').first();
@@ -70,7 +70,7 @@ for(const device of devices){
   if(editedFrench===originalFrench)throw Error('French edit must change the text');
   await french.fill(editedFrench);
   // Advancing must flush the focused edit before exporting.
-  await page.getByRole('button',{name:'Étape suivante · Exporter →',exact:true}).first().click();
+  await page.getByRole('button',{name:'Valider et exporter',exact:true}).first().click();
   await expect(page.getByRole('heading',{name:'Votre vidéo sous-titrée'})).toBeVisible();
   await page.reload();
   await page.getByRole('button',{name:new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();

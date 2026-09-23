@@ -168,7 +168,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   await text.fill("السلام عليكم ورحمة الله");
   await text.dispatchEvent("compositionend", { data: "الله" });
   await page
-    .getByRole("button", { name: "Étape suivante · Traduire →" })
+    .getByRole("button", { name: "Valider et traduire" })
     .first()
     .click();
   await expect(
@@ -181,7 +181,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
     .getByRole("textbox", { name: "Français one", exact: true })
     .fill("Bonjour à toutes et à tous.");
   await page
-    .getByRole("button", { name: "Étape suivante · Exporter →", exact: true })
+    .getByRole("button", { name: "Valider et exporter", exact: true })
     .last()
     .click();
   await expect(
@@ -207,14 +207,14 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   );
   await revisedFrench.blur();
   await expect(
-    page.getByRole("button", { name: "Étape suivante · Exporter →" }).last(),
+    page.getByRole("button", { name: "Valider et exporter" }).last(),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Télécharger · Low/ }),
   ).toHaveCount(0);
   expect((await page.request.get(originalExport!)).status()).toBe(200);
   await page
-    .getByRole("button", { name: "Étape suivante · Exporter →" })
+    .getByRole("button", { name: "Valider et exporter" })
     .last()
     .click();
   await page.getByRole("button", { name: "Créer la vidéo" }).click();
@@ -232,7 +232,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   const confirmation = page.getByRole("checkbox", {
     name: "Je confirme le remplacement de la traduction française.",
   });
-  await expect(confirmation).toHaveCount(2);
+  await expect(confirmation).toHaveCount(1);
   await confirmation.last().check();
   await expect(confirmation.first()).toBeChecked();
   const state = await (await page.request.get("/api/projects/fixture")).json();
@@ -338,7 +338,7 @@ test("step waits for compositionend when clicked while Arabic composition is act
     if (r.url().endsWith("/advance")) advanced = true;
   });
   await page
-    .getByRole("button", { name: "Étape suivante · Traduire →" })
+    .getByRole("button", { name: "Valider et traduire" })
     .last()
     .evaluate((button: HTMLButtonElement) => button.click());
   await page.waitForTimeout(100);
@@ -380,7 +380,7 @@ test("audio keeps playing while editing without stealing focus", async ({
   await page.getByRole("button", { name: "Pause", exact: true }).click();
 });
 
-test("desktop arrows seek without interfering with text or native range editing", async ({
+test("desktop playback shortcuts preserve text, range and button keyboard behavior", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 932 });
@@ -413,6 +413,44 @@ test("desktop arrows seek without interfering with text or native range editing"
   await slider.focus();
   await page.keyboard.press("ArrowRight");
   await expect(slider).toHaveValue("0.1");
+  await page.getByRole("button", { name: "Suivi activé", exact: true }).click();
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  const scroll = await page.evaluate(() => scrollY);
+  await page.keyboard.down("Space");
+  await expect
+    .poll(() => video.evaluate((v) => (v as HTMLVideoElement).paused))
+    .toBe(false);
+  await page.keyboard.down("Space"); // Holding the key must not toggle repeatedly.
+  await page.keyboard.up("Space");
+  expect(await video.evaluate((v) => (v as HTMLVideoElement).paused)).toBe(
+    false,
+  );
+  expect(await page.evaluate(() => scrollY)).toBe(scroll);
+  await page.keyboard.press("Space");
+  await expect
+    .poll(() => video.evaluate((v) => (v as HTMLVideoElement).paused))
+    .toBe(true);
+  const text = page.getByRole("textbox", { name: "Arabe one", exact: true });
+  await text.focus();
+  await page.keyboard.press("Space");
+  expect(await video.evaluate((v) => (v as HTMLVideoElement).paused)).toBe(
+    true,
+  );
+  await page.keyboard.press("Backspace");
+  await slider.focus();
+  await page.keyboard.press("Space");
+  expect(await video.evaluate((v) => (v as HTMLVideoElement).paused)).toBe(
+    true,
+  );
+  await page.getByRole("button", { name: "Lecture", exact: true }).focus();
+  await page.keyboard.press("Space");
+  await expect
+    .poll(() => video.evaluate((v) => (v as HTMLVideoElement).paused))
+    .toBe(false);
+  await page.keyboard.press("Space");
+  await expect
+    .poll(() => video.evaluate((v) => (v as HTMLVideoElement).paused))
+    .toBe(true);
 });
 
 test("source link copies the exact URL and reports clipboard refusal", async ({

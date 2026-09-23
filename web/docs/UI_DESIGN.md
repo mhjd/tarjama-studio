@@ -18,9 +18,10 @@ globale, de template marketing ni de remplacement du produit par un kit généri
 
 - Identité sombre et sauge conservée ; texte principal clair, contraste et focus
   visibles. Espacements réguliers, cartes de segments simples, pas de chrome inutile.
-- Quatre étapes en colonnes égales, chiffres et libellés centrés. Action suivante
-  visible avant et après les segments, qui attend toujours le flush et sa réussite.
-  Les deux emplacements partagent confirmations et état occupé.
+- Quatre étapes en colonnes égales, chiffres et libellés centrés. Validation uniquement après les segments, avec « Valider et traduire » ou
+  « Valider et exporter », qui attend toujours le flush et sa réussite. En haut,
+  « Aller à la validation » est un lien discret : déplacement et focus seulement,
+  sans confirmer l’étape ni lancer de traitement.
 - Titre modifiable sur plusieurs lignes, hauteur ajustée au texte et au viewport.
   Lien YouTube juste dessous, copiable au clic avec retour de succès/échec, et
   ouverture de la source dans un autre onglet. Les imports sans URL n’en inventent pas.
@@ -31,6 +32,9 @@ globale, de template marketing ni de remplacement du produit par un kit généri
 - Suivi dans la barre de l'éditeur, séparé du lecteur ; actif par défaut, conservé
   lors d'un scroll manuel, suspendu pendant la saisie. L'ouverture ne défile plus
   automatiquement jusqu'au premier segment et ne masque plus le contexte du projet.
+- Espace : lecture/pause, sans défilement de page ni répétition lors d’un appui
+  prolongé. Sur un bouton, conserver son activation native ; pendant la saisie,
+  conserver l’insertion d’espaces.
 - Flèches gauche/droite : ±5 s, bornées à la vidéo. Les champs, compositions IME,
   sélecteurs, sliders et combinaisons de touches conservent leur comportement natif.
 - Commandes d’export placées avant la transcription, avec espace de défilement

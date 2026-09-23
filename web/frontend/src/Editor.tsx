@@ -175,6 +175,13 @@ export function Editor({
   function seek(delta: number) {
     if (media.current) seekTo(media.current.currentTime + delta);
   }
+  function togglePlayback() {
+    const v = media.current;
+    if (v)
+      void (v.paused ? v.play() : Promise.resolve(v.pause())).catch(() =>
+        setError("Lecture impossible"),
+      );
+  }
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       const target = event.target;
@@ -184,6 +191,7 @@ export function Editor({
         event.ctrlKey ||
         event.metaKey ||
         event.shiftKey ||
+        target.isContentEditable ||
         target.closest(
           'input, textarea, select, [contenteditable="true"], [role="slider"]',
         )
@@ -193,6 +201,17 @@ export function Editor({
         if (!media.current) return;
         event.preventDefault();
         seek(event.key === "ArrowLeft" ? -5 : 5);
+      } else if (event.code === "Space" || event.key === " ") {
+        // Preserve native keyboard activation and avoid a second toggle on keyup.
+        if (
+          !media.current ||
+          target.closest(
+            'button, a, summary, [role="button"], video[controls], audio[controls]',
+          )
+        )
+          return;
+        event.preventDefault();
+        if (!event.repeat) togglePlayback();
       }
     }
     window.addEventListener("keydown", keydown);
@@ -238,14 +257,16 @@ export function Editor({
       </label>
     );
   }
-  function nextStep(position: "top" | "bottom") {
+  function nextStep() {
     return (
       <>
         {p.stage === "arabic" && (
           <section
             className="next-step"
-            data-position={position}
-            aria-label={`Étape suivante — ${position === "top" ? "haut" : "bas"}`}
+            id="validation"
+            data-position="bottom"
+            tabIndex={-1}
+            aria-label="Validation des sous-titres"
           >
             {p.translation_source > 0 &&
               p.translation_source !== p.arabic_version && (
@@ -283,16 +304,18 @@ export function Editor({
               }
             >
               {p.translation_source === p.arabic_version
-                ? "Étape suivante · Relire la traduction →"
-                : "Étape suivante · Traduire →"}
+                ? "Valider et relire la traduction"
+                : "Valider et traduire"}
             </button>
           </section>
         )}
         {p.stage === "review" && (
           <section
             className="next-step"
-            data-position={position}
-            aria-label={`Étape suivante — ${position === "top" ? "haut" : "bas"}`}
+            id="validation"
+            data-position="bottom"
+            tabIndex={-1}
+            aria-label="Validation des sous-titres"
           >
             <button
               className="primary"
@@ -309,7 +332,7 @@ export function Editor({
                 })
               }
             >
-              Étape suivante · Exporter →
+              Valider et exporter
             </button>
           </section>
         )}
@@ -538,7 +561,21 @@ export function Editor({
             </button>
           </p>
         ))}
-      {nextStep("top")}
+      {["arabic", "review"].includes(p.stage) && (
+        <div className="validation-shortcut">
+          <a
+            href="#validation"
+            onClick={(event) => {
+              event.preventDefault();
+              const target = document.getElementById("validation");
+              target?.focus({ preventScroll: true });
+              target?.scrollIntoView({ block: "end" });
+            }}
+          >
+            Aller à la validation
+          </a>
+        </div>
+      )}
       {p.stage === "ready" && (
         <section className="panel export-panel">
           <h2>Votre vidéo sous-titrée</h2>
@@ -617,13 +654,7 @@ export function Editor({
             <button
               className="primary play-button"
               aria-label={playing ? "Pause" : "Lecture"}
-              onClick={() => {
-                const v = media.current;
-                if (v)
-                  void (v.paused ? v.play() : Promise.resolve(v.pause())).catch(
-                    () => setError("Lecture impossible"),
-                  );
-              }}
+              onClick={togglePlayback}
             >
               {playing ? (
                 <Pause size={23} aria-hidden="true" />
@@ -724,7 +755,7 @@ export function Editor({
           </div>
         </>
       )}
-      {nextStep("bottom")}
+      {nextStep()}
       <section className="danger">
         {deleteOpen ? (
           <>

@@ -799,3 +799,25 @@ textarea.project-title {
 .export-edit-help {
   font-size: 13px;
 }
+
+.validation-shortcut {
+  display: flex;
+  justify-content: flex-end;
+  margin: 8px 0 20px;
+}
+.validation-shortcut a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  color: #b3c2bd;
+  text-underline-offset: 4px;
+}
+.next-step {
+  scroll-margin: 220px 0 16px;
+}
+@media (max-width: 640px) {
+  .next-step {
+    scroll-margin-top: 16px;
+  }
+}

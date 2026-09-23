@@ -39,7 +39,7 @@ for (const size of sizes)
       page.getByRole("textbox", { name: "Arabe visual-0", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Étape suivante · Traduire →" }).first(),
+      page.getByRole("link", { name: "Aller à la validation" }),
     ).toBeInViewport();
     expect(
       await page.evaluate(
@@ -66,6 +66,26 @@ for (const size of sizes)
       expect(dock!.y).toBeGreaterThan(size.height - 180);
     }
     await page.screenshot({ path: `${dir}/01-correction.png` });
+    let advances = 0;
+    page.on("request", (r) => {
+      if (r.url().endsWith("/advance")) advances++;
+    });
+    const validate = page.getByRole("button", {
+      name: "Valider et traduire",
+      exact: true,
+    });
+    await expect(validate).toHaveCount(1);
+    await page.getByRole("link", { name: "Aller à la validation" }).click();
+    await expect(page.locator("#validation")).toBeFocused();
+    await expect(validate).toBeInViewport();
+    const buttonBox = await validate.boundingBox();
+    const dockBox = await page.locator(".player").boundingBox();
+    if (size.width < 640)
+      expect(buttonBox!.y + buttonBox!.height).toBeLessThan(dockBox!.y);
+    else expect(buttonBox!.y).toBeGreaterThan(dockBox!.y + dockBox!.height);
+    expect(advances).toBe(0);
+    await page.screenshot({ path: `${dir}/07-validation-shortcut.png` });
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.getByRole("button", { name: "Agrandir la vidéo" }).click();
     await expect(
       page.getByRole("button", { name: "Réduire la vidéo" }),
@@ -77,8 +97,8 @@ for (const size of sizes)
       page.getByRole("textbox", { name: "Français visual-0", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Étape suivante · Exporter →" }),
-    ).toHaveCount(2);
+      page.getByRole("button", { name: "Valider et exporter" }),
+    ).toHaveCount(1);
     const arabicBox = await page
       .getByRole("textbox", { name: "Arabe visual-0", exact: true })
       .boundingBox();

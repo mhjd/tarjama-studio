@@ -1,4 +1,4 @@
-# Intégration des opérations isolées — proposition et qualification
+# Intégration des opérations isolées — profils enregistrés et qualification
 
 Cette livraison remplace l'exécution locale des outils par un moteur distant
 explicite `isolated-jobs`. Le moteur Bubblewrap reste intact, sans exception ni
@@ -27,22 +27,24 @@ n'utilise pas automatiquement le cache K3s : le dossier donne **Docker image ID*
 et référence de manifeste d'import séparément. L'enregistrement appartient à
 l'administrateur et n'est pas réalisé par la recette Tarjama.
 
-## Contrats de profils proposés
+## Contrats de profils examinés et enregistrés
 
 La liste structurée est [isolated-profiles.proposal.json](../deploy/preview/isolated-profiles.proposal.json).
-C'est un dossier de revue, **pas une configuration Ansible installable telle quelle**.
+Ce dossier de revue a été enregistré par l’administrateur le23septembre dans
+`vars/isolated-media.yml`, d’après sa passation `isolated-media-20260923.md`.
+Il reste **distinct du format Ansible administrateur**, sans installation par Tarjama.
 Les accolades désignent des paramètres à substituer par le mécanisme administré,
 jamais un shell. L'API applicative ne reçoit que leur valeur sous forme de chaîne.
 
 | Profil | Entrées → sortie | Paramètres | Délai |
 | --- | --- | --- | --- |
 | `media-probe` existant | media ≤512Mio → stdout JSON ≤1Mio | aucun |30s|
-| `tarjama-probe-v1` proposé | media ≤1Gio → stdout JSON ≤1Mio | aucun |30s|
-| `tarjama-audio-v1` proposé | media ≤1Gio → audio.flac ≤23Mio | start_ms entier0–10800000 ; duration_ms1–600000 |4h|
-| `tarjama-normalize-v1` proposé | media ≤1Gio → result.mp4 ≤1Gio | width/height pairs2–8192 ; quality=high |4h|
-| `tarjama-export-v1` proposé | media ≤1Gio + subtitles.ass ≤16Mio → result.mp4 ≤1Gio | mêmes dimensions ; quality=low/high |4h|
-| `tarjama-download-v1` proposé | aucune → media ≤1Gio | URL YouTube canonique ≤2048 caractères ; track=video/audio |30min|
-| `tarjama-mux-v1` proposé | media + audio ≤1Gio chacun → result.mkv ≤1Gio | aucun |4h|
+| `tarjama-probe-v1` enregistré | media ≤1Gio → stdout JSON ≤1Mio | aucun |30s|
+| `tarjama-audio-v1` enregistré | media ≤1Gio → audio.flac ≤23Mio | start_ms entier0–10800000 ; duration_ms1–600000 |4h|
+| `tarjama-normalize-v1` enregistré | media ≤1Gio → result.mp4 ≤1Gio | width/height pairs2–8192 ; quality=high |4h|
+| `tarjama-export-v1` enregistré | media ≤1Gio + subtitles.ass ≤16Mio → result.mp4 ≤1Gio | mêmes dimensions ; quality=low/high |4h|
+| `tarjama-download-v1` enregistré | aucune → media ≤1Gio | URL YouTube canonique ≤2048 caractères ; track=video/audio |30min|
+| `tarjama-mux-v1` enregistré | media + audio ≤1Gio chacun → result.mkv ≤1Gio | aucun |4h|
 
 Le profil audio existant WAV/secondes entières n'est pas utilisé. Le nouveau
 contrat conserve les millisecondes, mono16kHz et impose16bits avant FLAC : un
@@ -56,14 +58,15 @@ et ffprobe n'acceptent que `file,pipe`. Le résultat vidéo est reprobé dans u
 opération séparée avant publication. Une empreinte correcte ne prouve pas
 l'innocuité ou la conformité métier du contenu ; ces contrôles restent nécessaires.
 
-Proposition de ressources, **à mesurer et approuver**, concurrence globale1 :
+Ressources enregistrées, **tailles maximum restant à qualifier**, concurrence globale1 :
 petit profil existant256Mi inchangé ; nouveau probe1536Mi ; audio1536Mi ; normalize/export
 3072Mi ; mux4096Mi ; download1536Mi. Le budget doit inclure toutes les entrées,
 sorties, fichiers temporaires et décodeurs ; le grand profil peut nécessiter une
 limite applicative moindre si la mémoire physique disponible ne permet pas1Gio.
 CPU2, pids128, fichiers/descripteurs bornés ; aucune nouvelle capability demandée.
-La proposition structurée donne les bornes d'entrées/sorties, mais ne prétend pas
-que ces ressources sont déjà allouées ou qualifiées.
+Les nouveaux profils montent `/inputs` read-only et `/outputs` en tmpfs64Mi ou
+1152Mi. Réservation totale du broker4Gio, réserve disque minimale8Gio. Ces plafonds
+ne prouvent pas que les fichiers1Gio et traitements4h ont été qualifiés.
 
 ## YouTube, relais et WARP
 
@@ -77,13 +80,14 @@ conteneur disposant du relais. Les options fixes s'appuient sur la
 Les formats HTTPS choisis peuvent être indisponibles sur certaines vidéos :
 refus explicite et import disponible, pas de sortie directe de secours.
 
-Le profil doit installer un relais loopback `127.0.0.1:18080` vers le **filtre de
+Le profil utilise le relais administré loopback `127.0.0.1:18080` vers le **filtre de
 domaines** Tarjama, qui passe ensuite exclusivement par WARP172.31.250.2:40001.
 Le WARP brut ne remplace pas ce filtre. Le filtre existant, commande `tarjama egress`,
 garde DNS/IP publics, refus privé/metadata, CONNECT443, IP épinglée et TLS/SNI au
 nom d'origine. La recette conserve le service egress arrêté, port8092, sans accès
-public. Sa destination depuis le relais doit être administrée et qualifiée :
-aucune route entre Docker et `pv-egress` n'est supposée disponible.
+public. L’administrateur a raccordé le relais au Service `pv-egress:8092` ; son
+ClusterIP est résolu par Ansible et ne doit pas être codé dans l’application.
+Sans endpoint tant que les services restent arrêtés, le relais échoue sans repli.
 
 Tester URL initiale et sous-requêtes, TLS négatif, rebinding, redirection vers
 privé, panne/recréation filtre/relais/WARP et refus immédiat de connexion directe.
@@ -142,14 +146,22 @@ du cache après ACK sans réexécution implicite ; réessai utilisateur avec nou
 clé. Vrais FFmpeg : préparation, FLAC fractionnaire, ASS arabe/français Low/High.
 Ces tests utilisent des fixtures synthétiques et **aucun secret VPS ou fournisseur**.
 
-La passation administrateur rapporte la qualification des conteneurs network-none,
-transferts, reprise, annulation et relais. Ce n'est pas une preuve produite par la
-suite Tarjama. Le chemin de service K3s→API, la conformité des réponses JSON réelles,
-les profils installés, les ressources maximales, YouTube, OIDC, fournisseurs et
-stockage/backups restent à vérifier avant activation.
+La passation administrateur du23septembre rapporte l’enregistrement des huit
+profils sur l’image attendue, les essais du filtre réel et de WARP avec une fixture
+administrateur : CONNECT autorisé, TLS au nom d’origine, mauvais nom TLS refusé,
+domaines hors liste, IP privées/metadata/loopback IPv6/port incorrect refusés,
+DNS vers127.0.0.1 refusé, panne WARP simulée sans repli et recréation du filtre.
+La frontière est network-none ; aucune correction du CNI ou exception noyau.
+Ces preuves sont rapportées par l’administrateur, pas produites par la suite projet.
 
-Une demande d'exemples JSON anonymisés de `/v1/profiles` et `/v1/jobs/{id}` est en
-attente : le contrat textuel v1 n'explicite pas tous les schémas de réponse.
-Le client utilise les champs `id` et `state` au premier niveau, et les en-têtes de
-transfert définis dans le contrat ; cette compatibilité doit être confirmée.
-Aucun test direct de stress vers l'IP privée depuis l'hôte, aucun pare-feu modifié.
+Le schéma de réponse est confirmé : `/v1/profiles` est un objet indexé par nom,
+sans enveloppe ; `/v1/jobs/{id}` expose `id` et `state` au premier niveau, ainsi
+que des maps `inputs`/`outputs` contenant `size` entier et `sha256`. Le client actuel
+est compatible avec ces champs ; aucun changement du binaire n’est nécessaire.
+Cela ne remplace pas les essais de bout en bout avec les composants Tarjama.
+
+Restent : YouTube et ses sous-requêtes réelles, médias longs/tailles maximales,
+reprise métier sur le vrai broker, navigateur OIDC, fournisseurs, persistance et
+restauration cohérente. Les essais à deux comptes sont reportés avec l’activation
+du compte de test à la demande du propriétaire. Aucun test direct de stress vers
+l’IP privée depuis l’hôte, aucun pare-feu modifié, aucun service Tarjama activé.

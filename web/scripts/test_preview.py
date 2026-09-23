@@ -54,13 +54,28 @@ class PreviewSafetyTests(unittest.TestCase):
             root = Path(temp)
             (root / 'web/deploy/preview').mkdir(parents=True)
             (root / 'web/deploy/preview/bootstrap-db.sh').write_text('# synthetic bootstrap\n')
-            (root / 'deploy.preview.yml').write_text(
+            (root / 'web/deploy/preview/deploy.template.yml').write_text(
                 'services:\n  web:\n    enabled: false\n    image: preview.local/atelier/web@sha256:' + 'c' * 64 +
                 '\n')
             with patch.object(preview, 'ROOT', root):
                 result = preview.render(self.inputs())
             self.assertIn(self.inputs()['API_IMAGE'], result)
             self.assertNotIn('c' * 64, result)
+
+    def test_previous_active_output_cannot_activate_the_next_stopped_render(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            directory = root / 'web/deploy/preview'
+            directory.mkdir(parents=True)
+            (directory / 'bootstrap-db.sh').write_text('# synthetic bootstrap\n')
+            (directory / 'deploy.template.yml').write_text(
+                'services:\n  web:\n    enabled: false\n')
+            (root / 'deploy.preview.yml').write_text(
+                'services:\n  web:\n    enabled: true\n')
+            with patch.object(preview, 'ROOT', root):
+                result = preview.render(self.inputs())
+            self.assertIn('enabled: false', result)
+            self.assertNotIn('enabled: true', result)
 
 
 if __name__ == '__main__':

@@ -182,3 +182,33 @@ déclaré ou non autorisé »**. Le catalogue ne contient toujours pas `tarjama-
 que la recette référence ; les paramètres publics OIDC restent des placeholders.
 Aucune validation complète de recette ou qualification réelle du broker annoncée.
 Les quatre services restent désactivés, aucune tâche d'exploitation lancée.
+
+
+## Recette désactivée validée après retour administrateur — 23 septembre 2026
+
+Paramètres publics confirmés : issuer `https://auth.runagen.com`, client
+`preview-atelier-tarjama`, capacité `oidc`, secret référencé `tarjama-oidc` monté
+uniquement sur l’API. Le catalogue confirme OIDC, WARP et isolated-jobs. Les huit
+profils, le relais vers `pv-egress:8092` et les contrôles TLS/SSRF/WARP sont rapportés
+installés/testés par l’administrateur ; aucun réglage d’infrastructure changé ici.
+Les réponses JSON confirment le contrat utilisé par le client applicatif.
+
+Le générateur lit désormais un modèle séparé `web/deploy/preview/deploy.template.yml`,
+avec les paramètres publics versionnés `inputs.json`. `deploy.preview.yml` contient
+le vrai script de bootstrap, les images importées attendues, zéro placeholder et
+quatre services désactivés. Un ancien rendu actif n’influence plus le rendu arrêté.
+
+**Cinq tests de rendu réussis**, intégrité du script intégré et correspondance des
+images avec le catalogue vérifiées. **validate et plan réussis**, même révision
+calculée `d53694da65c63fca`, `applied: false`. Statut0 replica/0 ready. Aucun build
+supplémentaire nécessaire : backend/frontend et Dockerfile inchangés depuis les
+images testées de `f897ac6`. Aucun déploiement, bootstrap, migration ou appel réel
+aux fournisseurs/YouTube pendant cette préparation.
+
+La validation de recette ne qualifie ni les parcours applicatifs ni les tailles
+maximales. Petites fixtures uniquement pour les futurs premiers essais : environ
+17,3Gio libres mesurés par l’administrateur, réserve broker8Gio, PVC14+2Gi qui ne
+réservent pas physiquement le disque. Sauvegarde OVH retenue par le propriétaire,
+fraîcheur non recontrôlée ; copie indépendante reportée, restauration applicative
+encore à qualifier. Le compte de test reste désactivé à sa demande : aucune action
+humaine supplémentaire sollicitée maintenant. L’activation attend une instruction distincte.

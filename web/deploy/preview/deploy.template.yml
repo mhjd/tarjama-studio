@@ -4,7 +4,7 @@ version: 1
 services:
   web:
     enabled: false
-    image: "preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f"
+    image: preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f
     args: [api]
     uid: 10001
     gid: 10001
@@ -13,8 +13,8 @@ services:
       APP_MODE: production
       LISTEN_ADDR: 0.0.0.0:8090
       PUBLIC_ORIGIN: https://atelier.preview.runagen.com
-      OIDC_ISSUER: "https://auth.runagen.com"
-      OIDC_CLIENT_ID: "preview-atelier-tarjama"
+      OIDC_ISSUER: REQUIRED_OIDC_ISSUER
+      OIDC_CLIENT_ID: REQUIRED_OIDC_CLIENT_ID
       OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
       DATABASE_URL_FILE: /run/db/database_url
       ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
@@ -26,13 +26,13 @@ services:
       - {name: tarjama-oidc, path: /run/oidc}
     volumes: [{name: library, path: /storage}]
     connect: [db]
-    egress: ["oidc"]
+    egress: [REQUIRED_OIDC_EGRESS]
     resources: {cpu: 500m, memory: 512Mi}
     tmp: 64Mi
     health: {path: /readyz}
   worker:
     enabled: false
-    image: "preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f"
+    image: preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f
     args: [worker]
     uid: 10001
     gid: 10001
@@ -62,16 +62,16 @@ services:
     tmp: 64Mi
   egress:
     enabled: false
-    image: "preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f"
+    image: preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f
     args: [egress]
     uid: 10003
     gid: 10003
     port: 8092
     env:
       LISTEN_ADDR: 0.0.0.0:8092
-      WARP_HTTP_PROXY: "172.31.250.2:40001"
+      WARP_HTTP_PROXY: 172.31.250.2:40001
       GOMAXPROCS: '1'
-    egress: ["warp-downloads"]
+    egress: [warp-downloads]
     resources: {cpu: 250m, memory: 128Mi}
     tmp: 16Mi
   db:
@@ -113,7 +113,7 @@ jobs:
     resources: {cpu: 100m, memory: 128Mi}
     timeout: 240
   migrate:
-    image: "preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f"
+    image: preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f
     uid: 10001
     gid: 10001
     args: [migrate]
@@ -130,4 +130,4 @@ configs:
   postgres-client:
     pg_service.conf: "[preview-init]\nhost=/tmp\n"
   bootstrap:
-    bootstrap-db.sh: "#!/bin/sh\nset -eu\n# Explicit job; no secrets in command arguments or output.\nexport PGCONNECT_TIMEOUT=2\nattempt=0\nuntil psql -X -w --set ON_ERROR_STOP=1 -Atqc 'SELECT 1' >/dev/null 2>&1; do\n  attempt=$((attempt + 1))\n  if [ \"$attempt\" -ge 45 ]; then\n    echo 'PostgreSQL unavailable after bounded startup wait' >&2\n    exit 1\n  fi\n  sleep 2\ndone\npsql -X -w --set ON_ERROR_STOP=1 <<'SQL'\n\\getenv app_password APP_DB_PASSWORD\nBEGIN;\nSELECT pg_advisory_xact_lock(91372611);\nSELECT 'CREATE ROLE tarjama LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE'\nWHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'tarjama')\n\\gexec\nALTER ROLE tarjama LOGIN PASSWORD :'app_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;\nALTER DATABASE tarjama OWNER TO tarjama;\nGRANT USAGE, CREATE ON SCHEMA public TO tarjama;\nCOMMIT;\nSQL\n"
+    bootstrap-db.sh: REQUIRED_BOOTSTRAP_SCRIPT

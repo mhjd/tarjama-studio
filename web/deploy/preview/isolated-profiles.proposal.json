@@ -1,5 +1,5 @@
 {
-  "status": "proposal-not-installed",
+  "status": "reviewed-and-registered-by-administrator",
   "image_source": "images.lock.json: images.media (Docker runtime requires docker_id, not the K3s manifest reference)",
   "docker_image_id": "sha256:da630b6315542d51fbaa689432ecbae41ac364bd824200b0a60d00a10555c6d3",
   "k3s_import_reference": "preview.local/atelier/media@sha256:3ee5314e110eb8b1ad817b725bf3e113c9182af963a7b28aaf91ddd3351ed554",
@@ -197,7 +197,7 @@
       "pids_proposal": 128,
       "relay": {
         "listen": "127.0.0.1:18080",
-        "destination": "REQUIRED_ADMINISTERED_TARJAMA_DOMAIN_FILTER_THEN_WARP",
+        "destination": "Service pv-egress:8092 (ClusterIP resolved by administrator through Ansible)",
         "direct_fallback": false
       }
     },
@@ -223,5 +223,6 @@
       "relay": null
     }
   ],
-  "source_commit": "f897ac635f1e92d4a46bbbac59c79def9bf1b1ed"
+  "source_commit": "f897ac635f1e92d4a46bbbac59c79def9bf1b1ed",
+  "administrator_report": "vps-preview/references/isolated-media-20260923.md"
 }

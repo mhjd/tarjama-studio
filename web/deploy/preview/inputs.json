@@ -1,0 +1,8 @@
+{
+  "API_IMAGE": "preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f",
+  "OIDC_ISSUER": "https://auth.runagen.com",
+  "OIDC_CLIENT_ID": "preview-atelier-tarjama",
+  "OIDC_EGRESS": "oidc",
+  "WARP_HTTP_PROXY": "172.31.250.2:40001",
+  "WARP_EGRESS": "warp-downloads"
+}

@@ -31,7 +31,7 @@ def render(values, phase="stopped"):
     ipaddress.IPv4Address(host)
     if not port.isdigit() or not 1 <= int(port) <= 65535:
         raise ValueError("WARP_HTTP_PROXY: administrator-provided IPv4:port required")
-    text = (ROOT / "deploy.preview.yml").read_text()
+    text = (ROOT / "web/deploy/preview/deploy.template.yml").read_text()
     # Public proxy settings can already be pinned in the reviewed recipe.
     text = re.sub(r'(?m)^(\s+WARP_HTTP_PROXY: ).+$', r'\1REQUIRED_WARP_HTTP_PROXY', text)
     text = re.sub(r'(?ms)(^  egress:\n.*?^    egress: )\[[^\]\n]*\]',

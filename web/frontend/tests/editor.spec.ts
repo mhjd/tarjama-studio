@@ -59,6 +59,69 @@ test("download shows durable stages and stops claiming activity when polling fai
     ),
   ).toBeTruthy();
 });
+test("follow stays enabled on manual scroll, is explicit, and seeks the same subtitle", async ({
+  page,
+}) => {
+  await login(page);
+  await page.route("**/api/projects/fixture", async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    data.project.segments = Array.from({ length: 15 }, (_, i) => ({
+      id: `scroll-${i}`,
+      start_ms: i * 200,
+      end_ms: (i + 1) * 200,
+      arabic: "السلام عليكم",
+      french: "Bonjour",
+      version: 1,
+    }));
+    data.jobs = [
+      {
+        id: "waiting",
+        kind: "cleanup",
+        state: "waiting_provider",
+        progress: 0,
+        message: "Le service est temporairement limité ou indisponible.",
+      },
+    ];
+    await route.fulfill({ response, json: data });
+  });
+  await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+  const follow = page.getByRole("button", {
+    name: "Suivi activé",
+    exact: true,
+  });
+  await expect(follow).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".job")).toContainText(
+    "Correction automatique de l’arabe",
+  );
+  await expect(page.locator(".job")).toContainText(
+    "Cette étape doit se terminer",
+  );
+  await page.locator(".segments").dispatchEvent("wheel", { deltaY: 500 });
+  await page.locator(".segments").dispatchEvent("touchmove");
+  await expect(follow).toHaveAttribute("aria-pressed", "true");
+  const slider = page.getByRole("slider", { name: "Position de lecture" });
+  await slider.fill("2");
+  await expect(page.locator("#segment-scroll-10")).toHaveClass(/active/);
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  // Seeking within the same active segment must reposition, too.
+  await slider.fill("2.1");
+  await expect
+    .poll(() =>
+      page.locator("#segment-scroll-10").evaluate((el) => {
+        const player = document
+          .querySelector(".player")!
+          .getBoundingClientRect();
+        const rect = el.getBoundingClientRect();
+        return rect.top >= player.bottom && rect.top < window.innerHeight;
+      }),
+    )
+    .toBeTruthy();
+  await follow.click();
+  await expect(
+    page.getByRole("button", { name: "Suivi désactivé" }),
+  ).toHaveAttribute("aria-pressed", "false");
+});
 test("private projects, unchanged blur, offline draft, IME flush, review and real export", async ({
   page,
   browser,

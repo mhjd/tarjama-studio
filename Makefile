@@ -180,3 +180,9 @@ web-preview-import:
 .PHONY: web-isolated-image-test
 web-isolated-image-test:
 	sh web/scripts/isolated-image-test.sh
+
+# Dedicated private UI qualification images; never deploy them as the public web service.
+.PHONY: web-review-images
+web-review-images:
+	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target ui-review -t tarjama-ui-review:review web
+	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target ui-recorder -t tarjama-ui-recorder:review web

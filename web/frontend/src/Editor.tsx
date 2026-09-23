@@ -38,6 +38,7 @@ export function Editor({
     [busy, setBusy] = useState(false),
     [uploading, setUploading] = useState(false),
     [current, setCurrent] = useState(0),
+    [seekVersion, setSeekVersion] = useState(0),
     [playing, setPlaying] = useState(false),
     [follow, setFollow] = useState(true),
     [focused, setFocused] = useState(false),
@@ -130,14 +131,20 @@ export function Editor({
       document
         .getElementById(`segment-${active}`)
         ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [active, follow, focused]);
-  function seek(delta: number) {
+  }, [active, follow, focused, seekVersion]);
+  function seekTo(seconds: number) {
     const v = media.current;
-    if (v)
-      v.currentTime = Math.max(
-        0,
-        Math.min(v.duration || 0, v.currentTime + delta),
-      );
+    if (!v) return;
+    const position = Math.max(
+      0,
+      Math.min(v.duration || p.duration_ms / 1000, seconds),
+    );
+    v.currentTime = position;
+    setCurrent(position);
+    setSeekVersion((n) => n + 1);
+  }
+  function seek(delta: number) {
+    if (media.current) seekTo(media.current.currentTime + delta);
   }
   const editable = ["arabic", "review", "ready"].includes(p.stage),
     french = p.stage === "review" || p.stage === "ready";
@@ -274,17 +281,22 @@ export function Editor({
         .filter((j) => !["succeeded", "cancelled"].includes(j.state))
         .map((j) => (
           <section className="job" key={j.id}>
-            <p>
-              {j.message ||
-                {
-                  download: "Téléchargement vidéo",
-                  prepare: "Vérification de la vidéo",
-                  transcribe: "Transcription",
-                  cleanup: "Nettoyage arabe",
-                  translate: "Traduction",
-                }[j.kind] ||
-                "Création de la vidéo sous-titrée"}
-            </p>
+            <h2>
+              {{
+                download: "Téléchargement vidéo",
+                prepare: "Vérification de la vidéo",
+                transcribe: "Transcription",
+                cleanup: "Correction automatique de l’arabe",
+                translate: "Traduction",
+              }[j.kind] || "Création de la vidéo sous-titrée"}
+            </h2>
+            {j.message && <p>{j.message}</p>}
+            {j.state === "waiting_provider" && (
+              <p className="progress-note">
+                Cette étape doit se terminer avant de continuer. La reprise est
+                automatique : vous pouvez revenir plus tard.
+              </p>
+            )}
             {!connectionLost && <JobProgress job={j} />}
             {j.state === "failed" || j.state === "waiting_provider" ? (
               <button
@@ -401,29 +413,30 @@ export function Editor({
               step={0.1}
               value={current}
               onChange={(e) => {
-                if (media.current)
-                  media.current.currentTime = Number(e.target.value);
+                seekTo(Number(e.target.value));
               }}
             />
           </div>
+          {p.segments.length > 0 && (
+            <button
+              className="follow-toggle"
+              aria-pressed={follow}
+              onClick={() => setFollow((value) => !value)}
+              title={
+                focused && follow
+                  ? "Le défilement attend la fin de votre saisie"
+                  : undefined
+              }
+            >
+              Suivi {follow ? "activé" : "désactivé"}
+            </button>
+          )}
         </section>
       )}
       {p.segments.length > 0 && (
         <>
           <div className="row">
             <h2>{french ? "Relire arabe et français" : "Correction arabe"}</h2>
-            {!follow && (
-              <button
-                onClick={() => {
-                  setFollow(true);
-                  document
-                    .getElementById(`segment-${active}`)
-                    ?.scrollIntoView({ block: "nearest" });
-                }}
-              >
-                Suivre l’écoute
-              </button>
-            )}
           </div>
           <p className="notice">
             Vérifiez les citations religieuses et leurs références. Elles ne
@@ -439,11 +452,7 @@ export function Editor({
                 votre confirmation.
               </p>
             )}
-          <div
-            className="segments"
-            onWheel={() => setFollow(false)}
-            onTouchMove={() => setFollow(false)}
-          >
+          <div className="segments">
             {p.segments.map((s) => (
               <article
                 id={`segment-${s.id}`}
@@ -453,8 +462,7 @@ export function Editor({
                 <button
                   className="timestamp"
                   onClick={() => {
-                    if (media.current)
-                      media.current.currentTime = s.start_ms / 1000;
+                    seekTo(s.start_ms / 1000);
                   }}
                 >
                   {time(s.start_ms)} — {time(s.end_ms)}

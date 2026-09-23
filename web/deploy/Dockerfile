@@ -40,3 +40,22 @@ FROM api AS preview-check
 COPY --from=preview-check-build /preview-check /usr/local/bin/preview-check
 ENTRYPOINT ["/usr/local/bin/preview-check"]
 CMD ["-test.v", "-test.run", "^TestPreviewLive$", "-test.timeout", "12m"]
+
+# Explicit private UI qualification only; not part of api/media release images.
+FROM backend AS ui-review-build
+RUN CGO_ENABLED=0 go build -trimpath -o /ui-review ./cmd/ui-review
+FROM api AS ui-review
+COPY --from=ui-review-build /ui-review /usr/local/bin/ui-review
+ENTRYPOINT ["/usr/local/bin/ui-review"]
+CMD []
+
+FROM frontend AS ui-recorder
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-noto-core && rm -rf /var/lib/apt/lists/*
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
+RUN npx playwright install ffmpeg
+COPY review/ /review/
+RUN ln -s /src/frontend/node_modules /review/node_modules
+USER 10004:10004
+ENV HOME=/tmp
+ENTRYPOINT ["node", "/review/record.mjs"]

@@ -4,6 +4,8 @@
 !backend/**
 !frontend/
 !frontend/**
+!review/
+!review/*.mjs
 !deploy/
 !deploy/Dockerfile
 !deploy/Dockerfile.tools

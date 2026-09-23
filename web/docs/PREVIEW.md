@@ -132,3 +132,10 @@ DB+médias/cache cohérents, chiffrement séparé et restauration hors VPS reste
 
 Les preuves de tests, imports et refus éventuels du moteur sont consignées dans
 [STATUS.md](STATUS.md). Aucun succès de `validate`/`plan` ne vaut essai métier.
+
+
+Dernier contrôle du23septembre : images locales testées et importées depuis
+`f897ac6`, digests consignés dans `images.lock.json`. Les tests d'image synthétiques
+et le bootstrap/migration SQL de l'image finale réussissent. `validate` et `plan`
+refusent encore « Montage non déclaré ou non autorisé » ; `tarjama-oidc` manque
+au catalogue. Les profils d'opérations ne sont pas installés par ces imports.

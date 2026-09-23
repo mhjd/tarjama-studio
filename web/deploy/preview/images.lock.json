@@ -1,17 +1,17 @@
 {
-  "source_commit": "e6a0cf34cb39a37386d910a90967b20c936fb92f",
+  "source_commit": "f897ac635f1e92d4a46bbbac59c79def9bf1b1ed",
   "platform": "linux/amd64",
   "images": {
     "web": {
-      "image": "preview.local/atelier/web@sha256:966a2e244b183332f68e5e99caf062907f7628ef2004daacbe0695ffec9b8c9b",
-      "docker_id": "sha256:6602a204ce7f045a5be7d672b143a611b6db5c2251a3f92af623cf4c29bef937",
-      "imported_at": "2026-09-22T10:04:59.766702+00:00",
+      "image": "preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f",
+      "docker_id": "sha256:d9c9c47943c2b8c9f47a9920b9793ebb9f9fd4623c328826ddd1670ced4b2be3",
+      "imported_at": "2026-09-23T08:54:01.615105+00:00",
       "platform": "linux/amd64"
     },
     "media": {
-      "image": "preview.local/atelier/media@sha256:fc54ba926b58aa256800c484a4cc74508e1afa70289f994fa723cfa6e7b11f2f",
-      "docker_id": "sha256:6fbe59e36ee0da7c2093697039dd2763b1bada0c5d4678801c64182bfbb498b3",
-      "imported_at": "2026-09-22T10:05:42.829312+00:00",
+      "image": "preview.local/atelier/media@sha256:3ee5314e110eb8b1ad817b725bf3e113c9182af963a7b28aaf91ddd3351ed554",
+      "docker_id": "sha256:da630b6315542d51fbaa689432ecbae41ac364bd824200b0a60d00a10555c6d3",
+      "imported_at": "2026-09-23T08:55:13.596037+00:00",
       "platform": "linux/amd64"
     }
   }

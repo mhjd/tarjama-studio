@@ -167,3 +167,18 @@ anonymisés administrateur. Les autres prérequis restent : enregistrement des
 profils, relais filtré, qualification depuis K3s, tailles/ressources/rétention
 (plafond1000 IDs), OIDC, fournisseurs, persistance et sauvegardes.
 `atelier` a été vérifié à0 replica/0 ready. Aucun déploiement ni profil modifié.
+
+
+Images construites depuis **f897ac635f1e92d4a46bbbac59c79def9bf1b1ed**, importées
+le23septembre ; références exactes et Docker IDs dans `images.lock.json`, source
+vérifiée contre les labels de révision. Le dossier des profils indique la même
+image média immuable, sans l'installer. Tests de l'image finale réussis en Docker
+network-none, UID10002, rootfs read-only, capabilities retirées et NNP : probe,
+FLAC fractionnaire et normalisation MP4 sur fixture. Test DB de l'image finale
+réussi : bootstrap répété, rôle non superuser et migrations001/002 attendues.
+
+`validate` et `plan` relancés après imports : tous deux refusent **« Montage non
+déclaré ou non autorisé »**. Le catalogue ne contient toujours pas `tarjama-oidc`,
+que la recette référence ; les paramètres publics OIDC restent des placeholders.
+Aucune validation complète de recette ou qualification réelle du broker annoncée.
+Les quatre services restent désactivés, aucune tâche d'exploitation lancée.

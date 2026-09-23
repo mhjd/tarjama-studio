@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-review-7d68478446-xjtz5",
+      "log": "2026/09/23 17:55:42 Private UI review ready; independent schema, real providers and isolated media\n2026/09/23 17:58:00 Provider api.groq.com HTTP 200\n2026/09/23 17:58:04 Provider generativelanguage.googleapis.com HTTP 200\n2026/09/23 17:58:32 Provider generativelanguage.googleapis.com HTTP 200\n2026/09/23 18:04:12 Provider api.groq.com HTTP 200\n2026/09/23 18:04:34 Provider generativelanguage.googleapis.com HTTP 200\n2026/09/23 18:05:12 Provider generativelanguage.googleapis.com HTTP 200\n2026/09/23 18:10:33 Provider api.groq.com HTTP 200\n2026/09/23 18:10:36 Provider generativelanguage.googleapis.com HTTP 200\n2026/09/23 18:11:03 Provider generativelanguage.googleapis.com HTTP 200\n"
+    }
+  ]
+}

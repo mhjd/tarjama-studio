@@ -1,42 +1,9 @@
-// Real UI journeys. No provider/API fixtures, Kubernetes credentials or app secrets.
-import { chromium, expect } from '@playwright/test';
-import http from 'node:http';
+import {expect} from '@playwright/test';
 import fs from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
-import { createHash } from 'node:crypto';
-const upstream = 'http://pv-review:8095';
-const root = '/tmp/recordings';
-await fs.mkdir(root, {recursive:true});
-const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
-for(let attempt=0;;attempt++) {
-  try { const response=await fetch(upstream+'/readyz'); if(response.status===204)break; } catch {}
-  if(attempt===59)throw Error('Private review unavailable after bounded wait');
-  await sleep(1000);
-}
-const proxy=http.createServer((req,res)=>{
-  const target=http.request(upstream+req.url,{method:req.method,headers:req.headers},response=>{
-    res.writeHead(response.statusCode,response.headers);response.pipe(res);
-  });target.on('error',()=>{res.writeHead(502);res.end();});req.pipe(target);
-});
-await new Promise(resolve=>proxy.listen(8090,'127.0.0.1',resolve));
-const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage'],slowMo:180});
-const artifacts=[];const outcomes=[];
-async function upload(path,name) {
- const stat=await fs.stat(path);const hash=createHash('sha256');
- for await (const chunk of createReadStream(path))hash.update(chunk);
- const response=await fetch(upstream+'/review-artifacts/'+name,{method:'PUT',body:createReadStream(path),duplex:'half'});
- if(!response.ok)throw Error('Artifact persistence HTTP '+response.status);
- artifacts.push({name,bytes:stat.size,sha256:hash.digest('hex')});
- console.log('ARTIFACT '+JSON.stringify(artifacts.at(-1)));
-}
-const devices=[
- {name:'macbook-air15-m4',viewport:{width:1440,height:932},deviceScaleFactor:2,isMobile:false,hasTouch:false},
- {name:'pixel6',viewport:{width:412,height:915},deviceScaleFactor:2.625,isMobile:true,hasTouch:true},
- {name:'iphone15',viewport:{width:393,height:852},deviceScaleFactor:3,isMobile:true,hasTouch:true},
-];
+import {browser,root,proxy,sleep,artifacts,outcomes,upload,devices} from './record-support.mjs';
 for(const device of devices){
  const {name,...options}=device;
- const context=await browser.newContext({...options,baseURL:'http://127.0.0.1:8090',acceptDownloads:true,recordVideo:{dir:root,size:device.viewport}});
+ const context=await browser.newContext({...options,baseURL:'http://127.0.0.1:8090',acceptDownloads:true,recordVideo:{dir:root,size:device.viewport} });
  const page=await context.newPage();page.setDefaultTimeout(20000);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  let previousStatus='';
@@ -44,7 +11,7 @@ for(const device of devices){
   if(response.request().method()!=='GET'||! /\/api\/projects\/[^/]+$/.test(response.url())||response.status()!==200)return;
   try{
    const data=await response.json();
-   const status=JSON.stringify({stage:data.project.stage,duration_ms:data.project.duration_ms,segments:data.project.segments.length,jobs:data.jobs.map(j=>({kind:j.kind,state:j.state,progress:j.progress,message:j.message}))});
+   const status=JSON.stringify({stage:data.project.stage,duration_ms:data.project.duration_ms,segments:data.project.segments.length,jobs:data.jobs.filter(j=>j.state!=='succeeded').map(j=>({kind:j.kind,state:j.state,progress:j.progress}))});
    if(status!==previousStatus){console.log('PROGRESS '+name+' '+status);previousStatus=status;}
   }catch{}
  });
@@ -85,7 +52,9 @@ for(const device of devices){
   await follow.click();await expect(page.getByRole('button',{name:'Suivi désactivé'})).toHaveAttribute('aria-pressed','false');
   await page.getByRole('button',{name:'Suivi désactivé'}).click();
   const arabic=page.locator('textarea[lang="ar"]').first();
-  const editedArabic=(await arabic.inputValue()).trim().replace(/[.،؟。]+$/u,'')+'.';
+  const originalArabic=await arabic.inputValue();
+  const editedArabic=originalArabic.endsWith('.')?originalArabic.slice(0,-1):originalArabic+'.';
+  if(editedArabic===originalArabic)throw Error('Arabic edit must change the text');
   await arabic.fill(editedArabic);await arabic.blur();
   await expect(page.locator('.page-title [role="status"]')).toContainText('Enregistré');
   await page.reload();await page.getByRole('button',{name:new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
@@ -96,14 +65,19 @@ for(const device of devices){
   await page.getByRole('heading',{name:'Relire arabe et français'}).scrollIntoViewIfNeeded();
   await mark('translation');
   const french=page.locator('textarea[lang="fr"]').first();
-  const editedFrench=(await french.inputValue()).trim().replace(/[.!?]+$/,'')+'.';
+  const originalFrench=await french.inputValue();
+  const editedFrench=originalFrench.endsWith('.')?originalFrench.slice(0,-1):originalFrench+'.';
+  if(editedFrench===originalFrench)throw Error('French edit must change the text');
   await french.fill(editedFrench);
   // Advancing must flush the focused edit before exporting.
   await page.getByRole('button',{name:'Terminer la relecture',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Votre vidéo sous-titrée'})).toBeVisible();
-  await page.getByLabel('Qualité',{exact:true}).selectOption('high');
+  await page.reload();
+  await page.getByRole('button',{name:new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
+  await expect(page.locator('textarea[lang="fr"]').first()).toHaveValue(editedFrench);
+  await page.getByRole('combobox',{name:/Qualité/}).selectOption('high');
   for(const [track,label] of [['fr','français'],['ar','arabe']]) {
-   await page.getByLabel('Sous-titres',{exact:true}).selectOption(track);
+   await page.getByRole('combobox',{name:/Sous-titres/}).selectOption(track);
    await mark('export-'+track);
    await page.getByRole('button',{name:'Créer la vidéo',exact:true}).click();
    const link=page.getByRole('link',{name:`Télécharger · High · ${label}`,exact:true});

@@ -1,0 +1,44 @@
+{
+  "revision": "2558254dae078fcc",
+  "services": [
+    "db",
+    "egress",
+    "review",
+    "web",
+    "worker"
+  ],
+  "jobs": [
+    "results-20260923-lite2",
+    "ui-20260923-lite2"
+  ],
+  "images": {
+    "db": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "egress": "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9",
+    "review": "preview.local/atelier/web@sha256:335e60dcf9c36cd216621e88c0c4e1cae0575d5b8266a55c8a6cd05ccf0fca2b",
+    "web": "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9",
+    "worker": "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9",
+    "results-20260923-lite2": "preview.local/atelier/web@sha256:2b64690837041bee2f1cda4a93dd41132379a3614561a3ffd69efed7cecd873d",
+    "ui-20260923-lite2": "preview.local/atelier/web@sha256:2b64690837041bee2f1cda4a93dd41132379a3614561a3ffd69efed7cecd873d"
+  },
+  "volumes": {
+    "database": {
+      "size": "2Gi"
+    },
+    "library": {
+      "size": "14Gi"
+    }
+  },
+  "service_addresses": {
+    "db": "pv-db:5432",
+    "egress": "pv-egress:8092",
+    "review": "pv-review:8095",
+    "web": "web:8080"
+  },
+  "data_deleted": false,
+  "cpu_limits_m": 3000,
+  "memory_limits_mi": 2944,
+  "storage_requested_gi": 16,
+  "ok": true,
+  "validated": true,
+  "applied": false
+}

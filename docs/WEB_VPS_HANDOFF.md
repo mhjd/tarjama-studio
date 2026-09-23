@@ -1,5 +1,18 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+Actualisation du 23 septembre 2026 : le propriétaire choisit désormais
+`gemini-3.5-flash-lite` pour correction/traduction, en remplacement de 3.8 Flash,
+et accepte un premier jet à relire et corriger. Les erreurs observées et les
+limites du benchmark sont documentées dans
+[le rapport qualité](../web/review/translation-lite/RESULTS-20260923.md).
+La cible Gemini reste 20 minutes, avec des bornes de volume adaptées ; les chunks
+Groq demeurent distincts. Le suivi des sous-titres reste activé pendant un
+scroll manuel, sauf désactivation explicite, et son état est visible. Ces
+décisions récentes priment sur les paragraphes historiques correspondants.
+Les autorisations de mise en service et de tests réels ont été données séparément
+dans la session ; elles ne constituent pas une autorisation générale pour un
+nouvel intervenant de déployer sans vérifier son périmètre.
+
 Date : 21 septembre 2026. Destinataire : un nouvel agent Codex travaillant sur le VPS de l'utilisateur, dans le même dépôt, sans accès à la conversation précédente.
 
 Complément de décision après la passation initiale : l'utilisateur indique que l'IP de son serveur est bloquée par YouTube, mais qu'il a réussi avec Cloudflare WARP + yt-dlp. Il approuve une sortie WARP réservée aux téléchargements vidéo. L'import de fichier est désormais un choix de premier niveau à la création d'un projet, et doit aussi être proposé lorsqu'un téléchargement échoue. Ces décisions sont intégrées ci-dessous ; elles ne décrivent pas une implémentation déjà livrée.

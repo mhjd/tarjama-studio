@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "image": "preview.local/atelier/web@sha256:2b64690837041bee2f1cda4a93dd41132379a3614561a3ffd69efed7cecd873d",
+  "imagePullPolicy": "Never",
+  "platform": "linux/amd64",
+  "next": "Reporter cette référence dans la recette, puis validate et plan. Aucune application démarrée."
+}

@@ -1,0 +1,35 @@
+{
+  "api": {
+    "image": "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9",
+    "docker_id": "sha256:a5abf964c6a22baf4255b7ef5eee7ef89315bae830b92dd4a950fad529490875",
+    "imported_at": "2026-09-23T17:45:13.103347+00:00",
+    "platform": "linux/amd64",
+    "source_commit": "b69c700a602542e4934560c4e11fa0e6af1a7737"
+  },
+  "review": {
+    "image": "preview.local/atelier/web@sha256:335e60dcf9c36cd216621e88c0c4e1cae0575d5b8266a55c8a6cd05ccf0fca2b",
+    "docker_id": "sha256:612f79c25b6e4c065ef5c54a99ebc890a4b0d88b8b35c85c522817c2044449b2",
+    "imported_at": "2026-09-23T17:45:58.812981+00:00",
+    "platform": "linux/amd64",
+    "source_commit": "b69c700a602542e4934560c4e11fa0e6af1a7737"
+  },
+  "recorder": {
+    "image": "preview.local/atelier/web@sha256:2b64690837041bee2f1cda4a93dd41132379a3614561a3ffd69efed7cecd873d",
+    "docker_id": "sha256:54e3def0c369706aedcc01fff198d151af2911d2c109c34f3e8eaed75640855f",
+    "imported_at": "2026-09-23T17:46:42.263576+00:00",
+    "platform": "linux/amd64",
+    "source_commit": "b69c700a602542e4934560c4e11fa0e6af1a7737",
+    "mounted_scripts": {
+      "record.mjs": "f0ea09e48538a55da33fd62782c27c44b6d84bbbca2b98084b7ab68e7963c0f0",
+      "record-support.mjs": "2e2abf176c99970748dc5eeeba58ed06b1996a2f273027dfb24d551bfba6cfb6"
+    },
+    "execution_note": "UI lite2 executes these repository scripts from a public ConfigMap, using the pinned recorder image for Chromium and Playwright dependencies."
+  },
+  "benchmark": {
+    "image": "preview.local/atelier/web@sha256:14a6204d4816720a64e1fdced9afa0b99ba66c6f46b040ddb8da272149699c51",
+    "docker_id": "sha256:ed8c47fb903590f17b459b8a9091ae1ce3ec0415167ec1508bb785ed950aeaa5",
+    "imported_at": "2026-09-23T17:37:57.915159+00:00",
+    "platform": "linux/amd64",
+    "provenance": "Built from working tree before b69c700; same HTTPProviders/translate prompt and chunk limits; fixtures persisted in image. See timestamped evidence."
+  }
+}

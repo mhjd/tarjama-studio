@@ -278,3 +278,5 @@ Le choix utilisateur remplace Gemini 3.8 par `gemini-3.5-flash-lite`. Les garde-
 texte passent de 120 segments/18 ko à 600 segments/64 000 octets, avec une cible
 inchangée de 20 minutes et un budget de réponse de 32 768 tokens. La reprise
 préserve les anciens chunks validés. Voir le [test qualitatif réel](../review/translation-lite/RESULTS-20260923.md) : structure correcte, mais erreurs linguistiques et déplacements de sens entre segments observés. Le propriétaire accepte un premier jet corrigible ; aucune équivalence à GPT n'est démontrée. La livraison et les parcours UI sont documentés séparément.
+
+La [qualification UI réelle](../review/UI_RESULTS_20260923.md) est réussie sur les trois formats émulés, avec trois enregistrements et six exports High. Le service temporaire est arrêté après récupération du manifeste ; les fichiers attendent la procédure de remise du propriétaire.

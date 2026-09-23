@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-text-challenges-564961ca-k696c",
+      "log": "HTTP 200\nRESULT {\"duration_ms\":128000,\"elapsed_seconds\":21.296164232,\"model\":\"gemini-3.5-flash-lite\",\"output_tokens_budget\":32768,\"segments\":16,\"timestamp\":\"2026-09-23T17:39:16Z\",\"translation_sha256\":\"ab24e4161c67f6026868b8b6b270374215a5def68672de9ea8bff152fa1c6ef0\"}\n"
+    }
+  ]
+}

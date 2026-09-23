@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-results-20260923-lite-0acbb9e0-vrm8h",
+      "log": "{\"manifest\":\"manifest.json\",\"outcomes\":[{\"device\":\"macbook-air15-m4\",\"status\":\"failed\",\"step\":\"translation\",\"error\":\"TimeoutError: locator.selectOption: Timeout 20000ms exceeded.\\nCall log:\\n  - waiting for getByLabel('Qualité', { exact: true })\\n\",\"elapsedSeconds\":239}],\"videos\":[{\"name\":\"parcours-macbook-air15-m4.webm\",\"bytes\":12814665,\"sha256\":\"2565931859820841deba38892c43f6e9c8da451c2fdb50ee1a1da075875d5f6e\"}]}\n{\"manifest\":\"playback-manifest-validation.json\",\"status\":404}\n"
+    }
+  ]
+}

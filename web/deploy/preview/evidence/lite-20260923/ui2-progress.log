@@ -1,0 +1,138 @@
+STEP macbook-air15-m4 library 2026-09-23T17:56:05.133Z
+STEP macbook-air15-m4 youtube 2026-09-23T17:56:07.069Z
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"queued","progress":0}]}
+STEP macbook-air15-m4 preparing 2026-09-23T17:56:08.527Z
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":16}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":33}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":50}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":66}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":83}]}
+PROGRESS macbook-air15-m4 {"stage":"transcribing","duration_ms":114960,"segments":0,"jobs":[{"kind":"transcribe","state":"running","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"cleaning","duration_ms":114960,"segments":25,"jobs":[{"kind":"cleanup","state":"running","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"arabic","duration_ms":114960,"segments":25,"jobs":[]}
+STEP macbook-air15-m4 arabic 2026-09-23T17:58:07.110Z
+STEP macbook-air15-m4 seek-follow 2026-09-23T17:58:18.909Z
+STEP macbook-air15-m4 saved 2026-09-23T17:58:21.945Z
+PROGRESS macbook-air15-m4 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"translate","state":"queued","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"translate","state":"running","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"review","duration_ms":114960,"segments":25,"jobs":[]}
+STEP macbook-air15-m4 translation 2026-09-23T17:58:34.659Z
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[]}
+STEP macbook-air15-m4 export-fr 2026-09-23T17:58:37.906Z
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"queued","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":33}]}
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":66}]}
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-macbook-air15-m4-fr-high.mp4","bytes":25067300,"sha256":"bf52f9bd4fa2e3d9c4e1df7cfa7017ee7b945df1def8a1be5dbf321c2401b295"}
+STEP macbook-air15-m4 downloaded-fr 2026-09-23T18:00:02.945Z
+STEP macbook-air15-m4 export-ar 2026-09-23T18:00:04.567Z
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"queued","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":0}]}
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":33}]}
+PROGRESS macbook-air15-m4 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":66}]}
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-macbook-air15-m4-ar-high.mp4","bytes":24451558,"sha256":"483a9d0f2f28e58daf72b0495
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-macbook-air15-m4-ar-high.mp4","bytes":24451558,"sha256":"483a9d0f2f28e58daf72b049559de557843b251e23b0d60d2f7fec06c31f6c10"}
+STEP macbook-
+STEP macbook-air15-m4 downloaded-ar 2026-09-23T18:01:30.645Z
+STEP macbook-air15-m4 rendered-fr 2026-09-23T18:01:37.193Z
+STEP macbook-air15-m4 rendered-middle-fr 2026-09-23T18:01:44.201Z
+STEP macbook-air15-m4 rendered-ar 2026-09-23T18:01:51.299Z
+STEP macbook-air15-m4 rendered-middle-ar 2026-09-23T18:01:58.231Z
+ARTIFACT {"name":"parcours-macbook-air15-m4.webm","bytes":19349173,"sha256":"75c7cb8a27
+ARTIFACT {"name":"parcours-macbook-air15-m4.webm","bytes":19349173,"sha256":"75c7cb8a27c91e797e2c03fb366907b5878d49003e8c1af636ac81619d9b9ff5"}
+OUTCOME {"device":"macbook-air15-m4","viewport":{"width":1440,"height":932},"engine":"Chromium","status":"passed","elapsedSeconds":356}
+STEP pixel6 library 2026-09-23T18:02:17.129Z
+STEP pixel6 youtube 2026-09-23T18:02:18.717Z
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"queued","progress":0}]}
+STEP pixel6 preparing 2026-09-23T18:02:19.932Z
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","st
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":0}]}
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":16}]}
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":33}]}
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":50}]}
+PROGRESS pi
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":66}]}
+PROGRESS pixel6 {"stage":"p
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"dow
+PROGRESS pixel6 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":83}]}
+PROGRESS pixel6 {"stage":"transcribing","duration_ms":114960,"segments":0,"jobs":[{"kind":"transcribe","state":"running","progress":0}]}
+PROGRESS pixel6 {"s
+PROGRESS pixel6 {"stage":"cleaning","duration_ms":114960,"segments":25,"jobs":[{"kind":"cleanup","state":"running","progress":0}]}
+PROGRESS pixel6 {"stage":"arabic","duration_ms":114960,"segments":25,"jobs":[]}
+STEP pixel6 arabic 2026-09-23T18:04:36.877Z
+STEP pixel6 seek-follow 2026-09-23T18:04:48.340Z
+STEP pixel6 saved 2026-09-23T18:04:50.794Z
+PROGRESS pixel6 {"stage":"translating","duration_ms":114
+PROGRESS pixel6 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"translate","state":"queued","progress":0}]}
+PROGRESS pixel6 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"translate","state":"running","progress":0}]}
+PROGRESS pixel6 {"stage":"review","duration_ms":114960,"segments":25,"jobs":[]}
+STEP pixel6 translation 2026-09-23T18:05:15.327Z
+PR
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[]}
+STEP pixel6 export-fr 2026-09-23T18:05:17.891Z
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"queued","progress":0}]}
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":0}]}
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":33}]}
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":66}]}
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-pixel6-fr-high.mp4","bytes":25075035,"sha256":"c516ff7ff88aaedb70047d256a31f1c96265f17ecdb0c0a7ea85fbc2009c2035"}
+STEP pixel6 downloaded-fr 2026-09-23T18:06:44.442Z
+STEP pixel6 export-ar 2026-09-23T18:06:45.871Z
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"queued","progress":0}]}
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":0}]}
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":33}]}
+PROGRESS pixel6 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":66}]}
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-pixel6-ar-high.mp4","bytes":24525917,"sha256":"a91d7b634d2504c2231da2205092c6625be4fd2
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-pixel6-ar-high.mp4","bytes":24525917,"sha256":"a91d7b634d2504c2231da2205092c6625be4fd2b22d94942b756de406b266fde"}
+STEP pixel6 downloaded-ar 2026-09-23T18:08:12.745Z
+STEP pixel6 rendered-fr 2026-09-23T18:08:18.989Z
+STEP pixel6 rendered-middle-fr 2026-09-23T18:08:24.462Z
+STEP pixel6 rendered-ar 2026-09-23T18:08:30.173Z
+STEP pixel6 rendered-middle-ar 2026-09-23T18:08:35.561Z
+ARTIFACT {"name":"parcours-pixel6.webm","bytes":10376839,"sha256":"e5072c3ea78a53cbef34417f1e8511e7dc29a58a5e0322a0ca37cd33541b3b37"}
+OUTCOME {"device":"pixel6","viewport":{"width":412,"height":915},"engine":"Chromium","status":"passed","elapsedSeconds":380}
+STEP iphone15 library 2026-09-23T18:08:37.818Z
+STEP iphone15 youtube 2026-09-23T18:08:39.427Z
+PROGRESS iphone15 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"queued","progress":0}]}
+STEP iphone15 preparing 2026-09-23T18:08:40.667Z
+PROGRESS iphone15 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":0}]}
+PROGRESS iphone15 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":16}]}
+PROGRESS iphone15 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":33}]}
+PROGRESS iphone15 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":50}]}
+PROGRESS iphone15 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":66}]}
+PROGRESS iphone15 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":83}]}
+PROGRESS iphone15 {"stage":"transcribing","duration_ms":114960,"segments":0,"jobs":[{"kind":"transcribe","state":"running","progress":0}]}
+PROGRESS iphone15 {"stage":"cleaning","duration_ms":114960,"segments":25,"jobs":[{"kind":"cleanup","state":"running","progress":0}]}
+PROGRESS iphone15 {"stage":"arabic","duration_ms":114960,"segments":25,"jobs":[]}
+STEP iphone15 arabic 2026-09-23T18:10:39.39
+STEP iphone15 arabic 2026-09-23T18:10:39.397Z
+STEP iphone15 seek-follow 2026-09-23T18:10:50.830Z
+STEP iphone15 saved 2026-09-23T18:10:53.297Z
+PROGRESS iphone15 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"translate","state":"queued","progress":0}]}
+PROGRESS iphone15 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"translate","sta
+PROGRESS iphone15 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"translate","state":"running","progress":0}]}
+PROGRESS iphone15 {"stage":"review","duration_ms":114960,"segments":25,"jobs":[]}
+STEP iphone15 translation 2026-09-23T18:11:05.772Z
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[]}
+STEP iphone15 export-fr 2026-09-23T18:11:08.225Z
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"queued","progress":0}]}
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":0}]}
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":33}]}
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_fr_high","state":"running","progress":66}]}
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-iphone15-fr-high.mp4","bytes":25040292,"sha256":"a382597d601fd23bdb51db0986a4c56b73ca75efa2a7b116b19bb65ef9a30b09"}
+STEP iphone15 downloaded-fr 2026-09-23T18:12:32.850Z
+STEP iphone15 export-ar 2026-09-23T18:12:34.336Z
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"queued","progress":0}]}
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":0}]}
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":33}]}
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segments":25,"jobs":[{"kind":"export_ar_high","state":"running","progress":66}]}
+PROGRESS iphone15 {"stage":"ready","duration_ms":114960,"segm
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-iphone15-ar-high.mp4","bytes":24520425,"sha256":"87c32eaff590fc8f07930a53609257b280570996ed957aa3696270
+ARTIFACT {"name":"tarjama-b1MKJ5gHig0-iphone15-ar-high.mp4","bytes":24520425,"sha256":"87c32eaff590fc8f07930a53609257b280570996ed957aa36962703ce0cfc870"}
+STEP iphone15 downloaded-ar 2026-09-23T18:14:01.347Z
+STEP iphone15 rendered-fr 2026-09-23T18:14:07.443Z
+STEP iphone15 rendered-middle-fr 2026-09-23T18:14:12.850Z
+STEP iphone15 rendered-ar 2026-09-23T18:14:18.545Z
+STEP iphone15 rendered-middle-ar 2026-09-23T18:14:23.935Z
+ARTIFACT {"name":"parcours-iphone15.webm","bytes":8774677,"sha256":"dcbdbd1d404a21cbcbcfa4b23ea2cb19787c7b33140424da9304616d36d4df71"}
+OUTCOME {"device":"iphone15","viewport":{"width":393,"height":852},"engine":"Chromium","status":"passed","elaps

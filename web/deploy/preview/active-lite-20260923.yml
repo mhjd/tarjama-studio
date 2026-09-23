@@ -1,9 +1,9 @@
 # Generated from web/deploy/preview/deploy.template.yml and public inputs.json.
-# All services remain stopped; jobs require a separate, explicit activation.
+# Phase: active. Applying this recipe starts services; jobs remain explicit.
 version: 1
 services:
   web:
-    enabled: false
+    enabled: true
     image: "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9"
     args: [api]
     uid: 10001
@@ -31,7 +31,7 @@ services:
     tmp: 64Mi
     health: {path: /readyz}
   worker:
-    enabled: false
+    enabled: true
     image: "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9"
     args: [worker]
     uid: 10001
@@ -61,7 +61,7 @@ services:
     resources: {cpu: 750m, memory: 768Mi}
     tmp: 64Mi
   egress:
-    enabled: false
+    enabled: true
     image: "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9"
     args: [egress]
     uid: 10003
@@ -75,7 +75,7 @@ services:
     resources: {cpu: 250m, memory: 128Mi}
     tmp: 16Mi
   db:
-    enabled: false
+    enabled: true
     image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
     uid: 70
     gid: 70

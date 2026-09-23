@@ -1,0 +1,6 @@
+{
+  "web/backend/internal/studio/prompts/translate.txt": "012c22f0520d440af15bbf86052d0691428f3f36c4d972af2776a027358852d6",
+  "web/review/translation-lite/corpus.json": "eac1e2d869253e9012e9f6a92b5335d46d97288488f2b11c399cc31ed7ae5744",
+  "web/review/translation-lite/challenges.json": "edab28e378e859df16c8f89d6b41b53b42ed99fb66afa81f55deacaf41c9265a",
+  "test-fixtures/windows/traduction_fr.json": "617d8e5f24613078f25bf5878516ffcd9da2ee40302c0c36740fa5308e4f50b5"
+}

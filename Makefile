@@ -190,3 +190,10 @@ web-review-images:
 .PHONY: web-text-benchmark-image
 web-text-benchmark-image:
 	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target text-benchmark -t tarjama-text-benchmark:review web
+
+# Explicit inputs prevent reapplying historical production digests by accident.
+.PHONY: web-review-prepare web-text-benchmark-prepare
+web-review-prepare:
+	python3 web/review/prepare.py --base "$(REVIEW_BASE)" --review-image "$(REVIEW_IMAGE)" --recorder-image "$(RECORDER_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)"
+web-text-benchmark-prepare:
+	python3 web/review/translation-lite/prepare.py --base "$(REVIEW_BASE)" --image "$(BENCHMARK_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)"

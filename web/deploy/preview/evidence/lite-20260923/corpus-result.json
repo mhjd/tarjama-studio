@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-text-corpus-bb8b1c2b-ccswr",
+      "log": "HTTP 200\nRESULT {\"duration_ms\":940700,\"elapsed_seconds\":52.993145998,\"model\":\"gemini-3.5-flash-lite\",\"output_tokens_budget\":32768,\"segments\":384,\"timestamp\":\"2026-09-23T17:39:46Z\",\"translation_sha256\":\"3e61f69b08ee5147ed32a522eeab930d7c57fadd3a5e59f52e4131d333dc35a6\"}\n"
+    }
+  ]
+}

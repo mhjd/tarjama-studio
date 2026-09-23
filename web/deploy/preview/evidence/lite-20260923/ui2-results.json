@@ -1,0 +1,82 @@
+{
+  "manifest": "manifest.json",
+  "outcomes": [
+    {
+      "device": "macbook-air15-m4",
+      "viewport": {
+        "width": 1440,
+        "height": 932
+      },
+      "engine": "Chromium",
+      "status": "passed",
+      "elapsedSeconds": 356
+    },
+    {
+      "device": "pixel6",
+      "viewport": {
+        "width": 412,
+        "height": 915
+      },
+      "engine": "Chromium",
+      "status": "passed",
+      "elapsedSeconds": 380
+    },
+    {
+      "device": "iphone15",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "engine": "Chromium",
+      "status": "passed",
+      "elapsedSeconds": 348
+    }
+  ],
+  "videos": [
+    {
+      "name": "tarjama-b1MKJ5gHig0-macbook-air15-m4-fr-high.mp4",
+      "bytes": 25067300,
+      "sha256": "bf52f9bd4fa2e3d9c4e1df7cfa7017ee7b945df1def8a1be5dbf321c2401b295"
+    },
+    {
+      "name": "tarjama-b1MKJ5gHig0-macbook-air15-m4-ar-high.mp4",
+      "bytes": 24451558,
+      "sha256": "483a9d0f2f28e58daf72b049559de557843b251e23b0d60d2f7fec06c31f6c10"
+    },
+    {
+      "name": "parcours-macbook-air15-m4.webm",
+      "bytes": 19349173,
+      "sha256": "75c7cb8a27c91e797e2c03fb366907b5878d49003e8c1af636ac81619d9b9ff5"
+    },
+    {
+      "name": "tarjama-b1MKJ5gHig0-pixel6-fr-high.mp4",
+      "bytes": 25075035,
+      "sha256": "c516ff7ff88aaedb70047d256a31f1c96265f17ecdb0c0a7ea85fbc2009c2035"
+    },
+    {
+      "name": "tarjama-b1MKJ5gHig0-pixel6-ar-high.mp4",
+      "bytes": 24525917,
+      "sha256": "a91d7b634d2504c2231da2205092c6625be4fd2b22d94942b756de406b266fde"
+    },
+    {
+      "name": "parcours-pixel6.webm",
+      "bytes": 10376839,
+      "sha256": "e5072c3ea78a53cbef34417f1e8511e7dc29a58a5e0322a0ca37cd33541b3b37"
+    },
+    {
+      "name": "tarjama-b1MKJ5gHig0-iphone15-fr-high.mp4",
+      "bytes": 25040292,
+      "sha256": "a382597d601fd23bdb51db0986a4c56b73ca75efa2a7b116b19bb65ef9a30b09"
+    },
+    {
+      "name": "tarjama-b1MKJ5gHig0-iphone15-ar-high.mp4",
+      "bytes": 24520425,
+      "sha256": "87c32eaff590fc8f07930a53609257b280570996ed957aa36962703ce0cfc870"
+    },
+    {
+      "name": "parcours-iphone15.webm",
+      "bytes": 8774677,
+      "sha256": "dcbdbd1d404a21cbcbcfa4b23ea2cb19787c7b33140424da9304616d36d4df71"
+    }
+  ]
+}

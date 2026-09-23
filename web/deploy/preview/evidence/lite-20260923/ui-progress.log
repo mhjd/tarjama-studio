@@ -1,0 +1,25 @@
+STEP macbook-air15-m4 library 2026-09-23T17:48:16.306Z
+ARTIFACT {"name":"macbook-air15-m4-library.png","bytes":109253,"sha256":"30beb85beae7cab0c7edc5619284eabca83c2aa7d07766c6a0b401a3181ec73f"}
+STEP macbook-air15-m4 youtube 2026-09-23T17:48:18.197Z
+ARTIFACT {"name":"macbook-air15-m4-youtube.png","bytes":158165,"sha256":"4a2ea951d3b56d2d36de80c18f2b20ef9038698990995ad45423d8e1e4d2cbd2"}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"queued","progress":0,"message":""}]}
+STEP macbook-air15-m4 preparing 2026-09-23T17:48:19.670Z
+ARTIFACT {"name":"macbook-air15-m4-preparing.png","bytes":161703,"sha256":"e9193b8284ee5c6b7eb71f879c793d44d8b58b8f13d56409464dcaab6b806cc0"}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":0,"message":"Téléchargement de la vidéo…"}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":16,"message":"Téléchargement de l’audio…"}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":33,"message":"Assemblage de la vidéo et de l’audio…"}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":50,"message":"Vérification de la vidéo…"}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":66,"message":"Préparation de la vidéo pour la lecture…"}]}
+PROGRESS macbook-air15-m4 {"stage":"preparing","duration_ms":0,"segments":0,"jobs":[{"kind":"download","state":"running","progress":83,"message":"Vérification du résultat…"}]}
+PROGRESS macbook-air15-m4 {"stage":"transcribing","duration_ms":114960,"segments":0,"jobs":[{"kind":"download","state":"succeeded","progress":100,"message":""},{"kind":"transcribe","state":"running","progress":0,"message":""}]}
+PROGRESS macbook-air15-m4 {"stage":"cleaning","duration_ms":114960,"segments":25,"jobs":[{"kind":"download","state":"succeeded","progress":100,"message":""},{"kind":"transcribe","state":"succeeded","progress":100,"message":""},{"kind":"cleanup","state":"running","progress":0,"message":""}]}
+PROGRESS macbook-air15-m4 {"stage":"arabic","duration_ms":114960,"segments":25,"jobs":[{"kind":"download","state":"succeeded","progress":100,"message":""},{"kind":"transcribe","state":"succeeded","progress":100,"message":""},{"kind":"cleanup","state":"succeeded","progress":100,"message":""}]}
+STEP macbook-air15-m4 arabic 2026-09-23T17:50:46.528Z
+ARTIFACT {"name":"macbook-air15-m4-arabic.png","bytes":240043,"sha256":"d420ae755baa885796824b092a01a7de36c9de5c7e5116705ef310dbe641b648"}
+STEP macbook-air15-m4 seek-follow 2026-09-23T17:50:58.413Z
+ARTIFACT {"name":"macbook-air15-m4-seek-follow.png","bytes":212212,"sha256":"fb57dd2ecf5bd178e8b55456c91b89286175c92cd432a6cbfc9cc0ec4dc05186"}
+STEP macbook-air15-m4 saved 2026-09-23T17:51:01.507Z
+ARTIFACT {"name":"macbook-air15-m4-saved.png","bytes":230684,"sha256":"f234634d7bcbb85b1c636434a5bf32147f01f52024af7d7560fe16ff8a5671e0"}
+PROGRESS macbook-air15-m4 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"download","state":"succeeded","progress":100,"message":""},{"kind":"transcribe","state":"succeeded","progress":100,"message":""},{"kind":"cleanup","state":"succeeded","progress":100,"message":""},{"kind":"translate","state":"queued","progress":0,"message":""}]}
+PROGRESS macbook-air15-m4 {"stage":"translating","duration_ms":114960,"segments":25,"jobs":[{"kind":"download","state":"succeeded","progress":100,"message":""},{"kind":"transcribe","state":"succeeded","progress":100,"message":""},{"kind":"cleanup","state":"succeeded","progress":100,"message":""},{"kind":"translate","state":"running","progress":0,"message":""}]}
+PROGRESS macbook-air1

@@ -1,0 +1,197 @@
+[
+  {
+    "CreatedAt": "2026-09-23 17:45:23.742084478 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c ln -s /src/frontend/node_modules /review/node_modules",
+    "ID": "jrqlafhk34d07zmx6qnucc8tv",
+    "LastUsedAt": "56 seconds ago",
+    "Mutable": false,
+    "Parents": [
+      "m3dcx1gbpbgozbndwcvulg3ie"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "12.44kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:45:23.542681962 +0000 UTC",
+    "Description": "[ui-recorder 3/4] COPY --chown=10004:10004 review/ /review/",
+    "ID": "m3dcx1gbpbgozbndwcvulg3ie",
+    "LastUsedAt": "56 seconds ago",
+    "Mutable": false,
+    "Parents": [
+      "mv1y679mhscdupk7y6u6ptzk6"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "145.8kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:45:23.509924506 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c npx playwright install ffmpeg",
+    "ID": "mv1y679mhscdupk7y6u6ptzk6",
+    "LastUsedAt": "56 seconds ago",
+    "Mutable": false,
+    "Parents": [
+      "p0hydp0s07wil1p2pmx5ejm3x"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "7.691MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:36:27.284468507 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /text-benchmark ./cmd/text-benchmark",
+    "ID": "p16bgbkffqv6awpdomnu6hac2",
+    "LastUsedAt": "10 minutes ago",
+    "Mutable": true,
+    "Parents": [
+      "ke7u8uzkdxu9qv1vb48vpz7p6"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "11.08MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:44:53.621256702 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /ui-review ./cmd/ui-review",
+    "ID": "k7m0479oiz6sdfnju21z7y1nq",
+    "LastUsedAt": "2 minutes ago",
+    "Mutable": true,
+    "Parents": [
+      "fok101idd8sw4rxhv2igo4m7u"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "18.83MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 08:51:55.083680295 +0000 UTC",
+    "Description": "[media 4/5] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "k9cguohcji2f9umez1smbgt8p",
+    "LastUsedAt": "9 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "sa2s0wt170sfwwueqrrvrm2ir"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.48MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 08:51:54.997785949 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c python3 -m venv /usr/local/yt-dlp && /usr/local/yt-dlp/bin/pip install --no-cache-dir \"yt-dlp[default]==2026.8.19\" && ln -s /usr/local/yt-dlp/bin/yt-dlp /usr/local/bin/yt-dlp",
+    "ID": "sa2s0wt170sfwwueqrrvrm2ir",
+    "LastUsedAt": "9 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "qyatqfz0qcjdlb5lq97nz0q9f"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "98.41MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:10:27.329429039 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "kx556nf0c5b3jxy7w4ssqhs7e",
+    "LastUsedAt": "36 minutes ago",
+    "Mutable": true,
+    "Parents": [
+      "n510n9blmofeovuzb8rx2n6p4"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:44:53.582691076 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "fok101idd8sw4rxhv2igo4m7u",
+    "LastUsedAt": "2 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "d510huikmcypdzht53bez5ihb"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:36:27.240340011 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "ke7u8uzkdxu9qv1vb48vpz7p6",
+    "LastUsedAt": "10 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "8xzv2j7c0a02zqanayxcqz49o"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 08:51:55.313399853 +0000 UTC",
+    "Description": "[media 5/5] COPY --from=frontend /usr/local/bin/node /usr/local/bin/node",
+    "ID": "972z62c5f7u1spz3obwml3qhi",
+    "LastUsedAt": "9 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "k9cguohcji2f9umez1smbgt8p"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "170.1MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 08:51:45.675060204 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg fonts-noto-core bubblewrap util-linux python3 python3-venv && rm -rf /var/lib/apt/lists/*",
+    "ID": "qyatqfz0qcjdlb5lq97nz0q9f",
+    "LastUsedAt": "9 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "vkuu8vqpr9032m1mi1k9vjwhg"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "773.3MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:45:21.79394725 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c apt-get update && apt-get install -y --no-install-recommends chromium fonts-noto-core && rm -rf /var/lib/apt/lists/*",
+    "ID": "p0hydp0s07wil1p2pmx5ejm3x",
+    "LastUsedAt": "56 seconds ago",
+    "Mutable": false,
+    "Parents": [
+      "e7hav9dulb7lsrqzriirlq02k"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "1.039GB",
+    "Type": "regular",
+    "UsageCount": 1
+  }
+]

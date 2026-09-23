@@ -72,3 +72,19 @@ underscores, 40 caractères maximum). Chaque run dispose de son schéma et de so
 répertoire `/storage/ui-review-RUN`. Les uploads d'artefacts refusent désormais
 d'écraser un nom déjà présent. Employer un run nouveau pour chaque enregistrement
 complet ; conserver les anciennes preuves. Le défaut historique reste `20260923`.
+
+`make web-review-prepare` prépare une recette depuis la recette active actuelle,
+avec `REVIEW_BASE`, `REVIEW_IMAGE`, `RECORDER_IMAGE`, `REVIEW_RUN` et `REVIEW_RECIPE`.
+Il reprend uniquement la définition du service de test de la recette historique,
+jamais ses anciennes images de production. Après revue, validate/plan et activation
+explicitement autorisée, lancer le job `ui-RUN` (underscores remplacés par tirets)
+via `make web-preview-run PREVIEW_JOB=...`. Le job `results-RUN` lit le manifeste.
+Le générateur remplace les jobs de la recette fournie ; les autres migrations ne
+sont pas lancées. Retirer ensuite le service de test via la recette active finale.
+
+Le générateur monte `record.mjs` et `record-support.mjs` depuis le dépôt en
+configuration publique. Cela permet de corriger/rejouer les interactions sans
+reconstruire Chromium ; l'image du navigateur reste épinglée par digest.
+Les deux fichiers sont séparés pour respecter la limite de taille de chaque
+entrée de configuration du courtier. Les changements de backend nécessitent
+toujours une image de qualification construite depuis le code à tester.

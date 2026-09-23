@@ -297,3 +297,15 @@ l'assemblage a repris automatiquement. Détails, limites et preuves dans le
 Le runtime conserve le backend fournisseur qualifié `b69c700`, auquel seuls
 les correctifs d'import et de diagnostic ont été appliqués ; aucun changement
 implicite de recherche web/prompt/modèle n'a été déployé.
+
+## 23 septembre 2026 — redémarrage web demandé après HTTP 431
+
+Recette `active-restart-20260923.yml`, révision `308b1b7e24874138` : même image
+qualifiée, redémarrage du service web par marqueur d'environnement de déploiement.
+Un nouvel identifiant de pod et son message « API prête » ont été observés ; les
+quatre services sont prêts. Données et worker conservés, aucune migration.
+Le redéploiement inchangé initial n'avait pas remplacé le pod web.
+Le 431 du navigateur propriétaire n'a pas été reproduit : le chemin HTTPS public
+n'est pas joignable depuis le compte agent. La santé Kubernetes ne démontre pas
+sa résolution. Un essai en navigation privée permet de distinguer un problème
+d'en-têtes/cookies de la session habituelle avant investigation du proxy/SSO.

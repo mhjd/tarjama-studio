@@ -1,0 +1,117 @@
+{
+  "ok": true,
+  "url": "https://atelier.preview.runagen.com",
+  "revision": "09217babe7e5a6a1",
+  "partial": false,
+  "services": {
+    "pv-db": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-egress": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-worker": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "web": {
+      "replicas": 1,
+      "ready": 1
+    }
+  },
+  "pods": [
+    {
+      "pod": "pv-db-bddf9c7f9-259hp",
+      "component": "db",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "pv-egress-846b6c4f57-zz76g",
+      "component": "egress",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-bootstrap-db-87067c32-khg9k",
+      "component": "bootstrap-db",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-migrate-4371e14b-lhxf7",
+      "component": "migrate",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-15546ee2-bw269",
+      "component": "preview-check",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-c98e8957-mrmdr",
+      "component": "preview-check",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-e46f25a5-dbqrn",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-worker-5fbb5ff49d-w867q",
+      "component": "worker",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "web-5bc6cb875b-7bmkh",
+      "component": "web",
+      "phase": "Running",
+      "reasons": []
+    }
+  ],
+  "jobs": [
+    {
+      "name": "pv-job-bootstrap-db-87067c32",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-migrate-4371e14b",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-15546ee2",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-c98e8957",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-e46f25a5",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    }
+  ]
+}

@@ -234,3 +234,40 @@ de transcription arabe, les tailles maximales et la restauration cohérente des
 sauvegardes du VPS restent à qualifier. Le compte de test demeure désactivé.
 Bilan, références d’images, limites et commandes :
 [PREVIEW_QUALIFICATION_20260923.md](PREVIEW_QUALIFICATION_20260923.md).
+
+
+## 23 septembre 2026 — progression visible pendant les traitements
+
+Code testé : `ae76401`. Le retour utilisateur sur le téléchargement France24
+confirme que le traitement a abouti, mais que le0% était trompeur. L’API du
+broker ne fournit pas les octets téléchargés en continu ; aucun pourcentage
+de transfert n’est inventé.
+
+Le worker publie maintenant les étapes réellement terminées après récupération
+durable du résultat : vidéo, audio, assemblage, vérification source, préparation,
+vérification finale. Import/préparation et export ont trois étapes. Chaque
+actualisation conserve les contrôles propriétaire/génération/version/lease.
+Un résultat relu dans le cache ne fait pas reculer la progression ; un réessai
+explicite après échec/annulation remet à zéro les étapes de la nouvelle tentative
+média, tout en conservant les morceaux déjà traités des jobs IA.
+
+L’interface affiche le nom de l’étape, une barre avec le nombre d’étapes terminées,
+un indicateur animé respectant prefers-reduced-motion et les états file/attente/erreur.
+Le bloc de progression est placé avant l’import de secours. Les pourcentages de
+morceaux restent réservés aux jobs transcription/correction/traduction. Une perte
+de connexion est signalée et suspend l’indicateur d’activité jusqu’au retour des
+actualisations. Une étape longue n’a pas encore de progression interne en octets.
+
+Validation : suite Go avec race detector et vet, build frontend, sept tests
+Playwright mobiles, restauration PostgreSQL synthétique, cinq tests de recette.
+Le nouveau test navigateur vérifie les changements d’étape, la barre, l’absence
+d’un faux pourcentage de téléchargement, la perte/reprise de connexion et
+l’absence de débordement à390px. Les tests Go couvrent la lease périmée, la
+relecture du cache et le réessai.
+
+Image web construite localement et importée, image des outils média conservée.
+Recette `active-progress-20260923.yml`, révision `09217babe7e5a6a1`,
+validate/plan réussis puis mise à jour via vps-preview. Aucune migration requise,
+aucun changement de profils/seccomp/AppArmor/WARP/OIDC. La recette racine reste
+désactivée, avec le nouveau digest. Les images et recettes précédentes sont
+conservées pour retour arrière.

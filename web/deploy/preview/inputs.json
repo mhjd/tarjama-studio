@@ -1,5 +1,5 @@
 {
-  "API_IMAGE": "preview.local/atelier/web@sha256:5233b1fc385e42e6fa482ba4b54dcb69fcf7e000c0f4c1218697a7b74832e82f",
+  "API_IMAGE": "preview.local/atelier/web@sha256:8474319991802cb0f5bb68b7c33c523ecc16dca580e6d1da2361aa8e9b64650a",
   "OIDC_ISSUER": "https://auth.runagen.com",
   "OIDC_CLIENT_ID": "preview-atelier-tarjama",
   "OIDC_EGRESS": "oidc",

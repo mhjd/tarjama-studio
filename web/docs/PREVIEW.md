@@ -1,8 +1,11 @@
 # Aperçu privé Tarjama — traitements isolés, 23 septembre 2026
 
 Cible : `atelier`, `https://atelier.preview.runagen.com`. **Activation autorisée et effectuée le23septembre.**
-Voir le [bilan réel de qualification](PREVIEW_QUALIFICATION_20260923.md) pour l’état courant,
-les résultats et les limites. Les indications d’arrêt ci-dessous décrivent la préparation
+Version active avec progression média : `ae76401`, recette
+`web/deploy/preview/active-progress-20260923.yml`, révision `09217babe7e5a6a1`.
+Voir [STATUS.md](STATUS.md) pour la dernière livraison et le
+[bilan initial de qualification](PREVIEW_QUALIFICATION_20260923.md) pour les
+preuves d’intégration et leurs limites. Les indications d’arrêt ci-dessous décrivent la préparation
 antérieure et la recette racine désactivée, pas l’état courant du VPS.
 Le moteur applicatif retenu est désormais `MEDIA_ENGINE=isolated-jobs`.
 L'ancien service Bubblewrap conserve ses contrôles dans le code et dans la
@@ -11,9 +14,11 @@ Aucune exception seccomp/AppArmor n'est demandée.
 
 ## Images locales et recette
 
-Le workflow GHCR reste archivé et inactif. Les images de `f897ac6` restent
-valables : aucun code embarqué ne change dans cette préparation. Pour une future
-modification du code, construire sur le VPS et importer :
+Le workflow GHCR reste archivé et inactif. `images.lock.json` indique désormais
+le commit source de chaque image : web `ae76401`, outils média administrés
+`f897ac6`. Une modification API/frontend seule utilise `make web-api-image` ;
+elle ne remplace pas les profils média administrés. Pour une reconstruction
+complète de préparation, construire sur le VPS et importer :
 
 ```sh
 make web-test

@@ -39,6 +39,15 @@ for(const device of devices){
  const context=await browser.newContext({...options,baseURL:'http://127.0.0.1:8090',acceptDownloads:true,recordVideo:{dir:root,size:device.viewport}});
  const page=await context.newPage();page.setDefaultTimeout(20000);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ let previousStatus='';
+ page.on('response',async response=>{
+  if(response.request().method()!=='GET'||! /\/api\/projects\/[^/]+$/.test(response.url())||response.status()!==200)return;
+  try{
+   const data=await response.json();
+   const status=JSON.stringify({stage:data.project.stage,duration_ms:data.project.duration_ms,segments:data.project.segments.length,jobs:data.jobs.map(j=>({kind:j.kind,state:j.state,progress:j.progress,message:j.message}))});
+   if(status!==previousStatus){console.log('PROGRESS '+name+' '+status);previousStatus=status;}
+  }catch{}
+ });
  let step='start'; const started=Date.now();
  const mark=async label=>{
    step=label;console.log('STEP '+name+' '+label+' '+new Date().toISOString());

@@ -122,9 +122,6 @@ for(const device of devices){
    await sleep(4000);
    await rendered.evaluate(v=>v.pause());
    await mark('rendered-'+track);
-   // Small review frame in bounded job logs; no credentials or user data.
-   const jpeg=await page.screenshot({type:'jpeg',quality:25,scale:'css'});
-   console.log('REVIEW_FRAME '+name+' '+track+' '+jpeg.toString('base64'));
    await rendered.evaluate(async v=>{v.currentTime=v.duration*.5;await v.play();});
    await sleep(4000);await rendered.evaluate(v=>v.pause());
    await mark('rendered-middle-'+track);

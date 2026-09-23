@@ -50,3 +50,17 @@ fournie séparément par le propriétaire. Ne pas supprimer les artefacts avant 
 Une recette finale doit désactiver/retirer le service temporaire, tout en préservant
 les artefacts sur le volume ; conserver le schéma de test tant que des opérations
 média doivent encore être acquittées. Aucune suppression du schéma `public`.
+
+## Blocage fournisseur et preuves partielles
+
+`playback.mjs` utilise la vidéo et la transcription réelles déjà préparées pour
+contrôler lecture, suivi et déplacements sur les trois formats. Il ne prétend
+pas qualifier correction, traduction ou export lorsque Gemini les bloque.
+Sa seconde série conserve les noms `lecture-suivi-validation-*`, distincts des
+premiers essais. Les manifests précisent ce périmètre partiel.
+
+`summarize.mjs` lit uniquement les manifests de qualification et imprime les
+résultats ainsi que les noms/tailles/empreintes des vidéos. Les journaux du courtier
+étant bornés, les fichiers binaires restent sur le volume ; ne pas les encoder dans
+les logs. La recette monte ces deux scripts publics en ConfigMap sur le navigateur
+ou lecteur sans secret, avec uniquement une connexion au service `review`.

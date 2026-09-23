@@ -74,6 +74,28 @@ func providerError(r *http.Response) *ProviderError {
 		e.Temporary = true
 		e.Public = "Le service est temporairement limité ou indisponible. Votre progression est conservée et reprendra automatiquement. Vous pouvez attendre ou ajouter une clé personnelle."
 	}
+	// Google distinguishes daily quota from transient capacity in structured
+	// details. Never display its raw error message, which may contain identifiers.
+	if r.StatusCode == http.StatusTooManyRequests && r.Body != nil {
+		var payload struct {
+			Error struct {
+				Details []struct {
+					Violations []struct {
+						ID string `json:"quotaId"`
+					} `json:"violations"`
+				} `json:"details"`
+			} `json:"error"`
+		}
+		if json.NewDecoder(io.LimitReader(r.Body, 16384)).Decode(&payload) == nil {
+			for _, detail := range payload.Error.Details {
+				for _, violation := range detail.Violations {
+					if strings.HasPrefix(violation.ID, "GenerateRequestsPerDayPerProjectPerModel") {
+						e.Public = "Le quota quotidien de Gemini est atteint. Votre progression est conservée. La reprise sera automatique lorsque du quota sera disponible. Vous pouvez attendre ou ajouter une clé personnelle disposant de quota."
+					}
+				}
+			}
+		}
+	}
 	if seconds, e2 := strconv.Atoi(r.Header.Get("Retry-After")); e2 == nil && seconds > 0 {
 		e.After = time.Duration(seconds) * time.Second
 	} else if date, e2 := http.ParseTime(r.Header.Get("Retry-After")); e2 == nil {

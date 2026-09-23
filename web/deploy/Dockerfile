@@ -54,7 +54,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-noto-core && rm -rf /var/lib/apt/lists/*
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
 RUN npx playwright install ffmpeg
-COPY review/ /review/
+COPY --chown=10004:10004 review/ /review/
 RUN ln -s /src/frontend/node_modules /review/node_modules
 USER 10004:10004
 ENV HOME=/tmp

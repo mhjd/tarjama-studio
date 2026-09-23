@@ -4,9 +4,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"io"
@@ -15,9 +17,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"tarjama/web/internal/studio"
 	"time"
 )
+
+type reviewBody struct {
+	io.Reader
+	io.Closer
+}
 
 type reviewTransport struct{ base http.RoundTripper }
 
@@ -28,6 +36,38 @@ func (t reviewTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 			log.Printf("Provider %s transport error", r.URL.Hostname())
 		} else {
 			log.Printf("Provider %s HTTP %d", r.URL.Hostname(), response.StatusCode)
+			if response.StatusCode >= 400 {
+				// Keep the provider body readable by the real client. Log only recognized
+				// error categories and quota metric IDs, never raw messages or values.
+				raw, _ := io.ReadAll(io.LimitReader(response.Body, 65536))
+				response.Body = &reviewBody{Reader: io.MultiReader(bytes.NewReader(raw), response.Body), Closer: response.Body}
+				var payload struct {
+					Error struct {
+						Message string `json:"message"`
+						Details []struct {
+							Violations []struct {
+								Metric string `json:"quotaMetric"`
+								ID     string `json:"quotaId"`
+							} `json:"violations"`
+						} `json:"details"`
+					} `json:"error"`
+				}
+				if json.Unmarshal(raw, &payload) == nil {
+					for _, category := range []string{"quota", "rate limit", "overloaded", "high demand", "billing", "capacity"} {
+						if strings.Contains(strings.ToLower(payload.Error.Message), category) {
+							log.Printf("Provider error category: %s", category)
+						}
+					}
+					validMetric := regexp.MustCompile(`^[A-Za-z0-9_./-]{1,160}$`)
+					for _, detail := range payload.Error.Details {
+						for _, violation := range detail.Violations {
+							if strings.HasPrefix(violation.Metric, "generativelanguage.googleapis.com/") && validMetric.MatchString(violation.Metric) && validMetric.MatchString(violation.ID) {
+								log.Printf("Gemini quota metric=%s id=%s", violation.Metric, violation.ID)
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 	return response, err

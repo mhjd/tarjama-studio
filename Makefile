@@ -197,3 +197,9 @@ web-review-prepare:
 	python3 web/review/prepare.py --base "$(REVIEW_BASE)" --review-image "$(REVIEW_IMAGE)" --recorder-image "$(RECORDER_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)"
 web-text-benchmark-prepare:
 	python3 web/review/translation-lite/prepare.py --base "$(REVIEW_BASE)" --image "$(BENCHMARK_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)"
+
+# Six real paid calls maximum; requires the registered native OpenRouter key.
+.PHONY: web-model-compare
+web-model-compare:
+	@test -n "$(BENCHMARK_OUTPUT)" || (echo 'Set a new BENCHMARK_OUTPUT directory'; exit 1)
+	python3 -B web/review/model-comparison/run.py --output "$(BENCHMARK_OUTPUT)"

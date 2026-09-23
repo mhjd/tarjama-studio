@@ -1,0 +1,208 @@
+[
+  {
+    "case": "challenges-1",
+    "model_requested": "google/gemini-3.5-flash-lite",
+    "segments": 16,
+    "valid": true,
+    "http_status": 200,
+    "model": "google/gemini-3.5-flash-lite",
+    "provider": "Google",
+    "usage": {
+      "prompt_tokens": 881,
+      "completion_tokens": 621,
+      "total_tokens": 1502,
+      "cost": 0.0018168,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0018168,
+        "upstream_inference_prompt_cost": 0.0002643,
+        "upstream_inference_completions_cost": 0.0015525
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "finish_reason": "stop",
+    "elapsed_seconds": 8.393
+  },
+  {
+    "case": "challenges-1",
+    "model_requested": "deepseek/deepseek-v4.1-flash",
+    "segments": 16,
+    "valid": true,
+    "http_status": 200,
+    "model": "deepseek/deepseek-v4.1-flash",
+    "provider": "Together",
+    "usage": {
+      "prompt_tokens": 864,
+      "completion_tokens": 5932,
+      "total_tokens": 6796,
+      "cost": 0.0073776,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0073776,
+        "upstream_inference_prompt_cost": 0.0002592,
+        "upstream_inference_completions_cost": 0.0071184
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 5330,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "finish_reason": "stop",
+    "elapsed_seconds": 31.102
+  },
+  {
+    "case": "corpus",
+    "model_requested": "deepseek/deepseek-v4.1-flash",
+    "segments": 384,
+    "valid": true,
+    "http_status": 200,
+    "model": "deepseek/deepseek-v4.1-flash",
+    "provider": "Sail Research",
+    "usage": {
+      "prompt_tokens": 8480,
+      "completion_tokens": 29796,
+      "total_tokens": 38276,
+      "cost": 0.0234494,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0234494,
+        "upstream_inference_prompt_cost": 0.0011024,
+        "upstream_inference_completions_cost": 0.022347
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 21996,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "finish_reason": "stop",
+    "elapsed_seconds": 341.335
+  },
+  {
+    "case": "corpus",
+    "model_requested": "google/gemini-3.5-flash-lite",
+    "segments": 384,
+    "valid": false,
+    "http_status": 200,
+    "model": "google/gemini-3.5-flash-lite",
+    "provider": "Google",
+    "usage": {
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "cost": 0,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "finish_reason": "error",
+    "error": "ValueError",
+    "elapsed_seconds": 7.443,
+    "provider_error_code": 429
+  },
+  {
+    "case": "challenges-2",
+    "model_requested": "deepseek/deepseek-v4.1-flash",
+    "segments": 16,
+    "valid": true,
+    "http_status": 200,
+    "model": "deepseek/deepseek-v4.1-flash",
+    "provider": "Together",
+    "usage": {
+      "prompt_tokens": 864,
+      "completion_tokens": 6436,
+      "total_tokens": 7300,
+      "cost": 0.007756608,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 768,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.007756608,
+        "upstream_inference_prompt_cost": 3.3408e-05,
+        "upstream_inference_completions_cost": 0.0077232
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 5679,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "finish_reason": "stop",
+    "elapsed_seconds": 31.176
+  },
+  {
+    "case": "challenges-2",
+    "model_requested": "google/gemini-3.5-flash-lite",
+    "segments": 16,
+    "valid": true,
+    "http_status": 200,
+    "model": "google/gemini-3.5-flash-lite",
+    "provider": "Google",
+    "usage": {
+      "prompt_tokens": 881,
+      "completion_tokens": 778,
+      "total_tokens": 1659,
+      "cost": 0.0022093,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0022093,
+        "upstream_inference_prompt_cost": 0.0002643,
+        "upstream_inference_completions_cost": 0.001945
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "finish_reason": "stop",
+    "elapsed_seconds": 8.661
+  }
+]

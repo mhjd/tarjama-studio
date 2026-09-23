@@ -11,7 +11,9 @@ make web-model-compare BENCHMARK_OUTPUT=data/model_outputs/comparison-NOUVEAU-RU
 Cette commande effectue **six appels réels potentiellement payants** : corpus
 384 segments une fois par modèle et 16 difficultés linguistiques deux fois par
 modèle. Pas de retry client ; routage/fallback fournisseur OpenRouter autorisé.
-Le prompt serveur `translation-v1` est identique et conservé avec son empreinte.
+Le prompt serveur historique `translation-v1` est figé dans `prompt-v1.txt`,
+identique pour les deux modèles et conservé avec son empreinte. Ce banc reste
+explicitement sans recherche même après l’évolution du prompt de production.
 Les réglages de raisonnement et de température restent ceux des fournisseurs ;
 leurs valeurs annoncées sont archivées. Ce protocole compare donc les usages par
 défaut, pas un budget de raisonnement identique.

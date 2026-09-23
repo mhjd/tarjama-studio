@@ -78,10 +78,10 @@ web-deps:
 	web/scripts/tools.sh go mod download
 	web/scripts/tools.sh sh -c 'cd /work/web/frontend && npm ci'
 
-web-test:
+web-test: web-prompts-check
 	web/scripts/test.sh
 
-web-build:
+web-build: web-prompts-check
 	web/scripts/tools.sh sh -c 'go build -o /work/web/.cache/tarjama ./cmd/tarjama && cd /work/web/frontend && npm run build'
 
 WEB_ENV ?= web/deploy/.env
@@ -119,7 +119,7 @@ web-gc:
 	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml run --rm api gc
 
 .PHONY: web-images web-api-image web-audit
-web-api-image:
+web-api-image: web-prompts-check
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target api -t tarjama-web:review web
 
 web-images: web-api-image
@@ -156,7 +156,7 @@ PREVIEW_JOB ?= preview-check
 web-preview-run:
 	vps-preview run atelier "$(PREVIEW_JOB)"
 
-web-preview-check-image:
+web-preview-check-image: web-prompts-check
 	docker build --platform linux/amd64 --target preview-check -f web/deploy/Dockerfile -t tarjama-preview-check:review web
 	vps-preview image-import atelier --name web --image tarjama-preview-check:review
 
@@ -183,12 +183,12 @@ web-isolated-image-test:
 
 # Dedicated private UI qualification images; never deploy them as the public web service.
 .PHONY: web-review-images
-web-review-images:
+web-review-images: web-prompts-check
 	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target ui-review -t tarjama-ui-review:review web
 	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target ui-recorder -t tarjama-ui-recorder:review web
 
 .PHONY: web-text-benchmark-image
-web-text-benchmark-image:
+web-text-benchmark-image: web-prompts-check
 	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target text-benchmark -t tarjama-text-benchmark:review web
 
 # Explicit inputs prevent reapplying historical production digests by accident.
@@ -203,3 +203,10 @@ web-text-benchmark-prepare:
 web-model-compare:
 	@test -n "$(BENCHMARK_OUTPUT)" || (echo 'Set a new BENCHMARK_OUTPUT directory'; exit 1)
 	python3 -B web/review/model-comparison/run.py --output "$(BENCHMARK_OUTPUT)"
+
+.PHONY: web-prompts-sync web-prompts-check
+web-prompts-sync:
+	python3 -B web/scripts/sync_translation_prompt.py
+web-prompts-check:
+	python3 -B web/scripts/sync_translation_prompt.py --check
+	python3 -B -m unittest discover -s web/scripts -p test_translation_prompt.py -v

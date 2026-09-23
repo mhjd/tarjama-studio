@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-translation-research-b0e01f6b-swhlz",
+      "log": "HTTP 429\nLe service est temporairement limité ou indisponible. Votre progression est conservée et reprendra automatiquement. Vous pouvez attendre ou ajouter une clé personnelle.\n"
+    }
+  ]
+}

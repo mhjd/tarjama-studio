@@ -55,7 +55,7 @@ def main():
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=False)
     out.chmod(0o700)
-    prompt = (ROOT / 'web/backend/internal/studio/prompts/translate.txt').read_text()
+    prompt = Path(__file__).with_name('prompt-v1.txt').read_text()
     opener = urllib.request.build_opener(NoRedirect())
     with opener.open('https://openrouter.ai/api/v1/models', timeout=30) as response:
         models = json.load(response)['data']

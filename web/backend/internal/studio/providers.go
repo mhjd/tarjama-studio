@@ -37,6 +37,8 @@ type TextResult struct {
 		ID   string `json:"id"`
 		Text string `json:"text"`
 	} `json:"segments"`
+	// Provider provenance is separate from subtitle text, never supplied by the model.
+	Grounding json.RawMessage `json:"grounding,omitempty"`
 }
 type ASRSegment struct {
 	Start float64 `json:"start"`
@@ -135,7 +137,10 @@ func ValidateText(result TextResult, s []Segment) error {
 	return nil
 }
 func (p *HTTPProviders) Text(ctx context.Context, key, kind string, s, contextSegments []Segment) (TextResult, error) {
-	prompt, _ := prompts.ReadFile("prompts/" + kind + ".txt")
+	prompt, err := prompts.ReadFile("prompts/" + kind + ".txt")
+	if err != nil {
+		return TextResult{}, errors.New("Type de traitement inconnu")
+	}
 	type item struct {
 		ID   string `json:"id"`
 		Text string `json:"text"`
@@ -150,7 +155,11 @@ func (p *HTTPProviders) Text(ctx context.Context, key, kind string, s, contextSe
 	}
 	input, _ := json.Marshal(map[string]any{"segments": target, "context_only": contextText})
 	schema := map[string]any{"type": "object", "properties": map[string]any{"segments": map[string]any{"type": "array", "items": map[string]any{"type": "object", "properties": map[string]any{"id": map[string]string{"type": "string"}, "text": map[string]string{"type": "string"}}, "required": []string{"id", "text"}}}}, "required": []string{"segments"}}
-	body, _ := json.Marshal(map[string]any{"systemInstruction": map[string]any{"parts": []any{map[string]string{"text": string(prompt)}}}, "contents": []any{map[string]any{"role": "user", "parts": []any{map[string]string{"text": string(input)}}}}, "generationConfig": map[string]any{"responseMimeType": "application/json", "responseJsonSchema": schema, "maxOutputTokens": GeminiMaxOutputTokens}})
+	payload := map[string]any{"systemInstruction": map[string]any{"parts": []any{map[string]string{"text": string(prompt)}}}, "contents": []any{map[string]any{"role": "user", "parts": []any{map[string]string{"text": string(input)}}}}, "generationConfig": map[string]any{"responseMimeType": "application/json", "responseJsonSchema": schema, "maxOutputTokens": GeminiMaxOutputTokens}}
+	if kind == "translate" {
+		payload["tools"] = []any{map[string]any{"google_search": map[string]any{}}, map[string]any{"url_context": map[string]any{}}}
+	}
+	body, _ := json.Marshal(payload)
 	req, e := http.NewRequestWithContext(ctx, "POST", p.GeminiURL, bytes.NewReader(body))
 	if e != nil {
 		return TextResult{}, e
@@ -167,7 +176,8 @@ func (p *HTTPProviders) Text(ctx context.Context, key, kind string, s, contextSe
 	}
 	var envelope struct {
 		Candidates []struct {
-			FinishReason string `json:"finishReason"`
+			FinishReason string          `json:"finishReason"`
+			Grounding    json.RawMessage `json:"groundingMetadata"`
 			Content      struct {
 				Parts []struct {
 					Text    string `json:"text"`
@@ -188,12 +198,23 @@ func (p *HTTPProviders) Text(ctx context.Context, key, kind string, s, contextSe
 	var result TextResult
 	d := json.NewDecoder(strings.NewReader(content))
 	d.DisallowUnknownFields()
-	if e = d.Decode(&result); e != nil {
+	// Decode only the model-owned subtitle fields. A model cannot forge provenance.
+	wire := struct {
+		Segments json.RawMessage `json:"segments"`
+	}{}
+	if e = d.Decode(&wire); e != nil {
 		return result, errors.New("Réponse IA invalide")
 	}
 	if d.Decode(new(any)) != io.EOF {
 		return result, errors.New("Réponse IA invalide")
 	}
+	// Decode segment objects strictly as well as the root.
+	d = json.NewDecoder(bytes.NewReader(wire.Segments))
+	d.DisallowUnknownFields()
+	if e = d.Decode(&result.Segments); e != nil {
+		return result, errors.New("Réponse IA invalide")
+	}
+	result.Grounding = envelope.Candidates[0].Grounding
 	return result, ValidateText(result, s)
 }
 func (p *HTTPProviders) Audio(ctx context.Context, key, path string) (ASRResponse, json.RawMessage, error) {

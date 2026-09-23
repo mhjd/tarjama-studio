@@ -13,6 +13,19 @@ Les autorisations de mise en service et de tests réels ont été données sépa
 dans la session ; elles ne constituent pas une autorisation générale pour un
 nouvel intervenant de déployer sans vérifier son périmètre.
 
+Complément du 23 septembre : la comparaison indépendante DeepSeek/Flash-Lite
+via OpenRouter est documentée dans
+[le rapport comparatif](../web/review/model-comparison/RESULTS-20260923.md).
+Elle n'ajoute aucun fournisseur au produit et n'utilise aucune recherche web.
+Le propriétaire demande ensuite de rétablir les mêmes consignes de traduction
+que le desktop. Le prompt web est désormais généré depuis `prompts/translation.md`
+avec adaptation JSON uniquement ; voir
+[la parité des prompts](../web/docs/TRANSLATION_PROMPT_PARITY.md).
+**Candidat non activé** : deux essais Gemini avec outils de recherche ont reçu
+429. Ne pas annoncer la recherche ou Hamidullah vérifiés dans l'application
+active, qui conserve son image antérieure. Finaliser la qualification réelle et
+l'affichage des références/Search Suggestions avant cette mise en service.
+
 Date : 21 septembre 2026. Destinataire : un nouvel agent Codex travaillant sur le VPS de l'utilisateur, dans le même dépôt, sans accès à la conversation précédente.
 
 Complément de décision après la passation initiale : l'utilisateur indique que l'IP de son serveur est bloquée par YouTube, mais qu'il a réussi avec Cloudflare WARP + yt-dlp. Il approuve une sortie WARP réservée aux téléchargements vidéo. L'import de fichier est désormais un choix de premier niveau à la création d'un projet, et doit aussi être proposé lorsqu'un téléchargement échoue. Ces décisions sont intégrées ci-dessous ; elles ne décrivent pas une implémentation déjà livrée.

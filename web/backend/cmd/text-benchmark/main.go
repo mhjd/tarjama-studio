@@ -59,6 +59,30 @@ func (t auditTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 	fmt.Printf("HTTP %d\n", response.StatusCode)
+	if response.StatusCode != 200 {
+		// Only public quota identifiers, never messages, dimensions or account IDs.
+		var failure struct {
+			Error struct {
+				Details []struct {
+					Violations []struct {
+						ID     string `json:"quotaId"`
+						Metric string `json:"quotaMetric"`
+						Value  string `json:"quotaValue"`
+					} `json:"violations"`
+				} `json:"details"`
+			} `json:"error"`
+		}
+		if json.Unmarshal(raw, &failure) == nil {
+			for _, detail := range failure.Error.Details {
+				for _, violation := range detail.Violations {
+					if len(violation.ID) < 180 && len(violation.Metric) < 180 {
+						encoded, _ := json.Marshal(map[string]string{"quota_id": violation.ID, "quota_metric": violation.Metric, "quota_value": violation.Value})
+						fmt.Println("QUOTA " + string(encoded))
+					}
+				}
+			}
+		}
+	}
 	response.Body = io.NopCloser(bytes.NewReader(raw))
 	return response, nil
 }
@@ -71,6 +95,7 @@ func main() {
 func run() error {
 	input := flag.String("input", "", "public JSON segments fixture")
 	output := flag.String("output", "", "new immutable result directory")
+	printResult := flag.Bool("print-result", false, "print a bounded public-fixture result for qualification")
 	read := flag.Bool("read-next", false, "read next bounded text page from a completed run")
 	flag.Parse()
 	if *output == "" {
@@ -145,11 +170,39 @@ func run() error {
 	}
 	hash := sha256.Sum256(b)
 	summary := map[string]any{"model": studio.GeminiModel, "segments": len(s), "duration_ms": s[len(s)-1].End - s[0].Start, "elapsed_seconds": time.Since(start).Seconds(), "translation_sha256": hex.EncodeToString(hash[:]), "output_tokens_budget": studio.GeminiMaxOutputTokens, "timestamp": time.Now().UTC().Format(time.RFC3339)}
+	summary["prompt_version"] = studio.PromptVersion("translate")
+	if len(result.Grounding) > 0 {
+		var grounding struct {
+			Queries []string `json:"webSearchQueries"`
+			Chunks  []struct {
+				Web struct {
+					Title string `json:"title"`
+				} `json:"web"`
+			} `json:"groundingChunks"`
+		}
+		if json.Unmarshal(result.Grounding, &grounding) == nil {
+			summary["search_queries"] = len(grounding.Queries)
+			var titles []string
+			for _, chunk := range grounding.Chunks {
+				if len(titles) < 8 && len(chunk.Web.Title) < 100 {
+					titles = append(titles, chunk.Web.Title)
+				}
+			}
+			summary["source_titles"] = titles
+		}
+	}
 	summaryBytes, _ := json.Marshal(summary)
 	if err = write(filepath.Join(*output, "summary.json"), summaryBytes); err != nil {
 		return err
 	}
 	fmt.Println("RESULT " + string(summaryBytes))
+	if *printResult {
+		bounded, _ := json.Marshal(map[string]any{"segments": result.Segments})
+		if len(bounded) > 2200 {
+			return errors.New("result too large for public fixture log")
+		}
+		fmt.Println("TRANSLATION " + string(bounded))
+	}
 	return nil
 }
 

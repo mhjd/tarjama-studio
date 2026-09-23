@@ -409,7 +409,7 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 	if e = ValidateText(result, chunks[i]); e != nil {
 		return e
 	}
-	return w.Store.Chunk(ctx, j, i, result, GeminiModel, j.Kind+"-v1", (i+1)*99/len(chunks))
+	return w.Store.Chunk(ctx, j, i, result, GeminiModel, PromptVersion(j.Kind), (i+1)*99/len(chunks))
 }
 
 // Saved results define immutable completed boundaries, including those written by

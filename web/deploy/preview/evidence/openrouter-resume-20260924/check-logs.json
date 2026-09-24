@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-preview-check-2e3aa200-ckkbp",
+      "log": "=== RUN   TestPreviewLive\n=== RUN   TestPreviewLive/HTTPAndOIDCStart\n=== RUN   TestPreviewLive/GatewayTLS\n=== RUN   TestPreviewLive/DeepSeek/cleanup\n    preview_live_test.go:33: Provider openrouter.ai HTTP 200\n=== RUN   TestPreviewLive/DeepSeek/translate\n    preview_live_test.go:33: Provider openrouter.ai HTTP 200\n--- PASS: TestPreviewLive (5.22s)\n    --- PASS: TestPreviewLive/HTTPAndOIDCStart (1.01s)\n    --- PASS: TestPreviewLive/GatewayTLS (0.27s)\n    --- PASS: TestPreviewLive/DeepSeek/cleanup (2.02s)\n    --- PASS: TestPreviewLive/DeepSeek/translate (1.92s)\nPASS\n"
+    },
+    {
+      "pod": "pv-job-preview-check-c98e8957-mrmdr",
+      "log": "unable to retrieve container logs for containerd://2983ecc142d7db33989ec52108c0b0c75c95b496404f4e0590a04a7e1dbd95b8"
+    },
+    {
+      "pod": "pv-job-preview-check-e46f25a5-dbqrn",
+      "log": "unable to retrieve container logs for containerd://4c1cba4151da7c11e98866211cb7c7a00967f5e14ee50d206fc993fe9147199c"
+    }
+  ]
+}

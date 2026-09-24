@@ -3,6 +3,37 @@
 Source applicative testée : `eb4f510`, branche `web-vps`. Déploiement demandé
 explicitement par le propriétaire après la qualification du client OpenRouter.
 
+## État final — reprise réussie à 11:38 UTC
+
+**Application en service** sur https://atelier.preview.runagen.com.
+Révision `08e1b05c7bd437da`, code applicatif `eb4f510`.
+Les quatre services (web, worker, PostgreSQL, egress) sont Running/Ready.
+Le blocage décrit plus bas est un historique résolu, pas l’état courant.
+
+Après retour administrateur (DiskPressure=False, aucune taint, DB/egress prêts,
+images réimportées), les étapes ont été exécutées dans l’ordre :
+
+- Nouvelle sauvegarde `pv-job-backup-f372eb7f` : Succeeded.
+  Fichier `/storage/backups/pre-openrouter-eb4f510-20260924T113720Z.dump`,
+  SHA-256 `e1c3010f3f255eb6426213268af56a2a9a54bdcd969d579841d0efe81382514b`.
+  Table des matières vérifiée ; aucune restauration complète annoncée.
+- Migration `pv-job-migrate-d8385b7d` : Succeeded, avant activation web/worker.
+- Recette active validée, planifiée puis appliquée : aucun volume supprimé.
+- Qualification `pv-job-preview-check-2e3aa200` : Succeeded, tous les sous-tests PASS
+  en 5,22 secondes : readiness/HTTP, refus anonyme d’accès aux projets, démarrage
+  OIDC/PKCE/cookie sécurisé, TLS passerelle, vrais appels DeepSeek cleanup et
+  translate (OpenRouter HTTP 200 et validation stricte des segments).
+- Logs : API prête, aucun message d’erreur du worker courant ; statut final prêt.
+
+Le worker utilise OpenRouter et les outils serveur Parallel, sans secret Gemini.
+Le parcours complet MFA, un nouveau téléchargement YouTube et un export média
+n’ont pas été rejoués dans ce contrôle de bascule. Le test réel Search/Fetch
+précédent reste documenté dans le rapport de qualification du client. Les trois
+corpus locaux et le panneau de remarques restent à implémenter ; cette mise en
+service n’en annonce pas la disponibilité.
+
+Preuves de reprise : `web/deploy/preview/evidence/openrouter-resume-20260924/`.
+
 ## Images locales
 
 - Application complète (API/UI, worker et filtre egress) :
@@ -54,7 +85,7 @@ implicitement. Une recette acceptée ne signifie pas que les services sont prêt
 En cas de rollback, la migration additive reste en place ; le rollback ne restaure
 pas les données. Ne pas revenir au modèle Gemini sans nouvelle décision produit.
 
-## Incident de démarrage préexistant
+## Historique — incident de démarrage préexistant (résolu)
 
 Au premier `status`, avant build/déploiement, la révision `c30b28bb3e20861b`
 présentait déjà DB, egress, worker et web à zéro service prêt, avec leurs nouveaux
@@ -80,7 +111,7 @@ réussie. La migration 003 n’a pas été lancée et la recette finale n’a pa
 appliquée. API et worker restent volontairement désactivés dans la recette
 intermédiaire ; DB et egress demandés actifs sont en attente.
 
-## Diagnostic à transmettre à l’administrateur si l’attente persiste
+## Historique — diagnostic transmis pour l’attente de démarrage
 
 > Atelier était déjà indisponible avant cette mise à jour. Après réapplication
 > de la recette, `pv-db-7d97746b76-x4xdg` et `pv-egress-6f4c89d9d8-wjbqg` restent
@@ -98,4 +129,3 @@ local ne suffit pas à isoler la cause de l’indisponibilité de la passerelle.
 
 La cause précise n’est pas accessible avec les sorties du courtier disponibles.
 Ne pas annoncer un défaut de stockage, de CNI ou de PostgreSQL comme démontré.
-

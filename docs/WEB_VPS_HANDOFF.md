@@ -10,9 +10,10 @@ avant toute reprise. Les affirmations historiques Gemini/no-OpenRouter ci-dessou
 sont supersédées. Parallel est configuré dans les outils serveur OpenRouter :
 la clé OpenRouter suffit, aucune clé Parallel séparée. Voir le rapport réel lié
 dans ce document de décisions. Déploiement autorisé ensuite par le propriétaire ;
-la recette intermédiaire est appliquée mais le démarrage DB/egress est bloqué
-côté VPS, avant sauvegarde/migration et activation API/worker. Voir
-[le dossier de reprise](DEPLOY_OPENROUTER_20260924.md).
+la reprise du 24 septembre à 11:38 UTC est terminée : sauvegarde et migration
+réussies, quatre services prêts, contrôles HTTP/OIDC et DeepSeek réussis.
+Révision active `08e1b05c7bd437da`, recette `active-openrouter-20260924.yml`,
+code applicatif `eb4f510`. Voir [le compte rendu](DEPLOY_OPENROUTER_20260924.md).
 
 
 Actualisation du 23 septembre 2026 : le propriétaire choisit désormais

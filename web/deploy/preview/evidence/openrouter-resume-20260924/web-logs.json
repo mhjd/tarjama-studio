@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "web-69bf7bff85-mp4f8",
+      "log": "2026/09/24 11:38:13 Tarjama API prête\n"
+    },
+    {
+      "pod": "web-7cb8f865c-znqns",
+      "log": "unable to retrieve container logs for containerd://8a1f573b6f131d1c5362c3faf40c24916f86acf09f5389ddeaefae2088439b84"
+    }
+  ]
+}

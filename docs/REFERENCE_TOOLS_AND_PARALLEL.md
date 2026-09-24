@@ -270,10 +270,10 @@ traçabilité exhaustive des sources ni sur la qualité de toute traduction.
 - Migration additive `003_openrouter.sql`, clés personnelles OpenRouter/Groq.
   Les résultats et credentials Gemini historiques restent conservés et inutilisés.
 - Ancien client Parallel direct retiré, aucune nouvelle dépendance.
-- Bascule autorisée puis bloquée avant migration/activation : voir
-  [le dossier de déploiement](DEPLOY_OPENROUTER_20260924.md). Ne pas mélanger les nouvelles clés/UI avec un ancien
-  binaire Gemini. Construire l’image complète et qualifier la migration puis le
-  parcours applicatif avant bascule. Corpus et remarques restent à implémenter.
+- Bascule terminée le 24 septembre à 11:38 UTC : image complète `eb4f510`,
+  sauvegarde/migration réussies, quatre services prêts et qualification HTTP/OIDC
+  + DeepSeek réussie. Voir [le compte rendu](DEPLOY_OPENROUTER_20260924.md).
+  Corpus et remarques restent à implémenter. Ne pas réintroduire un ancien binaire Gemini.
 
 Qualification répétable, sans données utilisateur :
 

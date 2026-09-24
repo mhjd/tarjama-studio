@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-worker-586c66f9fb-r84df",
+      "log": "unable to retrieve container logs for containerd://c939d93d447d59a455f5b0c63c0e12dc029cd421ba71c682f1021630f1eb6882"
+    },
+    {
+      "pod": "pv-worker-748c997c7b-shl5l",
+      "log": ""
+    }
+  ]
+}

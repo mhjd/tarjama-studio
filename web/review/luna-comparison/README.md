@@ -86,3 +86,12 @@ Les résumés, empreintes, extraits et notes de lecture sont versionnés ici.
 Les extraits récupérés individuellement dans une réponse JSON invalide servent
 uniquement à l'analyse linguistique : **ils ne constituent pas une traduction
 acceptée**. Le classement éditorial ne remplace pas la validation du fichier.
+
+### Reprendre un bloc échoué
+
+`--case corpus-part-2` reprend uniquement le deuxième quart du corpus, avec
+les mêmes frontières et contexte. `recover.py --part 2 --output NOUVEAU_DOSSIER`
+rejoue ses deux moitiés à `medium` sur Responses, deux appels payants maximum.
+Voir le complément « résultat complet après reprises » dans
+`docs/LUNA_REASONING_COMPARISON_20260924.md` pour le cumul des échecs et succès.
+Les données originales et les trois autres blocs acceptés restent inchangés.

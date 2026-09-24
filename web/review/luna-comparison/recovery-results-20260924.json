@@ -1,0 +1,1800 @@
+{
+  "calls": [
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "corpus-part-1",
+      "valid": true,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "http_status": 200,
+      "id": "gen-1790276414-uu5x9eHi9kbjcftCFA7N",
+      "provider": null,
+      "usage": {
+        "input_tokens": 3379,
+        "input_tokens_details": {
+          "cached_tokens": 1670,
+          "cache_write_tokens": 1706
+        },
+        "output_tokens": 2351,
+        "output_tokens_details": {
+          "reasoning_tokens": 312
+        },
+        "total_tokens": 5730,
+        "cost": 0.00140575,
+        "cost_details": {
+          "upstream_inference_cost": 0.00140575,
+          "upstream_inference_input_cost": 0.00023025,
+          "upstream_inference_output_cost": 0.0011755
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 312,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "finish_reason": "completed",
+      "elapsed_seconds": 21.957
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "corpus-part-2",
+      "valid": false,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "http_status": 200,
+      "id": "gen-1790276435-2SvPvGUvXEuj78ZpJXyU",
+      "provider": null,
+      "usage": {
+        "input_tokens": 3225,
+        "input_tokens_details": {
+          "cached_tokens": 1670,
+          "cache_write_tokens": 1552
+        },
+        "output_tokens": 2054,
+        "output_tokens_details": {
+          "reasoning_tokens": 233
+        },
+        "total_tokens": 5279,
+        "cost": 0.001238,
+        "cost_details": {
+          "upstream_inference_cost": 0.001238,
+          "upstream_inference_input_cost": 0.000211,
+          "upstream_inference_output_cost": 0.001027
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 233,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "finish_reason": "completed",
+      "error": "JSONDecodeError",
+      "elapsed_seconds": 18.827
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "corpus-part-3",
+      "valid": true,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "http_status": 200,
+      "id": "gen-1790276455-IAGXvfr4QoCJeLYeBaQp",
+      "provider": null,
+      "usage": {
+        "input_tokens": 3184,
+        "input_tokens_details": {
+          "cached_tokens": 1670,
+          "cache_write_tokens": 1511
+        },
+        "output_tokens": 2080,
+        "output_tokens_details": {
+          "reasoning_tokens": 361
+        },
+        "total_tokens": 5264,
+        "cost": 0.001245875,
+        "cost_details": {
+          "upstream_inference_cost": 0.001245875,
+          "upstream_inference_input_cost": 0.000205875,
+          "upstream_inference_output_cost": 0.00104
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 361,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "finish_reason": "completed",
+      "elapsed_seconds": 20.331
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "corpus-part-4",
+      "valid": true,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "http_status": 200,
+      "id": "gen-1790276476-J7Km6Ow8MVyHEk37vLNl",
+      "provider": null,
+      "usage": {
+        "input_tokens": 3276,
+        "input_tokens_details": {
+          "cached_tokens": 1670,
+          "cache_write_tokens": 1603
+        },
+        "output_tokens": 2229,
+        "output_tokens_details": {
+          "reasoning_tokens": 359
+        },
+        "total_tokens": 5505,
+        "cost": 0.001331875,
+        "cost_details": {
+          "upstream_inference_cost": 0.001331875,
+          "upstream_inference_input_cost": 0.000217375,
+          "upstream_inference_output_cost": 0.0011145
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 359,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "finish_reason": "completed",
+      "elapsed_seconds": 21.239
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "corpus-part-2",
+      "valid": false,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "http_status": 200,
+      "id": "gen-1790276803-6qSFqyWKjhEhuyuRBBNA",
+      "provider": null,
+      "usage": {
+        "input_tokens": 3225,
+        "input_tokens_details": {
+          "cached_tokens": 3222
+        },
+        "output_tokens": 2389,
+        "output_tokens_details": {
+          "reasoning_tokens": 609
+        },
+        "total_tokens": 5614,
+        "cost": 0.00122702,
+        "cost_details": {
+          "upstream_inference_cost": 0.00122702,
+          "upstream_inference_input_cost": 3.252e-05,
+          "upstream_inference_output_cost": 0.0011945
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 609,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "finish_reason": "completed",
+      "error": "JSONDecodeError",
+      "elapsed_seconds": 22.384
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "part-2-half-1",
+      "valid": true,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "http_status": 200,
+      "id": "gen-1790277230-PQW4JSB9IDyKW7nD7KMI",
+      "provider": null,
+      "usage": {
+        "input_tokens": 2465,
+        "input_tokens_details": {
+          "cached_tokens": 1670,
+          "cache_write_tokens": 792
+        },
+        "output_tokens": 1654,
+        "output_tokens_details": {
+          "reasoning_tokens": 792
+        },
+        "total_tokens": 4119,
+        "cost": 0.000943,
+        "cost_details": {
+          "upstream_inference_cost": 0.000943,
+          "upstream_inference_input_cost": 0.000116,
+          "upstream_inference_output_cost": 0.000827
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 792,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "finish_reason": "completed",
+      "elapsed_seconds": 18.059
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "part-2-half-2",
+      "valid": true,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "http_status": 200,
+      "id": "gen-1790277248-np6QLSyvJLqsOtutyKi5",
+      "provider": null,
+      "usage": {
+        "input_tokens": 2512,
+        "input_tokens_details": {
+          "cached_tokens": 1670,
+          "cache_write_tokens": 839
+        },
+        "output_tokens": 1263,
+        "output_tokens_details": {
+          "reasoning_tokens": 293
+        },
+        "total_tokens": 3775,
+        "cost": 0.000753375,
+        "cost_details": {
+          "upstream_inference_cost": 0.000753375,
+          "upstream_inference_input_cost": 0.000121875,
+          "upstream_inference_output_cost": 0.0006315
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 293,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "finish_reason": "completed",
+      "elapsed_seconds": 16.233
+    }
+  ],
+  "validated_segments": 384,
+  "cost_usd": 0.008144895000000001,
+  "provider_seconds": 139.03,
+  "inputs": {
+    "data/model_outputs/luna-reasoning-medium-split-20260924-01/corpus-part-1-gpt-6-luna/translation.json": "55084e58f09d35782efc2e4a2bece1971cf113604ba462611d4a6b5f270c5413",
+    "data/model_outputs/luna-medium-halves-20260924-01/part-2-half-1-gpt-6-luna/translation.json": "3d447ec3e2d06496802920d578a761864ca08d8fb10e22a6b8bb00285f25a123",
+    "data/model_outputs/luna-medium-halves-20260924-01/part-2-half-2-gpt-6-luna/translation.json": "56b989a0785dba8d7f2f7e5e7443c42eeae2a745ef9c7032f0ebec2bbe83b6e8",
+    "data/model_outputs/luna-reasoning-medium-split-20260924-01/corpus-part-3-gpt-6-luna/translation.json": "591a75889f29b777e0b40691601042f5d3ba66609449d1151a1888dd667868ec",
+    "data/model_outputs/luna-reasoning-medium-split-20260924-01/corpus-part-4-gpt-6-luna/translation.json": "3124597a343059dc378b789761f039a1aeb69ad34c804df002b8ebfab8345206"
+  },
+  "translation": {
+    "segments": [
+      {
+        "id": "0",
+        "text": "Troisième question, monsieur : est-il juste de dire que les sunnites d’aujourd’hui sont soit acharites, soit maturidites ?"
+      },
+      {
+        "id": "1",
+        "text": "C’est restreindre ce qui est vaste et réduire considérablement les choses."
+      },
+      {
+        "id": "2",
+        "text": "L’expression « gens de la Sunna » change de sens selon l’usage qu’on en fait."
+      },
+      {
+        "id": "3",
+        "text": "Car, en arabe, la Sunna désigne la voie que l’on suit."
+      },
+      {
+        "id": "4",
+        "text": "Le sentier de la montagne est appelé « sunna »."
+      },
+      {
+        "id": "5",
+        "text": "Et le cœur de toute chose est aussi appelé « sunna »."
+      },
+      {
+        "id": "6",
+        "text": "C’est de là que vient ce vers de Ghailân : « Elle te montre le milieu d’un visage sans défaut,"
+      },
+      {
+        "id": "7",
+        "text": "lisse, sans grain de beauté ni cicatrice. »"
+      },
+      {
+        "id": "8",
+        "text": "« Elle te montre le milieu du visage », c’est-à-dire son centre."
+      },
+      {
+        "id": "9",
+        "text": "Le reste est donc caché."
+      },
+      {
+        "id": "10",
+        "text": "« Elle te montre le milieu d’un visage sans défaut,"
+      },
+      {
+        "id": "11",
+        "text": "lisse, sans grain de beauté ni cicatrice. »"
+      },
+      {
+        "id": "12",
+        "text": "En terminologie, le mot « Sunna » varie selon la discipline dans laquelle il est employé."
+      },
+      {
+        "id": "13",
+        "text": "Pour les spécialistes du hadith,"
+      },
+      {
+        "id": "14",
+        "text": "c’est tout ce qui a été rapporté du Prophète — que la paix et les bénédictions de Dieu soient sur lui — : paroles, actes, approbations, description physique ou morale,"
+      },
+      {
+        "id": "15",
+        "text": "que cela puisse ou non servir de preuve à une règle religieuse."
+      },
+      {
+        "id": "16",
+        "text": "Pour les spécialistes des fondements du droit,"
+      },
+      {
+        "id": "17",
+        "text": "c’est tout ce qui a été rapporté du Prophète — que la paix et les bénédictions de Dieu soient sur lui — : paroles, actes ou approbations,"
+      },
+      {
+        "id": "18",
+        "text": "et qui peut servir de preuve à une règle religieuse."
+      },
+      {
+        "id": "19",
+        "text": "Pour les juristes, c’est une qualification de l’acte prescrit par la loi religieuse, mais sans obligation ferme :"
+      },
+      {
+        "id": "20",
+        "text": "celui qui l’accomplit est récompensé, et celui qui le délaisse n’est pas puni."
+      },
+      {
+        "id": "21",
+        "text": "Certains ajoutent que le Prophète — que la paix et les bénédictions de Dieu soient sur lui — doit l’avoir accompli"
+      },
+      {
+        "id": "22",
+        "text": "publiquement, devant un groupe, et l’avoir observé régulièrement, afin de le distinguer de ce qui est simplement recommandé."
+      },
+      {
+        "id": "23",
+        "text": "La Sunna a ainsi un sens plus spécifique que ce qui est recommandé."
+      },
+      {
+        "id": "24",
+        "text": "Chez les spécialistes de la doctrine,"
+      },
+      {
+        "id": "25",
+        "text": "le terme s’emploie dans deux sens :"
+      },
+      {
+        "id": "26",
+        "text": "un sens restreint, par opposition aux chiites ;"
+      },
+      {
+        "id": "27",
+        "text": "parmi les musulmans qui prient en direction de la Kaaba,"
+      },
+      {
+        "id": "28",
+        "text": "il y a des chiites et des sunnites."
+      },
+      {
+        "id": "29",
+        "text": "Dans ce cas, l’expression « gens de la Sunna » englobe aussi les innovateurs, les pécheurs et les égarés."
+      },
+      {
+        "id": "30",
+        "text": "Au Liban, on l’emploie même pour quelqu’un qui ne prie pas du tout :"
+      },
+      {
+        "id": "31",
+        "text": "on dit pourtant qu’il fait partie des sunnites."
+      },
+      {
+        "id": "32",
+        "text": "N’est-ce pas, cheikh ?"
+      },
+      {
+        "id": "33",
+        "text": "Voilà pourquoi il s’agit d’un sens restreint : la Sunna par opposition au chiisme."
+      },
+      {
+        "id": "34",
+        "text": "Au sens large, l’expression « gens de la Sunna » désigne"
+      },
+      {
+        "id": "35",
+        "text": "ceux qui suivent la voie juste,"
+      },
+      {
+        "id": "36",
+        "text": "la voie originelle, qui consiste à revenir au Livre de Dieu"
+      },
+      {
+        "id": "37",
+        "text": "et à la Sunna du Messager de Dieu — que la paix et les bénédictions de Dieu soient sur lui —,"
+      },
+      {
+        "id": "38",
+        "text": "à tenir pour vrai tout ce que ces sources enseignent"
+      },
+      {
+        "id": "39",
+        "text": "et à faire usage de la raison pour les comprendre."
+      },
+      {
+        "id": "40",
+        "text": "Parmi eux,"
+      },
+      {
+        "id": "41",
+        "text": "quatre écoles doctrinales sont devenues célèbres."
+      },
+      {
+        "id": "42",
+        "text": "Car ce que la Révélation a apporté, Gabriel l’a transmis"
+      },
+      {
+        "id": "43",
+        "text": "au cœur du Prophète — que la paix et les bénédictions de Dieu soient sur lui — ;"
+      },
+      {
+        "id": "44",
+        "text": "cela n’est la doctrine de personne."
+      },
+      {
+        "id": "45",
+        "text": "On ne dit donc pas que l’obligation de la prière est la doctrine de Chaféï"
+      },
+      {
+        "id": "46",
+        "text": "ou que l’obligation de l’aumône légale est celle de Mâlik."
+      },
+      {
+        "id": "47",
+        "text": "Ce n’est la doctrine de personne."
+      },
+      {
+        "id": "48",
+        "text": "C’est ce que Gabriel a transmis."
+      },
+      {
+        "id": "49",
+        "text": "Les écoles portent sur des questions d’interprétation qui s’ajoutent au texte fondamental."
+      },
+      {
+        "id": "50",
+        "text": "Autrement dit, ce sont des méthodes pour aborder les textes,"
+      },
+      {
+        "id": "51",
+        "text": "des institutions qui les étudient."
+      },
+      {
+        "id": "52",
+        "text": "Tu as étudié dans cette université ;"
+      },
+      {
+        "id": "53",
+        "text": "cela signifie que tu suis cette école."
+      },
+      {
+        "id": "54",
+        "text": "Un autre a étudié dans une autre université, et suit donc cette autre école."
+      },
+      {
+        "id": "55",
+        "text": "Pourtant, on ne voit pas de rivalité aussi forte entre les universités,"
+      },
+      {
+        "id": "56",
+        "text": "au point que les gens se disputeraient pour savoir si celui-ci vient d’Al-Azhar"
+      },
+      {
+        "id": "57",
+        "text": "ou celui-là de la Zitouna."
+      },
+      {
+        "id": "58",
+        "text": "C’est une calomnie."
+      },
+      {
+        "id": "59",
+        "text": "Ce qui s’enseigne à Al-Azhar s’enseigne à la Zitouna,"
+      },
+      {
+        "id": "60",
+        "text": "et ce qui s’enseigne à la Zitouna s’enseigne à Al-Azhar."
+      },
+      {
+        "id": "61",
+        "text": "Un savant de la Zitouna a même été recteur d’Al-Azhar : le cheikh al-Khidr Hussein."
+      },
+      {
+        "id": "62",
+        "text": "Oui, c’est bien cela."
+      },
+      {
+        "id": "63",
+        "text": "Il n’y a donc aucun problème à ce que les écoles soient diverses,"
+      },
+      {
+        "id": "64",
+        "text": "qu’elles portent sur le droit ou sur la doctrine."
+      },
+      {
+        "id": "65",
+        "text": "Car, pour ce qui est de la doctrine, beaucoup s’imaginent"
+      },
+      {
+        "id": "66",
+        "text": "qu’elle ne comprend que des vérités absolues et certaines,"
+      },
+      {
+        "id": "67",
+        "text": "qui ne laissent place ni à l’interprétation ni à l’erreur,"
+      },
+      {
+        "id": "68",
+        "text": "et que tout le monde doit y adhérer dans chacun de ses aspects,"
+      },
+      {
+        "id": "69",
+        "text": "dans chaque parcelle de la doctrine,"
+      },
+      {
+        "id": "70",
+        "text": "comme si cela devait passer par le trou d’une aiguille :"
+      },
+      {
+        "id": "71",
+        "text": "il faudrait que tout le monde y passe."
+      },
+      {
+        "id": "72",
+        "text": "C’est faux."
+      },
+      {
+        "id": "73",
+        "text": "La doctrine est une discipline, comme le droit,"
+      },
+      {
+        "id": "74",
+        "text": "la grammaire,"
+      },
+      {
+        "id": "75",
+        "text": "le soufisme"
+      },
+      {
+        "id": "76",
+        "text": "ou la morphologie."
+      },
+      {
+        "id": "77",
+        "text": "Il y a du juste et de l’erroné,"
+      },
+      {
+        "id": "78",
+        "text": "des principes fondamentaux et des questions secondaires,"
+      },
+      {
+        "id": "79",
+        "text": "des interprétations,"
+      },
+      {
+        "id": "80",
+        "text": "et des questions à examiner."
+      },
+      {
+        "id": "81",
+        "text": "Celui qui croit au Prophète — que la paix et les bénédictions de Dieu soient sur lui —"
+      },
+      {
+        "id": "82",
+        "text": "et à ce qu’il a reçu de Dieu le Très-Haut,"
+      },
+      {
+        "id": "83",
+        "text": "est un croyant destiné au Paradis."
+      },
+      {
+        "id": "84",
+        "text": "Il lui est seulement demandé"
+      },
+      {
+        "id": "85",
+        "text": "de croire à six choses :"
+      },
+      {
+        "id": "86",
+        "text": "croire en Dieu, en Ses anges et en Ses Livres,"
+      },
+      {
+        "id": "87",
+        "text": "en Ses messagers,"
+      },
+      {
+        "id": "89",
+        "text": "au Jour dernier et au destin, qu’il soit bon ou mauvais,"
+      },
+      {
+        "id": "90",
+        "text": "dans son ensemble,"
+      },
+      {
+        "id": "91",
+        "text": "et d’accomplir cinq choses :"
+      },
+      {
+        "id": "92",
+        "text": "attester"
+      },
+      {
+        "id": "93",
+        "text": "qu’il n’y a de divinité que Dieu et que Muhammad est le Messager de Dieu,"
+      },
+      {
+        "id": "94",
+        "text": "accomplir la prière, s’acquitter de l’aumône légale et jeûner"
+      },
+      {
+        "id": "95",
+        "text": "le ramadan, puis faire le pèlerinage à la Maison sacrée."
+      },
+      {
+        "id": "96",
+        "text": "Celui qui fait cela sera parmi les gens du Paradis."
+      },
+      {
+        "id": "97",
+        "text": "Mais nous avons"
+      },
+      {
+        "id": "98",
+        "text": "de nombreuses spécialités, dont la théologie doctrinale."
+      },
+      {
+        "id": "99",
+        "text": "Car Dieu a fait"
+      },
+      {
+        "id": "100",
+        "text": "de l’être humain un être composé de trois éléments :"
+      },
+      {
+        "id": "101",
+        "text": "l’intellect, par lequel Il l’a honoré au-dessus de tous les autres"
+      },
+      {
+        "id": "102",
+        "text": "animaux, le corps, qui est fait de terre,"
+      },
+      {
+        "id": "103",
+        "text": "et l’âme, qui est un souffle invisible"
+      },
+      {
+        "id": "104",
+        "text": "venu de Dieu. C’est sur la base de ces trois éléments"
+      },
+      {
+        "id": "105",
+        "text": "que la religion s’articule autour de trois éléments :"
+      },
+      {
+        "id": "106",
+        "text": "la foi, qui est l’adresse de Dieu à l’intellect ;"
+      },
+      {
+        "id": "107",
+        "text": "l’islam, son adresse au corps ; et l’excellence spirituelle,"
+      },
+      {
+        "id": "108",
+        "text": "son adresse à l’âme. Les trois éléments se sont ainsi accordés"
+      },
+      {
+        "id": "109",
+        "text": "aux trois éléments qui composent l’être humain,"
+      },
+      {
+        "id": "110",
+        "text": "et c’est dans la mesure où ils sont équilibrés que"
+      },
+      {
+        "id": "111",
+        "text": "l’être humain reste droit et équilibré,"
+      },
+      {
+        "id": "112",
+        "text": "en fonction de son équilibre dans ces domaines."
+      },
+      {
+        "id": "113",
+        "text": "C’est pourquoi, parmi les courants doctrinaux,"
+      },
+      {
+        "id": "114",
+        "text": "on trouve d’abord"
+      },
+      {
+        "id": "115",
+        "text": "ceux qui nient Dieu,"
+      },
+      {
+        "id": "116",
+        "text": "ou nient Son Messager, que Dieu le bénisse et le salue,"
+      },
+      {
+        "id": "117",
+        "text": "et qui adoptent"
+      },
+      {
+        "id": "118",
+        "text": "des sources"
+      },
+      {
+        "id": "119",
+        "text": "pour acquérir le savoir, autres que ce que le Prophète, que Dieu le bénisse et le salue, a apporté"
+      },
+      {
+        "id": "120",
+        "text": "de la part de Dieu : celui-là est un innovateur."
+      },
+      {
+        "id": "121",
+        "text": "On les appelle les gens des passions. Nous ne déclarons pas mécréant"
+      },
+      {
+        "id": "122",
+        "text": "celui d’entre eux qui accomplit"
+      },
+      {
+        "id": "123",
+        "text": "tous les piliers mentionnés précédemment,"
+      },
+      {
+        "id": "124",
+        "text": "croit aux six piliers de la foi et observe les cinq piliers de l’islam."
+      },
+      {
+        "id": "125",
+        "text": "Nous ne les déclarons pas mécréants,"
+      },
+      {
+        "id": "126",
+        "text": "sauf si l’un d’eux commet"
+      },
+      {
+        "id": "127",
+        "text": "un acte de mécréance et qu’un juge le déclare"
+      },
+      {
+        "id": "128",
+        "text": "mécréant à titre individuel."
+      },
+      {
+        "id": "129",
+        "text": "Quant aux autres,"
+      },
+      {
+        "id": "130",
+        "text": "ce sont les gens de la Sunna."
+      },
+      {
+        "id": "131",
+        "text": "Les gens de la Sunna suivent de nombreuses écoles,"
+      },
+      {
+        "id": "132",
+        "text": "dont la plupart se ramènent à quatre. La première école,"
+      },
+      {
+        "id": "133",
+        "text": "c’est celle"
+      },
+      {
+        "id": "134",
+        "text": "des premiers pieux prédécesseurs,"
+      },
+      {
+        "id": "135",
+        "text": "qui ne connaissaient pas les difficultés"
+      },
+      {
+        "id": "136",
+        "text": "auxquelles nous sommes confrontés aujourd’hui :"
+      },
+      {
+        "id": "137",
+        "text": "les Compagnons, les Successeurs et ceux qui les ont suivis."
+      },
+      {
+        "id": "138",
+        "text": "S’ils croient comme vous avez cru,"
+      },
+      {
+        "id": "139",
+        "text": "ils sont alors bien guidés."
+      },
+      {
+        "id": "140",
+        "text": "Ils savaient que tout ce qu’avait apporté"
+      },
+      {
+        "id": "141",
+        "text": "le Messager de Dieu, que Dieu le bénisse et le salue,"
+      },
+      {
+        "id": "142",
+        "text": "était entièrement vrai et juste,"
+      },
+      {
+        "id": "143",
+        "text": "que nous le comprenions ou non."
+      },
+      {
+        "id": "144",
+        "text": "Nous ne nous donnons pas la peine de chercher à le comprendre."
+      },
+      {
+        "id": "145",
+        "text": "Ils étaient tous arabophones eux aussi,"
+      },
+      {
+        "id": "146",
+        "text": "et n’avaient donc pas besoin d’apprendre"
+      },
+      {
+        "id": "147",
+        "text": "que le sujet se met au nominatif et le complément d’objet à l’accusatif,"
+      },
+      {
+        "id": "148",
+        "text": "et que le complément du nom se met au génitif."
+      },
+      {
+        "id": "149",
+        "text": "Ils comprenaient donc naturellement l’arabe."
+      },
+      {
+        "id": "150",
+        "text": "Nous n’avons entendu personne"
+      },
+      {
+        "id": "151",
+        "text": "contester devant le Prophète, que la paix et les bénédictions d’Allah soient sur lui,"
+      },
+      {
+        "id": "152",
+        "text": "cette parole d’Allah : « Rien ne Lui ressemble,"
+      },
+      {
+        "id": "153",
+        "text": "et Il est l’Audient, le Clairvoyant. »"
+      },
+      {
+        "id": "154",
+        "text": "Quelqu’un aurait dit : « Comment nie-t-Il toute ressemblance"
+      },
+      {
+        "id": "155",
+        "text": "tout en affirmant ces attributs ? »"
+      },
+      {
+        "id": "156",
+        "text": "Cela n’est apparu qu’après"
+      },
+      {
+        "id": "157",
+        "text": "la génération des successeurs des successeurs, avec l’arrivée des mu‘tazilites"
+      },
+      {
+        "id": "158",
+        "text": "à la fin de cette génération,"
+      },
+      {
+        "id": "159",
+        "text": "qui disaient : « L’Éternel ne peut être multiple »,"
+      },
+      {
+        "id": "160",
+        "text": "et qu’Il est l’essence, à l’exclusion des attributs. Ils niaient les attributs."
+      },
+      {
+        "id": "161",
+        "text": "Mais du temps du Prophète, que la paix et les bénédictions d’Allah soient sur lui,"
+      },
+      {
+        "id": "162",
+        "text": "et des Compagnons, personne ne disait cela"
+      },
+      {
+        "id": "163",
+        "text": "ni ne posait la question."
+      },
+      {
+        "id": "164",
+        "text": "Abou Jahl n’est pas venu débattre,"
+      },
+      {
+        "id": "165",
+        "text": "ni ‘Utba ibn Rabî‘a,"
+      },
+      {
+        "id": "166",
+        "text": "ni al-Walîd ibn al-Mughîra ibn ‘Abd Allah ibn ‘Umar ibn Makhzûm."
+      },
+      {
+        "id": "167",
+        "text": "Aucun d’eux n’est venu"
+      },
+      {
+        "id": "168",
+        "text": "dire au Prophète, que la paix et les bénédictions d’Allah soient sur lui :"
+      },
+      {
+        "id": "169",
+        "text": "« Ces propos sont contradictoires :"
+      },
+      {
+        "id": "170",
+        "text": "comment peut-Il dire : “Rien ne Lui ressemble”,"
+      },
+      {
+        "id": "171",
+        "text": "puis nous dire : “Il est l’Audient, le Clairvoyant” ? »"
+      },
+      {
+        "id": "172",
+        "text": "Ils n’ont pas dit cela."
+      },
+      {
+        "id": "173",
+        "text": "Ils ne trouvaient pas cela problématique."
+      },
+      {
+        "id": "174",
+        "text": "La première doctrine est donc celle du silence :"
+      },
+      {
+        "id": "175",
+        "text": "y croire et les tenir pour vrais."
+      },
+      {
+        "id": "176",
+        "text": "Comme l’a dit l’imam Ahmad ibn Hanbal :"
+      },
+      {
+        "id": "177",
+        "text": "« Leur interprétation consiste à les réciter ;"
+      },
+      {
+        "id": "178",
+        "text": "pas de “comment”, pas de sens [à rechercher]. »"
+      },
+      {
+        "id": "179",
+        "text": "Ne cherchez pas à approfondir quoi que ce soit."
+      },
+      {
+        "id": "180",
+        "text": "Récitez-les telles quelles, croyez-y et tenez-les pour vraies."
+      },
+      {
+        "id": "181",
+        "text": "C’est ce qui s’est passé lorsque l’on interrogea Mâlik sur l’istiwâ’."
+      },
+      {
+        "id": "182",
+        "text": "On lui demanda : « Que signifie : “Le Tout Miséricordieux s’est établi sur le Trône” ? »"
+      },
+      {
+        "id": "183",
+        "text": "Il répondit : « L’istiwâ’ est connu,"
+      },
+      {
+        "id": "184",
+        "text": "son comment est inconnu,"
+      },
+      {
+        "id": "185",
+        "text": "y croire est obligatoire,"
+      },
+      {
+        "id": "186",
+        "text": "et poser des questions à son sujet est une innovation."
+      },
+      {
+        "id": "187",
+        "text": "Je ne vois en toi qu’un homme mal intentionné. Faites-le sortir d’ici ! »"
+      },
+      {
+        "id": "188",
+        "text": "C’est pourquoi"
+      },
+      {
+        "id": "189",
+        "text": "ils y croyaient et les tenaient pour vrais avec une conviction absolue,"
+      },
+      {
+        "id": "190",
+        "text": "sans se donner la peine d’interpréter ces questions."
+      },
+      {
+        "id": "191",
+        "text": "Mais après eux,"
+      },
+      {
+        "id": "192",
+        "text": "les gens de la Sunna se sont trouvés confrontés à une difficulté,"
+      },
+      {
+        "id": "193",
+        "text": "À cette époque, tout le monde,"
+      },
+      {
+        "id": "194",
+        "text": "ou presque tout le monde, comprenait le Coran"
+      },
+      {
+        "id": "195",
+        "text": "naturellement, puisque l’arabe était leur langue."
+      },
+      {
+        "id": "196",
+        "text": "Les gens entrèrent donc en masse dans la religion de Dieu."
+      },
+      {
+        "id": "197",
+        "text": "Les Perses, les Turcs et les Romains y entrèrent,"
+      },
+      {
+        "id": "198",
+        "text": "ainsi que toutes sortes de peuples et les Africains,"
+      },
+      {
+        "id": "199",
+        "text": "dans la religion de Dieu."
+      },
+      {
+        "id": "200",
+        "text": "Le Messager leur a été envoyé à tous,"
+      },
+      {
+        "id": "201",
+        "text": "et le Coran leur a été révélé à tous."
+      },
+      {
+        "id": "202",
+        "text": "Alors, si quelqu’un me demande,"
+      },
+      {
+        "id": "203",
+        "text": "qu’il soit Africain, Perse, Turc, Romain ou Russe, ou"
+      },
+      {
+        "id": "204",
+        "text": "qu’il habite ailleurs sur cette terre :"
+      },
+      {
+        "id": "205",
+        "text": "« Que signifie : “Le Tout Miséricordieux s’est établi sur le Trône” ? »"
+      },
+      {
+        "id": "206",
+        "text": "Vais-je lui répondre comme Malik : « L’établissement est connu » ?"
+      },
+      {
+        "id": "207",
+        "text": "Il me dira : « Tu mens, moi, je ne le connais pas. »"
+      },
+      {
+        "id": "208",
+        "text": "Je pose la question pour apprendre."
+      },
+      {
+        "id": "209",
+        "text": "Ce Coran n’est pas une énigme,"
+      },
+      {
+        "id": "210",
+        "text": "c’est la parole de Dieu."
+      },
+      {
+        "id": "211",
+        "text": "C’est pourquoi ils ont divergé,"
+      },
+      {
+        "id": "212",
+        "text": "c’est-à-dire les gens de la Sunna, dans leurs efforts d’interprétation,"
+      },
+      {
+        "id": "213",
+        "text": "pour résoudre ce problème nouveau."
+      },
+      {
+        "id": "214",
+        "text": "L’effort d’interprétation"
+      },
+      {
+        "id": "215",
+        "text": "consiste à résoudre un problème qui vient de surgir."
+      },
+      {
+        "id": "216",
+        "text": "C’est pourquoi les spécialistes des technologies disent :"
+      },
+      {
+        "id": "217",
+        "text": "« L’invention"
+      },
+      {
+        "id": "218",
+        "text": "naît du besoin. »"
+      },
+      {
+        "id": "219",
+        "text": "Quand un besoin se présente, nous inventons une solution."
+      },
+      {
+        "id": "220",
+        "text": "De même, nous sommes maintenant confrontés à un nouveau problème :"
+      },
+      {
+        "id": "221",
+        "text": "comment comprendre ces textes ?"
+      },
+      {
+        "id": "222",
+        "text": "Nous avons constaté qu’ils se répartissent en trois catégories."
+      },
+      {
+        "id": "223",
+        "text": "Les textes relatifs à la croyance se répartissent en trois catégories."
+      },
+      {
+        "id": "224",
+        "text": "La raison reconnaît, dans la première catégorie,"
+      },
+      {
+        "id": "225",
+        "text": "des attributs de Dieu,"
+      },
+      {
+        "id": "226",
+        "text": "qu’Il soit glorifié."
+      },
+      {
+        "id": "227",
+        "text": "Cela ne pose aucun problème."
+      },
+      {
+        "id": "228",
+        "text": "Il est Celui qui entend tout et voit tout,"
+      },
+      {
+        "id": "229",
+        "text": "Il est le Très-Pardonneur, le Tout-Affectueux, le Maître du Trône glorieux, Celui qui fait tout ce qu’Il veut."
+      },
+      {
+        "id": "230",
+        "text": "Ce sont là des attributs de Dieu."
+      },
+      {
+        "id": "231",
+        "text": "Dieu ! Il n’y a de divinité que Lui,"
+      },
+      {
+        "id": "232",
+        "text": "le Vivant, Celui qui subsiste par Lui-même,"
+      },
+      {
+        "id": "233",
+        "text": "que ni somnolence ni sommeil ne saisissent."
+      },
+      {
+        "id": "234",
+        "text": "Tout cela décrit très clairement les attributs de Dieu,"
+      },
+      {
+        "id": "235",
+        "text": "personne ne les conteste ni ne les nie."
+      },
+      {
+        "id": "236",
+        "text": "La deuxième catégorie :"
+      },
+      {
+        "id": "237",
+        "text": "les actes de Dieu,"
+      },
+      {
+        "id": "238",
+        "text": "ce qu’Il a accompli,"
+      },
+      {
+        "id": "239",
+        "text": "comme la création des cieux et de la terre,"
+      },
+      {
+        "id": "240",
+        "text": "la pluie qu’Il fait tomber,"
+      },
+      {
+        "id": "241",
+        "text": "l’envoi des messagers,"
+      },
+      {
+        "id": "242",
+        "text": "la répartition des subsistances,"
+      },
+      {
+        "id": "243",
+        "text": "et ainsi de suite. Ce sont des actes accomplis par Dieu."
+      },
+      {
+        "id": "244",
+        "text": "La troisième catégorie,"
+      },
+      {
+        "id": "245",
+        "text": "c’est celle qui a posé problème aux gens."
+      },
+      {
+        "id": "246",
+        "text": "La raison ne permet pas d’affirmer qu’il s’agit"
+      },
+      {
+        "id": "247",
+        "text": "d’attributs, ni qu’il s’agit d’actes."
+      },
+      {
+        "id": "248",
+        "text": "C’est le cas, par exemple, du visage :"
+      },
+      {
+        "id": "249",
+        "text": "« Et subsistera le visage de ton Seigneur, plein de majesté et de noblesse » ;"
+      },
+      {
+        "id": "250",
+        "text": "de l’œil : « afin que tu sois élevé sous Mon œil » ;"
+      },
+      {
+        "id": "251",
+        "text": "des deux mains et de la main droite ;"
+      },
+      {
+        "id": "252",
+        "text": "« que J’ai créées de Mes deux mains » ;"
+      },
+      {
+        "id": "253",
+        "text": "et du flanc : « au sujet de ce qu’ils ont négligé envers Dieu » ;"
+      },
+      {
+        "id": "254",
+        "text": "ou encore de la personne,"
+      },
+      {
+        "id": "255",
+        "text": "comme dans le hadith rapporté par Ibn Khuzayma dans son Sahih,"
+      },
+      {
+        "id": "256",
+        "text": "qui affirme que Dieu est une personne ;"
+      },
+      {
+        "id": "257",
+        "text": "ainsi que des doigts, du pied et de la jambe : tout cela figure dans des hadiths authentiques."
+      },
+      {
+        "id": "258",
+        "text": "Comment devons-nous comprendre ces textes ?"
+      },
+      {
+        "id": "259",
+        "text": "On ne peut pas dire que ce sont des énigmes"
+      },
+      {
+        "id": "260",
+        "text": "et les laisser de côté."
+      },
+      {
+        "id": "261",
+        "text": "Il faut au contraire proposer une solution aux gens."
+      },
+      {
+        "id": "262",
+        "text": "Les gens de la Sunna ont divergé sur cette solution."
+      },
+      {
+        "id": "263",
+        "text": "Certains ont dit :"
+      },
+      {
+        "id": "264",
+        "text": "« Considérons-les tous comme des attributs,"
+      },
+      {
+        "id": "265",
+        "text": "et rattachons-les aux attributs sans préciser de quels attributs il s’agit. »"
+      },
+      {
+        "id": "266",
+        "text": "C’est la doctrine hanbalite."
+      },
+      {
+        "id": "267",
+        "text": "Aujourd’hui, les gens appellent cela la doctrine des anciens."
+      },
+      {
+        "id": "268",
+        "text": "Mais ce n’est pas la doctrine des anciens ;"
+      },
+      {
+        "id": "269",
+        "text": "c’est précisément celle des hanbalites."
+      },
+      {
+        "id": "270",
+        "text": "Ils disent : « Le visage est un attribut de Dieu,"
+      },
+      {
+        "id": "271",
+        "text": "l’œil est un attribut de Dieu,"
+      },
+      {
+        "id": "272",
+        "text": "les deux mains sont des attributs de Dieu,"
+      },
+      {
+        "id": "273",
+        "text": "le pied et la jambe sont des attributs de Dieu,"
+      },
+      {
+        "id": "274",
+        "text": "d’une manière qui convient à Sa majesté."
+      },
+      {
+        "id": "275",
+        "text": "Nous ne L’assimilons pas à Ses créatures,"
+      },
+      {
+        "id": "276",
+        "text": "et cela n’implique ni corporéité"
+      },
+      {
+        "id": "277",
+        "text": "ni division en parties. Dieu est bien au-dessus de cela."
+      },
+      {
+        "id": "278",
+        "text": "Ce sont des attributs. »"
+      },
+      {
+        "id": "279",
+        "text": "C’est leur effort d’interprétation ;"
+      },
+      {
+        "id": "280",
+        "text": "ils ont élaboré cette interprétation."
+      },
+      {
+        "id": "281",
+        "text": "D’autres gens de la Sunna ont dit :"
+      },
+      {
+        "id": "282",
+        "text": "« Ali ibn Ismaïl al-Achari,"
+      },
+      {
+        "id": "283",
+        "text": "qui était l’un des grands imams chaféites,"
+      },
+      {
+        "id": "284",
+        "text": "a proposé une nouvelle interprétation."
+      },
+      {
+        "id": "285",
+        "text": "Cette interprétation disait :"
+      },
+      {
+        "id": "286",
+        "text": "« Ces textes,"
+      },
+      {
+        "id": "287",
+        "text": "nous les interprétons"
+      },
+      {
+        "id": "288",
+        "text": "selon ce qui leur ressemble et s’en rapproche. »"
+      },
+      {
+        "id": "289",
+        "text": "à quelque chose de raisonnable,"
+      },
+      {
+        "id": "290",
+        "text": "car les Compagnons l’ont fait."
+      },
+      {
+        "id": "291",
+        "text": "Oumm Salama"
+      },
+      {
+        "id": "292",
+        "text": "et Abd Allah ibn Abbas,"
+      },
+      {
+        "id": "293",
+        "text": "que Dieu les agrée tous deux, ont rapporté"
+      },
+      {
+        "id": "294",
+        "text": "qu’interrogés"
+      },
+      {
+        "id": "295",
+        "text": "sur la proximité générale de Dieu,"
+      },
+      {
+        "id": "296",
+        "text": "ils l’ont interprétée"
+      },
+      {
+        "id": "297",
+        "text": "comme relevant de la science et de l’omniscience."
+      },
+      {
+        "id": "298",
+        "text": "La proximité générale est mentionnée dans deux versets du Livre de Dieu,"
+      },
+      {
+        "id": "299",
+        "text": "dans deux sourates consécutives :"
+      },
+      {
+        "id": "300",
+        "text": "la sourate Al-Hadid et la sourate Al-Mujadala :"
+      },
+      {
+        "id": "301",
+        "text": "« Il est avec vous où que vous soyez. »"
+      },
+      {
+        "id": "302",
+        "text": "« Il n’est point de conversation secrète entre trois personnes"
+      },
+      {
+        "id": "303",
+        "text": "sans qu’Il soit leur quatrième, ni entre cinq sans qu’Il soit leur sixième ;"
+      },
+      {
+        "id": "304",
+        "text": "qu’elles soient moins nombreuses ou plus nombreuses,"
+      },
+      {
+        "id": "305",
+        "text": "Il est avec elles où qu’elles se trouvent. »"
+      },
+      {
+        "id": "306",
+        "text": "Voilà la proximité générale."
+      },
+      {
+        "id": "307",
+        "text": "Elle signifie donc la science et l’omniscience."
+      },
+      {
+        "id": "322",
+        "text": "Selon cette interprétation, le « visage » désigne l’essence, l’« œil » la vue, la « main » la puissance, et ainsi de suite."
+      },
+      {
+        "id": "323",
+        "text": "C’est également une interprétation fondée sur un effort de réflexion."
+      },
+      {
+        "id": "324",
+        "text": "Abou Mansour al-Mâtouridi est arrivé,"
+      },
+      {
+        "id": "325",
+        "text": "lui aussi un imam sunnite de l’école hanafite,"
+      },
+      {
+        "id": "326",
+        "text": "et il a proposé une autre interprétation, une autre solution."
+      },
+      {
+        "id": "327",
+        "text": "Cette solution rejoint aussi, sur un point, celle d’Abou al-Hassan :"
+      },
+      {
+        "id": "328",
+        "text": "la doctrine du tafwîd, par exemple."
+      },
+      {
+        "id": "329",
+        "text": "Le tafwîd et l’interprétation allégorique sont des doctrines communes aux acharites et aux maturidites."
+      },
+      {
+        "id": "330",
+        "text": "Mais ils divergent sur vingt-quatre points."
+      },
+      {
+        "id": "331",
+        "text": "Il a dit :"
+      },
+      {
+        "id": "332",
+        "text": "Au lieu de renvoyer la personne à votre propre savoir,"
+      },
+      {
+        "id": "333",
+        "text": "renvoyez-la au savoir de Dieu."
+      },
+      {
+        "id": "334",
+        "text": "À son savoir, à lui ? Renvoyez-la au savoir de Dieu."
+      },
+      {
+        "id": "335",
+        "text": "Au lieu de lui dire : « L’établissement sur le Trône est connu », "
+      },
+      {
+        "id": "336",
+        "text": "dites-lui : « Dieu sait mieux ce qu’Il entend par là. »"
+      },
+      {
+        "id": "337",
+        "text": "Ainsi, au lieu de la renvoyer à son propre savoir ou au vôtre,"
+      },
+      {
+        "id": "338",
+        "text": "renvoyez-la au savoir de Dieu,"
+      },
+      {
+        "id": "339",
+        "text": "et le problème est résolu."
+      },
+      {
+        "id": "345",
+        "text": "C’est ce qu’on appelle le tafwîd,"
+      },
+      {
+        "id": "346",
+        "text": "car cela revient à reconnaître"
+      },
+      {
+        "id": "347",
+        "text": "que ces paroles sont vraies : « Le Tout Miséricordieux S’est établi sur le Trône. »"
+      },
+      {
+        "id": "348",
+        "text": "Nous y croyons."
+      },
+      {
+        "id": "349",
+        "text": "C’est la vérité, sans le moindre doute,"
+      },
+      {
+        "id": "350",
+        "text": "et cela ne comporte assurément aucune imperfection,"
+      },
+      {
+        "id": "351",
+        "text": "ni rien qui implique une représentation corporelle de Dieu,"
+      },
+      {
+        "id": "352",
+        "text": "ni rien qui implique"
+      },
+      {
+        "id": "353",
+        "text": "qu’Il soit situé dans un lieu."
+      },
+      {
+        "id": "354",
+        "text": "Dieu, exalté soit-Il, existait avant"
+      },
+      {
+        "id": "355",
+        "text": "de créer le Trône,"
+      },
+      {
+        "id": "356",
+        "text": "et Il était comme Il a toujours été."
+      },
+      {
+        "id": "357",
+        "text": "La création ne Lui a attribué"
+      },
+      {
+        "id": "358",
+        "text": "aucune qualité nouvelle."
+      },
+      {
+        "id": "359",
+        "text": "Il est tel qu’Il a toujours été, exalté soit-Il."
+      },
+      {
+        "id": "360",
+        "text": "Ils seront tous sauvés, si Dieu le veut."
+      },
+      {
+        "id": "361",
+        "text": "Ce ne sont que des interprétations issues d’un effort de réflexion."
+      },
+      {
+        "id": "362",
+        "text": "Ils seront sauvés, si Dieu le veut. Louange à Dieu, ils seront sauvés."
+      },
+      {
+        "id": "363",
+        "text": "Les anciens aussi seront sauvés ; ils le seront tous."
+      },
+      {
+        "id": "364",
+        "text": "Tous ceux-là font partie des sunnites."
+      },
+      {
+        "id": "365",
+        "text": "Mais il faut simplement relever ici une remarque du cheikh :"
+      },
+      {
+        "id": "366",
+        "text": "certaines personnes"
+      },
+      {
+        "id": "367",
+        "text": "pensent que, parmi tous les musulmans"
+      },
+      {
+        "id": "368",
+        "text": "qui prient, il n’y a qu’un seul groupe sauvé,"
+      },
+      {
+        "id": "369",
+        "text": "et que tous les autres sont voués à la perdition."
+      },
+      {
+        "id": "370",
+        "text": "Or, dans les faits,"
+      },
+      {
+        "id": "371",
+        "text": "si vous leur demandez : « Quel est le groupe sauvé ? »"
+      },
+      {
+        "id": "372",
+        "text": "ils vous répondent : « C’est nous, les sunnites et la communauté. »"
+      },
+      {
+        "id": "373",
+        "text": "Mais le groupe sauvé n’existe pas en tant que tel :"
+      },
+      {
+        "id": "374",
+        "text": "au Jour de la Résurrection, les groupes n’existent plus."
+      },
+      {
+        "id": "375",
+        "text": "Ce jour-là, chacun sera seul ;"
+      },
+      {
+        "id": "376",
+        "text": "il n’y aura ni factions,"
+      },
+      {
+        "id": "377",
+        "text": "ni écoles, ni États, ni nationalités."
+      },
+      {
+        "id": "378",
+        "text": "Chacun se présentera devant Lui"
+      },
+      {
+        "id": "379",
+        "text": "seul, au Jour de la Résurrection."
+      },
+      {
+        "id": "380",
+        "text": "Le jour où chaque âme"
+      },
+      {
+        "id": "381",
+        "text": "viendra plaider pour elle-même,"
+      },
+      {
+        "id": "382",
+        "text": "où chaque âme sera pleinement rétribuée pour ce qu’elle aura fait,"
+      },
+      {
+        "id": "383",
+        "text": "sans qu’aucune ne soit lésée."
+      },
+      {
+        "id": "384",
+        "text": "Au Jour de la Résurrection, aucun proche ne viendra à la rescousse ;"
+      },
+      {
+        "id": "385",
+        "text": "nul ami intime ne pourra aider son ami intime."
+      },
+      {
+        "id": "386",
+        "text": "Le jour où l’homme fuira son frère, sa mère, son père, sa compagne et ses enfants,"
+      },
+      {
+        "id": "387",
+        "text": "chacun d’eux aura alors assez à faire pour lui-même."
+      },
+      {
+        "id": "388",
+        "text": "Dans la lecture d’Ibn Muhaysin de La Mecque, qui fait partie des quatre lectures ajoutées aux dix lectures canoniques,"
+      },
+      {
+        "id": "389",
+        "text": "on lit : « Chacun d’eux aura, ce jour-là, une affaire qui le concerne », "
+      },
+      {
+        "id": "390",
+        "text": "c’est-à-dire qui lui est propre."
+      },
+      {
+        "id": "391",
+        "text": "Puis Dieu, exalté soit-Il, dit :"
+      },
+      {
+        "id": "392",
+        "text": "« Le criminel voudra se racheter du châtiment de ce jour en donnant ses fils,"
+      },
+      {
+        "id": "393",
+        "text": "sa compagne, son frère, son clan qui l’abritait,"
+      },
+      {
+        "id": "394",
+        "text": "et tous ceux qui sont sur terre, pourvu que cela puisse le sauver. »"
+      },
+      {
+        "id": "395",
+        "text": "Il est donc impossible qu’un groupe entier soit sauvé,"
+      },
+      {
+        "id": "396",
+        "text": "tout comme il est impossible de condamner un groupe entier à l’impiété ou à l’égarement."
+      },
+      {
+        "id": "397",
+        "text": "Les groupes, c’est comme les nationalités, les tribus, les peuples et les couleurs de peau :"
+      },
+      {
+        "id": "398",
+        "text": "on y trouve des gens vertueux et d’autres qui ne le sont pas, même chez les djinns."
+      },
+      {
+        "id": "399",
+        "text": "Parmi les djinns, il y a des musulmans et d’autres qui ne le sont pas,"
+      },
+      {
+        "id": "400",
+        "text": "des gens vertueux et des injustes."
+      },
+      {
+        "id": "401",
+        "text": "Dieu nous l’a appris."
+      },
+      {
+        "id": "402",
+        "text": "Si les djinns présentent une telle diversité,"
+      },
+      {
+        "id": "403",
+        "text": "qu’en est-il des humains, des groupes et des écoles ?"
+      }
+    ]
+  }
+}

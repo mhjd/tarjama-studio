@@ -131,3 +131,45 @@ immuables sous `data/model_outputs/` :
 
 Les observations concernent ces accès OpenRouter. Aucune correction syntaxique
 silencieuse n'a été acceptée et aucun résultat échoué n'a été effacé.
+
+## Complément : résultat complet après reprises bornées
+
+À la demande du propriétaire, un échec de premier appel n'est plus considéré
+comme éliminatoire si la reprise conserve le travail et reste économiquement
+intéressante. Le bloc 2 a été réessayé seul : nouvel échec JSON, 22,384 s et
+0,00122702 $. Ses deux moitiés de 48 segments ont ensuite réussi, sans réparation,
+en 18,059 + 16,233 s pour 0,000943 + 0,000753375 $. Les trois autres blocs réussis
+n'ont pas été rappelés. L'assemblage est revalidé contre les 384 IDs dans l'ordre.
+
+| Résultat complet sur 15 min 40,7 s | Coût, échecs inclus | Temps fournisseur cumulé |
+|---|---:|---:|
+| GPT-6 Luna medium, 4 appels puis 3 reprises | 0,008144895 $ | 139,030 s |
+| DeepSeek V4.1 Flash, premier corpus entier | 0,0047347 $ | 250,456 s |
+
+Cela correspond à environ **0,0312 $/heure traduite** pour GPT-6 medium, contre
+0,0181 $ pour DeepSeek sur cet échantillon. GPT-6 termine ici plus vite, mais
+coûte environ 1,72 fois plus. Les temps sont les sommes des appels, **pas** le
+temps mural de l'expérience interrompue entre essais ni un délai de file réel ;
+le backoff applicatif viendrait s'y ajouter. Les coûts incluent les deux réponses
+invalides de cette stratégie découpée, pas les autres expériences indépendantes.
+Aucun appel web n'a été exécuté dans ces sept appels ; les outils étaient disponibles.
+Ces blocs de 96/48 segments durent environ 4/2 minutes : ils ne qualifient pas
+à eux seuls la nouvelle limite applicative de 10 minutes.
+
+Les 96 segments récupérés ont été relus. Le premier jet reste exploitable, avec
+des réserves : ID 151 « contester » durcit « trouver une difficulté/questionner » ;
+ID 144 ajoute explicitement « chercher à le comprendre », là où l'arabe dit plus
+sobrement ne pas s'imposer de peine. Les deux moitiés alternent Dieu/Allah et les
+formules de bénédiction. Les réserves déjà recensées dans les autres blocs restent.
+
+**Avis révisé : GPT-6 medium mérite une qualification applicative**, son format
+peut être récupéré à faible coût et son français est généralement plus naturel.
+Ce résultat n'établit pas un avantage qualitatif significatif universel, ni un
+modèle simultanément moins cher que DeepSeek. La production reste inchangée tant
+que l'intégration Responses et les reprises n'ont pas été qualifiées dans l'app.
+
+Les [preuves assemblées](../web/review/luna-comparison/recovery-results-20260924.json)
+référencent chaque source validée par empreinte. `recover.py --part 2 --output ...`
+rejoue exactement deux moitiés, avec contexte de deux segments, deux appels au
+maximum. Les originaux restent dans `luna-medium-retry-part2-20260924-01` et
+`luna-medium-halves-20260924-01`. Aucun résultat précédent n'est remplacé.

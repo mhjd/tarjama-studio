@@ -159,12 +159,15 @@ def main():
     parser.add_argument('--model', choices=MODELS, help='Only test this model')
     parser.add_argument('--api', choices=['chat', 'responses'], default='chat')
     parser.add_argument('--reasoning', choices=['none', 'low', 'medium', 'high'], default='none')
-    parser.add_argument('--case', choices=['capability', 'challenges-1', 'corpus', 'challenges-2'])
+    parser.add_argument('--case', choices=['capability', 'challenges-1', 'corpus', 'challenges-2',
+                                         'corpus-part-1', 'corpus-part-2', 'corpus-part-3', 'corpus-part-4'])
     args = parser.parse_args()
     target_models = [args.model] if args.model else MODELS
     if args.reasoning != 'none' and args.api == 'chat' and MODELS[0] in target_models:
         parser.error('GPT-6 Luna reasoning with tools requires --api responses')
-    if args.case and args.split_corpus: parser.error('--case and --split-corpus are separate modes')
+    if args.case and args.case.startswith('corpus-part-'): args.split_corpus = True
+    if args.case and args.split_corpus and not args.case.startswith('corpus-part-'):
+        parser.error('A whole-corpus case cannot be combined with --split-corpus')
     out = Path(args.output); out.mkdir(parents=True, exist_ok=False); out.chmod(0o700)
     prompt = (ROOT / 'web/backend/internal/studio/prompts/translate.txt').read_text()
     models = json.load(urllib.request.urlopen('https://openrouter.ai/api/v1/models', timeout=30))['data']
@@ -201,7 +204,8 @@ def main():
             {'id': 'name', 'arabic': 'منظمة الأمم المتحدة للتربية والعلم والثقافة'}]
         context_source = []
         if args.split_corpus:
-            start, end = index * chunk_size, min(len(corpus), (index + 1) * chunk_size)
+            part = int(case.rsplit('-', 1)[1]) - 1
+            start, end = part * chunk_size, min(len(corpus), (part + 1) * chunk_size)
             source = corpus[start:end]
             context_source = corpus[max(0, start - 2):start] + corpus[end:end + 2]
         rotation = index % len(target_models)

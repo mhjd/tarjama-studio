@@ -668,3 +668,13 @@ Le changement d'entrée conserve la barrière de génération contre les résult
 retardataires. Une deuxième requête d'upload doit être refusée avant de modifier
 la génération de la première. Voir `web/review/upload-choice-20260923/README.md`
 pour les tests et le diagnostic de l'incident média contemporain.
+
+### Décision utilisateur du 24 septembre — vitesse de lecture
+
+Le propriétaire demande désormais un réglage de ralentissement/accélération,
+avec raccourcis clavier, sans déplacer le centre des commandes −5 s / lecture /
++5 s. Cette décision remplace le choix précédent sans contrôle de vitesse.
+Le lecteur propose 0,5× à 2× (pas de 0,25×), par défaut 1× ; Maj + ↑ accélère
+et Maj + ↓ ralentit hors saisie. Le réglage occupe une ligne distincte de la
+barre de lecture. Le son conserve sa hauteur. Aucun changement de vitesse
+n'est appliqué au fichier exporté.

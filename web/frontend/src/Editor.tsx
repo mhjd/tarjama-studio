@@ -22,6 +22,9 @@ import {
 } from "./api";
 import { Drafts } from "./drafts";
 import { JobProgress } from "./JobProgress";
+const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const speedLabel = (value: number) => `${value.toLocaleString("fr-FR")}×`;
+
 export function Editor({
   initial,
   user,
@@ -51,6 +54,7 @@ export function Editor({
     [current, setCurrent] = useState(0),
     [seekVersion, setSeekVersion] = useState(0),
     [playing, setPlaying] = useState(false),
+    [playbackRate, setPlaybackRate] = useState(1),
     [follow, setFollow] = useState(true),
     [focused, setFocused] = useState(false),
     [expanded, setExpanded] = useState(false),
@@ -182,6 +186,13 @@ export function Editor({
         setError("Lecture impossible"),
       );
   }
+  function changeSpeed(rate: number) {
+    const v = media.current;
+    if (!v) return;
+    v.preservesPitch = true;
+    v.playbackRate = Math.max(0.5, Math.min(2, rate));
+    setPlaybackRate(v.playbackRate);
+  }
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
       const target = event.target;
@@ -190,13 +201,25 @@ export function Editor({
         event.altKey ||
         event.ctrlKey ||
         event.metaKey ||
-        event.shiftKey ||
         target.isContentEditable ||
         target.closest(
           'input, textarea, select, [contenteditable="true"], [role="slider"]',
         )
       )
         return;
+      if (event.shiftKey) {
+        if (
+          media.current &&
+          (event.key === "ArrowUp" || event.key === "ArrowDown")
+        ) {
+          event.preventDefault();
+          changeSpeed(
+            media.current.playbackRate +
+              (event.key === "ArrowUp" ? 0.25 : -0.25),
+          );
+        }
+        return;
+      }
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         if (!media.current) return;
         event.preventDefault();
@@ -680,6 +703,13 @@ export function Editor({
               ref={media}
               src={`/api/projects/${p.id}/media`}
               onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+              onLoadedMetadata={(e) => {
+                e.currentTarget.preservesPitch = true;
+                e.currentTarget.playbackRate = playbackRate;
+              }}
+              onRateChange={(e) =>
+                setPlaybackRate(e.currentTarget.playbackRate)
+              }
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
             />
@@ -731,6 +761,29 @@ export function Editor({
               seekTo(Number(e.target.value));
             }}
           />
+          <div className="playback-speed">
+            <label htmlFor="playback-speed">Vitesse</label>
+            <select
+              id="playback-speed"
+              value={playbackRate}
+              onChange={(e) => changeSpeed(Number(e.target.value))}
+              aria-describedby="speed-shortcuts"
+              aria-keyshortcuts="Shift+ArrowUp Shift+ArrowDown"
+            >
+              {!playbackSpeeds.includes(playbackRate) && (
+                <option value={playbackRate}>{speedLabel(playbackRate)}</option>
+              )}
+              {playbackSpeeds.map((rate) => (
+                <option key={rate} value={rate}>
+                  {speedLabel(rate)}
+                  {rate === 1 ? " · normale" : ""}
+                </option>
+              ))}
+            </select>
+            <span id="speed-shortcuts" className="speed-shortcuts">
+              Maj + ↑ accélérer · Maj + ↓ ralentir
+            </span>
+          </div>
         </section>
       )}
       {p.segments.length > 0 && (

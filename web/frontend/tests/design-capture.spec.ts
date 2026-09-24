@@ -63,7 +63,8 @@ for (const size of sizes)
     }
     if (size.width < 640) {
       const dock = await page.locator(".player").boundingBox();
-      expect(dock!.y).toBeGreaterThan(size.height - 180);
+      expect(dock!.y).toBeGreaterThan(size.height - 240);
+      expect(dock!.y + dock!.height).toBeLessThanOrEqual(size.height);
     }
     await page.screenshot({ path: `${dir}/01-correction.png` });
     let advances = 0;

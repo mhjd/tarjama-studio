@@ -612,7 +612,7 @@ textarea.project-title {
 }
 @media (max-width: 640px) {
   .editor.has-media {
-    padding-bottom: calc(160px + env(safe-area-inset-bottom));
+    padding-bottom: calc(220px + env(safe-area-inset-bottom));
   }
   .player {
     position: fixed;
@@ -703,10 +703,10 @@ textarea.project-title {
 
 @media (max-width: 640px) {
   html:has(.editor.has-media) {
-    scroll-padding-bottom: calc(160px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(220px + env(safe-area-inset-bottom));
   }
   html:has(.player.expanded) {
-    scroll-padding-bottom: calc(400px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(460px + env(safe-area-inset-bottom));
   }
   .segment,
   .editor:has(.player.expanded) .segment {
@@ -764,7 +764,7 @@ textarea.project-title {
     grid-column: 2;
   }
   .segment {
-    scroll-margin-top: 220px;
+    scroll-margin-top: 280px;
   }
 }
 
@@ -832,5 +832,48 @@ textarea.project-title {
 @media (max-width: 640px) {
   .next-step {
     scroll-margin-top: 16px;
+  }
+}
+
+/* A separate row keeps speed selection from shifting the transport center. */
+.playback-speed {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 13px;
+}
+.playback-speed label {
+  margin: 0;
+}
+.playback-speed select {
+  width: 144px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.speed-shortcuts {
+  color: #aebdb6;
+}
+@media (max-width: 640px) {
+  .player {
+    grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr);
+  }
+  .player .expand-player {
+    justify-self: end;
+  }
+  .player.expanded .player-controls {
+    grid-column: 2;
+    grid-template-columns: 44px 48px 44px;
+  }
+  .player.expanded .playback-time {
+    grid-column: 1 / -1;
+  }
+  .speed-shortcuts {
+    display: none;
   }
 }

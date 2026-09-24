@@ -120,3 +120,30 @@ func TestCancellation(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestHTTP200ProviderErrorDoesNotBecomeCompletion(t *testing.T) {
+	for _, code := range []string{"429", "502", "401", "402", `"503"`} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Retry-After", "37")
+			fmt.Fprintf(w, `{"error":{"code":%s,"message":"private upstream detail"},"choices":[{"finish_reason":"stop","message":{"content":"do not accept"}}]}`, code)
+		}))
+		runner := Runner{Client: server.Client(), Endpoint: server.URL, Model: "allowed"}
+		out, err := runner.Run(context.Background(), "fixture", "", nil, nil)
+		server.Close()
+		var failure *ModelHTTPError
+		if !errors.As(err, &failure) || failure.RetryAfter != "37" || out.Text != "" || strings.Contains(err.Error(), "private") {
+			t.Fatalf("code=%s err=%v", code, err)
+		}
+	}
+}
+func TestHTTP200UnknownErrorRemainsExplicit(t *testing.T) {
+	for _, body := range []string{`{"error":{"message":"private detail"}}`, `{"error":{"code":"unexpected","message":"private detail"}}`} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, body) }))
+		runner := Runner{Client: server.Client(), Endpoint: server.URL, Model: "allowed"}
+		out, err := runner.Run(context.Background(), "fixture", "", nil, nil)
+		server.Close()
+		if err == nil || err.Error() != "Erreur OpenRouter sans statut" || out.Text != "" {
+			t.Fatal(out, err)
+		}
+	}
+}

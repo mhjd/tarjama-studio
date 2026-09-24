@@ -54,6 +54,16 @@ export async function openReviewProject(page,mark,sourceVideo,name){
   if(!['preparing','transcribing','cleaning','arabic','translating','review','ready'].includes(projects[0].stage))throw Error('Unsupported review stage');
   await page.locator('button.project').click();
   await mark('resumed');
+  if(process.env.REVIEW_RETRY_FAILED==='1'){
+   const response=await page.request.get('/api/projects/'+projects[0].id);
+   if(!response.ok())throw Error('Cannot inspect failed review job');
+   const data=await response.json();
+   const failed=data.jobs.filter(j=>j.state==='failed');
+   if(failed.length!==1)throw Error('Explicit retry requires exactly one failed job');
+   const retry=page.getByRole('button',{name:'Réessayer',exact:true});
+   await retry.click();await expect(retry).toBeHidden();
+   await mark('retried');
+  }
   return projects[0].stage;
  }
  await page.getByRole('button',{name:'+ Nouvelle vidéo'}).click();

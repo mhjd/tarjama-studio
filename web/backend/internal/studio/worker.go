@@ -221,6 +221,14 @@ func jobFailureReason(err error) string {
 		return "conflict"
 	}
 	switch err.Error() {
+	case "Réponse OpenRouter invalide":
+		return "text_invalid_envelope"
+	case "Réponse modèle vide":
+		return "text_empty"
+	case "Erreur OpenRouter sans statut":
+		return "provider_unknown_status"
+	case "Outil client inattendu : exécution réservée à OpenRouter":
+		return "server_tools_unexpected"
 	case "Réponse IA incomplète":
 		return "text_incomplete"
 	case "Réponse IA mal alignée":
@@ -404,7 +412,7 @@ func (w *Worker) transcribe(ctx context.Context, j Job) error {
 // completed chunks. Refusals and unclassified failures keep their original policy.
 func textResponseFailure(j Job, err error) error {
 	switch jobFailureReason(err) {
-	case "text_incomplete", "text_misaligned", "text_invalid_json", "text_invalid_marker", "text_truncated":
+	case "text_incomplete", "text_misaligned", "text_invalid_json", "text_invalid_marker", "text_truncated", "text_invalid_envelope", "text_empty":
 		log.Printf("invalid text response job=%s kind=%s attempt=%d reason=%s", j.ID, j.Kind, j.Attempts, jobFailureReason(err))
 		message := "Le service a renvoyé une réponse incomplète ou mal structurée. Les morceaux terminés sont conservés. "
 		if j.Attempts < 2 {

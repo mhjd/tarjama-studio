@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -104,8 +105,30 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 		return out, &ModelHTTPError{response.StatusCode, response.Header.Get("Retry-After")}
 	}
 	raw, e := io.ReadAll(io.LimitReader(response.Body, 4*1024*1024+1))
-	if e != nil || len(raw) > 4*1024*1024 {
-		return out, errors.New("Réponse modèle illisible ou trop grande")
+	if e != nil {
+		return out, &ConnectionError{Service: "modèle"}
+	}
+	if len(raw) > 4*1024*1024 {
+		return out, errors.New("Réponse fournisseur trop grande")
+	}
+	// OpenRouter can report a provider error after sending HTTP 200 headers.
+	// Inspect only the numeric status; never expose its message or metadata.
+	var failure struct {
+		Error json.RawMessage `json:"error"`
+	}
+	if json.Unmarshal(raw, &failure) != nil {
+		return out, errors.New("Réponse OpenRouter invalide")
+	}
+	if len(failure.Error) > 0 && string(failure.Error) != "null" {
+		var detail struct {
+			Code json.Number `json:"code"`
+		}
+		if json.Unmarshal(failure.Error, &detail) == nil {
+			if status, err := strconv.Atoi(string(detail.Code)); err == nil && status >= 400 && status <= 599 {
+				return out, &ModelHTTPError{status, response.Header.Get("Retry-After")}
+			}
+		}
+		return out, errors.New("Erreur OpenRouter sans statut")
 	}
 	var envelope struct {
 		ID      string `json:"id"`

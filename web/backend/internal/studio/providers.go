@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -151,6 +152,7 @@ func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, 
 			return result, &ProviderError{Public: connectionError.Error() + " ; reprise automatique.", Temporary: true}
 		}
 		if errors.As(err, &modelError) {
+			log.Printf("model request failed status=%d", modelError.Status)
 			failure := providerError(&http.Response{StatusCode: modelError.Status, Header: http.Header{"Retry-After": []string{modelError.RetryAfter}}})
 			return result, failure
 		}

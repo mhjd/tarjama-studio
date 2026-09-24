@@ -27,7 +27,7 @@ for(const device of selectedDevices){
   try{
    const data=await response.json();
    const failure=data.jobs.find(j=>j.state==='failed');
-   if(failure)terminalFailure='Real job failed: '+failure.kind+' at '+failure.progress+'%';
+   terminalFailure=failure?'Real job failed: '+failure.kind+' at '+failure.progress+'%':'';
    const status=JSON.stringify({stage:data.project.stage,duration_ms:data.project.duration_ms,segments:data.project.segments.length,jobs:data.jobs.filter(j=>j.state!=='succeeded').map(j=>({kind:j.kind,state:j.state,progress:j.progress}))});
    if(status!==previousStatus){console.log('PROGRESS '+name+' '+data.project.stage+' '+data.jobs.filter(j=>j.state!=='succeeded').map(j=>j.kind+':'+j.state+':'+j.progress).join(' '));previousStatus=status;}
   }catch{}

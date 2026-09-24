@@ -127,3 +127,9 @@ L’export est transmis au stockage de preuve depuis le fichier téléchargé pa
 navigateur, sans `saveAs` créant une deuxième copie dans le tmpfs. La limite de
 fichier et les limites de mémoire restent applicables. Les contrôles de durée,
 dimensions et lecture de l’export sont inchangés.
+
+Après correction d’un défaut et examen d’un job réellement échoué, ajouter
+`REVIEW_RETRY_FAILED=1` à cette reprise. Le navigateur exige exactement un job
+échoué, clique une seule fois sur « Réessayer » et reprend la surveillance. Ce
+mode est explicite : un échec nouveau n’est pas masqué ni réessayé en boucle par
+le recorder. Les reprises applicatives continuent de suivre la file persistante.

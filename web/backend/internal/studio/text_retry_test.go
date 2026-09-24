@@ -12,7 +12,7 @@ import (
 )
 
 func TestTextRetriesBoundedAndFailClosed(t *testing.T) {
-	for _, reason := range []string{"Réponse IA incomplète", "Réponse IA mal alignée", "Réponse IA invalide", "Réponse IA tronquée", "Marqueur technique interdit"} {
+	for _, reason := range []string{"Réponse OpenRouter invalide", "Réponse modèle vide", "Réponse IA incomplète", "Réponse IA mal alignée", "Réponse IA invalide", "Réponse IA tronquée", "Marqueur technique interdit"} {
 		for attempt := 0; attempt < 4; attempt++ {
 			var p *ProviderError
 			if !errors.As(textResponseFailure(Job{Attempts: attempt}, errors.New(reason)), &p) || p.Temporary != (attempt < 2) {
@@ -140,6 +140,96 @@ func TestMalformedTextQueueRecoveryAndAttemptLimit(t *testing.T) {
 				if jobs[0].State != "failed" || provider.calls != 3 || final.Stage != "cleaning" || final.Segments[0].Arabic != p.Segments[0].Arabic {
 					t.Fatal("unbounded retry or partial publish", jobs, provider.calls)
 				}
+			}
+		})
+	}
+}
+
+func TestHTTP200FailurePreservesCompletedTranslation(t *testing.T) {
+	for _, broken := range []string{`{"error":{"code":502,"message":"private diagnostic"}}`, `{"choices":[{"finish_reason":"stop","message":{"content":""}}]}`} {
+		t.Run(broken, func(t *testing.T) {
+			s := testStore(t)
+			ctx := context.Background()
+			owner, p := fixture(t, s)
+			p.Segments[1].Start = 600001
+			p.Segments[1].End = 602001
+			_, err := s.Mutate(ctx, owner, p.ID, func(q *Project, tx pgx.Tx) error {
+				*q = p
+				q.Stage = "translating"
+				return enqueue(ctx, tx, owner, *q, "translate")
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			calls := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				var request struct {
+					Messages []struct {
+						Content string `json:"content"`
+					} `json:"messages"`
+				}
+				if json.NewDecoder(r.Body).Decode(&request) != nil {
+					t.Error("bad request")
+					return
+				}
+				var input struct {
+					Segments []struct {
+						ID string `json:"id"`
+					} `json:"segments"`
+				}
+				if json.Unmarshal([]byte(request.Messages[1].Content), &input) != nil || len(input.Segments) != 1 {
+					t.Error("bad chunk")
+					return
+				}
+				want := p.Segments[0].ID
+				if calls > 1 {
+					want = p.Segments[1].ID
+				}
+				if input.Segments[0].ID != want {
+					t.Error("completed chunk replayed")
+				}
+				if calls == 2 {
+					fmt.Fprint(w, broken)
+					return
+				}
+				content, _ := json.Marshal(map[string]any{"segments": []map[string]string{{"id": want, "text": "Bonjour"}}})
+				fmt.Fprintf(w, `{"choices":[{"finish_reason":"stop","message":{"content":%q}}]}`, string(content))
+			}))
+			defer server.Close()
+			provider := NewProviders()
+			provider.TextURL = server.URL
+			worker := Worker{Store: s, Config: Config{OpenRouterKey: "fixture"}, Providers: provider}
+			for i := 0; i < 2; i++ {
+				if _, err = worker.Once(ctx); err != nil {
+					t.Fatal(err)
+				}
+			}
+			jobs, _ := s.Jobs(ctx, owner, p.ID)
+			saved, _ := s.Chunks(ctx, Job{ID: jobs[0].ID})
+			if jobs[0].State != "waiting_provider" || len(saved) != 1 {
+				t.Fatal("lost chunk or terminal failure", jobs, len(saved))
+			}
+			if worked, _ := worker.Once(ctx); worked {
+				t.Fatal("immediate retry")
+			}
+			current, _ := s.Get(ctx, owner, p.ID)
+			if current.Stage != "translating" || current.Segments[0].French != p.Segments[0].French {
+				t.Fatal("partial translation published")
+			}
+			if _, err = s.DB.Exec(ctx, "UPDATE jobs SET next_attempt_at=now(); UPDATE cooldowns SET until_at=now()"); err != nil {
+				t.Fatal(err)
+			}
+			for i := 0; i < 2; i++ {
+				if _, err = worker.Once(ctx); err != nil {
+					t.Fatal(err)
+				}
+			}
+			jobs, _ = s.Jobs(ctx, owner, p.ID)
+			after, _ := s.Chunks(ctx, Job{ID: jobs[0].ID})
+			current, _ = s.Get(ctx, owner, p.ID)
+			if calls != 3 || jobs[0].State != "succeeded" || len(after) != 2 || string(after[0]) != string(saved[0]) || current.Stage != "review" || current.Segments[1].French != "Bonjour" {
+				t.Fatal("recovery did not preserve completed work", calls, jobs, current.Stage)
 			}
 		})
 	}

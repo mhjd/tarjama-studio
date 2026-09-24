@@ -1,5 +1,16 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **Décision du 24 septembre 2026 — blocs de texte de 10 minutes.**
+> La correction arabe et la traduction utilisent désormais un maximum cible de
+> 10 minutes par appel, aux frontières des sous-titres, avec les gardes de volume
+> existantes (600 segments / 64 000 octets arabes). Les anciennes mentions de
+> 20 minutes ci-dessous sont historiques et remplacées par cette décision.
+> Un sous-titre individuel n'est jamais tronqué. Les blocs déjà enregistrés
+> gardent leurs limites, même anciennes ; seuls les blocs restants sont redécoupés.
+> Les réponses invalides peuvent déclencher une reprise bornée sur des blocs
+> plus petits. L'ASR conserve son découpage distinct de 10 minutes avec chevauchement.
+
+
 **Dernière livraison UI — 24 septembre, 12:12 UTC :** navigation entre étapes
 précédentes et courante, traduction inaccessible avant validation de l’arabe,
 attente sans champs, relecture arabe seule pendant la traduction et export

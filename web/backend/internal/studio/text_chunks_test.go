@@ -17,15 +17,15 @@ func twentyMinuteSegments() []Segment {
 	}
 	return s
 }
-func TestTwentyMinuteTextChunks(t *testing.T) {
+func TestTenMinuteTextChunks(t *testing.T) {
 	s := twentyMinuteSegments()
 	chunks := TextChunks(s)
-	if len(chunks) != 1 || len(chunks[0]) != 400 {
-		t.Fatalf("20 minutes split too early: %d chunks", len(chunks))
+	if len(chunks) != 2 || len(chunks[0]) != 200 || len(chunks[1]) != 200 {
+		t.Fatalf("20 minutes must make two 10-minute chunks: %d chunks", len(chunks))
 	}
 	s = append(s, Segment{ID: "next", Start: 1200000, End: 1203000, Arabic: "التالي"})
 	chunks = TextChunks(s)
-	if len(chunks) != 2 || len(chunks[1]) != 1 {
+	if len(chunks) != 3 || len(chunks[2]) != 1 {
 		t.Fatal("boundary lost")
 	}
 	// Dense/very short segments must still respect count and byte guards.
@@ -61,13 +61,20 @@ func TestResumeOldTextBoundaries(t *testing.T) {
 	old, _ := provider.Text(context.Background(), "", "translate", s[:120], nil)
 	raw, _ := json.Marshal(old)
 	chunks, err := resumeTextChunks(s, []json.RawMessage{raw})
-	if err != nil || len(chunks) != 2 || len(chunks[0]) != 120 || len(chunks[1]) != 280 {
+	if err != nil || len(chunks) != 3 || len(chunks[0]) != 120 || len(chunks[1]) != 200 || len(chunks[2]) != 80 {
 		t.Fatalf("legacy checkpoint: %v %d", err, len(chunks))
 	}
 	rest, _ := provider.Text(context.Background(), "", "translate", s[120:], nil)
 	next, _ := json.Marshal(rest)
 	if chunks, err = resumeTextChunks(s, []json.RawMessage{raw, next}); err != nil || len(chunks) != 2 {
 		t.Fatal("completed results lost", err)
+	}
+	// A previously completed 20-minute chunk is not replayed after the policy change.
+	legacy, _ := provider.Text(context.Background(), "", "translate", s, nil)
+	legacyRaw, _ := json.Marshal(legacy)
+	extended := append(append([]Segment{}, s...), Segment{ID: "next", Start: 1200000, End: 1203000, Arabic: "التالي"})
+	if chunks, err = resumeTextChunks(extended, []json.RawMessage{legacyRaw}); err != nil || len(chunks) != 2 || len(chunks[0]) != 400 || len(chunks[1]) != 1 {
+		t.Fatal("completed legacy chunk replayed", err)
 	}
 	old.Segments[0].ID = "unknown"
 	invalid, _ := json.Marshal(old)

@@ -58,10 +58,10 @@ La recette du moteur générique `vps-preview` et ses prérequis sont décrits d
 tous les services arrêtés ; aucune activation sans images privées, secrets,
 identité, réseau et sandbox qualifiés.
 
-### Découpage texte et modèle (23 septembre 2026)
+### Découpage texte et modèle (24 septembre 2026)
 
-Correction et traduction utilisent Gemini 3.5 Flash-Lite. Les chunks visent
-20 minutes, aux frontières des segments, avec des garde-fous de 600 segments et
+Correction et traduction utilisent DeepSeek V4.1 Flash via OpenRouter, avec les
+outils Parallel. Les chunks visent 10 minutes, aux frontières des segments, avec des garde-fous de 600 segments et
 64 000 octets arabes. Le budget de réponse est de 32 768 tokens ; une réponse
 tronquée ou mal alignée est toujours refusée. La limite temporelle est une cible,
 les entrées denses peuvent être coupées plus tôt. Les appels restent bornés à

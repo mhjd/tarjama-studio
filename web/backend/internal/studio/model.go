@@ -119,10 +119,10 @@ func VideoURL(raw string) (string, error) {
 	return "https://www.youtube.com/watch?v=" + video, nil
 }
 
-// Text chunks target twenty minutes, independently of the ten-minute ASR chunks.
+// Text chunks target ten minutes; ASR keeps its own ten-minute overlap policy.
 // Dense inputs may stop earlier: keep room for JSON IDs and expanded French text
 // within the provider output budget. These are byte/count guards, not a tokenizer.
-const textChunkDurationMS = 20 * 60 * 1000
+const textChunkDurationMS = 10 * 60 * 1000
 const textChunkMaxSegments = 600
 const textChunkMaxBytes = 64000
 

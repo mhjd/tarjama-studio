@@ -35,7 +35,7 @@ func TestTextRetryPreservesSavedBoundaries(t *testing.T) {
 		t.Fatal(err)
 	}
 	chunks = smallerTextRetry(chunks, 1, 1)
-	if len(chunks) != 3 || len(chunks[0]) != 120 || len(chunks[1]) != 140 {
+	if len(chunks) != 4 || len(chunks[0]) != 120 || len(chunks[1]) != 100 {
 		t.Fatal("boundaries", len(chunks))
 	}
 	n := 0
@@ -53,7 +53,7 @@ func TestTextRetryPreservesSavedBoundaries(t *testing.T) {
 	recovered, _ := (&scriptedProvider{}).Text(context.Background(), "", "cleanup", chunks[1], nil)
 	next, _ := json.Marshal(recovered)
 	resumed, err := resumeTextChunks(source, []json.RawMessage{raw, next})
-	if err != nil || len(resumed) != 3 || resumed[2][0].ID != source[260].ID {
+	if err != nil || len(resumed) != 3 || resumed[2][0].ID != source[220].ID {
 		t.Fatal("restart replayed completed work", err)
 	}
 	if got := smallerTextRetry([][]Segment{{source[0]}}, 0, 2); len(got) != 1 || len(got[0]) != 1 {

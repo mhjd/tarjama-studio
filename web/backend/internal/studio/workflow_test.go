@@ -243,13 +243,13 @@ func TestWorkerResumesLegacyTextChunkAfterUpgrade(t *testing.T) {
 	}
 	provider.calls = 0
 	worker := Worker{Store: s, Config: Config{OpenRouterKey: "fixture"}, Providers: provider}
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		if worked, e := worker.Once(ctx); e != nil || !worked {
 			t.Fatal(worked, e)
 		}
 	}
 	actual, err := s.Get(ctx, owner, p.ID)
-	if err != nil || actual.Stage != "review" || len(actual.Segments) != 400 || provider.calls != 1 {
+	if err != nil || actual.Stage != "review" || len(actual.Segments) != 400 || provider.calls != 2 {
 		t.Fatalf("resume failed: stage=%s calls=%d err=%v", actual.Stage, provider.calls, err)
 	}
 	for i, x := range actual.Segments {
@@ -258,7 +258,7 @@ func TestWorkerResumesLegacyTextChunkAfterUpgrade(t *testing.T) {
 		}
 	}
 	saved, err := s.Chunks(ctx, oldJob)
-	if err != nil || len(saved) != 2 {
+	if err != nil || len(saved) != 3 {
 		t.Fatal("old completed chunk lost", err)
 	}
 }

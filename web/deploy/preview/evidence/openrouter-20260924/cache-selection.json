@@ -1,0 +1,1097 @@
+[
+  {
+    "CreatedAt": "2026-09-23 17:37:54.79812757 +0000 UTC",
+    "Description": "[text-benchmark 2/2] COPY --chown=10001:10001 review/translation-lite/*.json /benchmark-inputs/",
+    "ID": "btja2bym2yc3lpkdkskunxliq",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "medq97nu7t8cixf17nks8xetn"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "64.5kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 19:10:24.281492821 +0000 UTC",
+    "Description": "[text-benchmark 2/2] COPY --chown=10001:10001 review/translation-lite/*.json /benchmark-inputs/",
+    "ID": "oxef6si0gnudaupjbtesxtn82",
+    "LastUsedAt": "15 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "2nif3ucqbfyxq5rt63e07tihn"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "68.96kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 08:51:15.284082674 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "p34fxjusex4m3x4jlga0vjk2s",
+    "LastUsedAt": "22 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "qnh9tj1m2mlxwawhntpknkqei"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "310.6kB",
+    "Type": "regular",
+    "UsageCount": 4
+  },
+  {
+    "CreatedAt": "2026-09-23 16:23:08.053180388 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "joxh2r2kb4f75injb6brksqbk",
+    "LastUsedAt": "18 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "s5y9xitgrwqb0x5qgfgx0255w"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "315.3kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 16:52:04.784214979 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "iq76qa4gbfzortct1pczpkma0",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "vsd8ezzkyxtxaauhjpu73o160"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "315.5kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:10:43.370175975 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "rklxi2xm2ppn35c645dgaa7nl",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "voruya59uodvm3cd2uz92ytg0"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "315.5kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 16:38:34.773853312 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "1evjhixz8lcdrnf33bk8j5two",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "s5y9xitgrwqb0x5qgfgx0255w"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "315.5kB",
+    "Type": "regular",
+    "UsageCount": 3
+  },
+  {
+    "CreatedAt": "2026-09-23 21:53:39.621782136 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "fxp1gj3d30m37qxf1lx3oyut0",
+    "LastUsedAt": "12 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "05ggaektwzl8tyi7371fekm4d"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "336kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:14:45.414092621 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "uo9hu80k306bi6ap11dsbejlq",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "l6ip4rupmwydfwjg33uy03qor"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "336.3kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:21:43.635105786 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "6cnzysq6ori2kopbo1h32cgy9",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "cl9i56f7hg5f0m9dx891gkoyf"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "336.3kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:22:18.920689057 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "lfrykk1n4ifncyi6muwt7r5mh",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "33t2thwetvscdfmdljpif409d"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "336.3kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:18:15.617932962 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "df4jc3c890d9h3vhyofzb0ni9",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "sajrox8pjqrpnjrn04hnu3obs"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "336.9kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:01:59.095206362 +0000 UTC",
+    "Description": "[stage-1 2/2] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "8iomlk0y7bcatafwx4rrr6krv",
+    "LastUsedAt": "13 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "steh1wwf7o1nne3nvwdtsya9v"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "338.9kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:04:32.019630064 +0000 UTC",
+    "Description": "[stage-1 2/2] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "pzip88k7l2sr4cbycxh3h0vr9",
+    "LastUsedAt": "13 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "steh1wwf7o1nne3nvwdtsya9v"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "339kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:18:31.322717969 +0000 UTC",
+    "Description": "[stage-1 2/2] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "nbg6ljzz95q3ocpml8d5f7dle",
+    "LastUsedAt": "13 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "steh1wwf7o1nne3nvwdtsya9v"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "340kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:30:36.48392171 +0000 UTC",
+    "Description": "[api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "by6xoi3xy3of3iym8w19bdq8h",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "mf98qb394ogdic79j3tfbbhy6"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "341.8kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:35:27.192726874 +0000 UTC",
+    "Description": "[stage-1 2/2] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "ga5ibgzvodjrsaqqvwhwyn5r7",
+    "LastUsedAt": "13 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "steh1wwf7o1nne3nvwdtsya9v"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "344kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:38:23.558302023 +0000 UTC",
+    "Description": "[stage-1 2/2] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "4ui0e4mezd3m6ft955swxdso7",
+    "LastUsedAt": "13 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "steh1wwf7o1nne3nvwdtsya9v"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "344.1kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 22:52:35.605978253 +0000 UTC",
+    "Description": "[stage-1 2/2] COPY --from=frontend /src/frontend/dist /app/frontend",
+    "ID": "lqn2qt2sjezp6ajx6pb55user",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "t49egdw474u1xp0mfcq9tjfai"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "344.5kB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 10:00:44.616729199 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /research-check ./cmd/research-check",
+    "ID": "lwhjz0h2ipqfccxezy2s5baq5",
+    "LastUsedAt": "8 minutes ago",
+    "Mutable": true,
+    "Parents": [
+      "uk15xc5rulq9ou5l9e2rfg5ma"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "10.99MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 09:59:48.810253443 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /research-check ./cmd/research-check",
+    "ID": "3llygtwmmabavuwk9t51i24cw",
+    "LastUsedAt": "9 minutes ago",
+    "Mutable": true,
+    "Parents": [
+      "qgmssni383ctrl9j7n3flavoa"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "11MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 10:01:09.686507425 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /research-check ./cmd/research-check",
+    "ID": "hoql4b3avlbqmrkni0adndvem",
+    "LastUsedAt": "8 minutes ago",
+    "Mutable": true,
+    "Parents": [
+      "dwx46js994yybapmcmnxcffsw"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "11MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 09:36:27.647286779 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /research-check ./cmd/research-check",
+    "ID": "w424ea1as4i9yjx76ky3saxey",
+    "LastUsedAt": "32 minutes ago",
+    "Mutable": true,
+    "Parents": [
+      "no97w1b0qcpxnakti6e4jq1l6"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "11.02MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 09:59:50.685351775 +0000 UTC",
+    "Description": "[research-check 3/3] COPY --from=research-check-build /research-check /usr/local/bin/research-check",
+    "ID": "ztt4ioii1cfbnsw7rsrxcunpu",
+    "LastUsedAt": "9 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "j95mm2wq9q5nvmhvxn4bpnpb4"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.7MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 10:00:46.490309586 +0000 UTC",
+    "Description": "[research-check 3/3] COPY --from=research-check-build /research-check /usr/local/bin/research-check",
+    "ID": "pjtt95rllo3t83y5a2njo8cl6",
+    "LastUsedAt": "8 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "j95mm2wq9q5nvmhvxn4bpnpb4"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.7MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 09:36:29.478693059 +0000 UTC",
+    "Description": "[research-check 3/3] COPY --from=research-check-build /research-check /usr/local/bin/research-check",
+    "ID": "lvit0dlrabxaxdaj2fwgpdmmb",
+    "LastUsedAt": "32 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "j95mm2wq9q5nvmhvxn4bpnpb4"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.75MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:14:44.555028748 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "4de0i9fjm5aozpbmgtvhgezs3",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": true,
+    "Parents": [
+      "zeyxyq029e5eyjwur8pljxbl8"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.76MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:59:17.997094296 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "5hf9di1hizjpi3rzs4gv0q0yl",
+    "LastUsedAt": "12 hours ago",
+    "Mutable": true,
+    "Parents": [
+      "kqfyqdrr76bhxafwimeqmcffl"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.76MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:53:38.700771096 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "l9gupzyogfmyktyxdlq61q62f",
+    "LastUsedAt": "12 hours ago",
+    "Mutable": true,
+    "Parents": [
+      "i7tu8bh7y1t00i0q29aedrglq"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.76MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:30:35.519182194 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "c0e0tip6t0odq4wivninkf594",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": true,
+    "Parents": [
+      "i94tzqbskb79cuh9gdm8ivs02"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.78MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:18:13.905141768 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "ndiw847ujgug2obcn79lze1b7",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": true,
+    "Parents": [
+      "wj1bmufpfi5nxa01txios5f47"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.79MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:25:02.597449159 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "slxi2opz5ci4janh6wa1547gy",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": true,
+    "Parents": [
+      "sph56lc3vhw18qcgxdvy9xsmv"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.79MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:49:07.807601901 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "tlzvduyyx4834o1z6bxwsxblf",
+    "LastUsedAt": "About an hour ago",
+    "Mutable": true,
+    "Parents": [
+      "okpwseachvpd9c13z5099d1ii"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.79MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:21:42.719483565 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "udxk97elzuvftasmavpw5vevb",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": true,
+    "Parents": [
+      "vgz0nvwkx5z7wcwff8c9xga9n"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.79MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:22:18.016017937 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic",
+    "ID": "vn6shwfkjt1arxqafmth87hyv",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": true,
+    "Parents": [
+      "v57h3eckcsh22sxldu8504lww"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.79MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 17:36:29.013721773 +0000 UTC",
+    "Description": "[text-benchmark 1/1] COPY --from=text-benchmark-build /text-benchmark /usr/local/bin/text-benchmark",
+    "ID": "medq97nu7t8cixf17nks8xetn",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "steh1wwf7o1nne3nvwdtsya9v"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.82MB",
+    "Type": "regular",
+    "UsageCount": 2
+  },
+  {
+    "CreatedAt": "2026-09-23 19:10:24.258359376 +0000 UTC",
+    "Description": "[text-benchmark 1/2] COPY --from=text-benchmark-build /text-benchmark /usr/local/bin/text-benchmark",
+    "ID": "2nif3ucqbfyxq5rt63e07tihn",
+    "LastUsedAt": "15 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "k0kaktob6ej4qvyk76et3l3sa"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "16.84MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:18:15.936996443 +0000 UTC",
+    "Description": "[upload-release 1/1] COPY --from=diagnostic-build /media-diagnostic /usr/local/bin/media-diagnostic",
+    "ID": "jxd5ml2j4xhq58a6pg9jy6k5v",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "df4jc3c890d9h3vhyofzb0ni9"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "24.1MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:30:37.634941906 +0000 UTC",
+    "Description": "[upload-release 1/1] COPY --from=diagnostic-build /media-diagnostic /usr/local/bin/media-diagnostic",
+    "ID": "wbn8wp4aj91e7queu4izqn4c0",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "by6xoi3xy3of3iym8w19bdq8h"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "24.1MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:14:46.429568436 +0000 UTC",
+    "Description": "[upload-release 1/1] COPY --from=diagnostic-build /media-diagnostic /usr/local/bin/media-diagnostic",
+    "ID": "naojfs5ywb8v3exen6pel4y3q",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "uo9hu80k306bi6ap11dsbejlq"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "24.1MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:21:44.634595625 +0000 UTC",
+    "Description": "[upload-release 1/1] COPY --from=diagnostic-build /media-diagnostic /usr/local/bin/media-diagnostic",
+    "ID": "qo4ukq0p54w9zs5mk2kgi35zx",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "6cnzysq6ori2kopbo1h32cgy9"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "24.1MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:22:20.020321414 +0000 UTC",
+    "Description": "[upload-release 1/1] COPY --from=diagnostic-build /media-diagnostic /usr/local/bin/media-diagnostic",
+    "ID": "t1dp64i6ddfxfzlnkfw78ovdq",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "lfrykk1n4ifncyi6muwt7r5mh"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "24.1MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:53:40.886583654 +0000 UTC",
+    "Description": "[upload-release 1/1] COPY --from=diagnostic-build /media-diagnostic /usr/local/bin/media-diagnostic",
+    "ID": "osbhc26mg546csn4aymzjbh98",
+    "LastUsedAt": "12 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "fxp1gj3d30m37qxf1lx3oyut0"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "24.1MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 16:40:03.861718827 +0000 UTC",
+    "Description": "[ui-review 1/1] COPY --from=ui-review-build /ui-review /usr/local/bin/ui-review",
+    "ID": "oitli7swswp4zd8hr7j3v7f3q",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "1evjhixz8lcdrnf33bk8j5two"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "26.91MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 16:38:35.85397209 +0000 UTC",
+    "Description": "[ui-review 1/1] COPY --from=ui-review-build /ui-review /usr/local/bin/ui-review",
+    "ID": "j40l37ogaalvwtnsrogpc5ge2",
+    "LastUsedAt": "18 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "1evjhixz8lcdrnf33bk8j5two"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "26.92MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 16:52:05.827960702 +0000 UTC",
+    "Description": "[ui-review 1/1] COPY --from=ui-review-build /ui-review /usr/local/bin/ui-review",
+    "ID": "mtez86iwba4mvupo8vbjiwbl1",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "iq76qa4gbfzortct1pczpkma0"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "26.92MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 08:51:15.267007929 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "qnh9tj1m2mlxwawhntpknkqei",
+    "LastUsedAt": "25 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "ysn9nk3drvsvhsehfxwqp7umf"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.48MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 16:52:04.757117592 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "vsd8ezzkyxtxaauhjpu73o160",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "tp27cldnuuhb9ege7e438qr4g"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.49MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 16:23:08.034569893 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "s5y9xitgrwqb0x5qgfgx0255w",
+    "LastUsedAt": "18 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "ysn9nk3drvsvhsehfxwqp7umf"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.49MB",
+    "Type": "regular",
+    "UsageCount": 2
+  },
+  {
+    "CreatedAt": "2026-09-23 17:10:43.350286344 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "voruya59uodvm3cd2uz92ytg0",
+    "LastUsedAt": "17 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "tp27cldnuuhb9ege7e438qr4g"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.5MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:53:39.586045874 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "05ggaektwzl8tyi7371fekm4d",
+    "LastUsedAt": "12 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "tmn4r6j86l20nwboi6fima6gt"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.5MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:14:45.393477382 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "l6ip4rupmwydfwjg33uy03qor",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "s3v51x2mru2jomeq1thrpja38"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.51MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:21:43.610270063 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "cl9i56f7hg5f0m9dx891gkoyf",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "s3v51x2mru2jomeq1thrpja38"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.52MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:22:18.892315415 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "33t2thwetvscdfmdljpif409d",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "s3v51x2mru2jomeq1thrpja38"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.52MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:18:15.5889769 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "sajrox8pjqrpnjrn04hnu3obs",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "s3v51x2mru2jomeq1thrpja38"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.52MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:30:36.452560354 +0000 UTC",
+    "Description": "[api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama",
+    "ID": "mf98qb394ogdic79j3tfbbhy6",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "s3v51x2mru2jomeq1thrpja38"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "27.52MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 11:46:41.007146382 +0000 UTC",
+    "Description": "[preview-check 1/1] COPY --from=preview-check-build /preview-check /usr/local/bin/preview-check",
+    "ID": "ix5p50kimhhogz64i9gekp8t7",
+    "LastUsedAt": "22 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "p34fxjusex4m3x4jlga0vjk2s"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "29.93MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 11:49:30.061704192 +0000 UTC",
+    "Description": "[preview-check 1/1] COPY --from=preview-check-build /preview-check /usr/local/bin/preview-check",
+    "ID": "fgzyw176wk19y6vpg19ivu1pg",
+    "LastUsedAt": "22 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "p34fxjusex4m3x4jlga0vjk2s"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "29.93MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 11:52:43.454248275 +0000 UTC",
+    "Description": "[preview-check 1/1] COPY --from=preview-check-build /preview-check /usr/local/bin/preview-check",
+    "ID": "miep0bep7bh0h2kyu2zam5tg9",
+    "LastUsedAt": "22 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "p34fxjusex4m3x4jlga0vjk2s"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "29.93MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:53:38.661289263 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "i7tu8bh7y1t00i0q29aedrglq",
+    "LastUsedAt": "12 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "uhgd9vd50dmn920pn4fwyrsg4"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 21:59:17.963629731 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "kqfyqdrr76bhxafwimeqmcffl",
+    "LastUsedAt": "12 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "z093wk6vh3159210ihk68s5iz"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:25:02.55010903 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "sph56lc3vhw18qcgxdvy9xsmv",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "py44lwyhlt8meyisfkgib6hux"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:22:17.968796279 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "v57h3eckcsh22sxldu8504lww",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "qgq5xlqs51nsdk8intnnvny07"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:21:42.68684363 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "vgz0nvwkx5z7wcwff8c9xga9n",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "czppci1hxki2hnxl2wv9bmpwn"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:18:13.868299098 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "wj1bmufpfi5nxa01txios5f47",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "m7j00imsr0e1a1jw1frbzlspj"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:30:35.477653627 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "i94tzqbskb79cuh9gdm8ivs02",
+    "LastUsedAt": "2 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "j3rehttnu5itfi8xllmckhzul"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-23 23:14:44.522137337 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "zeyxyq029e5eyjwur8pljxbl8",
+    "LastUsedAt": "11 hours ago",
+    "Mutable": false,
+    "Parents": [
+      "iurpg44k3248b5v6sndat4ezb"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 08:49:07.777883148 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "okpwseachvpd9c13z5099d1ii",
+    "LastUsedAt": "About an hour ago",
+    "Mutable": false,
+    "Parents": [
+      "2cspjajkdogdbdtzu7lmumohi"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.4MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 10:01:09.652183395 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "dwx46js994yybapmcmnxcffsw",
+    "LastUsedAt": "2 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "efh0l60u8fwecku3dl6s3dly2"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.7MB",
+    "Type": "regular",
+    "UsageCount": 3
+  },
+  {
+    "CreatedAt": "2026-09-24 10:00:44.570195753 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "uk15xc5rulq9ou5l9e2rfg5ma",
+    "LastUsedAt": "8 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "x3seefgm53da2iypiusawi5ai"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.7MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 09:59:48.769183398 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "qgmssni383ctrl9j7n3flavoa",
+    "LastUsedAt": "9 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "58a21gu2tmt02svzz1wo9ravc"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.7MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 09:36:27.591152815 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama",
+    "ID": "no97w1b0qcpxnakti6e4jq1l6",
+    "LastUsedAt": "32 minutes ago",
+    "Mutable": false,
+    "Parents": [
+      "kpmmm2i9tv783oafq3vxr273t"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "168.9MB",
+    "Type": "regular",
+    "UsageCount": 1
+  },
+  {
+    "CreatedAt": "2026-09-24 10:06:21.387349507 +0000 UTC",
+    "Description": "mount / from exec /bin/sh -c CGO_ENABLED=0 go test -c -tags preview_live -o /preview-check ./internal/studio",
+    "ID": "ub3c02k2opahj6nxs9lo3iwx4",
+    "LastUsedAt": "2 minutes ago",
+    "Mutable": true,
+    "Parents": [
+      "dwx46js994yybapmcmnxcffsw"
+    ],
+    "Reclaimable": true,
+    "Shared": false,
+    "Size": "181.1MB",
+    "Type": "regular",
+    "UsageCount": 1
+  }
+]

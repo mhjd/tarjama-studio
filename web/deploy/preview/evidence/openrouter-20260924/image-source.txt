@@ -1,0 +1,1 @@
+"sha256:da12c439f1e40b3f89e2e0ab98da7caf1b50764790ead3c3b57dac349a033d80" "amd64" "10001:10001" {"org.opencontainers.image.revision":"eb4f510e44b635d5e1bd0954248110f69890c1fd","org.opencontainers.image.source":"https://github.com/mhjd/tarjama-studio"}

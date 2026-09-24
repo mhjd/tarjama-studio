@@ -9,7 +9,10 @@ remarques hors sous-titres sont définis, pas encore implémentés. Lire
 avant toute reprise. Les affirmations historiques Gemini/no-OpenRouter ci-dessous
 sont supersédées. Parallel est configuré dans les outils serveur OpenRouter :
 la clé OpenRouter suffit, aucune clé Parallel séparée. Voir le rapport réel lié
-dans ce document de décisions. Aucun nouveau déploiement réalisé.
+dans ce document de décisions. Déploiement autorisé ensuite par le propriétaire ;
+la recette intermédiaire est appliquée mais le démarrage DB/egress est bloqué
+côté VPS, avant sauvegarde/migration et activation API/worker. Voir
+[le dossier de reprise](DEPLOY_OPENROUTER_20260924.md).
 
 
 Actualisation du 23 septembre 2026 : le propriétaire choisit désormais

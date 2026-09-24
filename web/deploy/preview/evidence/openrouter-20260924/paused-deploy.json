@@ -1,0 +1,45 @@
+{
+  "revision": "87a875e28312ffa2",
+  "services": [
+    "db",
+    "egress",
+    "web",
+    "worker"
+  ],
+  "jobs": [
+    "backup",
+    "migrate"
+  ],
+  "images": {
+    "db": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "egress": "preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3",
+    "web": "preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3",
+    "worker": "preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3",
+    "backup": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "migrate": "preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3"
+  },
+  "volumes": {
+    "database": {
+      "size": "2Gi"
+    },
+    "library": {
+      "size": "14Gi"
+    }
+  },
+  "service_addresses": {
+    "db": "pv-db:5432",
+    "egress": "pv-egress:8092",
+    "web": "web:8080"
+  },
+  "data_deleted": false,
+  "cpu_limits_m": 2250,
+  "memory_limits_mi": 2176,
+  "storage_requested_gi": 16,
+  "services_to_stop": [],
+  "applied": true,
+  "database_rollback": false,
+  "ok": true,
+  "accepted": "deploy",
+  "url": "https://atelier.preview.runagen.com",
+  "next": "Consulter status ; migrations et tâches sont lancées explicitement avec run."
+}

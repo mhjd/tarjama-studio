@@ -270,7 +270,8 @@ traçabilité exhaustive des sources ni sur la qualité de toute traduction.
 - Migration additive `003_openrouter.sql`, clés personnelles OpenRouter/Groq.
   Les résultats et credentials Gemini historiques restent conservés et inutilisés.
 - Ancien client Parallel direct retiré, aucune nouvelle dépendance.
-- Candidat non déployé : ne pas mélanger les nouvelles clés/UI avec un ancien
+- Bascule autorisée puis bloquée avant migration/activation : voir
+  [le dossier de déploiement](DEPLOY_OPENROUTER_20260924.md). Ne pas mélanger les nouvelles clés/UI avec un ancien
   binaire Gemini. Construire l’image complète et qualifier la migration puis le
   parcours applicatif avant bascule. Corpus et remarques restent à implémenter.
 

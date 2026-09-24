@@ -1,0 +1,434 @@
+{
+  "ok": true,
+  "url": "https://atelier.preview.runagen.com",
+  "revision": "87a875e28312ffa2",
+  "partial": false,
+  "services": {
+    "pv-db": {
+      "replicas": 1,
+      "ready": 0
+    },
+    "pv-egress": {
+      "replicas": 1,
+      "ready": 0
+    },
+    "pv-review": {
+      "replicas": 0,
+      "ready": 0
+    },
+    "pv-worker": {
+      "replicas": 0,
+      "ready": 0
+    },
+    "web": {
+      "replicas": 0,
+      "ready": 0
+    }
+  },
+  "pods": [
+    {
+      "pod": "pv-db-745f66b577-nhvl4",
+      "component": "db",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-db-7d97746b76-x4xdg",
+      "component": "db",
+      "phase": "Pending",
+      "reasons": []
+    },
+    {
+      "pod": "pv-egress-59c75488d9-z79jv",
+      "component": "egress",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-egress-6f4c89d9d8-wjbqg",
+      "component": "egress",
+      "phase": "Pending",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-check-3b1bb96f-lrdx5",
+      "component": "asr-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-check-76cb3360-4jjf6",
+      "component": "asr-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-diagnostic-533b9ec1-gshjw",
+      "component": "asr-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-diagnostic-e6ea36d3-9bf2d",
+      "component": "asr-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-diagnostic-fcd830db-tmffc",
+      "component": "asr-diagnostic",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-verify-0e8462d6-ljwm5",
+      "component": "asr-verify",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-verify-8f570c2a-sqjg4",
+      "component": "asr-verify",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-verify-e47007aa-6n8wd",
+      "component": "asr-verify",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-ae8b4130-cbhzd",
+      "component": "backup",
+      "phase": "Pending",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-bootstrap-db-87067c32-khg9k",
+      "component": "bootstrap-db",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-cleanup-state-0b0ed3d1-clwrh",
+      "component": "cleanup-state",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-cleanup-state-b5163f82-spt85",
+      "component": "cleanup-state",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-23565d4d-gcd45",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-5c314f61-z4trc",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-86f3a1e1-5d6jv",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-90ab9f2c-n7htc",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-e115a78e-x95sl",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-f2f57558-zhpkf",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-migrate-4371e14b-lhxf7",
+      "component": "migrate",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-15546ee2-bw269",
+      "component": "preview-check",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-c98e8957-mrmdr",
+      "component": "preview-check",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-e46f25a5-dbqrn",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-read-challenges-c5f3a1b1-vpq7l",
+      "component": "read-challenges",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-read-corpus-0abef43b-58x4n",
+      "component": "read-corpus",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-read-corpus-8a94e572-pfqgm",
+      "component": "read-corpus",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-read-corpus-bd74948b-gx6nw",
+      "component": "read-corpus",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-read-corpus-c6b0d694-zdf2d",
+      "component": "read-corpus",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-read-corpus-ed783bf8-xkr79",
+      "component": "read-corpus",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-read-corpus-fa822aa9-pnmrb",
+      "component": "read-corpus",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-results-20260923-lite-0acbb9e0-vrm8h",
+      "component": "results-20260923-lite",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-results-20260923-lite2-b5a6c0f2-6dcpp",
+      "component": "results-20260923-lite2",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-retry-cleanup-3d13e70e-n2lmv",
+      "component": "retry-cleanup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-retry-transcription-2ddf15db-j8plt",
+      "component": "retry-transcription",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-retry-transcription-e59d096a-bbjcr",
+      "component": "retry-transcription",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-review-state-2282f502-n4vxw",
+      "component": "review-state",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-review-state-49a36867-p4lz4",
+      "component": "review-state",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-review-state-93559dda-5hbgg",
+      "component": "review-state",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-text-challenges-564961ca-k696c",
+      "component": "text-challenges",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-text-corpus-bb8b1c2b-ccswr",
+      "component": "text-corpus",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-translation-research-249bc9bd-hv9fl",
+      "component": "translation-research",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-translation-research-b0e01f6b-swhlz",
+      "component": "translation-research",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-20260923-lite-05ed8529-rfvfp",
+      "component": "ui-20260923-lite",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-20260923-lite2-2b637a5b-frj28",
+      "component": "ui-20260923-lite2",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-playback-324cdd9a-nsnz6",
+      "component": "ui-playback",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-playback-4c4df66d-swdcs",
+      "component": "ui-playback",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-record-4725fe0f-b9pjb",
+      "component": "ui-record",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-record-edf364b3-5bqnp",
+      "component": "ui-record",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-worker-586c66f9fb-r84df",
+      "component": "worker",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "web-7cb8f865c-znqns",
+      "component": "web",
+      "phase": "Failed",
+      "reasons": []
+    }
+  ],
+  "jobs": [
+    {
+      "name": "pv-job-review-state-49a36867",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-review-state-93559dda",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-text-challenges-564961ca",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-text-corpus-bb8b1c2b",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-translation-research-249bc9bd",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-translation-research-b0e01f6b",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-20260923-lite-05ed8529",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-20260923-lite2-2b637a5b",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-playback-324cdd9a",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-playback-4c4df66d",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-record-4725fe0f",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-record-edf364b3",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    }
+  ]
+}

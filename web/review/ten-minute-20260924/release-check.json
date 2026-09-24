@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-preview-check-2e3aa200-ckkbp",
+      "log": "=== RUN   TestPreviewLive\n=== RUN   TestPreviewLive/HTTPAndOIDCStart\n=== RUN   TestPreviewLive/GatewayTLS\n=== RUN   TestPreviewLive/DeepSeek/cleanup\n    preview_live_test.go:33: Provider openrouter.ai HTTP 200\n=== RUN   TestPreviewLive/DeepSeek/translate\n    preview_live_test.go:33: Provider openrouter.ai HTTP 200\n--- PASS: TestPreviewLive (5.22s)\n    --- PASS: TestPreviewLive/HTTPAndOIDCStart (1.01s)\n    --- PASS: TestPreviewLive/GatewayTLS (0.27s)\n    --- PASS: TestPreviewLive/DeepSeek/cleanup (2.02s)\n    --- PASS: TestPreviewLive/DeepSeek/translate (1.92s)\nPASS\n"
+    },
+    {
+      "pod": "pv-job-preview-check-3bc7c858-cms7l",
+      "log": "=== RUN   TestPreviewLive\n=== RUN   TestPreviewLive/HTTPAndOIDCStart\n=== RUN   TestPreviewLive/GatewayTLS\n--- PASS: TestPreviewLive (1.05s)\n    --- PASS: TestPreviewLive/HTTPAndOIDCStart (1.01s)\n    --- PASS: TestPreviewLive/GatewayTLS (0.04s)\nPASS\n"
+    },
+    {
+      "pod": "pv-job-preview-check-eaa0f103-656ht",
+      "log": "=== RUN   TestPreviewLive\n=== RUN   TestPreviewLive/HTTPAndOIDCStart\n=== RUN   TestPreviewLive/GatewayTLS\n--- PASS: TestPreviewLive (1.26s)\n    --- PASS: TestPreviewLive/HTTPAndOIDCStart (1.01s)\n    --- PASS: TestPreviewLive/GatewayTLS (0.25s)\nPASS\n"
+    }
+  ]
+}

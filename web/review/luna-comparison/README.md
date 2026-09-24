@@ -90,7 +90,7 @@ acceptée**. Le classement éditorial ne remplace pas la validation du fichier.
 ### Reprendre un bloc échoué
 
 `--case corpus-part-2` reprend uniquement le deuxième quart du corpus, avec
-les mêmes frontières et contexte. `recover.py --part 2 --output NOUVEAU_DOSSIER`
+les mêmes frontières et contexte. `make web-luna-recover BENCHMARK_PART=2 BENCHMARK_OUTPUT=NOUVEAU_DOSSIER`
 rejoue ses deux moitiés à `medium` sur Responses, deux appels payants maximum.
 Voir le complément « résultat complet après reprises » dans
 `docs/LUNA_REASONING_COMPARISON_20260924.md` pour le cumul des échecs et succès.

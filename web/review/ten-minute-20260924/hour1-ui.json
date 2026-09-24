@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-ui-tenmin-hour1-652f174f-b94ft",
+      "log": "STEP macbook-air15-m4 library 2026-09-24T19:44:02.445Z\nSTEP macbook-air15-m4 youtube 2026-09-24T19:44:04.371Z\nPROGRESS macbook-air15-m4 preparing download:queued:0\nSTEP macbook-air15-m4 preparing 2026-09-24T19:44:05.861Z\nPROGRESS macbook-air15-m4 preparing download:running:0\nPROGRESS macbook-air15-m4 preparing download:running:16\nPROGRESS macbook-air15-m4 preparing download:failed:16\nFAIL {\"device\":\"macbook-air15-m4\",\"status\":\"failed\",\"step\":\"preparing\",\"error\":\"Error: Real job failed: download at 16%\",\"elapsedSeconds\":32}\nSTEP macbook-air15-m4 failure 2026-09-24T19:44:33.263Z\nARTIFACT {\"name\":\"parcours-macbook-air15-m4.webm\",\"bytes\":1779808,\"sha256\":\"15d5a3b9fbd610511da8974c5a0cd6a3fcecf6e0801d824408fda4f3e28bb116\"}\nOUTCOME {\"device\":\"macbook-air15-m4\",\"status\":\"failed\",\"step\":\"preparing\",\"error\":\"Error: Real job failed: download at 16%\",\"elapsedSeconds\":32}\nRESULT {\"outcomes\":[{\"device\":\"macbook-air15-m4\",\"status\":\"failed\",\"step\":\"preparing\",\"error\":\"Error: Real job failed: download at 16%\",\"elapsedSeconds\":32}],\"artifacts\":[{\"name\":\"parcours-macbook-air15-m4.webm\",\"bytes\":1779808,\"sha256\":\"15d5a3b9fbd610511da8974c5a0cd6a3fcecf6e0801d824408fda4f3e28bb116\"}]}\n"
+    }
+  ]
+}

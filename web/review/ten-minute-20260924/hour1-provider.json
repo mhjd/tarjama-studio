@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-review-59b99d5d4c-754xw",
+      "log": "2026/09/24 19:43:12 Private UI review ready; independent schema, real providers and isolated media\n2026/09/24 19:44:31 isolated tool failed job=54c557ae29f1edbf29c077f5857db7b4 operation=ada7f707ecc6cb292ef161b3a1363d73 profile=tarjama-download-v1 reason=tool_detail_hidden\n2026/09/24 19:44:31 job failed id=54c557ae29f1edbf29c077f5857db7b4 kind=download reason=unclassified\n"
+    }
+  ]
+}

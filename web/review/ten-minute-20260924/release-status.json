@@ -1,0 +1,344 @@
+{
+  "ok": true,
+  "url": "https://atelier.preview.runagen.com",
+  "revision": "e11607797eb8ae08",
+  "partial": false,
+  "services": {
+    "pv-db": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-egress": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-review": {
+      "replicas": 0,
+      "ready": 0
+    },
+    "pv-worker": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "web": {
+      "replicas": 1,
+      "ready": 1
+    }
+  },
+  "pods": [
+    {
+      "pod": "pv-db-6f979f8dc4-67ds6",
+      "component": "db",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "pv-egress-7f4746cd5d-m54bq",
+      "component": "egress",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-check-3b1bb96f-lrdx5",
+      "component": "asr-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-check-76cb3360-4jjf6",
+      "component": "asr-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-diagnostic-533b9ec1-gshjw",
+      "component": "asr-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-diagnostic-e6ea36d3-9bf2d",
+      "component": "asr-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-diagnostic-fcd830db-tmffc",
+      "component": "asr-diagnostic",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-verify-0e8462d6-ljwm5",
+      "component": "asr-verify",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-verify-8f570c2a-sqjg4",
+      "component": "asr-verify",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-asr-verify-e47007aa-6n8wd",
+      "component": "asr-verify",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-54a06235-79t4s",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-f372eb7f-tw69k",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-cleanup-state-0b0ed3d1-clwrh",
+      "component": "cleanup-state",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-cleanup-state-b5163f82-spt85",
+      "component": "cleanup-state",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-diag-tenmin1-768bb43c-5hq44",
+      "component": "diag-tenmin1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-diag-tenmin2-6b1a603b-87256",
+      "component": "diag-tenmin2",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-23565d4d-gcd45",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-5c314f61-z4trc",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-86f3a1e1-5d6jv",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-90ab9f2c-n7htc",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-e115a78e-x95sl",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-media-diagnostic-f2f57558-zhpkf",
+      "component": "media-diagnostic",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-migrate-d8385b7d-ghmp4",
+      "component": "migrate",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-2e3aa200-ckkbp",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-3bc7c858-cms7l",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-eaa0f103-656ht",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-results-tenmin-short3-7f52901c-p6wgt",
+      "component": "results-tenmin-short3",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-retry-cleanup-3d13e70e-n2lmv",
+      "component": "retry-cleanup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-retry-transcription-2ddf15db-j8plt",
+      "component": "retry-transcription",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-retry-transcription-e59d096a-bbjcr",
+      "component": "retry-transcription",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-tenmin-hour1-652f174f-b94ft",
+      "component": "ui-tenmin-hour1",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-tenmin-iphone1-5acaf5b4-d2tdl",
+      "component": "ui-tenmin-iphone1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-tenmin-pixel1-4a2c446c-pp2gt",
+      "component": "ui-tenmin-pixel1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-tenmin-short1-f59afb7d-g9t79",
+      "component": "ui-tenmin-short1",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-tenmin-short2-ac2bc8f5-7gbm9",
+      "component": "ui-tenmin-short2",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-tenmin-short3-bbf981f6-q6lsr",
+      "component": "ui-tenmin-short3",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-worker-57f44666dd-46rp8",
+      "component": "worker",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "web-59f464b4f7-6wxmv",
+      "component": "web",
+      "phase": "Running",
+      "reasons": []
+    }
+  ],
+  "jobs": [
+    {
+      "name": "pv-job-preview-check-3bc7c858",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-eaa0f103",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-results-tenmin-short3-7f52901c",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-retry-cleanup-3d13e70e",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-retry-transcription-2ddf15db",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-retry-transcription-e59d096a",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-tenmin-hour1-652f174f",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-tenmin-iphone1-5acaf5b4",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-tenmin-pixel1-4a2c446c",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-tenmin-short1-f59afb7d",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-tenmin-short2-ac2bc8f5",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-tenmin-short3-bbf981f6",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    }
+  ]
+}

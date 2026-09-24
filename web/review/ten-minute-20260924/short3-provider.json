@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-review-6574d78859-mgnzr",
+      "log": "2026/09/24 19:35:17 Private UI review ready; independent schema, real providers and isolated media\n2026/09/24 19:37:50 Provider api.groq.com HTTP 200\n2026/09/24 19:38:11 Provider openrouter.ai HTTP 200\n2026/09/24 19:38:42 Provider openrouter.ai HTTP 200\n"
+    }
+  ]
+}

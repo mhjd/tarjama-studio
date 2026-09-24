@@ -242,3 +242,9 @@ web-luna-compare-test: web-prompts-check
 .PHONY: web-media-diagnostic-image
 web-media-diagnostic-image:
 	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target media-diagnostic -t tarjama-media-diagnostic:review web
+
+BENCHMARK_PART ?= 2
+.PHONY: web-luna-recover
+web-luna-recover:
+	@test -n "$(BENCHMARK_OUTPUT)" || (echo 'Set a new BENCHMARK_OUTPUT directory'; exit 1)
+	python3 -B web/review/luna-comparison/recover.py --part "$(BENCHMARK_PART)" --output "$(BENCHMARK_OUTPUT)"

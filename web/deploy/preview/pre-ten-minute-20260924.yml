@@ -1,0 +1,227 @@
+version: 1
+services:
+  web:
+    enabled: true
+    image: preview.local/atelier/web@sha256:c107c924162ac2c0252baa6f40e16c1379f6341801e78776f327a6cf43f161df
+    args:
+    - api
+    uid: 10001
+    gid: 10001
+    port: 8090
+    env:
+      APP_MODE: production
+      LISTEN_ADDR: 0.0.0.0:8090
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      OIDC_ISSUER: https://auth.runagen.com
+      OIDC_CLIENT_ID: preview-atelier-tarjama
+      OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-oidc
+      path: /run/oidc
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - oidc
+    resources:
+      cpu: 500m
+      memory: 512Mi
+    tmp: 64Mi
+    health:
+      path: /readyz
+  worker:
+    enabled: true
+    image: preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3
+    args:
+    - worker
+    uid: 10001
+    gid: 10001
+    env:
+      APP_MODE: production
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      MEDIA_ENGINE: isolated-jobs
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+      OPENROUTER_API_KEY_FILE: /run/openrouter/api_key
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-groq
+      path: /run/groq
+    - name: isolated-jobs
+      path: /run/isolated-jobs
+    - name: openrouter
+      path: /run/openrouter
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - public-web
+    - isolated-jobs
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+  egress:
+    enabled: true
+    image: preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3
+    args:
+    - egress
+    uid: 10003
+    gid: 10003
+    port: 8092
+    env:
+      LISTEN_ADDR: 0.0.0.0:8092
+      WARP_HTTP_PROXY: 172.31.250.2:40001
+      GOMAXPROCS: '1'
+    egress:
+    - warp-downloads
+    resources:
+      cpu: 250m
+      memory: 128Mi
+    tmp: 16Mi
+  db:
+    enabled: true
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 70
+    gid: 70
+    port: 5432
+    args:
+    - postgres
+    - -c
+    - unix_socket_directories=/tmp
+    - -c
+    - max_connections=40
+    - -c
+    - shared_buffers=128MB
+    env:
+      POSTGRES_DB: tarjama
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/db-admin/postgres_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=peer
+      PGDATA: /data/pgdata
+      PGSERVICE: preview-init
+      PGSERVICEFILE: /configuration/pg_service.conf
+    secrets:
+    - name: tarjama-db-admin
+      path: /run/db-admin
+    configs:
+    - name: postgres-client
+      path: /configuration
+    volumes:
+    - name: database
+      path: /data
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+jobs:
+  migrate:
+    image: preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3
+    uid: 10001
+    gid: 10001
+    args:
+    - migrate
+    env:
+      DATABASE_URL_FILE: /run/db/database_url
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    connect:
+    - db
+    resources:
+      cpu: 250m
+      memory: 256Mi
+    timeout: 300
+  backup:
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 10001
+    gid: 10001
+    command:
+    - /bin/sh
+    args:
+    - /configuration/backup.sh
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    configs:
+    - name: deploy-backup
+      path: /configuration
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    resources:
+      cpu: 250m
+      memory: 256Mi
+    tmp: 32Mi
+    timeout: 240
+  preview-check:
+    image: preview.local/atelier/web@sha256:6e212704818bc9f08258e88d21c55793ce7e311c75c5a442510a2610497a620b
+    uid: 10001
+    gid: 10001
+    args:
+    - -test.v
+    - -test.run
+    - ^TestPreviewLive$/(HTTPAndOIDCStart|GatewayTLS)$
+    - -test.timeout
+    - 4m
+    env:
+      PREVIEW_LIVE: atelier
+      OPENROUTER_API_KEY_FILE: /run/openrouter/api_key
+      GOMAXPROCS: '1'
+    secrets:
+    - name: openrouter
+      path: /run/openrouter
+    connect:
+    - web
+    egress:
+    - public-web
+    - oidc
+    resources:
+      cpu: 500m
+      memory: 256Mi
+    tmp: 32Mi
+    timeout: 300
+volumes:
+  library:
+    size: 14Gi
+  database:
+    size: 2Gi
+configs:
+  postgres-client:
+    pg_service.conf: '[preview-init]
+
+      host=/tmp
+
+      '
+  deploy-backup:
+    backup.sh: "#!/bin/sh\nset -eu\numask 077\nexport PGHOST=pv-db PGPORT=5432 PGDATABASE=tarjama\
+      \ PGUSER=tarjama PGCONNECT_TIMEOUT=3\nexport PGPASSWORD=\"$(cat /run/db/app_db_password)\"\
+      \nfor attempt in $(seq 1 30); do\n  if psql -X -w -Atqc 'SELECT 1' >/dev/null\
+      \ 2>/tmp/db-ready.err; then break; fi\n  sleep 2\ndone\npsql -X -w -Atqc 'SELECT\
+      \ 1' >/dev/null\nmkdir -p /storage/backups\nout=/storage/backups/pre-ten-minute-1b443ec-$(date\
+      \ -u +%Y%m%dT%H%M%SZ).dump\nset -C\n: > \"$out\"\nset +C\npg_dump -w -Fc > \"\
+      $out\"\npg_restore --list \"$out\" >/dev/null\nsha256sum \"$out\"\nprintf 'Backup\
+      \ complete; no media modified.\\n'\n"

@@ -1,8 +1,11 @@
 # GPT-6 Luna avec raisonnement — complément du 24 septembre 2026
 
-**Le raisonnement améliore le résultat observé sur les blocs courts, mais ne
-résout pas les défauts de restitution.** Je ne recommande pas encore de basculer
-la production vers GPT-6 Luna. Ce complément répond à la demande de refaire le
+**Avec raisonnement et reprises bornées, GPT-6 Luna restitue finalement les
+384 segments valides : 139 s cumulées et 0,008145 $, échecs inclus.** Son français
+est généralement plus naturel ; il est ici plus rapide, mais plus cher que DeepSeek.
+Une qualification dans l’application reste nécessaire avant de changer le modèle
+de production. Le complément final détaille les reprises après les essais initiaux
+sans reprise ci-dessous. Ce rapport répond à la demande de refaire le
 [premier comparatif](LUNA_TRANSLATION_COMPARISON_20260924.md) avec raisonnement.
 
 ## Protocole et exécution

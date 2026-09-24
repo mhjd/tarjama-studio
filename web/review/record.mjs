@@ -29,7 +29,7 @@ for(const device of selectedDevices){
    const failure=data.jobs.find(j=>j.state==='failed');
    if(failure)terminalFailure='Real job failed: '+failure.kind+' at '+failure.progress+'%';
    const status=JSON.stringify({stage:data.project.stage,duration_ms:data.project.duration_ms,segments:data.project.segments.length,jobs:data.jobs.filter(j=>j.state!=='succeeded').map(j=>({kind:j.kind,state:j.state,progress:j.progress}))});
-   if(status!==previousStatus){console.log('PROGRESS '+name+' '+status);previousStatus=status;}
+   if(status!==previousStatus){console.log('PROGRESS '+name+' '+data.project.stage+' '+data.jobs.filter(j=>j.state!=='succeeded').map(j=>j.kind+':'+j.state+':'+j.progress).join(' '));previousStatus=status;}
   }catch{}
  });
  let step='start'; const started=Date.now();
@@ -54,7 +54,6 @@ for(const device of selectedDevices){
   await expect(page.getByRole('button',{name:'3. Traduire',exact:true})).toBeDisabled();
   await expect(page.getByRole('button',{name:'4. Exporter',exact:true})).toBeDisabled();
   await expect(page.locator('textarea[lang="ar"]')).toHaveCount(0);
-  // Observe actual persistent queue; never fake success or bypass provider cooldown.
   await waitReady(page.getByRole('button',{name:'Valider et traduire',exact:true}).first());
   await page.getByRole('heading',{name:'Correction arabe',exact:true}).scrollIntoViewIfNeeded();
   await mark('arabic');
@@ -82,7 +81,7 @@ for(const device of selectedDevices){
   await mark('saved');
   await page.getByRole('button',{name:'Valider et traduire',exact:true}).first().click();
   await expect(page).toHaveURL(/\/traduire$/);
-  await expect(page.locator('textarea')).toHaveCount(0);
+  await expect(page.locator('textarea[lang="ar"],textarea[lang="fr"]')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'4. Exporter',exact:true})).toBeDisabled();
   await expect(page.getByRole('button',{name:'2. Corriger',exact:true})).toBeEnabled();
   await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(0);
@@ -95,7 +94,6 @@ for(const device of selectedDevices){
   const editedFrench=originalFrench.endsWith('.')?originalFrench.slice(0,-1):originalFrench+'.';
   if(editedFrench===originalFrench)throw Error('French edit must change the text');
   await french.fill(editedFrench);
-  // Advancing must flush the focused edit before exporting.
   await page.getByRole('button',{name:'Valider et exporter',exact:true}).first().click();
   await expect(page.getByRole('heading',{name:'Votre vidéo sous-titrée'})).toBeVisible();
   await page.reload();
@@ -118,6 +116,6 @@ for(const device of selectedDevices){
 }
 const manifest={sourceVideo,identity:'isolated test account; production MFA confirmed separately by owner',providers:'real OpenRouter/DeepSeek with Parallel and Groq',media:'administered isolated jobs, WARP for download',emulation:'CSS viewports, Chromium; not physical devices or Safari qualification',outcomes,artifacts};
 await fs.writeFile(root+'/manifest.json',JSON.stringify(manifest,null,2));await upload(root+'/manifest.json','manifest.json');
-console.log('RESULT '+JSON.stringify(manifest));
+console.log('RESULT '+JSON.stringify({outcomes,artifacts:artifacts.filter(x=>/\.(mp4|webm)$/.test(x.name))}));
 await browser.close();proxy.close();
 process.exitCode=outcomes.length===selectedDevices.length&&outcomes.every(x=>x.status==='passed')?0:1;

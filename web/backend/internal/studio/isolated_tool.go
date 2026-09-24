@@ -38,7 +38,7 @@ func runIsolatedTool(ctx context.Context, args []string, in, out string) error {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if e = cmd.Run(); e != nil {
-		return errors.New("Outil isolé en échec")
+		return fmt.Errorf("Outil isolé en échec (error_category=%s)", isolatedFailureReason(stderr.String()))
 	}
 	if args[0] == "probe" {
 		if e = os.WriteFile(result, stdout.Bytes(), 0600); e != nil {

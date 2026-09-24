@@ -628,6 +628,8 @@ func TestIsolatedFailureDiagnosticIsBoundedAndPrivate(t *testing.T) {
 		{`{"stderr":"ERROR: HTTP Error 403: Forbidden https://private.example/token"}`, "http_403"},
 		{`{"stderr":"Outil isol\u00e9 en \u00e9chec"}`, "tool_detail_hidden"},
 		{"Requested format is not available", "format_unavailable"},
+		{`{"stderr":"Outil isolé en échec (error_category=http_403)"}`, "http_403"},
+		{`{"stderr":"Outil isolé en échec (error_category=unclassified)"}`, "unclassified"},
 		{"secret-value and arbitrary stderr", "unclassified"},
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

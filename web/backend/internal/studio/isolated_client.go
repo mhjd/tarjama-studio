@@ -101,6 +101,11 @@ func isolatedFailureReason(message string) string {
 		message = payload.Stderr
 	}
 	s := strings.ToLower(message)
+	for _, code := range []string{"youtube_bot_check", "http_403", "http_429", "format_unavailable", "tls_verification", "network_timeout", "connection_refused", "storage_full", "video_unavailable", "unclassified"} {
+		if strings.Contains(s, "error_category="+code+")") {
+			return code
+		}
+	}
 	for _, entry := range []struct{ code, text string }{
 		{"youtube_bot_check", "confirm you’re not a bot"},
 		{"youtube_bot_check", "confirm you're not a bot"},
@@ -108,6 +113,9 @@ func isolatedFailureReason(message string) string {
 		{"format_unavailable", "requested format is not available"},
 		{"tls_verification", "certificate verify failed"},
 		{"network_timeout", "timed out"},
+		{"connection_refused", "connection refused"},
+		{"storage_full", "no space left on device"},
+		{"video_unavailable", "video unavailable"},
 		{"tool_detail_hidden", "outil isolé en échec"},
 	} {
 		if strings.Contains(s, entry.text) {

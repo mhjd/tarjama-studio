@@ -45,6 +45,18 @@ func TestRoutesCannotBypassWorkflowGuards(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if stage != "arabic" {
+			code, _ := call(t, server, token, csrf, "POST", "/api/projects/"+p.ID+"/advance", map[string]any{"stage": "arabic", "version": 1})
+			if code != 409 {
+				t.Fatal("translation before Arabic validation", stage, code)
+			}
+			for _, field := range []string{"arabic", "french"} {
+				code, _ = call(t, server, token, csrf, "PATCH", "/api/projects/"+p.ID+"/segments/one", map[string]any{"field": field, "text": "must not be saved", "version": 1})
+				if code != 400 {
+					t.Fatal("edited during processing", stage, field, code)
+				}
+			}
+		}
 		code, _ := call(t, server, token, csrf, "POST", "/api/projects/"+p.ID+"/advance", map[string]any{"stage": "review", "version": 1})
 		if code != 409 {
 			t.Fatal("skipped correction/translation", stage, code)

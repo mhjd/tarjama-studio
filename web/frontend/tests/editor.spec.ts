@@ -91,12 +91,8 @@ test("follow stays enabled on manual scroll, is explicit, and seeks the same sub
     exact: true,
   });
   await expect(follow).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".job")).toContainText(
-    "Correction automatique de l’arabe",
-  );
-  await expect(page.locator(".job")).toContainText(
-    "Cette étape doit se terminer",
-  );
+  // A historical preparation job must not claim to block a completed step.
+  await expect(page.locator(".job")).toHaveCount(0);
   await page.locator(".segments").dispatchEvent("wheel", { deltaY: 500 });
   await page.locator(".segments").dispatchEvent("touchmove");
   await expect(follow).toHaveAttribute("aria-pressed", "true");

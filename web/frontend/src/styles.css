@@ -280,7 +280,8 @@ label small {
   grid-template-columns: 1fr;
   gap: 18px;
 }
-.arabic textarea {
+.arabic textarea,
+.readonly-arabic {
   font-family: "Noto Naskh Arabic", "Traditional Arabic", serif;
   font-size: 25px;
   line-height: 1.8;
@@ -494,7 +495,25 @@ textarea.project-title {
 }
 .steps li {
   text-align: center;
-  padding: 12px 2px;
+  padding: 0 2px;
+}
+.steps button {
+  width: 100%;
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  font-size: inherit;
+}
+.steps button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.readonly-arabic {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .steps li span {
   display: flex;

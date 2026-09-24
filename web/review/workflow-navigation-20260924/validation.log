@@ -1,0 +1,98 @@
+python3 -B web/scripts/sync_translation_prompt.py --check
+python3 -B -m unittest discover -s web/scripts -p test_translation_prompt.py -v
+test_all_business_lines_are_preserved (test_translation_prompt.DesktopTranslationParity.test_all_business_lines_are_preserved) ... ok
+test_changed_format_requires_explicit_review (test_translation_prompt.DesktopTranslationParity.test_changed_format_requires_explicit_review) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.001s
+
+OK
+web/scripts/test.sh
+ Network tarjama-isolated-test_test Creating 
+ Network tarjama-isolated-test_test Creating 
+ Network tarjama-isolated-test_test Created 
+ Network tarjama-isolated-test_test Created 
+ Container tarjama-isolated-test-db-1 Creating 
+ Container tarjama-isolated-test-db-1 Created 
+ Container tarjama-isolated-test-db-1 Starting 
+ Container tarjama-isolated-test-db-1 Started 
+ Container tarjama-isolated-test-db-1 Waiting 
+ Container tarjama-isolated-test-db-1 Healthy 
+ Container tarjama-isolated-test-checks-run-fd68f47d029e Creating 
+ Container tarjama-isolated-test-checks-run-fd68f47d029e Created 
+?   	tarjama/web/cmd/fixture	[no test files]
+?   	tarjama/web/cmd/media-diagnostic	[no test files]
+?   	tarjama/web/cmd/research-check	[no test files]
+ok  	tarjama/web/cmd/tarjama	1.225s
+?   	tarjama/web/cmd/text-benchmark	[no test files]
+?   	tarjama/web/cmd/ui-review	[no test files]
+ok  	tarjama/web/internal/research	1.151s
+ok  	tarjama/web/internal/studio	16.425s
+
+> tarjama-web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1897 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.52 kB │ gzip:  0.32 kB
+dist/assets/index-BUc14EZ6.css   12.20 kB │ gzip:  3.45 kB
+dist/assets/index-DxkUZWhT.js   229.68 kB │ gzip: 72.37 kB
+✓ built in 2.74s
+
+> tarjama-web@0.1.0 test
+> playwright test
+
+
+Running 39 tests using 1 worker
+
+  ✓   1 tests/design-capture.spec.ts:8:3 › design capture iphone15 (6.5s)
+  ✓   2 tests/design-capture.spec.ts:8:3 › design capture pixel6 (6.3s)
+  ✓   3 tests/design-capture.spec.ts:8:3 › design capture macbook15 (6.1s)
+  ✓   4 tests/duplicate-video.spec.ts:7:3 › duplicate link opens the existing project without starting work (390px) (1.4s)
+  ✓   5 tests/duplicate-video.spec.ts:7:3 › duplicate link opens the existing project without starting work (1440px) (1.6s)
+  ✓   6 tests/editor.spec.ts:9:1 › download shows durable stages and stops claiming activity when polling fails (7.8s)
+  ✓   7 tests/editor.spec.ts:62:1 › follow stays enabled on manual scroll, is explicit, and seeks the same subtitle (2.4s)
+  ✓   8 tests/editor.spec.ts:121:1 › private projects, unchanged blur, offline draft, IME flush, review and real export (8.2s)
+  ✓   9 tests/editor.spec.ts:248:1 › two tabs conflict keeps the second draft and blocks advancing (1.7s)
+  ✓  10 tests/editor.spec.ts:268:1 › file import is a first class creation path and real media converges to Arabic review (4.2s)
+  ✓  11 tests/editor.spec.ts:290:1 › blur saves only that field and never overwrites characters typed during a slow response (1.9s)
+  ✓  12 tests/editor.spec.ts:323:1 › step waits for compositionend when clicked while Arabic composition is active (3.3s)
+  ✓  13 tests/editor.spec.ts:356:1 › audio keeps playing while editing without stealing focus (1.3s)
+  ✓  14 tests/editor.spec.ts:379:1 › desktop playback shortcuts preserve text, range and button keyboard behavior (2.8s)
+  ✓  15 tests/editor.spec.ts:452:1 › source link copies the exact URL and reports clipboard refusal (1.3s)
+  ✓  16 tests/editor.spec.ts:485:1 › link download offers upload only after failure or cancellation (11.6s)
+  ✓  17 tests/editor.spec.ts:526:1 › raw Arabic is hidden until automatic cleanup has finished (3.9s)
+  ✓  18 tests/journey-record.spec.ts:25:3 › record full UI journey macbook-air15 (22.3s)
+  ✓  19 tests/journey-record.spec.ts:25:3 › record full UI journey pixel6 (23.5s)
+  ✓  20 tests/journey-record.spec.ts:25:3 › record full UI journey iphone15 (23.7s)
+  ✓  21 tests/keys.spec.ts:3:1 › personal keys expose DeepSeek/OpenRouter and Groq only (1.4s)
+  ✓  22 tests/playback-speed.spec.ts:4:3 › speed controls preserve transport centering at 320px (2.1s)
+  ✓  23 tests/playback-speed.spec.ts:4:3 › speed controls preserve transport centering at 393px (2.0s)
+  ✓  24 tests/playback-speed.spec.ts:4:3 › speed controls preserve transport centering at 412px (2.0s)
+  ✓  25 tests/playback-speed.spec.ts:4:3 › speed controls preserve transport centering at 1440px (2.3s)
+  ✓  26 tests/player-layout.spec.ts:8:3 › player contains injected controls at 1440px (1.7s)
+  ✓  27 tests/player-layout.spec.ts:8:3 › player contains injected controls at 393px (1.7s)
+  ✓  28 tests/player-layout.spec.ts:8:3 › player contains injected controls at 412px (1.6s)
+  ✓  29 tests/routes.spec.ts:18:1 › project deep links reload, preserve login destination, and support back/forward (1.9s)
+  ✓  30 tests/routes.spec.ts:51:1 › URL edits cannot skip preparation, correction or review; polling updates canonical route (10.0s)
+  ✓  31 tests/routes.spec.ts:83:1 › browser back refuses to lose an unsaved draft (1.2s)
+  ✓  32 tests/routes.spec.ts:96:1 › foreign and missing project routes do not reveal a project (2.0s)
+  ✓  33 tests/routes.spec.ts:117:1 › browser back saves a title even without a blur (1.4s)
+  ✓  34 tests/workflow-navigation.spec.ts:115:3 › macbook-air-15: validation, previous pages and invalidation respect the workflow (5.9s)
+  ✓  35 tests/workflow-navigation.spec.ts:115:3 › pixel-6: validation, previous pages and invalidation respect the workflow (6.2s)
+  ✓  36 tests/workflow-navigation.spec.ts:115:3 › iphone-15: validation, previous pages and invalidation respect the workflow (6.4s)
+  ✓  37 tests/workflow-navigation.spec.ts:205:1 › translation waiting, failure, cancellation and retry never expose partial fields or export (6.1s)
+  ✓  38 tests/workflow-navigation.spec.ts:232:1 › step navigation flushes drafts and refuses to leave after a failed save (1.5s)
+  ✓  39 tests/workflow-navigation.spec.ts:259:1 › every premature direct URL is guarded without starting work (5.2s)
+
+  39 passed (3.5m)
+DO
+ Container tarjama-isolated-test-db-1 Stopping 
+ Container tarjama-isolated-test-db-1 Stopped 
+ Container tarjama-isolated-test-db-1 Removing 
+ Container tarjama-isolated-test-db-1 Removed 
+ Network tarjama-isolated-test_test Removing 
+ Network tarjama-isolated-test_test Removed 

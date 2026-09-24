@@ -5,7 +5,7 @@ import { purgeDrafts } from "./drafts";
 import { Create } from "./Create";
 import { Editor } from "./Editor";
 import { Keys } from "./Keys";
-import { parseRoute, projectPath } from "./routes";
+import { canVisitStep, currentStep, parseRoute, projectPath } from "./routes";
 import "./styles.css";
 function App() {
   const pendingFile = useRef<{ id: string; file: File } | null>(null);
@@ -13,6 +13,7 @@ function App() {
   const path = useRef(window.location.pathname);
   const navigation = useRef(0);
   const changingRoute = useRef(false);
+  const observedProject = useRef<Project | null>(null);
   const keysReturn = useRef("/projets");
   const [route, setRoute] = useState(path.current);
   const [routeLoading, setRouteLoading] = useState(false);
@@ -22,7 +23,8 @@ function App() {
     [projects, setProjects] = useState<Project[]>([]),
     [selected, setSelected] = useState<Project | null>(null),
     [error, setError] = useState("");
-  const view = parseRoute(route).view;
+  const routeInfo = parseRoute(route);
+  const view = routeInfo.view;
 
   function commitPath(next: string, mode: "push" | "replace") {
     if (window.location.pathname !== next || mode === "replace") {
@@ -61,7 +63,13 @@ function App() {
           `/api/projects/${target.id}`,
         );
         if (version !== navigation.current) return;
-        const canonical = projectPath(project);
+        const canonical = projectPath(
+          project,
+          canVisitStep(project, target.step)
+            ? target.step
+            : currentStep(project),
+        );
+        observedProject.current = project;
         setSelected(project);
         if (target.step && next !== canonical) {
           setError(
@@ -132,8 +140,21 @@ function App() {
   function syncProject(project: Project) {
     if (changingRoute.current || parseRoute(path.current).id !== project.id)
       return;
-    const canonical = projectPath(project);
-    if (path.current !== canonical) commitPath(canonical, "replace");
+    const viewed = parseRoute(path.current).step;
+    const previous = observedProject.current;
+    observedProject.current = project;
+    setSelected(project);
+    // Follow a workflow transition only from its current page. Someone reading
+    // an earlier page stays there when a background job finishes.
+    if (
+      !canVisitStep(project, viewed) ||
+      (previous &&
+        previous.stage !== project.stage &&
+        viewed === currentStep(previous))
+    ) {
+      const canonical = projectPath(project);
+      if (path.current !== canonical) commitPath(canonical, "replace");
+    }
   }
   async function logout() {
     try {
@@ -243,6 +264,12 @@ function App() {
           <Editor
             key={selected.id}
             initial={selected}
+            step={
+              canVisitStep(selected, routeInfo.step)
+                ? routeInfo.step
+                : currentStep(selected)
+            }
+            navigateStep={(step) => go(projectPath(selected, step))}
             initialFile={
               pendingFile.current?.id === selected.id
                 ? pendingFile.current.file

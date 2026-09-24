@@ -707,11 +707,20 @@ partiel n'est publié. Voir `web/review/cleanup-recovery-20260924/RESULTS.md`.
 ### Routes — 24 septembre
 
 Les projets ont une URL `/projets/<id>/<etape>` : `preparer`, `corriger`,
-`traduire`, `exporter`. L'étape reflète exclusivement l'état du serveur : une
-adresse prématurée ou périmée est remplacée par l'adresse de l'étape courante,
-sans validation implicite ni nouveau job. L'ouverture, le rechargement, le retour
-et l'avance du navigateur conservent ce contrôle. Les brouillons doivent être
-sauvegardés avant navigation ; une erreur de sauvegarde conserve l'éditeur.
+`traduire`, `exporter`. Décision affinée du propriétaire : l’URL représente la
+page consultée, distincte de l’avancement du serveur. Les étapes précédentes et
+courante sont accessibles ; une adresse future, inconnue ou invalidée par une
+retouche est remplacée par celle de l’étape courante, sans validation implicite
+ni nouveau job. La traduction est inaccessible avant validation de l’arabe.
+Pendant la traduction, sa page affiche seulement l’attente et les actions du
+traitement : aucun champ de sous-titre. L’étape 2 permet de relire l’arabe validé
+en lecture seule. L’export exige une traduction terminée puis sa validation.
+Les validations ouvrent le haut de la nouvelle page ; la lecture est mise en
+pause. La fin d’un traitement ne déplace pas quelqu’un consultant une étape
+précédente. L’ouverture, le rechargement, le retour et l’avance du navigateur
+conservent ces contrôles. Les brouillons doivent être sauvegardés avant navigation ;
+une erreur de sauvegarde conserve l’éditeur. Voir
+[la matrice et les preuves de parcours](WORKFLOW_NAVIGATION_20260924.md).
 La bibliothèque, la création et les clés ont aussi leurs routes. Le serveur
 sert la page React sur ces routes sans transformer les erreurs API/assets en HTML.
 

@@ -22,6 +22,7 @@ import {
 } from "./api";
 import { Drafts } from "./drafts";
 import { JobProgress } from "./JobProgress";
+import { canVisitStep, currentStep, steps, type ProjectStep } from "./routes";
 const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const speedLabel = (value: number) => `${value.toLocaleString("fr-FR")}×`;
 
@@ -33,7 +34,11 @@ export function Editor({
   initialFile,
   consumeFile,
   onProjectChange,
+  step,
+  navigateStep,
 }: {
+  step: ProjectStep;
+  navigateStep: (step: ProjectStep) => Promise<void>;
   onProjectChange: (project: Project) => void;
   initialFile: File | null;
   consumeFile: () => void;
@@ -85,6 +90,13 @@ export function Editor({
     composing = useRef(new Set<string>()),
     compositionWaiters = useRef<Array<() => void>>([]),
     mounted = useRef(true);
+  useEffect(() => {
+    // A workflow transition opens a new page, rather than leaving the reader
+    // at the bottom of the old text. Pause follow/playback while changing pages.
+    media.current?.pause();
+    setPlaying(false);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [step]);
   async function refresh() {
     const x = await request<{ project: Project; jobs: Job[] }>(
       `/api/projects/${p.id}`,
@@ -265,7 +277,24 @@ export function Editor({
     return () => window.removeEventListener("keydown", keydown);
   }, [p.duration_ms]);
   const editable = ["arabic", "review", "ready"].includes(p.stage),
-    french = p.stage === "review" || p.stage === "ready";
+    french =
+      step !== "corriger" && (p.stage === "review" || p.stage === "ready");
+  const translationPending = p.stage === "translating";
+  const showSegments =
+    step === "corriger" ||
+    ((step === "traduire" || step === "exporter") && !translationPending);
+  const showPlayer =
+    Boolean(p.media) && !(step === "traduire" && translationPending);
+  const validating =
+    (step === "corriger" && p.stage === "arabic") ||
+    (step === "traduire" && p.stage === "review");
+  function visibleJob(job: Job) {
+    if (job.kind === "translate")
+      return step === "traduire" && translationPending;
+    if (job.kind.startsWith("export_"))
+      return step === "exporter" && job.source_version === p.version;
+    return step === "preparer" && currentStep(p) === "preparer";
+  }
   function field(s: Segment, f: Field) {
     const key = `${s.id}:${f}`;
     return (
@@ -322,7 +351,7 @@ export function Editor({
   function nextStep() {
     return (
       <>
-        {p.stage === "arabic" && (
+        {step === "corriger" && p.stage === "arabic" && (
           <section
             className="next-step"
             id="validation"
@@ -371,7 +400,7 @@ export function Editor({
             </button>
           </section>
         )}
-        {p.stage === "review" && (
+        {step === "traduire" && p.stage === "review" && (
           <section
             className="next-step"
             id="validation"
@@ -402,13 +431,21 @@ export function Editor({
     );
   }
   return (
-    <div className={p.media ? "editor has-media" : "editor"}>
+    <div className={showPlayer ? "editor has-media" : "editor"}>
       <button className="back" onClick={() => void action(back)}>
         ← Mes projets
       </button>
       <div className="page-title">
         <div>
-          <p className="eyebrow">{stageNames[p.stage]}</p>
+          <p className="eyebrow">
+            {step === currentStep(p)
+              ? stageNames[p.stage]
+              : step === "corriger"
+                ? "Relire l’arabe"
+                : step === "traduire"
+                  ? "Relire la traduction"
+                  : "Vidéo préparée"}
+          </p>
           <textarea
             ref={titleField}
             rows={1}
@@ -457,27 +494,25 @@ export function Editor({
         </div>
         <small role="status">{d.status}</small>
       </div>
-      <ol className="steps">
-        {["Préparer", "Corriger", "Traduire", "Exporter"].map((s, i) => (
-          <li
-            className={
-              i ===
-              (["upload", "preparing", "transcribing", "cleaning"].includes(
-                p.stage,
-              )
-                ? 0
-                : p.stage === "arabic"
-                  ? 1
-                  : p.stage === "ready"
-                    ? 3
-                    : 2)
-                ? "current"
-                : ""
-            }
-            key={s}
-          >
-            <span>{i + 1}</span>
-            {s}
+      <ol className="steps" aria-label="Étapes du projet">
+        {steps.map((entry, i) => (
+          <li className={step === entry.slug ? "current" : ""} key={entry.slug}>
+            <button
+              aria-label={`${i + 1}. ${entry.label}`}
+              aria-current={step === entry.slug ? "step" : undefined}
+              disabled={!canVisitStep(p, entry.slug) || busy || uploading}
+              title={
+                !canVisitStep(p, entry.slug)
+                  ? "Terminez et validez l’étape précédente"
+                  : undefined
+              }
+              onClick={() => {
+                if (entry.slug !== step) void navigateStep(entry.slug);
+              }}
+            >
+              <span aria-hidden="true">{i + 1}</span>
+              {entry.label}
+            </button>
           </li>
         ))}
       </ol>
@@ -524,6 +559,7 @@ export function Editor({
         </p>
       )}
       {jobs
+        .filter(visibleJob)
         .filter((j) => !["succeeded", "cancelled"].includes(j.state))
         .map((j) => (
           <section className="job" key={j.id}>
@@ -588,7 +624,7 @@ export function Editor({
             )}
           </section>
         ))}
-      {canImport && (
+      {step === "preparer" && canImport && (
         <section className="panel">
           <h2>{uploading ? "Envoi de la vidéo…" : "Ajouter votre vidéo"}</h2>
           <p>
@@ -615,6 +651,7 @@ export function Editor({
         </section>
       )}
       {jobs
+        .filter(visibleJob)
         .filter(
           (j) =>
             j.state === "cancelled" &&
@@ -639,7 +676,7 @@ export function Editor({
             </button>
           </p>
         ))}
-      {["arabic", "review"].includes(p.stage) && (
+      {validating && (
         <div className="validation-shortcut">
           <a
             href="#validation"
@@ -654,7 +691,7 @@ export function Editor({
           </a>
         </div>
       )}
-      {p.stage === "ready" && (
+      {step === "exporter" && p.stage === "ready" && (
         <section className="panel export-panel">
           <h2>Votre vidéo sous-titrée</h2>
           <p className="export-edit-help">
@@ -710,7 +747,7 @@ export function Editor({
             ))}
         </section>
       )}
-      {p.media && (
+      {showPlayer && (
         <section
           className={`player ${expanded ? "expanded" : ""}`}
           aria-label="Lecteur vidéo"
@@ -811,70 +848,116 @@ export function Editor({
           modifier l’arabe une fois la correction automatique terminée.
         </p>
       )}
-      {["arabic", "translating", "review", "ready"].includes(p.stage) &&
-        p.segments.length > 0 && (
-          <>
-            <div className="editor-toolbar">
-              {p.segments.length > 0 && (
-                <button
-                  className="follow-toggle"
-                  aria-pressed={follow}
-                  onClick={() => setFollow((value) => !value)}
-                  title={
-                    focused && follow
-                      ? "Le défilement attend la fin de votre saisie"
-                      : undefined
-                  }
-                >
-                  Suivi {follow ? "activé" : "désactivé"}
-                </button>
-              )}
-              <h2>
-                {french ? "Relire arabe et français" : "Correction arabe"}
-              </h2>
-            </div>
-            <details className="translation-help">
-              <summary>À propos de la traduction</summary>
-              <p>
-                La traduction reste modifiable. La vérification automatique des
-                citations religieuses n’est pas activée ; vérifiez les
-                références avant publication.
+      {step === "traduire" && translationPending && (
+        <p className="notice" role="status">
+          La relecture sera disponible une fois la traduction terminée. Vous
+          pouvez relire l’arabe à l’étape 2 ; l’export reste indisponible.
+        </p>
+      )}
+      {step === "corriger" && translationPending && (
+        <p className="notice" role="status">
+          Arabe validé — lecture seule pendant la traduction. Retrouvez sa
+          progression à l’étape 3.
+        </p>
+      )}
+      {step === "preparer" && currentStep(p) !== "preparer" && (
+        <section className="panel">
+          <h2>Préparation terminée</h2>
+          <p>La vidéo et la transcription corrigée sont disponibles.</p>
+          <button onClick={() => void navigateStep("corriger")}>
+            Relire l’arabe
+          </button>
+        </section>
+      )}
+      {showSegments && canVisitStep(p, "corriger") && p.segments.length > 0 && (
+        <>
+          <div className="editor-toolbar">
+            {p.segments.length > 0 && (
+              <button
+                className="follow-toggle"
+                aria-pressed={follow}
+                onClick={() => setFollow((value) => !value)}
+                title={
+                  focused && follow
+                    ? "Le défilement attend la fin de votre saisie"
+                    : undefined
+                }
+              >
+                Suivi {follow ? "activé" : "désactivé"}
+              </button>
+            )}
+            <h2>
+              {french
+                ? "Relire arabe et français"
+                : translationPending
+                  ? "Arabe validé"
+                  : "Correction arabe"}
+            </h2>
+          </div>
+          <details className="translation-help">
+            <summary>À propos de la traduction</summary>
+            <p>
+              La traduction reste modifiable. La vérification automatique des
+              citations religieuses n’est pas activée ; vérifiez les références
+              avant publication.
+            </p>
+          </details>
+          {p.stage === "arabic" &&
+            p.translation_source > 0 &&
+            p.translation_source !== p.arabic_version && (
+              <p className="notice">
+                L’arabe a changé. La traduction précédente est conservée ; une
+                nouvelle traduction remplacera les retouches françaises après
+                votre confirmation.
               </p>
-            </details>
-            {p.stage === "arabic" &&
-              p.translation_source > 0 &&
-              p.translation_source !== p.arabic_version && (
-                <p className="notice">
-                  L’arabe a changé. La traduction précédente est conservée ; une
-                  nouvelle traduction remplacera les retouches françaises après
-                  votre confirmation.
-                </p>
-              )}
-            <div className="segments">
-              {p.segments.map((s) => (
-                <article
-                  id={`segment-${s.id}`}
-                  key={s.id}
-                  className={`segment ${s.id === active ? "active" : ""}`}
+            )}
+          <div className="segments">
+            {p.segments.map((s) => (
+              <article
+                id={`segment-${s.id}`}
+                key={s.id}
+                className={`segment ${s.id === active ? "active" : ""}`}
+              >
+                <button
+                  className="timestamp"
+                  onClick={() => {
+                    seekTo(s.start_ms / 1000);
+                  }}
                 >
-                  <button
-                    className="timestamp"
-                    onClick={() => {
-                      seekTo(s.start_ms / 1000);
-                    }}
-                  >
-                    {time(s.start_ms)} — {time(s.end_ms)}
-                  </button>
-                  <div className={french ? "fields bilingual" : "fields"}>
-                    {field(s, "arabic")}
-                    {french && field(s, "french")}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
-        )}
+                  {time(s.start_ms)} — {time(s.end_ms)}
+                </button>
+                <div className={french ? "fields bilingual" : "fields"}>
+                  {translationPending ? (
+                    <p className="readonly-arabic" lang="ar" dir="rtl">
+                      {s.arabic}
+                    </p>
+                  ) : (
+                    field(s, "arabic")
+                  )}
+                  {french && field(s, "french")}
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
       {nextStep()}
+      {step === "corriger" && canVisitStep(p, "traduire") && (
+        <div className="next-step">
+          <button disabled={busy} onClick={() => void navigateStep("traduire")}>
+            {translationPending
+              ? "Voir la progression de la traduction"
+              : "Relire la traduction"}
+          </button>
+        </div>
+      )}
+      {step === "traduire" && p.stage === "ready" && (
+        <div className="next-step">
+          <button disabled={busy} onClick={() => void navigateStep("exporter")}>
+            Revenir à l’export
+          </button>
+        </div>
+      )}
       <section className="danger">
         {deleteOpen ? (
           <>

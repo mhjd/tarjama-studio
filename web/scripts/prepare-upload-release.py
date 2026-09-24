@@ -22,7 +22,7 @@ def archive(revision, path):
 archive("b69c700", "web/backend")
 archive("HEAD", "web/frontend")
 # Explicitly reviewed additions/fixes; do not copy the pending backend wholesale.
-for name in ["api.go", "studio_test.go", "isolated_client.go", "isolated_test.go", "asr_test.go", "text_retry_test.go"]:
+for name in ["api.go", "studio_test.go", "isolated_client.go", "isolated_test.go", "asr_test.go", "text_retry_test.go", "routes_test.go"]:
     relative = Path("web/backend/internal/studio") / name
     shutil.copy2(root / relative, stage / relative)
 # 8b25d68 is the pre-incident source; its candidate prompt version remains excluded.

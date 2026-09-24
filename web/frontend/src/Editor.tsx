@@ -32,7 +32,9 @@ export function Editor({
   register,
   initialFile,
   consumeFile,
+  onProjectChange,
 }: {
+  onProjectChange: (project: Project) => void;
   initialFile: File | null;
   consumeFile: () => void;
   initial: Project;
@@ -46,6 +48,9 @@ export function Editor({
     draft.current = new Drafts(initial, user, () => render((n) => n + 1));
   const d = draft.current,
     p = d.project;
+  useEffect(() => {
+    onProjectChange(p);
+  }, [p.stage]);
   const [jobs, setJobs] = useState<Job[]>([]),
     [connectionLost, setConnectionLost] = useState(false),
     [error, setError] = useState(""),
@@ -89,11 +94,30 @@ export function Editor({
     setJobs(x.jobs);
     if (!d.dirty) d.adopt(x.project);
   }
+  const titleSave = useRef<Promise<void>>(Promise.resolve());
+  function saveTitle() {
+    const value = titleField.current?.value;
+    const saved = titleSave.current
+      .catch(() => {})
+      .then(async () => {
+        if (value === undefined || value === d.project.title) return;
+        const updated = await request<Project>(
+          `/api/projects/${p.id}`,
+          "PATCH",
+          { title: value },
+        );
+        // Renaming does not change content versions; do not replace newer segments.
+        d.adopt({ ...d.project, title: updated.title });
+      });
+    titleSave.current = saved;
+    return saved;
+  }
   async function flush() {
     if (composing.current.size)
       await new Promise<void>((resolve) =>
         compositionWaiters.current.push(resolve),
       );
+    await saveTitle();
     for (const [key, el] of fields.current) {
       const [id, field] = key.split(":");
       d.edit(id, field as Field, el.value);
@@ -393,12 +417,7 @@ export function Editor({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => {
-              if (title !== p.title)
-                void request<Project>(`/api/projects/${p.id}`, "PATCH", {
-                  title,
-                })
-                  .then((x) => d.adopt(x))
-                  .catch((e) => setError(String(e)));
+              void saveTitle().catch((e) => setError(String(e)));
             }}
           />
           {p.url && /^https?:\/\//.test(p.url) && (

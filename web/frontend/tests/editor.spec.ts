@@ -148,7 +148,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   await page.getByRole("button", { name: "Réessayer", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Enregistré");
   await page.reload();
-  await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+  await expect(page).toHaveURL(/\/projets\/fixture\/corriger$/);
   await expect(
     page.getByRole("textbox", { name: "Arabe one", exact: true }),
   ).toHaveValue("السلام عليكم جميعا");

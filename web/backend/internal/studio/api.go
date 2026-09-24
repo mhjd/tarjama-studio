@@ -145,6 +145,13 @@ func (a *API) Routes() http.Handler {
 		w.WriteHeader(204)
 	})
 	m.Handle("/api/", a.Auth.Protect(protected))
+	// Only application routes receive the shell. Missing API/assets stay errors.
+	appShell := func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(a.Config.Frontend, "index.html"))
+	}
+	for _, pattern := range []string{"GET /projets", "GET /projets/{id}", "GET /projets/{id}/{step}", "GET /compte/cles"} {
+		m.HandleFunc(pattern, appShell)
+	}
 	m.Handle("/", http.FileServer(http.Dir(a.Config.Frontend)))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")

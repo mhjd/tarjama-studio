@@ -5,45 +5,151 @@ import { purgeDrafts } from "./drafts";
 import { Create } from "./Create";
 import { Editor } from "./Editor";
 import { Keys } from "./Keys";
+import { parseRoute, projectPath } from "./routes";
 import "./styles.css";
 function App() {
-  const pendingFile = useRef<File | null>(null);
+  const pendingFile = useRef<{ id: string; file: File } | null>(null);
+  const flush = useRef<(() => Promise<void>) | null>(null);
+  const path = useRef(window.location.pathname);
+  const navigation = useRef(0);
+  const changingRoute = useRef(false);
+  const keysReturn = useRef("/projets");
+  const [route, setRoute] = useState(path.current);
+  const [routeLoading, setRouteLoading] = useState(false);
   const [user, setUser] = useState(""),
     [loaded, setLoaded] = useState(false),
     [dev, setDev] = useState(false),
     [projects, setProjects] = useState<Project[]>([]),
     [selected, setSelected] = useState<Project | null>(null),
-    [creating, setCreating] = useState(false),
-    [settings, setSettings] = useState(false),
     [error, setError] = useState("");
+  const view = parseRoute(route).view;
+
+  function commitPath(next: string, mode: "push" | "replace") {
+    if (window.location.pathname !== next || mode === "replace") {
+      window.history[mode === "push" ? "pushState" : "replaceState"](
+        {},
+        "",
+        next,
+      );
+    }
+    path.current = next;
+    setRoute(next);
+  }
+  async function go(next: string, mode: "push" | "replace" = "push") {
+    const version = ++navigation.current;
+    const previous = path.current;
+    changingRoute.current = true;
+    try {
+      await flush.current?.();
+      if (version !== navigation.current) return;
+    } catch (e) {
+      if (version !== navigation.current) return;
+      // popstate has already moved the URL. Restore the edited page if save fails.
+      if (window.location.pathname !== previous) commitPath(previous, "push");
+      changingRoute.current = false;
+      setError(
+        "Navigation interrompue : vos modifications n’ont pas pu être enregistrées.",
+      );
+      return;
+    }
+    setError("");
+    setRouteLoading(true);
+    try {
+      const target = parseRoute(next);
+      if (target.view === "project") {
+        const { project } = await request<{ project: Project }>(
+          `/api/projects/${target.id}`,
+        );
+        if (version !== navigation.current) return;
+        const canonical = projectPath(project);
+        setSelected(project);
+        if (target.step && next !== canonical) {
+          setError(
+            "Cette étape n’est pas disponible. Le projet est ouvert à son étape actuelle.",
+          );
+        }
+        commitPath(canonical, mode);
+      } else {
+        const list = await request<Project[]>("/api/projects");
+        if (version !== navigation.current) return;
+        setProjects(list);
+        setSelected(null);
+        commitPath(next === "/" ? "/projets" : next, mode);
+      }
+    } catch {
+      if (version !== navigation.current) return;
+      setSelected(null);
+      commitPath(next, mode);
+      setError(
+        "Impossible d’ouvrir cette page. Vérifiez votre connexion et l’accès au projet.",
+      );
+    } finally {
+      if (version === navigation.current) {
+        changingRoute.current = false;
+        setRouteLoading(false);
+      }
+    }
+  }
   async function session() {
     try {
       const s = await request<{ id: string; csrf: string }>("/api/session");
       setCSRF(s.csrf);
       setUser(s.id);
-      setProjects(await request<Project[]>("/api/projects"));
+      let destination = window.location.pathname;
+      try {
+        const saved = sessionStorage.getItem("tarjama:return-path");
+        sessionStorage.removeItem("tarjama:return-path");
+        if (
+          destination === "/" &&
+          saved &&
+          parseRoute(saved).view !== "missing"
+        )
+          destination = saved;
+      } catch {
+        /* Private browsers can disable storage. */
+      }
+      await go(destination, "replace");
     } catch {
       setUser("");
     } finally {
       setLoaded(true);
     }
   }
+  const navigateRef = useRef(go);
+  navigateRef.current = go;
   useEffect(() => {
-    void request<{ development: boolean }>("/api/config").then((c) =>
-      setDev(c.development),
-    );
+    void request<{ development: boolean }>("/api/config")
+      .then((c) => setDev(c.development))
+      .catch(() => {});
     void session();
+    const onPop = () => {
+      if (window.location.pathname !== path.current)
+        void navigateRef.current(window.location.pathname, "replace");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
-  async function refresh() {
-    setProjects(await request<Project[]>("/api/projects"));
-    setSelected(null);
+  function syncProject(project: Project) {
+    if (changingRoute.current || parseRoute(path.current).id !== project.id)
+      return;
+    const canonical = projectPath(project);
+    if (path.current !== canonical) commitPath(canonical, "replace");
   }
-  const [flush, setFlush] = useState<(() => Promise<void>) | null>(null);
-  async function navigate(fn: () => void | Promise<void>) {
+  async function logout() {
     try {
-      await flush?.();
-      await fn();
+      await flush.current?.();
+      await request("/api/logout", "POST");
+      navigation.current++;
+      purgeDrafts();
+      pendingFile.current = null;
+      setCSRF("");
+      setUser("");
+      setProjects([]);
+      setSelected(null);
       setError("");
+      setRouteLoading(false);
+      changingRoute.current = false;
+      commitPath("/projets", "replace");
     } catch (e) {
       setError(String(e));
     }
@@ -66,7 +172,20 @@ function App() {
         <p>
           Écoutez, corrigez et traduisez vos vidéos dans votre espace privé.
         </p>
-        <a className="primary button" href="/auth/login">
+        <a
+          className="primary button"
+          href="/auth/login"
+          onClick={() => {
+            try {
+              sessionStorage.setItem(
+                "tarjama:return-path",
+                window.location.pathname,
+              );
+            } catch {
+              /* Optional return location. */
+            }
+          }}
+        >
           Se connecter
         </a>
         {dev && (
@@ -92,32 +211,22 @@ function App() {
   return (
     <>
       <header>
-        <button className="brand" onClick={() => void navigate(refresh)}>
+        <button className="brand" onClick={() => void go("/projets")}>
           تَرْجَمَة <span>Tarjama</span>
         </button>
         <nav>
           <button
-            onClick={() =>
-              void navigate(() => {
-                setSettings(!settings);
-              })
-            }
+            onClick={() => {
+              if (view === "keys") void go(keysReturn.current);
+              else {
+                keysReturn.current = path.current;
+                void go("/compte/cles");
+              }
+            }}
           >
             Mes clés
           </button>
-          <button
-            onClick={() =>
-              void navigate(async () => {
-                await request("/api/logout", "POST");
-                purgeDrafts();
-                setCSRF("");
-                setUser("");
-                setSelected(null);
-              })
-            }
-          >
-            Déconnexion
-          </button>
+          <button onClick={() => void logout()}>Déconnexion</button>
         </nav>
       </header>
       <main>
@@ -126,20 +235,34 @@ function App() {
             {error}
           </p>
         )}
-        {settings ? (
-          <Keys close={() => setSettings(false)} />
-        ) : selected ? (
+        {routeLoading ? (
+          <p role="status">Chargement…</p>
+        ) : view === "keys" ? (
+          <Keys close={() => void go(keysReturn.current)} />
+        ) : view === "project" && selected ? (
           <Editor
             key={selected.id}
             initial={selected}
-            initialFile={pendingFile.current}
+            initialFile={
+              pendingFile.current?.id === selected.id
+                ? pendingFile.current.file
+                : null
+            }
             consumeFile={() => {
               pendingFile.current = null;
             }}
             user={user}
-            back={refresh}
-            register={(fn) => setFlush(() => fn)}
+            back={() => go("/projets")}
+            register={(fn) => {
+              flush.current = fn;
+            }}
+            onProjectChange={syncProject}
           />
+        ) : view === "missing" || view === "project" ? (
+          <section>
+            <h1>Page indisponible</h1>
+            <button onClick={() => void go("/projets")}>← Mes projets</button>
+          </section>
         ) : (
           <>
             <div className="page-title">
@@ -148,17 +271,19 @@ function App() {
                 <h1>Mes projets</h1>
                 <p>Une vidéo. Une écoute attentive. Des mots fidèles.</p>
               </div>
-              <button className="primary" onClick={() => setCreating(true)}>
+              <button
+                className="primary"
+                onClick={() => void go("/projets/nouveau")}
+              >
                 + Nouvelle vidéo
               </button>
             </div>
-            {creating && (
+            {view === "create" && (
               <Create
-                onClose={() => setCreating(false)}
+                onClose={() => void go("/projets")}
                 onCreate={(p, file) => {
-                  pendingFile.current = file;
-                  setSelected(p);
-                  setCreating(false);
+                  pendingFile.current = file ? { id: p.id, file } : null;
+                  void go(projectPath(p));
                 }}
               />
             )}
@@ -169,7 +294,7 @@ function App() {
                   Collez un lien YouTube ou importez une vidéo depuis votre
                   appareil.
                 </p>
-                <button onClick={() => setCreating(true)}>
+                <button onClick={() => void go("/projets/nouveau")}>
                   Nouvelle vidéo
                 </button>
               </section>
@@ -180,11 +305,7 @@ function App() {
                     className="project"
                     key={p.id}
                     onClick={() =>
-                      void request<{ project: Project }>(
-                        `/api/projects/${p.id}`,
-                      )
-                        .then((x) => setSelected(x.project))
-                        .catch((e) => setError(String(e)))
+                      void go(`/projets/${encodeURIComponent(p.id)}`)
                     }
                   >
                     <span className="project-icon">▶</span>

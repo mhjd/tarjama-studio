@@ -687,3 +687,14 @@ publication atomique de la correction. L'API refuse déjà les modifications à 
 étapes. Les réponses IA mal structurées peuvent être reprises de manière bornée,
 avec découpage plus fin et conservation des morceaux validés ; aucun résultat
 partiel n'est publié. Voir `web/review/cleanup-recovery-20260924/RESULTS.md`.
+
+### Routes — 24 septembre
+
+Les projets ont une URL `/projets/<id>/<etape>` : `preparer`, `corriger`,
+`traduire`, `exporter`. L'étape reflète exclusivement l'état du serveur : une
+adresse prématurée ou périmée est remplacée par l'adresse de l'étape courante,
+sans validation implicite ni nouveau job. L'ouverture, le rechargement, le retour
+et l'avance du navigateur conservent ce contrôle. Les brouillons doivent être
+sauvegardés avant navigation ; une erreur de sauvegarde conserve l'éditeur.
+La bibliothèque, la création et les clés ont aussi leurs routes. Le serveur
+sert la page React sur ces routes sans transformer les erreurs API/assets en HTML.

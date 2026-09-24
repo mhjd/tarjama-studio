@@ -622,3 +622,24 @@ func TestBrokerRefusalKeepsPrivateDetailsOutOfLogs(t *testing.T) {
 		}
 	}
 }
+
+func TestIsolatedFailureDiagnosticIsBoundedAndPrivate(t *testing.T) {
+	for _, tc := range []struct{ body, want string }{
+		{`{"stderr":"ERROR: HTTP Error 403: Forbidden https://private.example/token"}`, "http_403"},
+		{`{"stderr":"Outil isol\u00e9 en \u00e9chec"}`, "tool_detail_hidden"},
+		{"Requested format is not available", "format_unavailable"},
+		{"secret-value and arbitrary stderr", "unclassified"},
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/v1/jobs/abc/diagnostics" {
+				t.Error(r.URL.Path)
+			}
+			fmt.Fprint(w, tc.body)
+		}))
+		client := &IsolatedClient{URL: server.URL, Token: "fixture", HTTP: server.Client()}
+		if got := client.failureReason(context.Background(), "abc"); got != tc.want {
+			t.Errorf("got %s, want %s", got, tc.want)
+		}
+		server.Close()
+	}
+}

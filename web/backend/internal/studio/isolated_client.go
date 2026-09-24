@@ -71,6 +71,51 @@ func NewIsolatedClient(address, token, caFile string) (*IsolatedClient, error) {
 func mediaUnavailable() error {
 	return &ProviderError{Public: "Traitement média indisponible. Progression conservée ; reprise automatique.", Temporary: true, After: time.Minute}
 }
+
+// Capture a fixed operational category before reconciliation acknowledges and
+// deletes remote diagnostics. Never log raw tool output, URLs or user media.
+func (c *IsolatedClient) failureReason(ctx context.Context, id string) string {
+	path, err := operationPath(id)
+	if err != nil {
+		return "diagnostics_unavailable"
+	}
+	bounded, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	resp, err := c.do(bounded, "GET", path+"/diagnostics", nil, 0, nil)
+	if err != nil {
+		return "diagnostics_unavailable"
+	}
+	defer resp.Body.Close()
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 32768))
+	if err != nil {
+		return "diagnostics_unavailable"
+	}
+	return isolatedFailureReason(string(b))
+}
+
+func isolatedFailureReason(message string) string {
+	var payload struct {
+		Stderr string `json:"stderr"`
+	}
+	if json.Unmarshal([]byte(message), &payload) == nil && payload.Stderr != "" {
+		message = payload.Stderr
+	}
+	s := strings.ToLower(message)
+	for _, entry := range []struct{ code, text string }{
+		{"youtube_bot_check", "confirm you’re not a bot"},
+		{"youtube_bot_check", "confirm you're not a bot"},
+		{"http_403", "http error 403"}, {"http_429", "http error 429"},
+		{"format_unavailable", "requested format is not available"},
+		{"tls_verification", "certificate verify failed"},
+		{"network_timeout", "timed out"},
+		{"tool_detail_hidden", "outil isolé en échec"},
+	} {
+		if strings.Contains(s, entry.text) {
+			return entry.code
+		}
+	}
+	return "unclassified"
+}
 func brokerError(code int) error {
 	switch {
 	case code == 429 || code >= 500:

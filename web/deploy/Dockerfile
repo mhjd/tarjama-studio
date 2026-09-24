@@ -77,3 +77,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY --from=research-check-build /research-check /usr/local/bin/research-check
 USER 10001:10001
 ENTRYPOINT ["/usr/local/bin/research-check"]
+
+# Read-only diagnosis of production or explicitly scoped qualification data.
+FROM backend AS media-diagnostic-build
+RUN CGO_ENABLED=0 go build -trimpath -o /media-diagnostic ./cmd/media-diagnostic
+FROM api AS media-diagnostic
+COPY --from=media-diagnostic-build /media-diagnostic /usr/local/bin/media-diagnostic
+ENTRYPOINT ["/usr/local/bin/media-diagnostic"]

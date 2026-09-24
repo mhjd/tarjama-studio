@@ -46,6 +46,12 @@ func run() error {
 		return e
 	}
 	cfg.ConnConfig.RuntimeParams["default_transaction_read_only"] = "on"
+	if schema := os.Getenv("DIAGNOSTIC_SCHEMA"); schema != "" {
+		if !regexp.MustCompile(`^ui_review_[a-z0-9_]{1,40}$`).MatchString(schema) {
+			return fmt.Errorf("invalid review schema")
+		}
+		cfg.ConnConfig.RuntimeParams["search_path"] = schema
+	}
 	cfg.ConnConfig.ConnectTimeout = 3 * time.Second
 	db, e := pgxpool.NewWithConfig(ctx, cfg)
 	if e != nil {
@@ -120,7 +126,7 @@ func run() error {
 		var data map[string]any
 		json.Unmarshal(b, &data)
 		fmt.Printf("remote http=%d state=%v exit=%v error=%s\n", code, data["state"], data["exit_code"], clean(fmt.Sprint(data["error"])))
-		if data["state"] == "failed" {
+		if data["state"] == "failed" || (data["exit_code"] != nil && data["exit_code"] != float64(0)) {
 			code, b = get("/v1/jobs/"+id+"/diagnostics", false)
 			fmt.Printf("diagnostics http=%d %s\n", code, clean(string(b)))
 		}

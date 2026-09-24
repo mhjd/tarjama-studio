@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -170,6 +171,9 @@ func (m *IsolatedMedia) operation(ctx context.Context, step, profile string, par
 		}
 	}
 	if remote.State != "succeeded" {
+		if remote.State == "failed" {
+			log.Printf("isolated tool failed job=%s operation=%s profile=%s reason=%s", m.Job.ID, op.RemoteID, profile, m.Client.failureReason(ctx, op.RemoteID))
+		}
 		return "", errors.New("Opération isolée terminée sans résultat disponible ; réessai explicite requis")
 	}
 	if e = storageRoom(m.Storage, maxOutput); e != nil {

@@ -238,3 +238,7 @@ web-luna-compare: web-prompts-check
 
 web-luna-compare-test: web-prompts-check
 	python3 -B -m unittest discover -s web/review/luna-comparison -p 'test_*.py'
+
+.PHONY: web-media-diagnostic-image
+web-media-diagnostic-image:
+	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target media-diagnostic -t tarjama-media-diagnostic:review web

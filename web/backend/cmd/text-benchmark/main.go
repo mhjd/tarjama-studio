@@ -138,9 +138,6 @@ func run() error {
 		return errors.New("registered OpenRouter secret unavailable")
 	}
 	p := studio.NewProviders()
-	if p.Research.Key == "" {
-		return errors.New("registered Parallel secret unavailable; no web-free benchmark")
-	}
 	p.Client.Transport = &auditTransport{dir: *output, base: http.DefaultTransport}
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
 	defer cancel()

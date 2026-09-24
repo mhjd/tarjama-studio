@@ -82,7 +82,6 @@ func TestResumeOldTextBoundaries(t *testing.T) {
 }
 func TestDeepSeekRequestBudget(t *testing.T) {
 	p := NewProviders()
-	p.Research.Key = "parallel-fixture-only"
 	if !strings.Contains(p.TextURL, "openrouter.ai/api/v1/chat/completions") {
 		t.Fatal(p.TextURL)
 	}

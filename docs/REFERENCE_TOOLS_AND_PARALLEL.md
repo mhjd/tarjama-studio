@@ -21,15 +21,16 @@ l’ancien déploiement, pas une recette à réappliquer pour cette évolution.
 ## Décisions retenues
 
 - Tous les modèles comparés disposent des mêmes outils `web_search` et
-  `web_fetch`, exécutés exclusivement par Parallel. Aucun moteur natif Google,
-  OpenRouter ou propre à un modèle, ni repli direct de téléchargement de pages.
+  `web_fetch`, exécutés exclusivement par Parallel. Les appels passent par les outils serveur OpenRouter avec `engine: "parallel"`
+  explicite pour chacun. Aucun moteur natif, `auto`, Exa ni fetch HTTP direct.
 - La recherche web sert aux vérifications générales hors corpus : noms propres,
   lieux, vocabulaire spécialisé et contexte utile à la fidélité de traduction.
   Elle ne sert pas à vérifier systématiquement chaque affirmation du locuteur.
 - Viser 15 à 20 résultats par recherche. Ne pas confondre cette quantité avec
   le nombre d’appels autorisés ou la quantité de texte injectée dans le modèle.
   Enregistrer le nombre effectivement reçu ; ne pas fabriquer ni répéter des
-  résultats pour atteindre 20. L’API V1 documente `advanced_settings.max_results: 20`, borne retenue dans le client.
+  résultats pour atteindre 20. OpenRouter reçoit `parameters.max_results: 20`. Un maximum n’est pas une
+  promesse de recevoir 20 résultats utiles.
 - Trois outils locaux distincts : Coran français ; Bukhari/Muslim arabe ; autres
   recueils arabes. Le modèle traduit lui-même les hadiths depuis l’arabe.
 - L’outil coranique accepte une référence directe sourate/verset (ou plage),
@@ -166,92 +167,129 @@ une sortie exploitable sans attribution fabriquée.
    de génération et de recherche. La disponibilité d’un outil ne prouve pas
    qu’un modèle l’utilise correctement.
 
-## Accès et état initial
+## Accès : correction après retour du propriétaire
 
-Le catalogue d’atelier contient Gemini et OpenRouter mais pas Parallel au début
-de cette tâche. Aucun secret n’a été lu ou affiché pour cet inventaire.
-Prérequis pour les vrais essais : secret administré `parallel`, clé `api_key`,
-consommé via `PARALLEL_API_KEY_FILE`; sortie HTTPS vers `api.parallel.ai`.
-Les valeurs ne doivent apparaître ni dans le dépôt, ni dans les commandes, ni
-les journaux. L’administrateur n’a pas à ouvrir les URL visitées à l’application :
-Search et Extract sont exécutés chez Parallel.
+La première implémentation (`4145708`) appelait directement les API Parallel et
+exigeait une clé supplémentaire. Ce choix était inutile : **OpenRouter propose
+Search et Fetch avec le moteur Parallel et sa propre facturation**. Le propriétaire
+l’a signalé et cette exigence est retirée. Aucun secret Parallel ni intervention
+administrateur pour créer cet accès n’est nécessaire.
 
-## Sources techniques consultées
+La seule clé de génération est `OPENROUTER_API_KEY_FILE` (secret administré
+`openrouter`, entrée `api_key`), partagée ou personnelle selon la politique
+existante. Le service contacte `https://openrouter.ai/api/v1/chat/completions`.
+OpenRouter exécute les recherches et lectures chez Parallel. Le backend Tarjama
+ne visite pas les URL produites par le modèle et n’ouvre aucun accès au réseau
+local pour ces pages. Les protections SSRF/TLS/WARP des téléchargements média
+restent indépendantes et inchangées. Ne pas présenter les protections internes
+d’OpenRouter/Parallel comme un audit SSRF réalisé par Tarjama.
 
-- https://docs.parallel.ai/api-reference/search/search
-- https://docs.parallel.ai/api-reference/extract/extract
-- https://openrouter.ai/docs/guides/features/tool-calling
+## Contrat OpenRouter retenu
+
+```json
+{
+  "tools": [
+    {
+      "type": "openrouter:web_search",
+      "parameters": {
+        "engine": "parallel",
+        "mode": "advanced",
+        "max_results": 20,
+        "max_uses": 6,
+        "max_total_results": 120,
+        "search_context_size": "medium"
+      }
+    },
+    {
+      "type": "openrouter:web_fetch",
+      "parameters": {
+        "engine": "parallel",
+        "max_uses": 10,
+        "max_content_tokens": 12000
+      }
+    }
+  ],
+  "max_tool_calls": 16
+}
+```
+
+Un seul appel HTTP expose ces deux outils. OpenRouter gère les continuations du
+modèle. Les plafonds de recherche, de lecture, de résultats et d’étapes bornent
+le travail ; le délai applicatif est de cinq minutes. `max_tokens` plafonne la
+sortie d’une génération, pas la somme des tokens de toutes les continuations.
+Ce contrat s’applique aussi aux futurs modèles qui auraient leur recherche native.
+La disparition des anciens outils `function` ne retire pas la future possibilité
+de combiner trois outils locaux : OpenRouter permet de mélanger outils serveur
+et outils client. La boucle cliente des corpus sera ajoutée avec ces corpus.
+
+Ne pas utiliser le plugin historique `web`, le suffixe `:online`, un preset
+implicite ou `engine: auto`. Des restrictions du workspace OpenRouter peuvent
+refuser le moteur demandé (403) ; corriger alors la configuration, sans repli.
+La recherche reste facultative selon le besoin du passage : outils disponibles
+ne signifie pas appel systématique, ni vérification religieuse certifiée.
+
+## Format et preuves
+
+Les essais ont montré que le modèle peut rendre des balises Markdown ou un objet
+hors schéma après usage des outils serveur, malgré `response_format: json_schema`
+et `provider.require_parameters`. Le schéma est donc également rappelé dans les
+instructions. Le serveur conserve sa validation stricte : JSON seul, champs
+connus, même cardinalité et mêmes IDs/ordre, texte non vide. Aucun nettoyage
+permissif ne transforme arbitrairement une réponse mal formée en succès.
+
+L’audit conserve l’ID OpenRouter, les usages et annotations retournés dans
+l’enveloppe fournisseur, séparément des sous-titres. `model_calls` désigne les
+requêtes HTTP Tarjama, pas le nombre de tours internes chez OpenRouter.
+Le champ `engine` indique le moteur **demandé**. Aucune assertion de provenance
+placée dans le JSON du modèle n’est acceptée comme preuve.
+
+L’API observée fournit `usage.server_tool_use_details.web_search_requests` et
+`tool_calls_executed`, mais pas de compteur fetch ni de contenu brut par appel.
+Avec seulement Search et Fetch exposés, un total exécuté supérieur au nombre de
+recherches permet d’inférer un appel Fetch ; cette inférence est étiquetée dans
+le rapport. Elle ne prouve pas le succès de chaque extraction. Les annotations
+URL seules ne suffisent pas à prouver une lecture de page. La qualification
+actuelle porte sur l’invocation des outils et le JSON final, pas sur une
+traçabilité exhaustive des sources ni sur la qualité de toute traduction.
+
+## Sources techniques consultées le 24 septembre 2026
+
+- https://openrouter.ai/docs/guides/features/server-tools
+- https://openrouter.ai/docs/guides/features/server-tools/web-search
+- https://openrouter.ai/docs/guides/features/server-tools/web-fetch
+- https://parallel.ai/integrations/openrouter
 - https://sunnah.com/developers
 - https://api-docs.quran.com/docs/tutorials/content-sync/getting-started/
 
-## État du code candidat
+## État du code candidat et reprise
 
-- `internal/research` : Search/Extract Parallel V1, outils identiques via le
-  function calling OpenRouter, 20 résultats maximum, 24 000 caractères d’extraits
-  par retour, 3 URL maximum par fetch. Limites locales : 6 recherches, 10 fetch,
-  12 tours modèle et 10 minutes par exécution. Ces limites ne garantissent pas
-  un coût précis ; les usages API et temps sont conservés séparément.
-- Métadonnées opaques du modèle conservées entre tours ; aucun plugin de recherche
-  natif ni moteur de repli. Les contenus sont traités comme des données non fiables.
-- Sans clé Parallel, le candidat n’émet pas d’appel de génération payant. Un
-  défaut de configuration conserve le job en attente ; aucune recherche fictive.
-- Prompt `translation-parallel-v3` commun desktop/web (enveloppes adaptées).
-  Il annonce explicitement l’absence actuelle des outils locaux et ne demande
-  plus de sortie vide. Aucun champ `remarks` n’est encore accepté : l’ajout du
-  contrat et du panneau est une étape restante, pas une fonctionnalité livrée.
-- Migration additive `003_openrouter.sql`, et clés personnelles OpenRouter/Groq.
-  Les morceaux déjà calculés restent intacts, même s’ils proviennent de Gemini.
-- `make web-research-check-image` prépare une qualification indépendante sans
-  données utilisateur. `make web-research-check` exige les chemins de fichiers
-  de clés et un nouveau `RESEARCH_RUN`, vérifie Search + Fetch effectivement
-  exécutés puis une réponse structurée. Maximum 4 appels modèle, 2 048 tokens
-  de sortie par appel, 5 minutes, aucun retry automatique.
-- Les vrais essais Parallel sont bloqués tant que l’accès administré n’est pas
-  fourni. Ne pas confondre les mocks réussis avec cette qualification réelle.
+- DeepSeek via OpenRouter pour nettoyage et traduction ; Gemini refusé.
+- Prompt métier `translation-parallel-v3` commun desktop/web, enveloppes adaptées.
+  Les outils locaux sont explicitement indisponibles. Aucun `remarks` accepté
+  avant sa persistance et son panneau UI ; aucun avertissement dans les sous-titres.
+- Migration additive `003_openrouter.sql`, clés personnelles OpenRouter/Groq.
+  Les résultats et credentials Gemini historiques restent conservés et inutilisés.
+- Ancien client Parallel direct retiré, aucune nouvelle dépendance.
+- Candidat non déployé : ne pas mélanger les nouvelles clés/UI avec un ancien
+  binaire Gemini. Construire l’image complète et qualifier la migration puis le
+  parcours applicatif avant bascule. Corpus et remarques restent à implémenter.
 
-## Commandes et reprise
-
-Pour un essai local explicite sur le VPS, définir uniquement les chemins de
-fichiers administrés : `PARALLEL_API_KEY_FILE`, `OPENROUTER_API_KEY_FILE`, puis
-`RESEARCH_RUN=parallel-NOUVEAU-RUN`. Le programme consomme les secrets ; ni leurs
-valeurs ni les en-têtes ne sont exposés à l’agent. Exécuter :
+Qualification répétable, sans données utilisateur :
 
 ```sh
 make web-research-check-image
-make web-research-check
+OPENROUTER_API_KEY_FILE=/chemin/du/fichier/administre \
+RESEARCH_RUN=openrouter-parallel-NOUVEAU-RUN make web-research-check
 ```
 
-Si Parallel n’est disponible que comme secret du courtier, monter `parallel`
-(`api_key`) et `openrouter` (`api_key`) dans une tâche de qualification isolée,
-avec sortie `public-web`, aucun accès base et aucun secret applicatif. Utiliser
-l’image importée réelle, pas un digest inventé. Ne pas faire remplacer les
-services actifs par une recette de qualification.
+Le programme consomme la clé sans l’afficher. Les preuves sont créées dans un
+nouveau dossier `data/model_outputs/<RESEARCH_RUN>/` ; aucun résultat existant
+n’est écrasé. Un seul appel HTTP, quatre étapes serveur maximum, 2 048 tokens
+par génération, cinq minutes, aucun réessai automatique. Un succès ne vaut que
+pour ce modèle et cet exemple ; chaque nouveau modèle doit être qualifié.
 
-Avant la bascule applicative : sauvegarde opérationnelle, qualification réelle
-Parallel/DeepSeek, image complète, migration 003 explicite et démarrage coordonné
-API/worker. Ne pas mélanger la nouvelle UI de clés et l’ancien worker Gemini.
-Les corpus locaux, le contrat remarques et leur UI restent à construire/qualifier.
-Les images actives n’ont pas été remplacées pendant cette tâche.
-
-## Validation locale du 24 septembre
-
-- `go test -race -count=1 ./...` avec PostgreSQL isolé : réussi.
-- `go vet ./...` : réussi.
-- 33 tests Playwright : réussis, dont clés OpenRouter/Groq, suppression de clé,
-  confidentialité, routes protégées et trois parcours complets sur média synthétique.
-- `make web-build` et image `tarjama-research-check:review` : compilations réussies.
-- Parité du prompt desktop/web : 2 tests réussis. Les anciens tests de validation
-  de benchmark restent conservés (3 réussis), sans relancer Gemini.
-- Tests de protocole : résultat Search puis Extract réellement transmis au faux
-  modèle, conservation des métadonnées opaques, 20 résultats maximum, limites de
-  texte et d’appels, annulation, rejet des outils inconnus/URLs locales, erreurs
-  302/401/429/500 sans exposition du corps, absence de moteur natif.
-- Anciennes clés Gemini conservées mais non résolues/acceptées/exposées ; aucune
-  génération payante si Parallel manque. Gemini refusé comme modèle sélectionné.
-- Le binaire de qualification, lancé sans clé et sans réseau, s’arrête sur
-  `PARALLEL_API_KEY_FILE requis`. Ce contrôle n’est pas un essai fournisseur réussi.
-
-Preuves locales : `web/review/parallel-20260924/`. Aucun appel réel de génération,
-Search ou Extract n’a été facturé par ce travail ; les consultations de documentation
-ont été faites séparément. Aucun corpus religieux complet, outil local de référence
-ou panneau de remarques n’est présenté comme terminé.
+Tests et essais réels de cette correction :
+[rapport](../web/review/openrouter-parallel-20260924/RESULTS.md).
+Les logs de `web/review/parallel-20260924/` décrivent l’ancienne implémentation
+avec accès direct ; ils sont conservés comme historique, pas comme preuve de
+cette intégration serveur.

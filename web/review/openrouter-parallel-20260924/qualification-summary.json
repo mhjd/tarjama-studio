@@ -1,0 +1,42 @@
+{
+  "elapsed_seconds": 55.970944732,
+  "fetch_evidence": "inferred_from_executed_calls_minus_searches_with_only_two_tools",
+  "fetched": true,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "model_calls": 1,
+  "protocol": "openrouter",
+  "qualification_scope": "server_tool_invocation_and_subtitle_json_not_per_page_success",
+  "qualified": true,
+  "searched": true,
+  "valid_json": true,
+  "usage": [
+    {
+      "prompt_tokens": 49255,
+      "completion_tokens": 446,
+      "total_tokens": 49701,
+      "cost": 0.0263643294,
+      "prompt_tokens_details": {
+        "cached_tokens": 11392,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 177,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.0113643294,
+        "upstream_inference_prompt_cost": 0.0108558894,
+        "upstream_inference_completions_cost": 0.00050844
+      },
+      "server_tool_use_details": {
+        "web_search_requests": 1,
+        "tool_calls_requested": 4,
+        "tool_calls_executed": 4
+      }
+    }
+  ],
+  "request_id": "gen-1790244131-wlhQXTEKJZDvU7NyWTit"
+}

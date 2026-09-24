@@ -350,7 +350,6 @@ func TestProviderStatusesAndSecretPlacement(t *testing.T) {
 			}))
 			defer server.Close()
 			p := NewProviders()
-			p.Research.Key = "parallel-fixture-only"
 			p.TextURL = server.URL
 			_, e := p.Text(context.Background(), "sensitive", "translate", []Segment{{ID: "a", Arabic: "سلام"}}, nil)
 			var pe *ProviderError

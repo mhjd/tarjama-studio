@@ -7,7 +7,9 @@ Groq reste la transcription. Trois outils locaux distincts et un panneau de
 remarques hors sous-titres sont définis, pas encore implémentés. Lire
 [les décisions, contrats et état de qualification](REFERENCE_TOOLS_AND_PARALLEL.md)
 avant toute reprise. Les affirmations historiques Gemini/no-OpenRouter ci-dessous
-sont supersédées. L’accès Parallel manque ; aucun nouveau déploiement réalisé.
+sont supersédées. Parallel est configuré dans les outils serveur OpenRouter :
+la clé OpenRouter suffit, aucune clé Parallel séparée. Voir le rapport réel lié
+dans ce document de décisions. Aucun nouveau déploiement réalisé.
 
 
 Actualisation du 23 septembre 2026 : le propriétaire choisit désormais

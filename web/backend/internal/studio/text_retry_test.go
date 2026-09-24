@@ -66,7 +66,6 @@ func TestTextOutputLimitDiffersFromRefusal(t *testing.T) {
 			fmt.Fprintf(w, `{"choices":[{"finish_reason":%q}]}`, reason)
 		}))
 		p := NewProviders()
-		p.Research.Key = "parallel-fixture-only"
 		p.TextURL = server.URL
 		_, err := p.Text(context.Background(), "test-only", "cleanup", []Segment{{ID: "a", Arabic: "سلام"}}, nil)
 		server.Close()

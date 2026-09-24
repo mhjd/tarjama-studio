@@ -1,0 +1,9 @@
+python3 -B web/scripts/sync_translation_prompt.py --check
+python3 -B -m unittest discover -s web/scripts -p test_translation_prompt.py -v
+test_all_business_lines_are_preserved (test_translation_prompt.DesktopTranslationParity.test_all_business_lines_are_preserved) ... ok
+test_changed_format_requires_explicit_review (test_translation_prompt.DesktopTranslationParity.test_changed_format_requires_explicit_review) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.001s
+
+OK

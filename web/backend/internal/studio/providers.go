@@ -62,11 +62,10 @@ type Providers interface {
 type HTTPProviders struct {
 	Client           *http.Client
 	TextURL, GroqURL string
-	Research         *research.Parallel
 }
 
 func NewProviders() *HTTPProviders {
-	return &HTTPProviders{Research: research.NewParallel(secret("PARALLEL_API_KEY")), Client: &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, TextURL: "https://openrouter.ai/api/v1/chat/completions", GroqURL: "https://api.groq.com/openai/v1/audio/transcriptions"}
+	return &HTTPProviders{Client: &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, TextURL: "https://openrouter.ai/api/v1/chat/completions", GroqURL: "https://api.groq.com/openai/v1/audio/transcriptions"}
 }
 func providerError(r *http.Response) *ProviderError {
 	e := &ProviderError{Public: "Le fournisseur a refusé la requête. Vérifiez la configuration du service."}
@@ -126,9 +125,6 @@ func (p *HTTPProviders) EvaluateOpenRouter(ctx context.Context, key, model strin
 }
 func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, s, contextSegments []Segment, endpoint, model string) (TextResult, error) {
 	var result TextResult
-	if p.Research == nil || p.Research.Key == "" {
-		return result, &ProviderError{Public: "La recherche Parallel n’est pas configurée. Votre progression est conservée ; l’administrateur doit enregistrer cet accès.", Temporary: true, After: 10 * time.Minute}
-	}
 	prompt, err := prompts.ReadFile("prompts/" + kind + ".txt")
 	if err != nil {
 		return result, errors.New("Type de traitement inconnu")
@@ -146,7 +142,7 @@ func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, 
 	}
 	input := map[string]any{"segments": target, "context_only": contextText}
 	schema := map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"segments": map[string]any{"type": "array", "items": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"id": map[string]string{"type": "string"}, "text": map[string]string{"type": "string"}}, "required": []string{"id", "text"}}}}, "required": []string{"segments"}}
-	runner := research.Runner{Parallel: p.Research, Client: p.Client, Endpoint: endpoint, Model: model}
+	runner := research.Runner{Client: p.Client, Endpoint: endpoint, Model: model}
 	output, err := runner.Run(ctx, key, string(prompt), input, schema)
 	if err != nil {
 		var modelError *research.ModelHTTPError
@@ -157,10 +153,6 @@ func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, 
 		if errors.As(err, &modelError) {
 			failure := providerError(&http.Response{StatusCode: modelError.Status, Header: http.Header{"Retry-After": []string{modelError.RetryAfter}}})
 			return result, failure
-		}
-		var webError *research.HTTPError
-		if errors.As(err, &webError) {
-			return result, &ProviderError{Public: "La recherche Parallel est indisponible. La progression est conservée.", Temporary: webError.Status == 429 || webError.Status >= 500, After: time.Minute}
 		}
 		return result, err
 	}

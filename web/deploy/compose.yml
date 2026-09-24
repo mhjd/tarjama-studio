@@ -21,12 +21,11 @@ x-app: &app
     DATABASE_URL_FILE: /run/secrets/database_url
     ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
     OPENROUTER_API_KEY_FILE: /run/secrets/openrouter_key
-    PARALLEL_API_KEY_FILE: /run/secrets/parallel_key
     GROQ_API_KEY_FILE: /run/secrets/groq_key
     MEDIA_TOKEN_FILE: /run/secrets/media_token
     MEDIA_URL: http://media:8091
     GOMAXPROCS: '2'
-  secrets: [database_url, encryption_key, oidc_client_secret, openrouter_key, parallel_key, groq_key, media_token]
+  secrets: [database_url, encryption_key, oidc_client_secret, openrouter_key, groq_key, media_token]
   volumes: ['storage:/storage']
   cpus: 1
   mem_limit: 512m
@@ -132,6 +131,5 @@ secrets:
   encryption_key: {file: '${SECRETS_DIR}/encryption_key'}
   oidc_client_secret: {file: '${SECRETS_DIR}/oidc_client_secret'}
   openrouter_key: {file: '${SECRETS_DIR}/openrouter_key'}
-  parallel_key: {file: '${SECRETS_DIR}/parallel_key'}
   groq_key: {file: '${SECRETS_DIR}/groq_key'}
   media_token: {file: '${SECRETS_DIR}/media_token'}

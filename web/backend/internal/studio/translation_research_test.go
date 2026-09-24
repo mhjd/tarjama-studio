@@ -40,7 +40,6 @@ func TestTranslationResearchAndProvenance(t *testing.T) {
 			}}})
 		}))
 		p := NewProviders()
-		p.Research.Key = "parallel-fixture-only"
 		p.TextURL = server.URL
 		result, err := p.Text(context.Background(), "fixture", "translate", []Segment{{ID: "a", Arabic: "سلام"}}, nil)
 		server.Close()
@@ -56,17 +55,6 @@ func TestTranslationResearchAndProvenance(t *testing.T) {
 	}
 }
 
-func TestMissingParallelPreventsPaidModelCall(t *testing.T) {
-	p := NewProviders()
-	p.Research.Key = ""
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Error("paid call without configured research") }))
-	defer server.Close()
-	p.TextURL = server.URL
-	_, e := p.Text(context.Background(), "fixture", "translate", []Segment{{ID: "a", Arabic: "سلام"}}, nil)
-	if e == nil || !strings.Contains(e.Error(), "Parallel") {
-		t.Fatal(e)
-	}
-}
 func TestGeminiCredentialRemainsHistoricalOnly(t *testing.T) {
 	s := testStore(t)
 	owner, _ := fixture(t, s)

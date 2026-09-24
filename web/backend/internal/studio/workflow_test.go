@@ -174,7 +174,6 @@ func TestProviderStructuredWireValidation(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": tc.finish, "message": map[string]any{"role": "assistant", "content": tc.content}}}})
 		}))
 		p := NewProviders()
-		p.Research.Key = "parallel-fixture-only"
 		p.TextURL = server.URL
 		_, e := p.Text(context.Background(), "fixture", "translate", source, nil)
 		server.Close()
@@ -212,7 +211,6 @@ func TestGroqMultipartContract(t *testing.T) {
 	}))
 	defer server.Close()
 	p := NewProviders()
-	p.Research.Key = "parallel-fixture-only"
 	p.GroqURL = server.URL
 	response, raw, e := p.Audio(context.Background(), "fixture", file)
 	if e != nil || len(response.Segments) != 1 || len(raw) == 0 {

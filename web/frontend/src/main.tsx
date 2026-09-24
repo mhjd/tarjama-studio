@@ -281,6 +281,7 @@ function App() {
             {view === "create" && (
               <Create
                 onClose={() => void go("/projets")}
+                onOpen={(id) => void go(`/projets/${encodeURIComponent(id)}`)}
                 onCreate={(p, file) => {
                   pendingFile.current = file ? { id: p.id, file } : null;
                   void go(projectPath(p));

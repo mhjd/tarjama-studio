@@ -1,0 +1,45 @@
+{
+  "revision": "c30b28bb3e20861b",
+  "services": [
+    "db",
+    "egress",
+    "web",
+    "worker"
+  ],
+  "jobs": [
+    "cleanup-state",
+    "media-diagnostic",
+    "migrate",
+    "retry-cleanup"
+  ],
+  "images": {
+    "db": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "egress": "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9",
+    "web": "preview.local/atelier/web@sha256:64b48d8b8739b39e133ef2d1b2f9a50057d4ba4a9d02a847e714ec0714ea51b4",
+    "worker": "preview.local/atelier/web@sha256:72c9bedff3f58f373cc6a32a1acc064ec75254b0ecfb2a12eecdb0bd29fec256",
+    "cleanup-state": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "media-diagnostic": "preview.local/atelier/web@sha256:99ed8d1d4bd03b59f6d5d592c07aa20d7de0410f31ae186a860f3a97b2c291e5",
+    "migrate": "preview.local/atelier/web@sha256:30eb294e540188a985f94f6de2a657681f20a7d5501b26dd0841eb485c19f2a9",
+    "retry-cleanup": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73"
+  },
+  "volumes": {
+    "database": {
+      "size": "2Gi"
+    },
+    "library": {
+      "size": "14Gi"
+    }
+  },
+  "service_addresses": {
+    "db": "pv-db:5432",
+    "egress": "pv-egress:8092",
+    "web": "web:8080"
+  },
+  "data_deleted": false,
+  "cpu_limits_m": 2250,
+  "memory_limits_mi": 2176,
+  "storage_requested_gi": 16,
+  "ok": true,
+  "validated": true,
+  "applied": false
+}

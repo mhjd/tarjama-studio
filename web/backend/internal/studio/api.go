@@ -185,7 +185,7 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 	}
 	p := Project{ID: id(), Title: b.Title, URL: b.URL, Stage: "upload", Version: 1, ArabicVersion: 1, Generation: 1, Segments: []Segment{}}
 	owner := who(r).User
-	// Serialize creation per account so the resource bound also holds under concurrent requests.
+	// Serialize creation per account, including the duplicate check and job enqueue.
 	tx, e := a.Store.DB.Begin(r.Context())
 	if e != nil {
 		http.Error(w, "Création impossible", 503)
@@ -193,6 +193,25 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 	_, e = tx.Exec(r.Context(), "SELECT id FROM users WHERE id=$1 FOR UPDATE", owner)
+	if e == nil && b.URL != "" {
+		var existing string
+		e = tx.QueryRow(r.Context(), `SELECT id FROM projects
+			WHERE owner_id=$1 AND document->>'url'=$2
+			ORDER BY (COALESCE(document->>'media','') <> '') DESC, created_at, id LIMIT 1`, owner, b.URL).Scan(&existing)
+		if e == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			jsonOut(w, map[string]string{"code": "duplicate_video", "message": "Cette vidéo est déjà présente dans vos projets.", "project_id": existing})
+			return
+		}
+		if errors.Is(e, pgx.ErrNoRows) {
+			e = nil
+		}
+	}
+	if e != nil {
+		http.Error(w, "Création impossible", 503)
+		return
+	}
 	var count int
 	if e == nil {
 		e = tx.QueryRow(r.Context(), "SELECT count(*) FROM projects WHERE owner_id=$1", owner).Scan(&count)

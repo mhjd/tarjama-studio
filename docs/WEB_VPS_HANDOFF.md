@@ -698,3 +698,16 @@ et l'avance du navigateur conservent ce contrôle. Les brouillons doivent être
 sauvegardés avant navigation ; une erreur de sauvegarde conserve l'éditeur.
 La bibliothèque, la création et les clés ont aussi leurs routes. Le serveur
 sert la page React sur ces routes sans transformer les erreurs API/assets en HTML.
+
+### Doublons de liens — 24 septembre
+
+Un utilisateur ne doit pas recréer un projet pour une vidéo YouTube déjà présente
+dans son espace. Comparer les URL canoniques, sous le verrou transactionnel de
+création par compte, avant insertion du projet et du téléchargement. Les liens
+courts, mobiles, Shorts et les paramètres de playlist/lecture identifient la même
+vidéo. Un téléchargement en cours ou en échec garde cette association : proposer
+« Ouvrir le projet existant » pour continuer ou réessayer. Ne pas exposer les
+projets d'autres comptes. Les anciens doublons restent conservés ; privilégier
+un projet avec média. Après suppression du projet, sa vidéo peut être ajoutée
+à nouveau. Cette protection concerne les liens, pas l'identification du contenu
+des fichiers importés. Voir `web/review/duplicate-video-20260924/RESULTS.md`.

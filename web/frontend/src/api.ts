@@ -32,6 +32,16 @@ export let csrf = "";
 export function setCSRF(value: string) {
   csrf = value;
 }
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code = "",
+    public projectId = "",
+  ) {
+    super(message);
+  }
+}
 export async function request<T>(
   path: string,
   method = "GET",
@@ -45,7 +55,23 @@ export async function request<T>(
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) {
+    const text = await response.text();
+    let details: { message?: string; code?: string; project_id?: string } = {};
+    if (response.headers.get("Content-Type")?.includes("application/json")) {
+      try {
+        details = JSON.parse(text);
+      } catch {
+        /* Preserve an unstructured error. */
+      }
+    }
+    throw new APIError(
+      details?.message || text,
+      response.status,
+      details?.code,
+      details?.project_id,
+    );
+  }
   return response.status === 204 ? (undefined as T) : response.json();
 }
 export async function upload(project: string, file: File) {

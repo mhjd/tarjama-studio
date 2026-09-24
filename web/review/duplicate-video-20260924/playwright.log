@@ -1,0 +1,17 @@
+ Container tarjama-isolated-test-db-1 Running 
+ Container tarjama-isolated-test-db-1 Waiting 
+ Container tarjama-isolated-test-db-1 Healthy 
+ Container tarjama-isolated-test-checks-run-d233073b8a31 Creating 
+ Container tarjama-isolated-test-checks-run-d233073b8a31 Created 
+
+Running 7 tests using 1 worker
+
+  ✓  1 tests/duplicate-video.spec.ts:7:3 › duplicate link opens the existing project without starting work (390px) (1.7s)
+  ✓  2 tests/duplicate-video.spec.ts:7:3 › duplicate link opens the existing project without starting work (1440px) (1.7s)
+  ✓  3 tests/routes.spec.ts:18:1 › project deep links reload, preserve login destination, and support back/forward (2.1s)
+  ✓  4 tests/routes.spec.ts:51:1 › URL edits cannot skip preparation, correction or review; polling updates canonical route (9.3s)
+  ✓  5 tests/routes.spec.ts:83:1 › browser back refuses to lose an unsaved draft (1.3s)
+  ✓  6 tests/routes.spec.ts:96:1 › foreign and missing project routes do not reveal a project (2.0s)
+  ✓  7 tests/routes.spec.ts:117:1 › browser back saves a title even without a blur (1.5s)
+
+  7 passed (24.1s)

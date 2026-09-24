@@ -1,0 +1,18 @@
+ Network tarjama-isolated-test_test Creating 
+ Network tarjama-isolated-test_test Creating 
+ Network tarjama-isolated-test_test Created 
+ Network tarjama-isolated-test_test Created 
+ Container tarjama-isolated-test-db-1 Creating 
+ Container tarjama-isolated-test-db-1 Created 
+ Container tarjama-isolated-test-db-1 Starting 
+ Container tarjama-isolated-test-db-1 Started 
+ Container tarjama-isolated-test-db-1 Waiting 
+ Container tarjama-isolated-test-db-1 Healthy 
+ Container tarjama-isolated-test-checks-run-e79f26aa903d Creating 
+ Container tarjama-isolated-test-checks-run-e79f26aa903d Created 
+?   	tarjama/web/cmd/fixture	[no test files]
+?   	tarjama/web/cmd/media-diagnostic	[no test files]
+ok  	tarjama/web/cmd/tarjama	1.212s
+?   	tarjama/web/cmd/text-benchmark	[no test files]
+?   	tarjama/web/cmd/ui-review	[no test files]
+ok  	tarjama/web/internal/studio	16.769s

@@ -80,3 +80,38 @@ PostgreSQL de la base synthétique réussis via `make web-test`. Une première
 exécution manuelle avait réutilisé une base de test déjà modifiée ; la qualification
 finale repart d’un environnement isolé neuf. Aucun changement du code métier ou
 du schéma backend n’est nécessaire pour cette correction d’interface.
+
+## Mise en ligne qualifiée à 12:12 UTC
+
+Application : https://atelier.preview.runagen.com.
+Code UI testé : `ee5fb35` (branche `web-vps`).
+Révision de déploiement : **`7e55121aa8016645`**.
+Recette : `web/deploy/preview/active-workflow-20260924.yml`.
+
+L’image construite localement puis importée par `vps-preview` est
+`preview.local/atelier/web@sha256:c107c924162ac2c0252baa6f40e16c1379f6341801e78776f327a6cf43f161df`.
+Son label de source correspond à `ee5fb35e6e474fc3f94c2ec176a5d6d5aa6b9d16`.
+Les fichiers frontend du build Docker sont identiques au build testé :
+`index-DxkUZWhT.js` et `index-BUc14EZ6.css`.
+
+Seule l’image du service web est remplacée. Le worker et le filtre réseau restent
+sur l’image `eb4f510` qualifiée lors de la bascule OpenRouter. Aucun changement de
+schéma, nouvelle migration ou modification des protections/volumes. Le plan
+indique `data_deleted: false` et aucun service à arrêter.
+
+Après `validate`, `plan` et `deploy` : quatre services Ready, déploiement non
+partiel. Le job explicite `pv-job-preview-check-eaa0f103` est **Succeeded** :
+HTTP/readiness, refus anonyme des projets, démarrage OIDC/PKCE/cookie protégé et
+passerelle HTTPS réussis en 1,26 s. Le filtre de test exclut les fournisseurs :
+aucun nouvel appel payant de traduction dans cette qualification de livraison.
+Le MFA du propriétaire n’a pas été rejoué ; les parcours UI authentifiés et
+l’export ont été validés sur la fixture isolée, pas sur ses projets réels.
+
+Preuves : `web/deploy/preview/evidence/workflow-navigation-20260924/`.
+Les recettes précédentes et leurs images sont conservées pour retour arrière.
+
+```sh
+make web-preview-status
+make web-preview-validate PREVIEW_FILE=web/deploy/preview/active-workflow-20260924.yml
+make web-preview-plan PREVIEW_FILE=web/deploy/preview/active-workflow-20260924.yml
+```

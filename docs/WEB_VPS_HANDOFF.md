@@ -1,5 +1,13 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+**Dernière livraison UI — 24 septembre, 12:12 UTC :** navigation entre étapes
+précédentes et courante, traduction inaccessible avant validation de l’arabe,
+attente sans champs, relecture arabe seule pendant la traduction et export
+bloqué jusqu’à validation du français. Code testé `ee5fb35`, recette active
+`active-workflow-20260924.yml`, révision `7e55121aa8016645` ; quatre services
+prêts et qualification HTTP/OIDC/TLS réussie. Backend métier inchangé depuis
+la bascule OpenRouter ci-dessous. [Matrice, tests et preuves](WORKFLOW_NAVIGATION_20260924.md).
+
 **Décisions prioritaires du 24 septembre 2026 :** Gemini est définitivement retiré.
 Le candidat utilise DeepSeek V4.1 Flash via OpenRouter, et exclusivement Parallel
 pour Search/Fetch (y compris pour les futurs modèles disposant d’un moteur natif).

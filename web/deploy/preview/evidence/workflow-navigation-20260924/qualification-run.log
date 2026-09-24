@@ -1,0 +1,7 @@
+vps-preview run atelier "preview-check"
+{
+  "ok": true,
+  "accepted": "run",
+  "job": "pv-job-preview-check-eaa0f103",
+  "next": "Consulter status et logs --component NOM."
+}

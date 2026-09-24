@@ -8,7 +8,7 @@ credential de production n'est utilisé par le navigateur de test.
 `api` et `media` de production :
 
 - `ui-review` : API et worker réels, schéma `ui_review_20260923`, répertoire
-  `/storage/ui-review-20260923`, identité locale de test. Fournisseurs Gemini/Groq
+  `/storage/ui-review-20260923`, identité locale de test. Fournisseurs OpenRouter/DeepSeek et Groq
   réels et opérations média via le courtier administré. Aucun traitement FFmpeg
   ou yt-dlp exécuté dans ce service. Durée bornée à trois heures.
 - `ui-recorder` : Chromium et Playwright, sans secret, sans volume applicatif,
@@ -26,7 +26,7 @@ Les parcours utilisent la vidéo entière `b1MKJ5gHig0`, sans faux fournisseur n
 réponse API simulée. Les enregistrements conservent les attentes réelles. Le script
 vérifie création, préparation, transcription/correction, lecture, suivi,
 déplacement temporel, édition et sauvegarde après rechargement, traduction,
-relecture et exports High français/arabe téléchargés par clic dans l'interface.
+relecture et exports High français téléchargés par clic dans l'interface.
 Les exports téléchargés sont ensuite ouverts pour inspecter leur rendu vidéo.
 
 Formats CSS émulés, sans barres du navigateur ou système :
@@ -82,9 +82,25 @@ via `make web-preview-run PREVIEW_JOB=...`. Le job `results-RUN` lit le manifest
 Le générateur remplace les jobs de la recette fournie ; les autres migrations ne
 sont pas lancées. Retirer ensuite le service de test via la recette active finale.
 
-Le générateur monte `record.mjs` et `record-support.mjs` depuis le dépôt en
+Le générateur monte `record.mjs`, `record-support.mjs` et `record-export.mjs` depuis le dépôt en
 configuration publique. Cela permet de corriger/rejouer les interactions sans
 reconstruire Chromium ; l'image du navigateur reste épinglée par digest.
-Les deux fichiers sont séparés pour respecter la limite de taille de chaque
+Les fichiers sont séparés pour respecter la limite de taille de chaque
 entrée de configuration du courtier. Les changements de backend nécessitent
 toujours une image de qualification construite depuis le code à tester.
+
+## Parcours de septembre 2026 avec routes et blocs de dix minutes
+
+Fournir `REVIEW_VIDEO` (URL YouTube canonique) et `REVIEW_DEVICE`
+(`macbook-air15-m4`, `pixel6` ou `iphone15`) à `make web-review-prepare`. Un seul
+format par `REVIEW_RUN` évite de contourner la règle contre les liens dupliqués
+dans un même compte. Réutiliser un run terminé écraserait des preuves : choisir
+un nouveau nom pour rejouer intégralement. Les secrets de Gemini sont retirés
+du service temporaire ; la clé OpenRouter reste uniquement dans son backend.
+
+Le parcours recharge les URL de projet directement, contrôle l'absence des
+champs pendant correction/traduction, les étapes inaccessibles et le retour en
+haut après validation. Un état de job `failed` interrompt la qualification et
+conserve les preuves ; une attente fournisseur reste suivie pendant au plus
+30 minutes par phase, avec une limite de tâche administrée d'une heure.
+Le manifeste donne la source exacte, le format et le résultat réel.

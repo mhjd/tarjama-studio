@@ -194,7 +194,7 @@ web-text-benchmark-image: web-prompts-check
 # Explicit inputs prevent reapplying historical production digests by accident.
 .PHONY: web-review-prepare web-text-benchmark-prepare
 web-review-prepare:
-	python3 web/review/prepare.py --base "$(REVIEW_BASE)" --review-image "$(REVIEW_IMAGE)" --recorder-image "$(RECORDER_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)"
+	python3 web/review/prepare.py --base "$(REVIEW_BASE)" --review-image "$(REVIEW_IMAGE)" --recorder-image "$(RECORDER_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)" --video "$(REVIEW_VIDEO)" $(if $(REVIEW_DEVICE),--device "$(REVIEW_DEVICE)")
 web-text-benchmark-prepare:
 	python3 web/review/translation-lite/prepare.py --base "$(REVIEW_BASE)" --image "$(BENCHMARK_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)"
 

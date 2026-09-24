@@ -1,16 +1,33 @@
+import {exportAndInspect} from './record-export.mjs';
 import {expect} from '@playwright/test';
 import fs from 'node:fs/promises';
 import {browser,root,proxy,sleep,artifacts,outcomes,upload,devices} from './record-support.mjs';
-for(const device of devices){
+const sourceVideo=process.env.REVIEW_VIDEO;
+if(!sourceVideo||!/^https:\/\/www.youtube.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(sourceVideo))throw Error('Explicit canonical YouTube URL required');
+const selectedDevices=devices.filter(d=>d.name===process.env.REVIEW_DEVICE);
+if(selectedDevices.length!==1)throw Error('One device per isolated review run required');
+const videoID=new URL(sourceVideo).searchParams.get('v');
+for(const device of selectedDevices){
  const {name,...options}=device;
  const context=await browser.newContext({...options,baseURL:'http://127.0.0.1:8090',acceptDownloads:true,recordVideo:{dir:root,size:device.viewport} });
  const page=await context.newPage();page.setDefaultTimeout(20000);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- let previousStatus='';
+ let previousStatus='',terminalFailure='';
+ const waitReady=async locator=>{
+  const deadline=Date.now()+30*60000;
+  while(Date.now()<deadline){
+   if(terminalFailure)throw Error(terminalFailure);
+   if(await locator.isVisible())return;
+   await sleep(2000);
+  }
+  throw Error('Bounded wait exhausted at '+step);
+ };
  page.on('response',async response=>{
   if(response.request().method()!=='GET'||! /\/api\/projects\/[^/]+$/.test(response.url())||response.status()!==200)return;
   try{
    const data=await response.json();
+   const failure=data.jobs.find(j=>j.state==='failed');
+   if(failure)terminalFailure='Real job failed: '+failure.kind+' at '+failure.progress+'%';
    const status=JSON.stringify({stage:data.project.stage,duration_ms:data.project.duration_ms,segments:data.project.segments.length,jobs:data.jobs.filter(j=>j.state!=='succeeded').map(j=>({kind:j.kind,state:j.state,progress:j.progress}))});
    if(status!==previousStatus){console.log('PROGRESS '+name+' '+status);previousStatus=status;}
   }catch{}
@@ -28,14 +45,17 @@ for(const device of devices){
   await expect(page.getByRole('heading',{name:'Mes projets'})).toBeVisible();
   await mark('library');
   await page.getByRole('button',{name:'+ Nouvelle vidéo'}).click();
-  const title=`France 24 · ${name} · ${new Date().toISOString().slice(11,19)}`;
+  const title=`Qualification · ${name} · ${new Date().toISOString().slice(11,19)}`;
   await page.getByLabel('Titre',{exact:true}).fill(title);
-  await page.getByLabel('Lien YouTube').fill('https://www.youtube.com/watch?v=b1MKJ5gHig0');
+  await page.getByLabel('Lien YouTube').fill(sourceVideo);
   await mark('youtube');
   await page.getByRole('button',{name:'Commencer',exact:true}).click();
   await mark('preparing');
+  await expect(page.getByRole('button',{name:'3. Traduire',exact:true})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'4. Exporter',exact:true})).toBeDisabled();
+  await expect(page.locator('textarea[lang="ar"]')).toHaveCount(0);
   // Observe actual persistent queue; never fake success or bypass provider cooldown.
-  await expect(page.getByRole('button',{name:'Valider et traduire',exact:true}).first()).toBeVisible({timeout:18*60000});
+  await waitReady(page.getByRole('button',{name:'Valider et traduire',exact:true}).first());
   await page.getByRole('heading',{name:'Correction arabe',exact:true}).scrollIntoViewIfNeeded();
   await mark('arabic');
   const follow=page.getByRole('button',{name:'Suivi activé',exact:true});
@@ -57,11 +77,17 @@ for(const device of devices){
   if(editedArabic===originalArabic)throw Error('Arabic edit must change the text');
   await arabic.fill(editedArabic);await arabic.blur();
   await expect(page.locator('.page-title [role="status"]')).toContainText('Enregistré');
-  await page.reload();await page.getByRole('button',{name:new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
+  await page.reload();
   await expect(page.locator('textarea[lang="ar"]').first()).toHaveValue(editedArabic);
   await mark('saved');
   await page.getByRole('button',{name:'Valider et traduire',exact:true}).first().click();
-  await expect(page.getByRole('button',{name:'Valider et exporter',exact:true}).first()).toBeVisible({timeout:18*60000});
+  await expect(page).toHaveURL(/\/traduire$/);
+  await expect(page.locator('textarea')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'4. Exporter',exact:true})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'2. Corriger',exact:true})).toBeEnabled();
+  await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(0);
+  await mark('translating');
+  await waitReady(page.getByRole('button',{name:'Valider et exporter',exact:true}).first());
   await page.getByRole('heading',{name:'Relire arabe et français'}).scrollIntoViewIfNeeded();
   await mark('translation');
   const french=page.locator('textarea[lang="fr"]').first();
@@ -73,32 +99,10 @@ for(const device of devices){
   await page.getByRole('button',{name:'Valider et exporter',exact:true}).first().click();
   await expect(page.getByRole('heading',{name:'Votre vidéo sous-titrée'})).toBeVisible();
   await page.reload();
-  await page.getByRole('button',{name:new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).click();
+  await page.getByRole('button',{name:'3. Traduire',exact:true}).click();
   await expect(page.locator('textarea[lang="fr"]').first()).toHaveValue(editedFrench);
-  await page.getByRole('combobox',{name:/Qualité/}).selectOption('high');
-  for(const [track,label] of [['fr','français']]) {
-   await mark('export-'+track);
-   await page.getByRole('button',{name:'Créer la vidéo',exact:true}).click();
-   const link=page.getByRole('link',{name:`Télécharger · High · ${label}`,exact:true});
-   await expect(link).toBeVisible({timeout:12*60000});
-   const pending=page.waitForEvent('download',{timeout:60000});await link.click();const download=await pending;
-   const filename=`tarjama-b1MKJ5gHig0-${name}-${track}-high.mp4`;
-   const path=root+'/'+filename;await download.saveAs(path);await upload(path,filename);await fs.unlink(path);await download.delete();
-   await mark('downloaded-'+track);
-  }
-  for (const track of ['fr']) {
-   const filename=`tarjama-b1MKJ5gHig0-${name}-${track}-high.mp4`;
-   await page.goto('/review-artifacts/'+filename);
-   const rendered=page.locator('video');
-   await expect(rendered).toBeVisible();
-   await rendered.evaluate(async v=>{v.muted=true;await v.play();});
-   await sleep(4000);
-   await rendered.evaluate(v=>v.pause());
-   await mark('rendered-'+track);
-   await rendered.evaluate(async v=>{v.currentTime=v.duration*.5;await v.play();});
-   await sleep(4000);await rendered.evaluate(v=>v.pause());
-   await mark('rendered-middle-'+track);
-  }
+  await page.getByRole('button',{name:'4. Exporter',exact:true}).click();
+  await exportAndInspect(page,mark,waitReady,videoID,name);
   if(errors.length)throw Error('Browser errors: '+errors.join('; '));
   outcomes.push({device:name,viewport:device.viewport,engine:'Chromium',status:'passed',elapsedSeconds:Math.round((Date.now()-started)/1000)});
  }catch(e){
@@ -112,8 +116,8 @@ for(const device of devices){
  console.log('OUTCOME '+JSON.stringify(outcomes.at(-1)));
  if(outcomes.at(-1).status==='failed')break;
 }
-const manifest={sourceVideo:'https://www.youtube.com/watch?v=b1MKJ5gHig0',identity:'isolated test account; production MFA confirmed separately by owner',providers:'real Gemini and Groq',media:'administered isolated jobs, WARP for download',emulation:'CSS viewports, Chromium; not physical devices or Safari qualification',outcomes,artifacts};
+const manifest={sourceVideo,identity:'isolated test account; production MFA confirmed separately by owner',providers:'real OpenRouter/DeepSeek with Parallel and Groq',media:'administered isolated jobs, WARP for download',emulation:'CSS viewports, Chromium; not physical devices or Safari qualification',outcomes,artifacts};
 await fs.writeFile(root+'/manifest.json',JSON.stringify(manifest,null,2));await upload(root+'/manifest.json','manifest.json');
 console.log('RESULT '+JSON.stringify(manifest));
 await browser.close();proxy.close();
-process.exitCode=outcomes.length===3&&outcomes.every(x=>x.status==='passed')?0:1;
+process.exitCode=outcomes.length===selectedDevices.length&&outcomes.every(x=>x.status==='passed')?0:1;

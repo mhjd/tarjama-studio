@@ -1,0 +1,370 @@
+version: 1
+services:
+  web:
+    enabled: true
+    image: preview.local/atelier/web@sha256:c107c924162ac2c0252baa6f40e16c1379f6341801e78776f327a6cf43f161df
+    args:
+    - api
+    uid: 10001
+    gid: 10001
+    port: 8090
+    env:
+      APP_MODE: production
+      LISTEN_ADDR: 0.0.0.0:8090
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      OIDC_ISSUER: https://auth.runagen.com
+      OIDC_CLIENT_ID: preview-atelier-tarjama
+      OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-oidc
+      path: /run/oidc
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - oidc
+    resources:
+      cpu: 500m
+      memory: 512Mi
+    tmp: 64Mi
+    health:
+      path: /readyz
+  worker:
+    enabled: true
+    image: preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3
+    args:
+    - worker
+    uid: 10001
+    gid: 10001
+    env:
+      APP_MODE: production
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      MEDIA_ENGINE: isolated-jobs
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+      OPENROUTER_API_KEY_FILE: /run/openrouter/api_key
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-groq
+      path: /run/groq
+    - name: isolated-jobs
+      path: /run/isolated-jobs
+    - name: openrouter
+      path: /run/openrouter
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - public-web
+    - isolated-jobs
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+  egress:
+    enabled: true
+    image: preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3
+    args:
+    - egress
+    uid: 10003
+    gid: 10003
+    port: 8092
+    env:
+      LISTEN_ADDR: 0.0.0.0:8092
+      WARP_HTTP_PROXY: 172.31.250.2:40001
+      GOMAXPROCS: '1'
+    egress:
+    - warp-downloads
+    resources:
+      cpu: 250m
+      memory: 128Mi
+    tmp: 16Mi
+  db:
+    enabled: true
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 70
+    gid: 70
+    port: 5432
+    args:
+    - postgres
+    - -c
+    - unix_socket_directories=/tmp
+    - -c
+    - max_connections=40
+    - -c
+    - shared_buffers=128MB
+    env:
+      POSTGRES_DB: tarjama
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/db-admin/postgres_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=peer
+      PGDATA: /data/pgdata
+      PGSERVICE: preview-init
+      PGSERVICEFILE: /configuration/pg_service.conf
+    secrets:
+    - name: tarjama-db-admin
+      path: /run/db-admin
+    configs:
+    - name: postgres-client
+      path: /configuration
+    volumes:
+    - name: database
+      path: /data
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+  review:
+    enabled: true
+    image: preview.local/atelier/web@sha256:573472938f1d88425ba80f4831d8919d3a34ac038bd5abaff42e3cf861a2bd78
+    args: []
+    uid: 10001
+    gid: 10001
+    env:
+      APP_MODE: test
+      PUBLIC_ORIGIN: http://127.0.0.1:8090
+      DATABASE_URL_FILE: /run/db/database_url
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      MEDIA_ENGINE: isolated-jobs
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+      LISTEN_ADDR: 0.0.0.0:8095
+      UI_REVIEW: atelier-20260923
+      UI_REVIEW_RUN: tenmin_short1
+      OPENROUTER_API_KEY_FILE: /run/openrouter/api_key
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-groq
+      path: /run/groq
+    - name: isolated-jobs
+      path: /run/isolated-jobs
+    - name: openrouter
+      path: /run/openrouter
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - public-web
+    - isolated-jobs
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+    port: 8095
+    health:
+      path: /readyz
+jobs:
+  ui-tenmin-short1:
+    image: preview.local/atelier/web@sha256:493d8e6070fc48e0e646d49dd1b5916cf1cefaf202062b7097568c6adba6fe30
+    uid: 10004
+    gid: 10004
+    command:
+    - node
+    args:
+    - /src/frontend/recording/record.mjs
+    configs:
+    - name: ui-recording
+      path: /src/frontend/recording
+    env:
+      REVIEW_DEVICE: macbook-air15-m4
+      REVIEW_VIDEO: https://www.youtube.com/watch?v=b1MKJ5gHig0
+    connect:
+    - review
+    resources:
+      cpu: 2000m
+      memory: 2048Mi
+    tmp: 1024Mi
+    timeout: 3600
+  results-tenmin-short1:
+    image: preview.local/atelier/web@sha256:493d8e6070fc48e0e646d49dd1b5916cf1cefaf202062b7097568c6adba6fe30
+    uid: 10004
+    gid: 10004
+    command:
+    - node
+    args:
+    - /review/summarize.mjs
+    connect:
+    - review
+    resources:
+      cpu: 100m
+      memory: 128Mi
+    tmp: 16Mi
+    timeout: 120
+volumes:
+  library:
+    size: 14Gi
+  database:
+    size: 2Gi
+configs:
+  postgres-client:
+    pg_service.conf: '[preview-init]
+
+      host=/tmp
+
+      '
+  deploy-backup:
+    backup.sh: "#!/bin/sh\nset -eu\numask 077\nexport PGHOST=pv-db PGPORT=5432 PGDATABASE=tarjama\
+      \ PGUSER=tarjama PGCONNECT_TIMEOUT=3\nexport PGPASSWORD=\"$(cat /run/db/app_db_password)\"\
+      \nfor attempt in $(seq 1 30); do\n  if psql -X -w -Atqc 'SELECT 1' >/dev/null\
+      \ 2>/tmp/db-ready.err; then break; fi\n  sleep 2\ndone\npsql -X -w -Atqc 'SELECT\
+      \ 1' >/dev/null\nmkdir -p /storage/backups\nout=/storage/backups/pre-openrouter-eb4f510-$(date\
+      \ -u +%Y%m%dT%H%M%SZ).dump\nset -C\n: > \"$out\"\nset +C\npg_dump -w -Fc > \"\
+      $out\"\npg_restore --list \"$out\" >/dev/null\nsha256sum \"$out\"\nprintf 'Backup\
+      \ complete; no media modified.\\n'\n"
+  ui-recording:
+    record.mjs: "import {exportAndInspect} from './record-export.mjs';\nimport {expect}\
+      \ from '@playwright/test';\nimport fs from 'node:fs/promises';\nimport {browser,root,proxy,sleep,artifacts,outcomes,upload,devices}\
+      \ from './record-support.mjs';\nconst sourceVideo=process.env.REVIEW_VIDEO;\n\
+      if(!sourceVideo||!/^https:\\/\\/www.youtube.com\\/watch\\?v=[A-Za-z0-9_-]{11}$/.test(sourceVideo))throw\
+      \ Error('Explicit canonical YouTube URL required');\nconst selectedDevices=devices.filter(d=>d.name===process.env.REVIEW_DEVICE);\n\
+      if(selectedDevices.length!==1)throw Error('One device per isolated review run\
+      \ required');\nconst videoID=new URL(sourceVideo).searchParams.get('v');\nfor(const\
+      \ device of selectedDevices){\n const {name,...options}=device;\n const context=await\
+      \ browser.newContext({...options,baseURL:'http://127.0.0.1:8090',acceptDownloads:true,recordVideo:{dir:root,size:device.viewport}\
+      \ });\n const page=await context.newPage();page.setDefaultTimeout(20000);\n\
+      \ const errors=[];page.on('pageerror',e=>errors.push(e.message));\n let previousStatus='',terminalFailure='';\n\
+      \ const waitReady=async locator=>{\n  const deadline=Date.now()+30*60000;\n\
+      \  while(Date.now()<deadline){\n   if(terminalFailure)throw Error(terminalFailure);\n\
+      \   if(await locator.isVisible())return;\n   await sleep(2000);\n  }\n  throw\
+      \ Error('Bounded wait exhausted at '+step);\n };\n page.on('response',async\
+      \ response=>{\n  if(response.request().method()!=='GET'||! /\\/api\\/projects\\\
+      /[^/]+$/.test(response.url())||response.status()!==200)return;\n  try{\n   const\
+      \ data=await response.json();\n   const failure=data.jobs.find(j=>j.state==='failed');\n\
+      \   if(failure)terminalFailure='Real job failed: '+failure.kind+' at '+failure.progress+'%';\n\
+      \   const status=JSON.stringify({stage:data.project.stage,duration_ms:data.project.duration_ms,segments:data.project.segments.length,jobs:data.jobs.filter(j=>j.state!=='succeeded').map(j=>({kind:j.kind,state:j.state,progress:j.progress}))});\n\
+      \   if(status!==previousStatus){console.log('PROGRESS '+name+' '+status);previousStatus=status;}\n\
+      \  }catch{}\n });\n let step='start'; const started=Date.now();\n const mark=async\
+      \ label=>{\n   step=label;console.log('STEP '+name+' '+label+' '+new Date().toISOString());\n\
+      \   await sleep(800);\n   if(!await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))throw\
+      \ Error('Horizontal overflow at '+label);\n   const path=`${root}/${name}-${label}.png`;await\
+      \ page.screenshot({path});await upload(path,`${name}-${label}.png`);await fs.unlink(path);\n\
+      \ };\n try {\n  await page.goto('/');\n  await page.getByRole('button',{name:'Compte\
+      \ test alice'}).click();\n  await expect(page.getByRole('heading',{name:'Mes\
+      \ projets'})).toBeVisible();\n  await mark('library');\n  await page.getByRole('button',{name:'+\
+      \ Nouvelle vidéo'}).click();\n  const title=`Qualification · ${name} · ${new\
+      \ Date().toISOString().slice(11,19)}`;\n  await page.getByLabel('Titre',{exact:true}).fill(title);\n\
+      \  await page.getByLabel('Lien YouTube').fill(sourceVideo);\n  await mark('youtube');\n\
+      \  await page.getByRole('button',{name:'Commencer',exact:true}).click();\n \
+      \ await mark('preparing');\n  await expect(page.getByRole('button',{name:'3.\
+      \ Traduire',exact:true})).toBeDisabled();\n  await expect(page.getByRole('button',{name:'4.\
+      \ Exporter',exact:true})).toBeDisabled();\n  await expect(page.locator('textarea[lang=\"\
+      ar\"]')).toHaveCount(0);\n  // Observe actual persistent queue; never fake success\
+      \ or bypass provider cooldown.\n  await waitReady(page.getByRole('button',{name:'Valider\
+      \ et traduire',exact:true}).first());\n  await page.getByRole('heading',{name:'Correction\
+      \ arabe',exact:true}).scrollIntoViewIfNeeded();\n  await mark('arabic');\n \
+      \ const follow=page.getByRole('button',{name:'Suivi activé',exact:true});\n\
+      \  await expect(follow).toHaveAttribute('aria-pressed','true');\n  await page.getByRole('button',{name:'Lecture',exact:true}).click();await\
+      \ sleep(7000);\n  await page.mouse.wheel(0,700);await sleep(1000);\n  await\
+      \ expect(follow).toHaveAttribute('aria-pressed','true');\n  await page.getByRole('button',{name:'Pause',exact:true}).click();\n\
+      \  const slider=page.getByRole('slider',{name:'Position de lecture'});\n  const\
+      \ duration=Number(await slider.getAttribute('max'));\n  await slider.fill(String(Math.round(duration*.45*10)/10));await\
+      \ sleep(1500);\n  await expect(page.locator('.segment.active')).toBeVisible();\n\
+      \  await mark('seek-follow');\n  await follow.click();await expect(page.getByRole('button',{name:'Suivi\
+      \ désactivé'})).toHaveAttribute('aria-pressed','false');\n  await page.getByRole('button',{name:'Suivi\
+      \ désactivé'}).click();\n  const arabic=page.locator('textarea[lang=\"ar\"]').first();\n\
+      \  const originalArabic=await arabic.inputValue();\n  const editedArabic=originalArabic.endsWith('.')?originalArabic.slice(0,-1):originalArabic+'.';\n\
+      \  if(editedArabic===originalArabic)throw Error('Arabic edit must change the\
+      \ text');\n  await arabic.fill(editedArabic);await arabic.blur();\n  await expect(page.locator('.page-title\
+      \ [role=\"status\"]')).toContainText('Enregistré');\n  await page.reload();\n\
+      \  await expect(page.locator('textarea[lang=\"ar\"]').first()).toHaveValue(editedArabic);\n\
+      \  await mark('saved');\n  await page.getByRole('button',{name:'Valider et traduire',exact:true}).first().click();\n\
+      \  await expect(page).toHaveURL(/\\/traduire$/);\n  await expect(page.locator('textarea')).toHaveCount(0);\n\
+      \  await expect(page.getByRole('button',{name:'4. Exporter',exact:true})).toBeDisabled();\n\
+      \  await expect(page.getByRole('button',{name:'2. Corriger',exact:true})).toBeEnabled();\n\
+      \  await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(0);\n  await mark('translating');\n\
+      \  await waitReady(page.getByRole('button',{name:'Valider et exporter',exact:true}).first());\n\
+      \  await page.getByRole('heading',{name:'Relire arabe et français'}).scrollIntoViewIfNeeded();\n\
+      \  await mark('translation');\n  const french=page.locator('textarea[lang=\"\
+      fr\"]').first();\n  const originalFrench=await french.inputValue();\n  const\
+      \ editedFrench=originalFrench.endsWith('.')?originalFrench.slice(0,-1):originalFrench+'.';\n\
+      \  if(editedFrench===originalFrench)throw Error('French edit must change the\
+      \ text');\n  await french.fill(editedFrench);\n  // Advancing must flush the\
+      \ focused edit before exporting.\n  await page.getByRole('button',{name:'Valider\
+      \ et exporter',exact:true}).first().click();\n  await expect(page.getByRole('heading',{name:'Votre\
+      \ vidéo sous-titrée'})).toBeVisible();\n  await page.reload();\n  await page.getByRole('button',{name:'3.\
+      \ Traduire',exact:true}).click();\n  await expect(page.locator('textarea[lang=\"\
+      fr\"]').first()).toHaveValue(editedFrench);\n  await page.getByRole('button',{name:'4.\
+      \ Exporter',exact:true}).click();\n  await exportAndInspect(page,mark,waitReady,videoID,name);\n\
+      \  if(errors.length)throw Error('Browser errors: '+errors.join('; '));\n  outcomes.push({device:name,viewport:device.viewport,engine:'Chromium',status:'passed',elapsedSeconds:Math.round((Date.now()-started)/1000)});\n\
+      \ }catch(e){\n  outcomes.push({device:name,status:'failed',step,error:String(e),elapsedSeconds:Math.round((Date.now()-started)/1000)});\n\
+      \  console.log('FAIL '+JSON.stringify(outcomes.at(-1)));\n  await mark('failure').catch(()=>{});\n\
+      \ }finally{\n  const video=page.video();await context.close();\n  if(video){const\
+      \ path=await video.path();await upload(path,`parcours-${name}.webm`);await fs.unlink(path);}\n\
+      \ }\n console.log('OUTCOME '+JSON.stringify(outcomes.at(-1)));\n if(outcomes.at(-1).status==='failed')break;\n\
+      }\nconst manifest={sourceVideo,identity:'isolated test account; production MFA\
+      \ confirmed separately by owner',providers:'real OpenRouter/DeepSeek with Parallel\
+      \ and Groq',media:'administered isolated jobs, WARP for download',emulation:'CSS\
+      \ viewports, Chromium; not physical devices or Safari qualification',outcomes,artifacts};\n\
+      await fs.writeFile(root+'/manifest.json',JSON.stringify(manifest,null,2));await\
+      \ upload(root+'/manifest.json','manifest.json');\nconsole.log('RESULT '+JSON.stringify(manifest));\n\
+      await browser.close();proxy.close();\nprocess.exitCode=outcomes.length===selectedDevices.length&&outcomes.every(x=>x.status==='passed')?0:1;\n"
+    record-support.mjs: "// Real UI journeys. No provider/API fixtures, Kubernetes\
+      \ credentials or app secrets.\nimport { chromium, expect } from '@playwright/test';\n\
+      import http from 'node:http';\nimport fs from 'node:fs/promises';\nimport {\
+      \ createReadStream } from 'node:fs';\nimport { createHash } from 'node:crypto';\n\
+      const upstream = 'http://pv-review:8095';\nconst root = '/tmp/recordings';\n\
+      await fs.mkdir(root, {recursive:true});\nconst sleep = ms => new Promise(resolve\
+      \ => setTimeout(resolve,ms));\nfor(let attempt=0;;attempt++) {\n  try { const\
+      \ response=await fetch(upstream+'/readyz'); if(response.status===204)break;\
+      \ } catch {}\n  if(attempt===59)throw Error('Private review unavailable after\
+      \ bounded wait');\n  await sleep(1000);\n}\nconst proxy=http.createServer((req,res)=>{\n\
+      \  const target=http.request(upstream+req.url,{method:req.method,headers:req.headers},response=>{\n\
+      \    res.writeHead(response.statusCode,response.headers);response.pipe(res);\n\
+      \  });target.on('error',()=>{res.writeHead(502);res.end();});req.pipe(target);\n\
+      });\nawait new Promise(resolve=>proxy.listen(8090,'127.0.0.1',resolve));\nconst\
+      \ browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage'],slowMo:180});\n\
+      const artifacts=[];const outcomes=[];\nasync function upload(path,name) {\n\
+      \ const stat=await fs.stat(path);const hash=createHash('sha256');\n for await\
+      \ (const chunk of createReadStream(path))hash.update(chunk);\n const response=await\
+      \ fetch(upstream+'/review-artifacts/'+name,{method:'PUT',body:createReadStream(path),duplex:'half'});\n\
+      \ if(!response.ok)throw Error('Artifact persistence HTTP '+response.status);\n\
+      \ artifacts.push({name,bytes:stat.size,sha256:hash.digest('hex')});\n if(/\\\
+      .(mp4|webm)$/.test(name))console.log('ARTIFACT '+JSON.stringify(artifacts.at(-1)));\n\
+      }\nconst devices=[\n {name:'macbook-air15-m4',viewport:{width:1440,height:932},deviceScaleFactor:2,isMobile:false,hasTouch:false},\n\
+      \ {name:'pixel6',viewport:{width:412,height:915},deviceScaleFactor:2.625,isMobile:true,hasTouch:true},\n\
+      \ {name:'iphone15',viewport:{width:393,height:852},deviceScaleFactor:3,isMobile:true,hasTouch:true},\n\
+      ];\n\nexport {browser,root,proxy,sleep,artifacts,outcomes,upload,devices};\n"
+    record-export.mjs: "import {expect} from '@playwright/test';\nimport fs from 'node:fs/promises';\n\
+      import {root,sleep,upload} from './record-support.mjs';\nexport async function\
+      \ exportAndInspect(page,mark,waitReady,videoID,name){\n  await page.getByRole('combobox',{name:/Qualité/}).selectOption('high');\n\
+      \  for(const [track,label] of [['fr','français']]) {\n   await mark('export-'+track);\n\
+      \   await page.getByRole('button',{name:'Créer la vidéo',exact:true}).click();\n\
+      \   const link=page.getByRole('link',{name:`Télécharger · High · ${label}`,exact:true});\n\
+      \   await waitReady(link);\n   const pending=page.waitForEvent('download',{timeout:60000});await\
+      \ link.click();const download=await pending;\n   const filename=`tarjama-${videoID}-${name}-${track}-high.mp4`;\n\
+      \   const path=root+'/'+filename;await download.saveAs(path);await upload(path,filename);await\
+      \ fs.unlink(path);await download.delete();\n   await mark('downloaded-'+track);\n\
+      \  }\n  for (const track of ['fr']) {\n   const filename=`tarjama-${videoID}-${name}-${track}-high.mp4`;\n\
+      \   await page.goto('/review-artifacts/'+filename);\n   const rendered=page.locator('video');\n\
+      \   await expect(rendered).toBeVisible();\n   await rendered.evaluate(async\
+      \ v=>{v.muted=true;await v.play();});\n   await sleep(4000);\n   await rendered.evaluate(v=>v.pause());\n\
+      \   await mark('rendered-'+track);\n   await rendered.evaluate(async v=>{v.currentTime=v.duration*.5;await\
+      \ v.play();});\n   await sleep(4000);await rendered.evaluate(v=>v.pause());\n\
+      \   await mark('rendered-middle-'+track);\n  }\n}\n"

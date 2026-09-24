@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-diag-hour2-c7857b5b-4fdbh",
+      "log": "broker_profiles_http 200\njob=91db05cadb0b9f1dfda1fdc9d7a7fd91 kind=download state=succeeded progress=100 media_attempt=0 tries=0 next=2026-09-24 21:17:09.481719+00\noperation job=91db05cadb0b9f1dfda1fdc9d7a7fd91 id=b45b40dfb3088f1d046d23a465c66757 unit=-1 attempt=0 profile=media-probe cached=true ack=true retired=true\nremote http=200 state=acknowledged exit=0 error=\noperation job=91db05cadb0b9f1dfda1fdc9d7a7fd91 id=e94485d727c72d0a8762ceb52bc8cfd7 unit=-1 attempt=0 profile=tarjama-normalize-v1 cached=true ack=true retired=true\nremote http=200 state=acknowledged exit=0 error=\noperation job=91db05cadb0b9f1dfda1fdc9d7a7fd91 id=98f349a108ec22ba504a54691ad6d3a2 unit=-1 attempt=0 profile=media-probe cached=true ack=true retired=true\nremote http=200 state=acknowledged exit=0 error=\noperation job=91db05cadb0b9f1dfda1fdc9d7a7fd91 id=ea721b63c33178df466099dd70bf579b unit=-1 attempt=0 profile=tarjama-mux-v1 cached=true ack=true retired=true\nremote http=200 state=acknowledged exit=0 error=\noperation job=91db05cadb0b9f1dfda1fdc9d7a7fd91 id=dae0f4bc0e1d95f855fad02cfef6711a unit=-1 attempt=0 profile=tarjama-download-v1 cached=true ack=true retired=true\nremote http=200 state=acknowledged exit=0 error=\noperation job=91db05cadb0b9f1dfda1fdc9d7a7fd91 id=ee12746ed747867a7a60f188103dad08 unit=-1 attempt=0 profile=tarjama-download-v1 cached=true ack=true retired=true\nremote http=200 state=acknowledged exit=0 error=\n"
+    }
+  ]
+}

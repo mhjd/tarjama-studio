@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-results-tenmin-hour2-798c34f9-n5lv9",
+      "log": "{\"manifest\":\"manifest.json\",\"outcomes\":[{\"device\":\"macbook-air15-m4\",\"viewport\":{\"width\":1440,\"height\":932},\"engine\":\"Chromium\",\"status\":\"passed\",\"elapsedSeconds\":3027}],\"videos\":[{\"name\":\"reprise-tarjama-7TLnx8DIu4c-macbook-air15-m4-fr-high.mp4\",\"bytes\":286191971,\"sha256\":\"34a1aae705b8d24b41cbcb6233de8cf8fd3b403afc2394f69d6faddae68347cb\"},{\"name\":\"reprise-parcours-macbook-air15-m4.webm\",\"bytes\":115414074,\"sha256\":\"7a0a29cc7e4ab636efbe201cf352ad2c0af76ffabdca4422aae9cea8fbea6b42\"}]}\n{\"manifest\":\"playback-manifest-validation.json\",\"status\":404}\n"
+    }
+  ]
+}

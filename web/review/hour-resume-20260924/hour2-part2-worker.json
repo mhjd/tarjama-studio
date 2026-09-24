@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-review-78c76444ff-5zpj9",
+      "log": "2026/09/24 21:48:34 Private UI review ready; independent schema, real providers and isolated media\n2026/09/24 21:51:11 Provider openrouter.ai HTTP 200\n2026/09/24 21:52:42 Provider openrouter.ai HTTP 200\n2026/09/24 21:53:11 Provider openrouter.ai HTTP 200\n2026/09/24 21:53:52 Provider openrouter.ai HTTP 200\n2026/09/24 21:54:53 Provider openrouter.ai HTTP 200\n2026/09/24 21:55:45 Provider openrouter.ai HTTP 200\n2026/09/24 21:55:55 Provider openrouter.ai HTTP 200\n2026/09/24 21:57:04 Provider openrouter.ai HTTP 200\n2026/09/24 21:57:39 Provider openrouter.ai HTTP 200\n2026/09/24 21:57:39 job failed id=eff3579a5afdb6c431663cd2a3173e15 kind=translate reason=unclassified\n"
+    }
+  ]
+}

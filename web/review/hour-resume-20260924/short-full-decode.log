@@ -1,0 +1,63 @@
+/inputs/ui-review-tenmin_iphone1/tarjama-gbrDbQVYDuQ-iphone15-fr-high.mp4
+{
+    "programs": [
+
+    ],
+    "streams": [
+        {
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080
+        },
+        {
+            "codec_name": "aac"
+        }
+    ],
+    "format": {
+        "duration": "138.867000",
+        "size": "27397701"
+    }
+}
+Full decode PASS
+/inputs/ui-review-tenmin_pixel1/tarjama-gbrDbQVYDuQ-pixel6-fr-high.mp4
+{
+    "programs": [
+
+    ],
+    "streams": [
+        {
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080
+        },
+        {
+            "codec_name": "aac"
+        }
+    ],
+    "format": {
+        "duration": "138.867000",
+        "size": "27335231"
+    }
+}
+Full decode PASS
+/inputs/ui-review-tenmin_short3/tarjama-gbrDbQVYDuQ-macbook-air15-m4-fr-high.mp4
+{
+    "programs": [
+
+    ],
+    "streams": [
+        {
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080
+        },
+        {
+            "codec_name": "aac"
+        }
+    ],
+    "format": {
+        "duration": "138.867000",
+        "size": "27396809"
+    }
+}
+Full decode PASS

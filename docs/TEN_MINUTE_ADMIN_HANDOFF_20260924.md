@@ -1,6 +1,21 @@
 # Demande administrateur — diagnostic audio et remise des preuves UI
 
-## Diagnostic du téléchargement audio
+## Actualisation après intervention administrateur
+
+Le profil demandé est mis à jour, sans changement des protections. L’essai audio
+administrateur a réussi (24 septembre, 20:25 UTC). Les 48 artefacts des trois runs
+PASS ont été copiés puis vérifiés à nouveau par SHA-256 par l’agent. Livraison
+préparée avec `vps-share` sous `tarjama-parcours-10min` (52 fichiers, avec rapports,
+notice et empreintes). Le propriétaire doit exécuter `vps pull` sur son Mac.
+Cela ne prouve pas la cause de l’incident précédent. La reprise complète du parcours
+long, ses corrections et sa demande de copie distincte sont documentées dans
+[HOUR_UI_RESUME_20260924.md](HOUR_UI_RESUME_20260924.md).
+
+Les demandes ci-dessous sont conservées pour audit ; leur exécution a été confirmée
+par `references/isolated-download-20260924.md` dans le skill `vps-preview` et les
+[rapports administrateur](../web/review/hour-resume-20260924/).
+
+## Diagnostic du téléchargement audio (demande initiale)
 
 Le parcours réel court (138 867 ms) a réussi. Le parcours d'une heure est bloqué
 avant toute IA : `tarjama-download-v1`, `track=audio`, code de sortie 1 ; la vidéo

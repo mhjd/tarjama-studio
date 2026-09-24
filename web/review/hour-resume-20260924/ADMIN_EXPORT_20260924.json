@@ -1,0 +1,298 @@
+{
+  "utc": "2026-09-24T20:24:27.040138+00:00",
+  "destination": "/home/codex/projects/tarjama-studio/web/.cache/real-ui-10min",
+  "files": [
+    {
+      "name": "macbook-air15-m4-library.png",
+      "bytes": 110235,
+      "sha256": "68631fc9ba9c96a66a47e0f04208f2d5d638329f0e20f851135c797f8f12d2a7",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-youtube.png",
+      "bytes": 160784,
+      "sha256": "b5f3d765dabd6bfef361a58673693b1cdf7597e68f290696a9b4a8d59ac506a2",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-preparing.png",
+      "bytes": 158652,
+      "sha256": "c8b6d158d96467c24fe789b5349b920111001dc1e0eb23fa2d8558054baa620e",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-arabic.png",
+      "bytes": 220174,
+      "sha256": "89a929278e39c43594390d5b71e8edb97a641bbc8389336de17711baaadbdfd0",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-seek-follow.png",
+      "bytes": 185354,
+      "sha256": "cd7de0d433f3f5ab3cc84b034d557b703d4044b075824a7425316f502f28fe3c",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-saved.png",
+      "bytes": 220310,
+      "sha256": "f6421c10c0843b01194bc3eceb4add577a5d9bb2c2f1b57c5b33c928df50f9ed",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-translating.png",
+      "bytes": 148156,
+      "sha256": "1e20945988bda9ed6c695d8747fb727c2354f4389021a95f9a821af8fa07a596",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-translation.png",
+      "bytes": 222261,
+      "sha256": "263cac8a31d6d6a64a5cea6471a7c92a530937d9b4a53575de5241f225271992",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "transcription-macbook-air15-m4.json",
+      "bytes": 10042,
+      "sha256": "4219cd60c3a72e6ea3275351dbb585490f38a0d54e1a8635738b2154c8dac85e",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-export-fr.png",
+      "bytes": 203856,
+      "sha256": "74b37689ed54057a2632289c469dc2f72ef914923170fc822459e0d7b630d0aa",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "tarjama-gbrDbQVYDuQ-macbook-air15-m4-fr-high.mp4",
+      "bytes": 27396809,
+      "sha256": "b7f43e123872bcde70b0dda13dad039b0259d722c02c80d36a1c47f5898d3b6e",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-downloaded-fr.png",
+      "bytes": 165952,
+      "sha256": "39ec6d0c7e36de244523e24da2e633a12d27e72d2488477d1bfadd81f10ebc38",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-rendered-fr.png",
+      "bytes": 882769,
+      "sha256": "0fe95f7ba78271d06af0d01cd306006510b70c7946a02a07f1e92e01dcbd2c64",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "macbook-air15-m4-rendered-middle-fr.png",
+      "bytes": 2521569,
+      "sha256": "1eff22d0ea5983108c933fab07b433d64c591564d6b6eb4a0f9197c12fbaffbe",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "parcours-macbook-air15-m4.webm",
+      "bytes": 14887613,
+      "sha256": "3eec2c5c63b154c4f2b8ba84706d3323599aa725e42a4edf20f0608696d8aa14",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "manifest.json",
+      "bytes": 3153,
+      "sha256": "c289f3b981e799d264a54951e5b0d24195e75599a03377b0e940c07a128b8bf2",
+      "run": "ui-review-tenmin_short3"
+    },
+    {
+      "name": "pixel6-library.png",
+      "bytes": 117117,
+      "sha256": "f023de4bb04eef6ab3aba2c782aecb394598be89c9e06ae4ca342d42f805a856",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-youtube.png",
+      "bytes": 155426,
+      "sha256": "b7868ff9bba7025a83bb0c0078b126d2583fa2ab0c87452066ea87c0bae4e1c8",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-preparing.png",
+      "bytes": 159797,
+      "sha256": "990871a477559f747a8cf0e5bca70eeff39ebeabf7b4cf4d451b07f6534d5e17",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-arabic.png",
+      "bytes": 219073,
+      "sha256": "7be5fe3f060a57680aeaa793c1bacb431f0a5ceab181afcf07577ba45220cbf7",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-seek-follow.png",
+      "bytes": 214377,
+      "sha256": "f29cdb18c797efeaf0d9e54844488c357fd4ccd389fe2faa4456f7f306359d3b",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-saved.png",
+      "bytes": 217652,
+      "sha256": "d6b36b5b491344d38e37817e45a559be63de5fc2640ac5bdfe0326f8f2e95560",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-translating.png",
+      "bytes": 159462,
+      "sha256": "8950f1eb1e8344511f494cac4bb74e6587d77f01d1ae4dd93a35ef125eddbaf2",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-translation.png",
+      "bytes": 218175,
+      "sha256": "fd7f76a9d412318de76355fbaecdd126fdb9d8ee20e9118571667cb2e6e5fb26",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "transcription-pixel6.json",
+      "bytes": 10102,
+      "sha256": "aa961325474b621ad47a0c2856fcc3c2dd591b2e9edf5e03c3b39a9929078d8a",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-export-fr.png",
+      "bytes": 235438,
+      "sha256": "f60083ab6d06427f4bf663c7917243606aaeefd65f84dd4648938b22c6568d82",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "tarjama-gbrDbQVYDuQ-pixel6-fr-high.mp4",
+      "bytes": 27335231,
+      "sha256": "99e7af76c92119738d55cbb080aef8807522109d95e2d3cb8c61becb42d08b28",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-downloaded-fr.png",
+      "bytes": 246046,
+      "sha256": "3a01ff95e53305b223a4f8c93b4447489c7f3169ff3aa482e10cf162aaee6e9e",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-rendered-fr.png",
+      "bytes": 232505,
+      "sha256": "51ed354da521e0e8221a538a1ae666250707db87afba60e2428769398de7022a",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "pixel6-rendered-middle-fr.png",
+      "bytes": 586233,
+      "sha256": "dd3d8af04a401452679a7abe64a1ae6c4d99596578a4d8aeb077091210daf1e6",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "parcours-pixel6.webm",
+      "bytes": 9821954,
+      "sha256": "e4ef2794fd5d7ca32cfe5cc72eb145d8512ad6d72eb968126fe9b9eccee84503",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "manifest.json",
+      "bytes": 2990,
+      "sha256": "f4cb3189c46f584d06f668f2ddcea1ac071b8aac9b2ae39004231065b4f4a87c",
+      "run": "ui-review-tenmin_pixel1"
+    },
+    {
+      "name": "iphone15-library.png",
+      "bytes": 134377,
+      "sha256": "c2704fbf40e1cd15ae96f3de46b023fb2bd2e86ca5c092b791b2062419c3aa15",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-youtube.png",
+      "bytes": 161053,
+      "sha256": "357db45e01e3fccd7b4cb3aae708b615496c068d4238ce804b708e4617e36aee",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-preparing.png",
+      "bytes": 176050,
+      "sha256": "cdd79dee5c100bf64298fa837318fb76d4d587db5a784cce32c0be19257b2424",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-arabic.png",
+      "bytes": 254470,
+      "sha256": "a7350aefa8dbcb20618f48dc8a4a48e53e7995af53fefbe41e022d7e3b79e45c",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-seek-follow.png",
+      "bytes": 242586,
+      "sha256": "d20daa275c6eec4cb37f0c605357277b37512e2c45029dcc1506ec8b0037e226",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-saved.png",
+      "bytes": 254481,
+      "sha256": "b832bdf4a7763c34a84adaf8138b2bce4a11568adcf5672f2ded64ff909256ea",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-translating.png",
+      "bytes": 168900,
+      "sha256": "489f3e77998ca3ace5f813d1de2d75f8a8e25b5f6b9ab81da31be5dd82457d97",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-translation.png",
+      "bytes": 254595,
+      "sha256": "3243e75376fcf2c1fd728d276150cfffbee4f348620a83fdd6a915acccc34964",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "transcription-iphone15.json",
+      "bytes": 10086,
+      "sha256": "c70a7e35f65bc30777d0ca7f098768ed9d8d41740ed5898b6ef270d96207649d",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-export-fr.png",
+      "bytes": 261511,
+      "sha256": "d4e3b42209b07efabb9de2f61907f0246af6715dbcd9f01de50fdb84536fdfe7",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "tarjama-gbrDbQVYDuQ-iphone15-fr-high.mp4",
+      "bytes": 27397701,
+      "sha256": "f064157aa02cabf8b4c467131ac18495c540f6b00f90c2599a83117b5fa64bc8",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-downloaded-fr.png",
+      "bytes": 248978,
+      "sha256": "34959d30d9a01e407481d73ea3bc651b35f95e634a0aa9a39176e29631df68e7",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-rendered-fr.png",
+      "bytes": 262936,
+      "sha256": "1a0c6650da14c8c8b316b51d76574fddac4f99fce6f94756dfbfe15552b3a020",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "iphone15-rendered-middle-fr.png",
+      "bytes": 659576,
+      "sha256": "742389507287a539918daa5680603c2c34c5597a317e82497d210264570cdb10",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "parcours-iphone15.webm",
+      "bytes": 7951287,
+      "sha256": "e1db81b58c3e571acd8dd596774c0dcfac2cf669b77eabcfca73df0d5b29f716",
+      "run": "ui-review-tenmin_iphone1"
+    },
+    {
+      "name": "manifest.json",
+      "bytes": 3022,
+      "sha256": "ad5dc6985bbc474c9ea3c1466c5f9d76fadbbb2ac32dcf0acdc374375c21d7d5",
+      "run": "ui-review-tenmin_iphone1"
+    }
+  ],
+  "total_bytes": 125870876,
+  "originals_preserved": true,
+  "verified": "SHA256 original and copy",
+  "result": "PASS"
+}

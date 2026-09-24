@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-ui-tenmin-hour2-1174f4c4-7vqnz",
+      "log": "STEP macbook-air15-m4 library 2026-09-24T21:17:06.238Z\nSTEP macbook-air15-m4 youtube 2026-09-24T21:17:08.226Z\nPROGRESS macbook-air15-m4 preparing download:queued:0\nSTEP macbook-air15-m4 preparing 2026-09-24T21:17:09.675Z\nPROGRESS macbook-air15-m4 preparing download:running:0\nPROGRESS macbook-air15-m4 preparing download:running:16\nPROGRESS macbook-air15-m4 preparing download:running:33\nPROGRESS macbook-air15-m4 preparing download:running:50\nPROGRESS macbook-air15-m4 preparing download:running:66\nPROGRESS macbook-air15-m4 preparing download:running:83\nPROGRESS macbook-air15-m4 transcribing transcribe:running:0\nPROGRESS macbook-air15-m4 transcribing transcribe:running:16\nPROGRESS macbook-air15-m4 transcribing transcribe:running:32\nPROGRESS macbook-air15-m4 transcribing transcribe:running:48\nFAIL {\"device\":\"macbook-air15-m4\",\"status\":\"failed\",\"step\":\"preparing\",\"error\":\"Error: Bounded wait exhausted at preparing\",\"elapsedSeconds\":1807}\nSTEP macbook-air15-m4 failure 2026-09-24T21:47:11.827Z\nARTIFACT {\"name\":\"parcours-macbook-air15-m4.webm\",\"bytes\":52924593,\"sha256\":\"0f355cf936aee3bc1a0b7d4b3ebd45d4884284ca98e9a015107b24b61a1c22c8\"}\nOUTCOME {\"device\":\"macbook-air15-m4\",\"status\":\"failed\",\"step\":\"preparing\",\"error\":\"Error: Bounded wait exhausted at preparing\",\"elapsedSeconds\":1807}\nRESULT {\"outcomes\":[{\"device\":\"macbook-air15-m4\",\"status\":\"failed\",\"step\":\"preparing\",\"error\":\"Error: Bounded wait exhausted at preparing\",\"elapsedSeconds\":1807}],\"artifacts\":[{\"name\":\"parcours-macbook-air15-m4.webm\",\"bytes\":52924593,\"sha256\":\"0f355cf936aee3bc1a0b7d4b3ebd45d4884284ca98e9a015107b24b61a1c22c8\"}]}\n"
+    }
+  ]
+}

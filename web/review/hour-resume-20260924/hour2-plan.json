@@ -1,0 +1,45 @@
+{
+  "revision": "1b3a426a04d72f9b",
+  "services": [
+    "db",
+    "egress",
+    "review",
+    "web",
+    "worker"
+  ],
+  "jobs": [
+    "results-tenmin-hour2",
+    "ui-tenmin-hour2"
+  ],
+  "images": {
+    "db": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "egress": "preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3",
+    "review": "preview.local/atelier/web@sha256:43cade2f6d82a75536f0ae8b124e18042a46aa6df012d0a20b8a57a0bf952a1d",
+    "web": "preview.local/atelier/web@sha256:49d556701715dae8dc6f89b40ca86a075e6704936860fae959e627c8738c640f",
+    "worker": "preview.local/atelier/web@sha256:49d556701715dae8dc6f89b40ca86a075e6704936860fae959e627c8738c640f",
+    "results-tenmin-hour2": "preview.local/atelier/web@sha256:493d8e6070fc48e0e646d49dd1b5916cf1cefaf202062b7097568c6adba6fe30",
+    "ui-tenmin-hour2": "preview.local/atelier/web@sha256:493d8e6070fc48e0e646d49dd1b5916cf1cefaf202062b7097568c6adba6fe30"
+  },
+  "volumes": {
+    "database": {
+      "size": "2Gi"
+    },
+    "library": {
+      "size": "14Gi"
+    }
+  },
+  "service_addresses": {
+    "db": "pv-db:5432",
+    "egress": "pv-egress:8092",
+    "review": "pv-review:8095",
+    "web": "web:8080"
+  },
+  "data_deleted": false,
+  "cpu_limits_m": 3000,
+  "memory_limits_mi": 2944,
+  "storage_requested_gi": 16,
+  "services_to_stop": [],
+  "applied": false,
+  "database_rollback": false,
+  "ok": true
+}

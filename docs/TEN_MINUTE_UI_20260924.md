@@ -1,5 +1,9 @@
 # Blocs de dix minutes et parcours réels — 24 septembre 2026
 
+Actualisation : voir [la reprise d’une heure et le déploiement du correctif](HOUR_UI_RESUME_20260924.md).
+Ce document conserve les résultats et références de la qualification précédente.
+
+
 La correction arabe et la traduction ciblent désormais **10 minutes au maximum**,
 aux frontières des segments (commit `b993a33`). Gardes inchangées : 600 segments,
 64 000 octets arabes, réponse de 32 768 tokens. Un sous-titre n'est jamais coupé.

@@ -1,0 +1,290 @@
+# Qualified API/worker source dab84b9; activated 2026-09-24 after backup. No SQL migration.
+version: 1
+services:
+  web:
+    enabled: true
+    image: preview.local/atelier/web@sha256:b509c2712780bec713fed4cf93a0ffcf4e15d2d28693cc74628b7e7246f27994
+    args:
+    - api
+    uid: 10001
+    gid: 10001
+    port: 8090
+    env:
+      APP_MODE: production
+      LISTEN_ADDR: 0.0.0.0:8090
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      OIDC_ISSUER: https://auth.runagen.com
+      OIDC_CLIENT_ID: preview-atelier-tarjama
+      OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-oidc
+      path: /run/oidc
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - oidc
+    resources:
+      cpu: 500m
+      memory: 512Mi
+    tmp: 64Mi
+    health:
+      path: /readyz
+  worker:
+    enabled: true
+    image: preview.local/atelier/web@sha256:b509c2712780bec713fed4cf93a0ffcf4e15d2d28693cc74628b7e7246f27994
+    args:
+    - worker
+    uid: 10001
+    gid: 10001
+    env:
+      APP_MODE: production
+      PUBLIC_ORIGIN: https://atelier.preview.runagen.com
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      MEDIA_ENGINE: isolated-jobs
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+      OPENROUTER_API_KEY_FILE: /run/openrouter/api_key
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-groq
+      path: /run/groq
+    - name: isolated-jobs
+      path: /run/isolated-jobs
+    - name: openrouter
+      path: /run/openrouter
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - public-web
+    - isolated-jobs
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+  egress:
+    enabled: true
+    image: preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3
+    args:
+    - egress
+    uid: 10003
+    gid: 10003
+    port: 8092
+    env:
+      LISTEN_ADDR: 0.0.0.0:8092
+      WARP_HTTP_PROXY: 172.31.250.2:40001
+      GOMAXPROCS: '1'
+    egress:
+    - warp-downloads
+    resources:
+      cpu: 250m
+      memory: 128Mi
+    tmp: 16Mi
+  db:
+    enabled: true
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 70
+    gid: 70
+    port: 5432
+    args:
+    - postgres
+    - -c
+    - unix_socket_directories=/tmp
+    - -c
+    - max_connections=40
+    - -c
+    - shared_buffers=128MB
+    env:
+      POSTGRES_DB: tarjama
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/db-admin/postgres_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=peer
+      PGDATA: /data/pgdata
+      PGSERVICE: preview-init
+      PGSERVICEFILE: /configuration/pg_service.conf
+    secrets:
+    - name: tarjama-db-admin
+      path: /run/db-admin
+    configs:
+    - name: postgres-client
+      path: /configuration
+    volumes:
+    - name: database
+      path: /data
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+jobs:
+  migrate:
+    image: preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3
+    uid: 10001
+    gid: 10001
+    args:
+    - migrate
+    env:
+      DATABASE_URL_FILE: /run/db/database_url
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    connect:
+    - db
+    resources:
+      cpu: 250m
+      memory: 256Mi
+    timeout: 300
+  backup:
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 10001
+    gid: 10001
+    command:
+    - /bin/sh
+    args:
+    - /configuration/backup.sh
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    configs:
+    - name: deploy-backup
+      path: /configuration
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    resources:
+      cpu: 250m
+      memory: 256Mi
+    tmp: 32Mi
+    timeout: 240
+  preview-check:
+    image: preview.local/atelier/web@sha256:6e212704818bc9f08258e88d21c55793ce7e311c75c5a442510a2610497a620b
+    uid: 10001
+    gid: 10001
+    args:
+    - -test.v
+    - -test.run
+    - ^TestPreviewLive$/(HTTPAndOIDCStart|GatewayTLS)$
+    - -test.timeout
+    - 4m
+    env:
+      PREVIEW_LIVE: atelier
+      OPENROUTER_API_KEY_FILE: /run/openrouter/api_key
+      GOMAXPROCS: '1'
+    secrets:
+    - name: openrouter
+      path: /run/openrouter
+    connect:
+    - web
+    egress:
+    - public-web
+    - oidc
+    resources:
+      cpu: 500m
+      memory: 256Mi
+    tmp: 32Mi
+    timeout: 300
+  verify-hour:
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 10001
+    gid: 10001
+    command:
+    - /bin/sh
+    args:
+    - /qualification/verify-hour.sh
+    configs:
+    - name: hour-verification
+      path: /qualification
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    connect:
+    - db
+    resources:
+      cpu: 250m
+      memory: 256Mi
+    tmp: 16Mi
+    timeout: 180
+volumes:
+  library:
+    size: 14Gi
+  database:
+    size: 2Gi
+configs:
+  postgres-client:
+    pg_service.conf: '[preview-init]
+
+      host=/tmp
+
+      '
+  deploy-backup:
+    backup.sh: "#!/bin/sh\nset -eu\numask 077\nexport PGHOST=pv-db PGPORT=5432 PGDATABASE=tarjama\
+      \ PGUSER=tarjama PGCONNECT_TIMEOUT=3\nexport PGPASSWORD=\"$(cat /run/db/app_db_password)\"\
+      \nfor attempt in $(seq 1 30); do\n  if psql -X -w -Atqc 'SELECT 1' >/dev/null\
+      \ 2>/tmp/db-ready.err; then break; fi\n  sleep 2\ndone\npsql -X -w -Atqc 'SELECT\
+      \ 1' >/dev/null\nmkdir -p /storage/backups\nout=/storage/backups/pre-response-recovery-dab84b9-$(date\
+      \ -u +%Y%m%dT%H%M%SZ).dump\nset -C\n: > \"$out\"\nset +C\npg_dump -w -Fc > \"\
+      $out\"\npg_restore --list \"$out\" >/dev/null\nsha256sum \"$out\"\nprintf 'Backup\
+      \ complete; no media modified.\\n'\n"
+  hour-verification:
+    verify-hour.sh: "#!/bin/sh\nset -eu\nexport PGHOST=pv-db PGPORT=5432 PGDATABASE=tarjama\
+      \ PGUSER=tarjama PGCONNECT_TIMEOUT=3\nexport PGOPTIONS='-c default_transaction_read_only=on'\n\
+      export PGPASSWORD=\"$(cat /run/db/app_db_password)\"\nfor attempt in $(seq 1\
+      \ 30); do\n  if psql -X -w -Atqc 'SELECT 1' >/dev/null 2>/dev/null; then break;\
+      \ fi\n  sleep 2\ndone\npsql -X -w -At --set ON_ERROR_STOP=on -f /qualification/verify-hour.sql\n"
+    verify-hour.sql: "-- Qualification schema only. The connection enforces read-only\
+      \ transactions.\nSET search_path = ui_review_tenmin_hour2;\nDO $$\nDECLARE p\
+      \ jsonb;\nBEGIN\n IF (SELECT count(*) FROM projects) <> 1 THEN RAISE EXCEPTION\
+      \ 'expected one qualification project'; END IF;\n SELECT document INTO p FROM\
+      \ projects;\n IF p->>'url' <> 'https://www.youtube.com/watch?v=7TLnx8DIu4c'\n\
+      \    OR p->>'stage' <> 'ready'\n    OR jsonb_array_length(p->'segments')=0\n\
+      \    OR (p->>'duration_ms')::bigint NOT BETWEEN 3590000 AND 3630000\n    OR\
+      \ (p->>'confirmed_review')::bigint <> (p->>'version')::bigint\n THEN RAISE EXCEPTION\
+      \ 'project not fully validated'; END IF;\n IF EXISTS (SELECT 1 FROM jobs WHERE\
+      \ state <> 'succeeded')\n    OR (SELECT count(*) FROM jobs) <> 5\n THEN RAISE\
+      \ EXCEPTION 'expected five completed jobs'; END IF;\n IF EXISTS (\n  SELECT\
+      \ 1 FROM (\n   SELECT s, lag((s->>'end_ms')::bigint) OVER (ORDER BY n) previous_end\n\
+      \   FROM jsonb_array_elements(p->'segments') WITH ORDINALITY a(s,n)\n  ) x WHERE\
+      \ coalesce(s->>'arabic','')='' OR coalesce(s->>'french','')=''\n   OR (s->>'end_ms')::bigint\
+      \ <= (s->>'start_ms')::bigint\n   OR (s->>'start_ms')::bigint < 0\n   OR (s->>'end_ms')::bigint\
+      \ > (p->>'duration_ms')::bigint\n   OR (s->>'start_ms')::bigint < previous_end\n\
+      \ ) THEN RAISE EXCEPTION 'invalid final subtitle text or timing'; END IF;\n\
+      \ IF (SELECT count(DISTINCT s->>'id') FROM jsonb_array_elements(p->'segments')\
+      \ s)\n    <> jsonb_array_length(p->'segments')\n THEN RAISE EXCEPTION 'duplicate\
+      \ subtitle IDs'; END IF;\n IF EXISTS (\n  SELECT 1 FROM job_chunks c JOIN jobs\
+      \ j ON j.id=c.job_id\n  CROSS JOIN LATERAL (\n   SELECT max((s->>'end_ms')::bigint)-min((s->>'start_ms')::bigint)\
+      \ span_ms\n   FROM jsonb_array_elements(j.input->'segments') s\n   WHERE s->>'id'\
+      \ IN (SELECT r->>'id' FROM jsonb_array_elements(c.result->'segments') r)\n \
+      \ ) bounds\n  WHERE j.kind IN ('cleanup','translate') AND jsonb_array_length(c.result->'segments')>1\n\
+      \   AND bounds.span_ms>600000\n ) THEN RAISE EXCEPTION 'text chunk exceeds ten\
+      \ minutes'; END IF;\nEND $$;\nSELECT jsonb_build_object('stage',document->>'stage','duration_ms',document->'duration_ms',\n\
+      \ 'width',document->'width','height',document->'height','segments',jsonb_array_length(document->'segments'))\n\
+      FROM projects;\nSELECT jsonb_build_object('kind',kind,'state',state,'attempts',attempts,'progress',progress)\n\
+      FROM jobs ORDER BY created_at;\nSELECT jsonb_build_object('kind',j.kind,'ordinal',c.ordinal,'model',c.model,\n\
+      \ 'segments',jsonb_array_length(c.result->'segments'),\n 'span_ms',(SELECT max((s->>'end_ms')::bigint)-min((s->>'start_ms')::bigint)\n\
+      \  FROM jsonb_array_elements(j.input->'segments') s\n  WHERE s->>'id' IN (SELECT\
+      \ r->>'id' FROM jsonb_array_elements(c.result->'segments') r)))\nFROM job_chunks\
+      \ c JOIN jobs j ON j.id=c.job_id WHERE j.kind IN ('cleanup','translate')\nORDER\
+      \ BY j.kind,c.ordinal;\nSELECT jsonb_build_object('asr_chunks',count(*),'max_duration_seconds',max((c.result->>'duration')::numeric))\n\
+      FROM job_chunks c JOIN jobs j ON j.id=c.job_id WHERE j.kind='transcribe';\n"

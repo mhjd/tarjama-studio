@@ -7,9 +7,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
+	"unicode"
 )
 
 // RunIsolatedTool is an administrator profile entrypoint, NEVER a Media fallback.
@@ -38,6 +41,12 @@ func runIsolatedTool(ctx context.Context, args []string, in, out string) error {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if e = cmd.Run(); e != nil {
+		// Download has only a canonical public URL as input and no app secrets.
+		// Keep its bounded, redacted tail in the private broker diagnostic, not
+		// application logs. Other tools may echo user file contents: do not dump them.
+		if args[0] == "download" {
+			fmt.Fprintln(os.Stderr, safeDownloadDiagnostic(stderr.String()))
+		}
 		return fmt.Errorf("Outil isolé en échec (error_category=%s)", isolatedFailureReason(stderr.String()))
 	}
 	if args[0] == "probe" {
@@ -152,4 +161,30 @@ func isolatedToolCommand(args []string, in, out string) (program string, argv []
 	}
 	err = nil
 	return
+}
+
+var diagnosticURL = regexp.MustCompile(`(?i)https?://[^\s"<>]+`)
+
+func safeDownloadDiagnostic(raw string) string {
+	raw = diagnosticURL.ReplaceAllString(raw, "[URL]")
+	lines := strings.Split(raw, "\n")
+	for i, line := range lines {
+		lower := strings.ToLower(line)
+		for _, marker := range []string{"authorization", "cookie", "api_key", "api-key", "bearer "} {
+			if strings.Contains(lower, marker) {
+				lines[i] = "[credential-bearing line redacted]"
+				break
+			}
+		}
+	}
+	cleaned := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' {
+			return -1
+		}
+		return r
+	}, strings.Join(lines, "\n"))
+	if len(cleaned) > 4096 {
+		cleaned = cleaned[len(cleaned)-4096:]
+	}
+	return cleaned
 }

@@ -645,3 +645,16 @@ func TestIsolatedFailureDiagnosticIsBoundedAndPrivate(t *testing.T) {
 		server.Close()
 	}
 }
+
+func TestDownloadDiagnosticRedactsURLsAndCredentials(t *testing.T) {
+	input := "ERROR HTTP Error 403: https://video.example/file?token=private-token\nAuthorization: Bearer private-key\nCookie: private-cookie\nX-api-key: private-key\n\x00done"
+	output := safeDownloadDiagnostic(input)
+	for _, secret := range []string{"video.example", "private-token", "private-key", "private-cookie", "\x00"} {
+		if strings.Contains(output, secret) {
+			t.Fatalf("private data in diagnostic: %q", secret)
+		}
+	}
+	if !strings.Contains(output, "HTTP Error 403") || len(safeDownloadDiagnostic(strings.Repeat("a", 10000))) > 4096 {
+		t.Fatal("missing cause or unbounded diagnostic")
+	}
+}

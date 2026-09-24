@@ -104,3 +104,26 @@ haut après validation. Un état de job `failed` interrompt la qualification et
 conserve les preuves ; une attente fournisseur reste suivie pendant au plus
 30 minutes par phase, avec une limite de tâche administrée d'une heure.
 Le manifeste donne la source exacte, le format et le résultat réel.
+
+## Reprendre une préparation longue sans refaire les appels
+
+Si le recorder atteint son attente bornée alors que le worker continue, conserver
+le même `REVIEW_RUN` et ajouter `REVIEW_RESUME=1 REVIEW_ARTIFACT_PREFIX=suite-`
+à `make web-review-prepare`. La reprise accepte uniquement un projet dans le
+schéma de test, dont l’URL est celle demandée.
+Elle ouvre sa carte depuis la bibliothèque et poursuit les vérifications à partir
+de l’étape actuelle : arabe, traduction ou export. Les étapes antérieures ne sont
+pas rejouées et ne sont pas qualifiées de nouveau par ce morceau d’enregistrement. Aucun résultat IA n’est injecté ou remplacé.
+Un nouveau préfixe est obligatoire pour conserver les premières captures, vidéo
+et manifeste. Le manifeste indique `resumed: true` : les deux enregistrements
+sont des parties distinctes, pas une seule preuve continue ni un premier PASS.
+
+Ne pas remplacer le scénario d’un navigateur en cours : attendre son résultat et
+conserver ses logs avant d’appliquer la recette de reprise autorisée. Le lecteur
+`results-RUN` utilise aussi le préfixe. Un changement de service de test relance
+son worker ; les opérations persistantes et morceaux validés restent conservés.
+
+L’export est transmis au stockage de preuve depuis le fichier téléchargé par le
+navigateur, sans `saveAs` créant une deuxième copie dans le tmpfs. La limite de
+fichier et les limites de mémoire restent applicables. Les contrôles de durée,
+dimensions et lecture de l’export sont inchangés.

@@ -1,12 +1,12 @@
 import {expect} from '@playwright/test';
 import fs from 'node:fs/promises';
-import {root,sleep,upload} from './record-support.mjs';
+import {root,sleep,upload,artifactPrefix} from './record-support.mjs';
 export async function exportAndInspect(page,mark,waitReady,videoID,name){
   await page.getByRole('combobox',{name:/Qualité/}).selectOption('high');
   const projectID=new URL(page.url()).pathname.split('/')[2];
   const result=await page.request.get('/api/projects/'+projectID);
   if(!result.ok())throw Error('Cannot verify final transcript');
-  const {project}=await result.json();
+  const {project,jobs}=await result.json();
   const transcript={source:project.url,duration_ms:project.duration_ms,segments:project.segments};
   const transcriptName=`transcription-${name}.json`;
   await fs.writeFile(root+'/'+transcriptName,JSON.stringify(transcript,null,2));
@@ -15,17 +15,18 @@ export async function exportAndInspect(page,mark,waitReady,videoID,name){
   console.log('TRANSLATION_SAMPLE '+JSON.stringify({duration_ms:project.duration_ms,segments:indexes.map(i=>project.segments[i])}));
   for(const [track,label] of [['fr','français']]) {
    await mark('export-'+track);
-   await page.getByRole('button',{name:'Créer la vidéo',exact:true}).click();
+   const existing=jobs.some(j=>j.kind==='export_fr_high'&&j.source_version===project.version&&['queued','running','waiting_provider','succeeded'].includes(j.state));
+   if(!existing)await page.getByRole('button',{name:'Créer la vidéo',exact:true}).click();
    const link=page.getByRole('link',{name:`Télécharger · High · ${label}`,exact:true});
    await waitReady(link);
    const pending=page.waitForEvent('download',{timeout:60000});await link.click();const download=await pending;
    const filename=`tarjama-${videoID}-${name}-${track}-high.mp4`;
-   const path=root+'/'+filename;await download.saveAs(path);await upload(path,filename);await fs.unlink(path);await download.delete();
+   const path=await download.path();if(!path)throw Error('Browser download unavailable');await upload(path,filename);await download.delete();
    await mark('downloaded-'+track);
   }
   for (const track of ['fr']) {
    const filename=`tarjama-${videoID}-${name}-${track}-high.mp4`;
-   await page.goto('/review-artifacts/'+filename);
+   await page.goto('/review-artifacts/'+artifactPrefix+filename);
    const rendered=page.locator('video');
    await expect(rendered).toBeVisible();
    await rendered.evaluate(async v=>{v.muted=true;await v.play();});

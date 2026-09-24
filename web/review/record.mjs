@@ -1,7 +1,7 @@
 import {exportAndInspect} from './record-export.mjs';
 import {expect} from '@playwright/test';
 import fs from 'node:fs/promises';
-import {browser,root,proxy,sleep,artifacts,outcomes,upload,devices} from './record-support.mjs';
+import {browser,root,proxy,sleep,artifacts,outcomes,upload,devices,openReviewProject} from './record-support.mjs';
 const sourceVideo=process.env.REVIEW_VIDEO;
 if(!sourceVideo||!/^https:\/\/www.youtube.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(sourceVideo))throw Error('Explicit canonical YouTube URL required');
 const selectedDevices=devices.filter(d=>d.name===process.env.REVIEW_DEVICE);
@@ -40,20 +40,9 @@ for(const device of selectedDevices){
    const path=`${root}/${name}-${label}.png`;await page.screenshot({path});await upload(path,`${name}-${label}.png`);await fs.unlink(path);
  };
  try {
-  await page.goto('/');
-  await page.getByRole('button',{name:'Compte test alice'}).click();
-  await expect(page.getByRole('heading',{name:'Mes projets'})).toBeVisible();
-  await mark('library');
-  await page.getByRole('button',{name:'+ Nouvelle vidéo'}).click();
-  const title=`Qualification · ${name} · ${new Date().toISOString().slice(11,19)}`;
-  await page.getByLabel('Titre',{exact:true}).fill(title);
-  await page.getByLabel('Lien YouTube').fill(sourceVideo);
-  await mark('youtube');
-  await page.getByRole('button',{name:'Commencer',exact:true}).click();
-  await mark('preparing');
-  await expect(page.getByRole('button',{name:'3. Traduire',exact:true})).toBeDisabled();
-  await expect(page.getByRole('button',{name:'4. Exporter',exact:true})).toBeDisabled();
-  await expect(page.locator('textarea[lang="ar"]')).toHaveCount(0);
+  const resumedStage=await openReviewProject(page,mark,sourceVideo,name);
+  console.log('RESUME_STAGE '+resumedStage);
+  if(!['translating','review','ready'].includes(resumedStage)){
   await waitReady(page.getByRole('button',{name:'Valider et traduire',exact:true}).first());
   await page.getByRole('heading',{name:'Correction arabe',exact:true}).scrollIntoViewIfNeeded();
   await mark('arabic');
@@ -86,6 +75,8 @@ for(const device of selectedDevices){
   await expect(page.getByRole('button',{name:'2. Corriger',exact:true})).toBeEnabled();
   await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(0);
   await mark('translating');
+  }
+  if(resumedStage!=='ready'){
   await waitReady(page.getByRole('button',{name:'Valider et exporter',exact:true}).first());
   await page.getByRole('heading',{name:'Relire arabe et français'}).scrollIntoViewIfNeeded();
   await mark('translation');
@@ -100,6 +91,7 @@ for(const device of selectedDevices){
   await page.getByRole('button',{name:'3. Traduire',exact:true}).click();
   await expect(page.locator('textarea[lang="fr"]').first()).toHaveValue(editedFrench);
   await page.getByRole('button',{name:'4. Exporter',exact:true}).click();
+  }
   await exportAndInspect(page,mark,waitReady,videoID,name);
   if(errors.length)throw Error('Browser errors: '+errors.join('; '));
   outcomes.push({device:name,viewport:device.viewport,engine:'Chromium',status:'passed',elapsedSeconds:Math.round((Date.now()-started)/1000)});
@@ -114,7 +106,7 @@ for(const device of selectedDevices){
  console.log('OUTCOME '+JSON.stringify(outcomes.at(-1)));
  if(outcomes.at(-1).status==='failed')break;
 }
-const manifest={sourceVideo,identity:'isolated test account; production MFA confirmed separately by owner',providers:'real OpenRouter/DeepSeek with Parallel and Groq',media:'administered isolated jobs, WARP for download',emulation:'CSS viewports, Chromium; not physical devices or Safari qualification',outcomes,artifacts};
+const manifest={sourceVideo,resumed:process.env.REVIEW_RESUME==='1',identity:'isolated test account; production MFA confirmed separately by owner',providers:'real OpenRouter/DeepSeek with Parallel and Groq',media:'administered isolated jobs, WARP for download',emulation:'CSS viewports, Chromium; not physical devices or Safari qualification',outcomes,artifacts};
 await fs.writeFile(root+'/manifest.json',JSON.stringify(manifest,null,2));await upload(root+'/manifest.json','manifest.json');
 console.log('RESULT '+JSON.stringify({outcomes,artifacts:artifacts.filter(x=>/\.(mp4|webm)$/.test(x.name))}));
 await browser.close();proxy.close();

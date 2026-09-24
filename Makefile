@@ -229,3 +229,12 @@ web-research-check-image:
 # Explicit opt-in. Required environment variables name files, never secret values.
 web-research-check:
 	web/scripts/run-research-check.sh
+
+# Paid, bounded comparison; no production model or deployment changes.
+.PHONY: web-luna-compare web-luna-compare-test
+web-luna-compare: web-prompts-check
+	@test -n "$(BENCHMARK_OUTPUT)" || { echo 'Set BENCHMARK_OUTPUT to a new directory.' >&2; exit 1; }
+	python3 -B web/review/luna-comparison/run.py --output "$(BENCHMARK_OUTPUT)" $(if $(filter 1,$(BENCHMARK_SPLIT)),--split-corpus,)
+
+web-luna-compare-test: web-prompts-check
+	python3 -B -m unittest discover -s web/review/luna-comparison -p 'test_*.py'

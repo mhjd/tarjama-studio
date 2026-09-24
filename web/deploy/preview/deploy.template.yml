@@ -1,3 +1,4 @@
+# HISTORICAL GEMINI RECIPE: do not use for the new DeepSeek/Parallel candidate.
 # Generated from web/deploy/preview/deploy.template.yml and public inputs.json.
 # All services remain stopped; jobs require a separate, explicit activation.
 version: 1

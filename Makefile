@@ -221,3 +221,11 @@ web-ui-release-build:
 web-upload-release-build:
 	python3 web/scripts/prepare-upload-release.py
 	docker build --platform linux/amd64 --target upload-release -f "$$(cat web/.cache/upload-release-path)/web/Dockerfile" -t tarjama-web:upload-review "$$(cat web/.cache/upload-release-path)/web"
+
+.PHONY: web-research-check-image web-research-check
+web-research-check-image:
+	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target research-check -t tarjama-research-check:review web
+
+# Explicit opt-in. Required environment variables name files, never secret values.
+web-research-check:
+	web/scripts/run-research-check.sh

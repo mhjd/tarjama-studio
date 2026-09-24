@@ -20,8 +20,9 @@ import (
 )
 
 type auditTransport struct {
-	dir  string
-	base http.RoundTripper
+	dir      string
+	base     http.RoundTripper
+	sequence int
 }
 
 func write(path string, data []byte) error {
@@ -33,14 +34,15 @@ func write(path string, data []byte) error {
 	_, err = f.Write(data)
 	return err
 }
-func (t auditTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+func (t *auditTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	t.sequence++
 	// Only bodies are saved; headers (API key) and transport errors never are.
 	request, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, errors.New("request read failed")
 	}
 	r.Body = io.NopCloser(bytes.NewReader(request))
-	if err = write(filepath.Join(t.dir, "request.json"), request); err != nil {
+	if err = write(filepath.Join(t.dir, fmt.Sprintf("request-%02d.json", t.sequence)), request); err != nil {
 		return nil, err
 	}
 	response, err := t.base.RoundTrip(r)
@@ -54,7 +56,7 @@ func (t auditTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	// Errors may include account identifiers: record only status, never the body.
 	if response.StatusCode == 200 {
-		if err = write(filepath.Join(t.dir, "response.raw.json"), raw); err != nil {
+		if err = write(filepath.Join(t.dir, fmt.Sprintf("response-%02d.raw.json", t.sequence)), raw); err != nil {
 			return nil, err
 		}
 	}
@@ -131,18 +133,21 @@ func run() error {
 	if err = write(filepath.Join(*output, "input.json"), raw); err != nil {
 		return err
 	}
-	key, err := os.ReadFile(os.Getenv("GEMINI_API_KEY_FILE"))
+	key, err := os.ReadFile(os.Getenv("OPENROUTER_API_KEY_FILE"))
 	if err != nil || len(bytes.TrimSpace(key)) == 0 {
-		return errors.New("registered Gemini secret unavailable")
+		return errors.New("registered OpenRouter secret unavailable")
 	}
 	p := studio.NewProviders()
-	p.Client.Transport = auditTransport{*output, http.DefaultTransport}
+	if p.Research.Key == "" {
+		return errors.New("registered Parallel secret unavailable; no web-free benchmark")
+	}
+	p.Client.Transport = &auditTransport{dir: *output, base: http.DefaultTransport}
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
 	defer cancel()
 	// Bounded readiness check without spending a model call or logging credentials.
 	ready := false
 	for attempt := 0; attempt < 20; attempt++ {
-		req, _ := http.NewRequestWithContext(ctx, "GET", "https://generativelanguage.googleapis.com/", nil)
+		req, _ := http.NewRequestWithContext(ctx, "GET", "https://openrouter.ai/api/v1/models", nil)
 		client := &http.Client{Timeout: 3 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 		response, e := client.Do(req)
 		if e == nil {
@@ -169,26 +174,12 @@ func run() error {
 		return err
 	}
 	hash := sha256.Sum256(b)
-	summary := map[string]any{"model": studio.GeminiModel, "segments": len(s), "duration_ms": s[len(s)-1].End - s[0].Start, "elapsed_seconds": time.Since(start).Seconds(), "translation_sha256": hex.EncodeToString(hash[:]), "output_tokens_budget": studio.GeminiMaxOutputTokens, "timestamp": time.Now().UTC().Format(time.RFC3339)}
+	summary := map[string]any{"model": studio.TextModel, "segments": len(s), "duration_ms": s[len(s)-1].End - s[0].Start, "elapsed_seconds": time.Since(start).Seconds(), "translation_sha256": hex.EncodeToString(hash[:]), "output_tokens_budget": studio.TextMaxOutputTokens, "timestamp": time.Now().UTC().Format(time.RFC3339)}
 	summary["prompt_version"] = studio.PromptVersion("translate")
 	if len(result.Grounding) > 0 {
-		var grounding struct {
-			Queries []string `json:"webSearchQueries"`
-			Chunks  []struct {
-				Web struct {
-					Title string `json:"title"`
-				} `json:"web"`
-			} `json:"groundingChunks"`
-		}
-		if json.Unmarshal(result.Grounding, &grounding) == nil {
-			summary["search_queries"] = len(grounding.Queries)
-			var titles []string
-			for _, chunk := range grounding.Chunks {
-				if len(titles) < 8 && len(chunk.Web.Title) < 100 {
-					titles = append(titles, chunk.Web.Title)
-				}
-			}
-			summary["source_titles"] = titles
+		var audit map[string]any
+		if json.Unmarshal(result.Grounding, &audit) == nil {
+			summary["research"] = audit
 		}
 	}
 	summaryBytes, _ := json.Marshal(summary)

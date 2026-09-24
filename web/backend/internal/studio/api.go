@@ -630,10 +630,10 @@ func (a *API) keyStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer rows.Close()
-	out := map[string]bool{"gemini": false, "groq": false}
+	out := map[string]bool{"openrouter": false, "groq": false}
 	for rows.Next() {
 		var p string
-		if rows.Scan(&p) == nil {
+		if rows.Scan(&p) == nil && (p == "openrouter" || p == "groq") {
 			out[p] = true
 		}
 	}

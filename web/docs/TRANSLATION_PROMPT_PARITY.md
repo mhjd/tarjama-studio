@@ -1,3 +1,10 @@
+> Actualisation prioritaire du 24 septembre : prompt `translation-parallel-v3`,
+> Gemini retiré, DeepSeek/OpenRouter et outils Parallel. Le prompt métier demeure
+> dérivé de `prompts/translation.md`, sans sortie vide en cas de référence absente.
+> Corpus locaux et remarques à implémenter ; candidat non déployé. Voir
+> [les décisions actuelles](../../docs/REFERENCE_TOOLS_AND_PARALLEL.md).
+> Le compte rendu ci-dessous décrit l’ancien essai v2 et reste historique.
+
 # Prompt de traduction desktop et web
 
 La source de vérité reste `prompts/translation.md`, déjà utilisée par

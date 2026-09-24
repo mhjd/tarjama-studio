@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"tarjama/web/internal/research"
 	"time"
 	"unicode"
 )
@@ -20,8 +21,8 @@ import (
 //go:embed prompts/*.txt
 var prompts embed.FS
 
-const GeminiModel = "gemini-3.5-flash-lite"
-const GeminiMaxOutputTokens = 32768
+const TextModel = "deepseek/deepseek-v4.1-flash"
+const TextMaxOutputTokens = 32768
 const GroqModel = "whisper-large-v3"
 
 type ProviderError struct {
@@ -59,12 +60,13 @@ type Providers interface {
 	Audio(context.Context, string, string) (ASRResponse, json.RawMessage, error)
 }
 type HTTPProviders struct {
-	Client             *http.Client
-	GeminiURL, GroqURL string
+	Client           *http.Client
+	TextURL, GroqURL string
+	Research         *research.Parallel
 }
 
 func NewProviders() *HTTPProviders {
-	return &HTTPProviders{Client: &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, GeminiURL: "https://generativelanguage.googleapis.com/v1beta/models/" + GeminiModel + ":generateContent", GroqURL: "https://api.groq.com/openai/v1/audio/transcriptions"}
+	return &HTTPProviders{Research: research.NewParallel(secret("PARALLEL_API_KEY")), Client: &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, TextURL: "https://openrouter.ai/api/v1/chat/completions", GroqURL: "https://api.groq.com/openai/v1/audio/transcriptions"}
 }
 func providerError(r *http.Response) *ProviderError {
 	e := &ProviderError{Public: "Le fournisseur a refusé la requête. Vérifiez la configuration du service."}
@@ -76,28 +78,6 @@ func providerError(r *http.Response) *ProviderError {
 	case 429, 408, 500, 502, 503, 504:
 		e.Temporary = true
 		e.Public = "Le service est temporairement limité ou indisponible. Votre progression est conservée et reprendra automatiquement. Vous pouvez attendre ou ajouter une clé personnelle."
-	}
-	// Google distinguishes daily quota from transient capacity in structured
-	// details. Never display its raw error message, which may contain identifiers.
-	if r.StatusCode == http.StatusTooManyRequests && r.Body != nil {
-		var payload struct {
-			Error struct {
-				Details []struct {
-					Violations []struct {
-						ID string `json:"quotaId"`
-					} `json:"violations"`
-				} `json:"details"`
-			} `json:"error"`
-		}
-		if json.NewDecoder(io.LimitReader(r.Body, 16384)).Decode(&payload) == nil {
-			for _, detail := range payload.Error.Details {
-				for _, violation := range detail.Violations {
-					if strings.HasPrefix(violation.ID, "GenerateRequestsPerDayPerProjectPerModel") {
-						e.Public = "Le quota quotidien de Gemini est atteint. Votre progression est conservée. La reprise sera automatique lorsque du quota sera disponible. Vous pouvez attendre ou ajouter une clé personnelle disposant de quota."
-					}
-				}
-			}
-		}
 	}
 	if seconds, e2 := strconv.Atoi(r.Header.Get("Retry-After")); e2 == nil && seconds > 0 {
 		e.After = time.Duration(seconds) * time.Second
@@ -137,87 +117,68 @@ func ValidateText(result TextResult, s []Segment) error {
 	return nil
 }
 func (p *HTTPProviders) Text(ctx context.Context, key, kind string, s, contextSegments []Segment) (TextResult, error) {
+	return p.textWithResearch(ctx, key, kind, s, contextSegments, p.TextURL, TextModel)
+}
+
+// Standalone evaluations use the same tools and validation as the application.
+func (p *HTTPProviders) EvaluateOpenRouter(ctx context.Context, key, model string, s []Segment) (TextResult, error) {
+	return p.textWithResearch(ctx, key, "translate", s, nil, "https://openrouter.ai/api/v1/chat/completions", model)
+}
+func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, s, contextSegments []Segment, endpoint, model string) (TextResult, error) {
+	var result TextResult
+	if p.Research == nil || p.Research.Key == "" {
+		return result, &ProviderError{Public: "La recherche Parallel n’est pas configurée. Votre progression est conservée ; l’administrateur doit enregistrer cet accès.", Temporary: true, After: 10 * time.Minute}
+	}
 	prompt, err := prompts.ReadFile("prompts/" + kind + ".txt")
 	if err != nil {
-		return TextResult{}, errors.New("Type de traitement inconnu")
+		return result, errors.New("Type de traitement inconnu")
 	}
 	type item struct {
 		ID   string `json:"id"`
 		Text string `json:"text"`
 	}
-	target := []item{}
-	contextText := []item{}
+	target, contextText := []item{}, []item{}
 	for _, x := range s {
 		target = append(target, item{x.ID, x.Arabic})
 	}
 	for _, x := range contextSegments {
 		contextText = append(contextText, item{x.ID, x.Arabic})
 	}
-	input, _ := json.Marshal(map[string]any{"segments": target, "context_only": contextText})
-	schema := map[string]any{"type": "object", "properties": map[string]any{"segments": map[string]any{"type": "array", "items": map[string]any{"type": "object", "properties": map[string]any{"id": map[string]string{"type": "string"}, "text": map[string]string{"type": "string"}}, "required": []string{"id", "text"}}}}, "required": []string{"segments"}}
-	payload := map[string]any{"systemInstruction": map[string]any{"parts": []any{map[string]string{"text": string(prompt)}}}, "contents": []any{map[string]any{"role": "user", "parts": []any{map[string]string{"text": string(input)}}}}, "generationConfig": map[string]any{"responseMimeType": "application/json", "responseJsonSchema": schema, "maxOutputTokens": GeminiMaxOutputTokens}}
-	if kind == "translate" {
-		payload["tools"] = []any{map[string]any{"google_search": map[string]any{}}, map[string]any{"url_context": map[string]any{}}}
-	}
-	body, _ := json.Marshal(payload)
-	req, e := http.NewRequestWithContext(ctx, "POST", p.GeminiURL, bytes.NewReader(body))
-	if e != nil {
-		return TextResult{}, e
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-goog-api-key", key)
-	r, e := p.Client.Do(req)
-	if e != nil {
-		return TextResult{}, &ProviderError{Public: "Connexion au fournisseur interrompue ; reprise automatique.", Temporary: true}
-	}
-	raw, e := readResponse(r)
-	if e != nil {
-		return TextResult{}, e
-	}
-	var envelope struct {
-		Candidates []struct {
-			FinishReason string          `json:"finishReason"`
-			Grounding    json.RawMessage `json:"groundingMetadata"`
-			Content      struct {
-				Parts []struct {
-					Text    string `json:"text"`
-					Thought bool   `json:"thought"`
-				} `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
-	}
-	if json.Unmarshal(raw, &envelope) == nil && len(envelope.Candidates) == 1 && envelope.Candidates[0].FinishReason == "MAX_TOKENS" {
-		return TextResult{}, errors.New("Réponse IA tronquée")
-	}
-	if json.Unmarshal(raw, &envelope) != nil || len(envelope.Candidates) != 1 || envelope.Candidates[0].FinishReason != "STOP" {
-		return TextResult{}, errors.New("Réponse IA tronquée ou refusée")
-	}
-	var content string
-	for _, part := range envelope.Candidates[0].Content.Parts {
-		if !part.Thought {
-			content += part.Text
+	input := map[string]any{"segments": target, "context_only": contextText}
+	schema := map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"segments": map[string]any{"type": "array", "items": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"id": map[string]string{"type": "string"}, "text": map[string]string{"type": "string"}}, "required": []string{"id", "text"}}}}, "required": []string{"segments"}}
+	runner := research.Runner{Parallel: p.Research, Client: p.Client, Endpoint: endpoint, Model: model}
+	output, err := runner.Run(ctx, key, string(prompt), input, schema)
+	if err != nil {
+		var modelError *research.ModelHTTPError
+		var connectionError *research.ConnectionError
+		if errors.As(err, &connectionError) {
+			return result, &ProviderError{Public: connectionError.Error() + " ; reprise automatique.", Temporary: true}
 		}
+		if errors.As(err, &modelError) {
+			failure := providerError(&http.Response{StatusCode: modelError.Status, Header: http.Header{"Retry-After": []string{modelError.RetryAfter}}})
+			return result, failure
+		}
+		var webError *research.HTTPError
+		if errors.As(err, &webError) {
+			return result, &ProviderError{Public: "La recherche Parallel est indisponible. La progression est conservée.", Temporary: webError.Status == 429 || webError.Status >= 500, After: time.Minute}
+		}
+		return result, err
 	}
-	var result TextResult
-	d := json.NewDecoder(strings.NewReader(content))
+	d := json.NewDecoder(strings.NewReader(output.Text))
 	d.DisallowUnknownFields()
-	// Decode only the model-owned subtitle fields. A model cannot forge provenance.
+	// The model owns subtitles only. Provenance comes from executed tools.
 	wire := struct {
 		Segments json.RawMessage `json:"segments"`
 	}{}
-	if e = d.Decode(&wire); e != nil {
+	if d.Decode(&wire) != nil || d.Decode(new(any)) != io.EOF {
 		return result, errors.New("Réponse IA invalide")
 	}
-	if d.Decode(new(any)) != io.EOF {
-		return result, errors.New("Réponse IA invalide")
-	}
-	// Decode segment objects strictly as well as the root.
 	d = json.NewDecoder(bytes.NewReader(wire.Segments))
 	d.DisallowUnknownFields()
-	if e = d.Decode(&result.Segments); e != nil {
+	if d.Decode(&result.Segments) != nil {
 		return result, errors.New("Réponse IA invalide")
 	}
-	result.Grounding = envelope.Candidates[0].Grounding
+	result.Grounding, _ = json.Marshal(output.Audit)
 	return result, ValidateText(result, s)
 }
 func (p *HTTPProviders) Audio(ctx context.Context, key, path string) (ASRResponse, json.RawMessage, error) {

@@ -1,3 +1,8 @@
+> **Retiré le 24 septembre 2026** : Gemini est définitivement exclu. Ce
+> protocole sans web reste une archive ; son exécution est désactivée. Utiliser
+> `make web-research-check` pour la nouvelle qualification DeepSeek/Parallel.
+> Voir `docs/REFERENCE_TOOLS_AND_PARALLEL.md`. Les résultats existants sont conservés.
+
 # Comparaison de traduction indépendante
 
 Ce programme compare `google/gemini-3.5-flash-lite` et

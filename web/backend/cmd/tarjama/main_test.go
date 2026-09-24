@@ -42,7 +42,7 @@ func TestMigrationNeedsOnlyDatabaseAndCanBeRepeated(t *testing.T) {
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("DATABASE_URL_FILE", file)
 	t.Setenv("APP_MODE", "production")
-	for _, key := range []string{"PUBLIC_ORIGIN", "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "ENCRYPTION_KEY", "GEMINI_API_KEY", "GROQ_API_KEY", "MEDIA_TOKEN"} {
+	for _, key := range []string{"PUBLIC_ORIGIN", "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "ENCRYPTION_KEY", "OPENROUTER_API_KEY", "GROQ_API_KEY", "MEDIA_TOKEN"} {
 		t.Setenv(key, "")
 		t.Setenv(key+"_FILE", "")
 	}
@@ -55,7 +55,7 @@ func TestMigrationNeedsOnlyDatabaseAndCanBeRepeated(t *testing.T) {
 		}
 	}
 	var count int
-	if err = db.QueryRow(ctx, "SELECT count(*) FROM "+schema+".schema_migrations").Scan(&count); err != nil || count != 2 {
+	if err = db.QueryRow(ctx, "SELECT count(*) FROM "+schema+".schema_migrations").Scan(&count); err != nil || count != 3 {
 		t.Fatalf("migration not applied exactly once: count=%d err=%v", count, err)
 	}
 }

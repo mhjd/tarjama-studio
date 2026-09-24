@@ -60,19 +60,20 @@ func TestTextRetryPreservesSavedBoundaries(t *testing.T) {
 		t.Fatal("single segment lost")
 	}
 }
-func TestGeminiOutputLimitDiffersFromRefusal(t *testing.T) {
-	for _, reason := range []string{"MAX_TOKENS", "SAFETY"} {
+func TestTextOutputLimitDiffersFromRefusal(t *testing.T) {
+	for _, reason := range []string{"length", "content_filter"} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, `{"candidates":[{"finishReason":%q}]}`, reason)
+			fmt.Fprintf(w, `{"choices":[{"finish_reason":%q}]}`, reason)
 		}))
 		p := NewProviders()
-		p.GeminiURL = server.URL
+		p.Research.Key = "parallel-fixture-only"
+		p.TextURL = server.URL
 		_, err := p.Text(context.Background(), "test-only", "cleanup", []Segment{{ID: "a", Arabic: "سلام"}}, nil)
 		server.Close()
 		var transient *ProviderError
 		recovered := textResponseFailure(Job{}, err)
 		retry := errors.As(recovered, &transient) && transient.Temporary
-		if retry != (reason == "MAX_TOKENS") {
+		if retry != (reason == "length") {
 			t.Fatal(reason, err)
 		}
 	}
@@ -109,7 +110,7 @@ func TestMalformedTextQueueRecoveryAndAttemptLimit(t *testing.T) {
 				t.Fatal(err)
 			}
 			provider := &scriptedProvider{failure: errors.New("Réponse IA incomplète")}
-			worker := Worker{Store: s, Config: Config{GeminiKey: "fixture"}, Providers: provider}
+			worker := Worker{Store: s, Config: Config{OpenRouterKey: "fixture"}, Providers: provider}
 			if _, err = worker.Once(ctx); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				t.Fatal(err)
 			}

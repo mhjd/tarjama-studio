@@ -199,16 +199,16 @@ func TestKeysAuthenticatedEncryption(t *testing.T) {
 	other, _ := fixture(t, s)
 	a, server := testAPI(t, s)
 	c := a.Config
-	c.GeminiKey = "shared"
+	c.OpenRouterKey = "shared"
 	ctx := context.Background()
-	if e := s.SetKey(ctx, c, owner, "gemini", "personal-sensitive"); e != nil {
+	if e := s.SetKey(ctx, c, owner, "openrouter", "personal-sensitive"); e != nil {
 		t.Fatal(e)
 	}
-	v, _, e := s.Key(ctx, c, owner, "gemini")
+	v, _, e := s.Key(ctx, c, owner, "openrouter")
 	if e != nil || v != "personal-sensitive" {
 		t.Fatal(v, e)
 	}
-	v, _, e = s.Key(ctx, c, other, "gemini")
+	v, _, e = s.Key(ctx, c, other, "openrouter")
 	if e != nil || v != "shared" {
 		t.Fatal(v, e)
 	}
@@ -217,11 +217,11 @@ func TestKeysAuthenticatedEncryption(t *testing.T) {
 	if bytes.Contains(encrypted, []byte("personal-sensitive")) {
 		t.Fatal("plaintext")
 	}
-	if _, e = unseal(c.EncryptionKey, other, "gemini", encrypted); e == nil {
+	if _, e = unseal(c.EncryptionKey, other, "openrouter", encrypted); e == nil {
 		t.Fatal("owner binding")
 	}
 	encrypted[len(encrypted)-1] ^= 1
-	if _, e = unseal(c.EncryptionKey, owner, "gemini", encrypted); e == nil {
+	if _, e = unseal(c.EncryptionKey, owner, "openrouter", encrypted); e == nil {
 		t.Fatal("tampering")
 	}
 	token, csrf := sessionFor(t, s, owner)
@@ -229,13 +229,13 @@ func TestKeysAuthenticatedEncryption(t *testing.T) {
 	if bytes.Contains(body, []byte("personal")) {
 		t.Fatal("read-only secret exposure")
 	}
-	s.SetKey(ctx, c, owner, "gemini", "replacement")
-	v, _, _ = s.Key(ctx, c, owner, "gemini")
+	s.SetKey(ctx, c, owner, "openrouter", "replacement")
+	v, _, _ = s.Key(ctx, c, owner, "openrouter")
 	if v != "replacement" {
 		t.Fatal(v)
 	}
-	s.SetKey(ctx, c, owner, "gemini", "")
-	v, _, _ = s.Key(ctx, c, owner, "gemini")
+	s.SetKey(ctx, c, owner, "openrouter", "")
+	v, _, _ = s.Key(ctx, c, owner, "openrouter")
 	if v != "shared" {
 		t.Fatal(v)
 	}
@@ -258,7 +258,7 @@ func TestLeaseCrashFairnessAndLateResults(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if e = s.Chunk(ctx, j, 0, map[string]any{"ok": true}, GeminiModel, "v1", 40); e != nil {
+	if e = s.Chunk(ctx, j, 0, map[string]any{"ok": true}, TextModel, "v1", 40); e != nil {
 		t.Fatal(e)
 	}
 	next, e := s.Claim(ctx)
@@ -341,7 +341,7 @@ func TestProviderStatusesAndSecretPlacement(t *testing.T) {
 	for _, status := range []int{401, 403, 404, 429, 503} {
 		t.Run(fmt.Sprint(status), func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if strings.Contains(r.URL.String(), "sensitive") || r.Header.Get("x-goog-api-key") != "sensitive" {
+				if strings.Contains(r.URL.String(), "sensitive") || r.Header.Get("Authorization") != "Bearer sensitive" {
 					t.Error("secret placement")
 				}
 				w.Header().Set("Retry-After", "3600")
@@ -350,7 +350,8 @@ func TestProviderStatusesAndSecretPlacement(t *testing.T) {
 			}))
 			defer server.Close()
 			p := NewProviders()
-			p.GeminiURL = server.URL
+			p.Research.Key = "parallel-fixture-only"
+			p.TextURL = server.URL
 			_, e := p.Text(context.Background(), "sensitive", "translate", []Segment{{ID: "a", Arabic: "سلام"}}, nil)
 			var pe *ProviderError
 			if !errors.As(e, &pe) || pe.Temporary != (status == 429 || status == 503) || strings.Contains(pe.Public, "sensitive") {
@@ -584,7 +585,7 @@ func TestMigrationRepeatAndReadiness(t *testing.T) {
 	}
 	var count int
 	s.DB.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count)
-	if count != 2 {
+	if count != 3 {
 		t.Fatal(count)
 	}
 }

@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-func TestProviderDailyQuotaIsExplicitWithoutExposingResponse(t *testing.T) {
+func TestProviderRateLimitDoesNotExposeResponse(t *testing.T) {
 	for _, tc := range []struct {
 		name, body string
 		daily      bool
 	}{
-		{"daily", `{"error":{"message":"sensitive credential or project identifier","details":[{"violations":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}]}}`, true},
+		{"daily", `{"error":{"message":"sensitive credential or project identifier","details":[{"violations":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}]}}`, false},
 		{"minute", `{"error":{"message":"sensitive","details":[{"violations":[{"quotaId":"GenerateRequestsPerMinutePerProjectPerModel-FreeTier"}]}]}}`, false},
 		{"malformed", `sensitive upstream HTML`, false},
 	} {

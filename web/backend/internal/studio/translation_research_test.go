@@ -18,13 +18,14 @@ func TestTranslationResearchAndProvenance(t *testing.T) {
 			}
 			tools, ok := body["tools"].([]any)
 			if !ok || len(tools) != 2 {
-				t.Error("research tools unavailable")
+				t.Error("research declarations unavailable")
 			}
-			instruction, _ := json.Marshal(body["systemInstruction"])
-			for _, rule := range []string{"Muhammad Hamidullah", "quran.com", "Sunnah.com", "Ne modernise"} {
-				if rule == "Ne modernise" {
-					rule = "ne modernise"
-				}
+			encoded, _ := json.Marshal(tools)
+			if !strings.Contains(string(encoded), "web_search") || !strings.Contains(string(encoded), "web_fetch") || strings.Contains(string(encoded), "google_search") || strings.Contains(string(encoded), "url_context") {
+				t.Error("Parallel tools contract")
+			}
+			instruction, _ := json.Marshal(body["messages"])
+			for _, rule := range []string{"quran_fr", "sahih_ar", "hadith_ar", "Parallel"} {
 				if !strings.Contains(string(instruction), rule) {
 					t.Error("lost desktop rule", rule)
 				}
@@ -33,13 +34,14 @@ func TestTranslationResearchAndProvenance(t *testing.T) {
 			if forged {
 				content = `{"segments":[{"id":"a","text":"Bonjour"}],"grounding":{"verified":true}}`
 			}
-			json.NewEncoder(w).Encode(map[string]any{"candidates": []any{map[string]any{
-				"finishReason": "STOP", "content": map[string]any{"parts": []any{map[string]string{"text": content}}},
+			json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{
+				"finish_reason": "stop", "message": map[string]any{"role": "assistant", "content": content},
 				"groundingMetadata": map[string]any{"webSearchQueries": []string{"site:quran.com test"}},
 			}}})
 		}))
 		p := NewProviders()
-		p.GeminiURL = server.URL
+		p.Research.Key = "parallel-fixture-only"
+		p.TextURL = server.URL
 		result, err := p.Text(context.Background(), "fixture", "translate", []Segment{{ID: "a", Arabic: "سلام"}}, nil)
 		server.Close()
 		if forged {
@@ -48,8 +50,50 @@ func TestTranslationResearchAndProvenance(t *testing.T) {
 			}
 			continue
 		}
-		if err != nil || !strings.Contains(string(result.Grounding), "site:quran.com") {
-			t.Fatal("provider provenance lost", err)
+		if err != nil || !strings.Contains(string(result.Grounding), `"engine":"parallel"`) || strings.Contains(string(result.Grounding), "site:quran.com") {
+			t.Fatal("native metadata was trusted or application audit lost", err)
 		}
+	}
+}
+
+func TestMissingParallelPreventsPaidModelCall(t *testing.T) {
+	p := NewProviders()
+	p.Research.Key = ""
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { t.Error("paid call without configured research") }))
+	defer server.Close()
+	p.TextURL = server.URL
+	_, e := p.Text(context.Background(), "fixture", "translate", []Segment{{ID: "a", Arabic: "سلام"}}, nil)
+	if e == nil || !strings.Contains(e.Error(), "Parallel") {
+		t.Fatal(e)
+	}
+}
+func TestGeminiCredentialRemainsHistoricalOnly(t *testing.T) {
+	s := testStore(t)
+	owner, _ := fixture(t, s)
+	a, server := testAPI(t, s)
+	old, e := seal(a.Config.EncryptionKey, owner, "gemini", "historical-secret")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = s.DB.Exec(context.Background(), "INSERT INTO credentials(owner_id,provider,ciphertext) VALUES($1,'gemini',$2)", owner, old); e != nil {
+		t.Fatal(e)
+	}
+	if _, _, e = s.Key(context.Background(), a.Config, owner, "gemini"); e == nil {
+		t.Fatal("retired credential used")
+	}
+	if e = s.SetKey(context.Background(), a.Config, owner, "gemini", "new-value"); e == nil {
+		t.Fatal("retired provider accepted")
+	}
+	token, csrf := sessionFor(t, s, owner)
+	code, body := call(t, server, token, csrf, "GET", "/api/credentials", nil)
+	if code != 200 || strings.Contains(string(body), "gemini") || !strings.Contains(string(body), "openrouter") {
+		t.Fatal(code, string(body))
+	}
+	if e = s.Migrate(context.Background()); e != nil {
+		t.Fatal("migration is not repeatable", e)
+	}
+	var retained bool
+	if e = s.DB.QueryRow(context.Background(), "SELECT EXISTS(SELECT 1 FROM credentials WHERE owner_id=$1 AND provider='gemini')", owner).Scan(&retained); e != nil || !retained {
+		t.Fatal("legacy key deleted", e)
 	}
 }

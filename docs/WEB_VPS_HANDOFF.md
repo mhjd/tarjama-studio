@@ -1,5 +1,15 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+**Décisions prioritaires du 24 septembre 2026 :** Gemini est définitivement retiré.
+Le candidat utilise DeepSeek V4.1 Flash via OpenRouter, et exclusivement Parallel
+pour Search/Fetch (y compris pour les futurs modèles disposant d’un moteur natif).
+Groq reste la transcription. Trois outils locaux distincts et un panneau de
+remarques hors sous-titres sont définis, pas encore implémentés. Lire
+[les décisions, contrats et état de qualification](REFERENCE_TOOLS_AND_PARALLEL.md)
+avant toute reprise. Les affirmations historiques Gemini/no-OpenRouter ci-dessous
+sont supersédées. L’accès Parallel manque ; aucun nouveau déploiement réalisé.
+
+
 Actualisation du 23 septembre 2026 : le propriétaire choisit désormais
 `gemini-3.5-flash-lite` pour correction/traduction, en remplacement de 3.8 Flash,
 et accepte un premier jet à relire et corriger. Les erreurs observées et les

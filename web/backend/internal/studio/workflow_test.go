@@ -52,7 +52,7 @@ func TestQuotaWaitPersonalKeyAndRestart(t *testing.T) {
 		t.Fatal(e)
 	}
 	provider := &scriptedProvider{failure: &ProviderError{Public: "Limite partagée", Temporary: true, After: time.Hour}}
-	c := Config{EncryptionKey: make([]byte, 32), GeminiKey: "shared"}
+	c := Config{EncryptionKey: make([]byte, 32), OpenRouterKey: "shared"}
 	w := Worker{Store: s, Config: c, Providers: provider}
 	if _, e = w.Once(ctx); e != nil {
 		t.Fatal(e)
@@ -65,7 +65,7 @@ func TestQuotaWaitPersonalKeyAndRestart(t *testing.T) {
 		t.Fatal("retry storm")
 	}
 	provider.failure = nil
-	if e = s.SetKey(ctx, c, owner, "gemini", "personal"); e != nil {
+	if e = s.SetKey(ctx, c, owner, "openrouter", "personal"); e != nil {
 		t.Fatal(e)
 	}
 	if _, e = w.Once(ctx); e != nil {
@@ -140,13 +140,13 @@ func TestCancelledLeaseAndCooldownIsolation(t *testing.T) {
 	if s.Heartbeat(ctx, j) {
 		t.Fatal("cancel heartbeat accepted")
 	}
-	if e = s.Chunk(ctx, j, 0, TextResult{}, GeminiModel, "v1", 1); !errors.Is(e, ErrConflict) {
+	if e = s.Chunk(ctx, j, 0, TextResult{}, TextModel, "v1", 1); !errors.Is(e, ErrConflict) {
 		t.Fatal("late chunk", e)
 	}
-	if e = s.SetCooldown(ctx, "gemini:shared", time.Hour); e != nil {
+	if e = s.SetCooldown(ctx, "openrouter:shared", time.Hour); e != nil {
 		t.Fatal(e)
 	}
-	if d, e := s.Cooldown(ctx, "gemini:personal"); e != nil || d != 0 {
+	if d, e := s.Cooldown(ctx, "openrouter:personal"); e != nil || d != 0 {
 		t.Fatal("personal blocked", d, e)
 	}
 }
@@ -157,24 +157,25 @@ func TestProviderStructuredWireValidation(t *testing.T) {
 		content, finish string
 		valid           bool
 	}{
-		{`{"segments":[{"id":"a","text":"Bonjour"}]}`, "STOP", true},
-		{`{"segments":[{"id":"a","text":"Bonjour","start":0}]}`, "STOP", false},
-		{`{"segments":[]}`, "STOP", false},
-		{`{"segments":[{"id":"a","text":"Bonjour"}]}`, "MAX_TOKENS", false},
-		{`{"segments":[`, "STOP", false},
+		{`{"segments":[{"id":"a","text":"Bonjour"}]}`, "stop", true},
+		{`{"segments":[{"id":"a","text":"Bonjour","start":0}]}`, "stop", false},
+		{`{"segments":[]}`, "stop", false},
+		{`{"segments":[{"id":"a","text":"Bonjour"}]}`, "length", false},
+		{`{"segments":[`, "stop", false},
 	} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var body map[string]any
 			if json.NewDecoder(r.Body).Decode(&body) != nil {
 				t.Fatal("request JSON")
 			}
-			if body["systemInstruction"] == nil || body["generationConfig"] == nil {
+			if body["messages"] == nil || body["response_format"] == nil {
 				t.Error("missing fixed instruction/schema")
 			}
-			json.NewEncoder(w).Encode(map[string]any{"candidates": []any{map[string]any{"finishReason": tc.finish, "content": map[string]any{"parts": []any{map[string]string{"text": tc.content}}}}}})
+			json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"finish_reason": tc.finish, "message": map[string]any{"role": "assistant", "content": tc.content}}}})
 		}))
 		p := NewProviders()
-		p.GeminiURL = server.URL
+		p.Research.Key = "parallel-fixture-only"
+		p.TextURL = server.URL
 		_, e := p.Text(context.Background(), "fixture", "translate", source, nil)
 		server.Close()
 		if (e == nil) != tc.valid {
@@ -211,6 +212,7 @@ func TestGroqMultipartContract(t *testing.T) {
 	}))
 	defer server.Close()
 	p := NewProviders()
+	p.Research.Key = "parallel-fixture-only"
 	p.GroqURL = server.URL
 	response, raw, e := p.Audio(context.Background(), "fixture", file)
 	if e != nil || len(response.Segments) != 1 || len(raw) == 0 {
@@ -242,7 +244,7 @@ func TestWorkerResumesLegacyTextChunkAfterUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 	provider.calls = 0
-	worker := Worker{Store: s, Config: Config{GeminiKey: "fixture"}, Providers: provider}
+	worker := Worker{Store: s, Config: Config{OpenRouterKey: "fixture"}, Providers: provider}
 	for i := 0; i < 2; i++ {
 		if worked, e := worker.Once(ctx); e != nil || !worked {
 			t.Fatal(worked, e)

@@ -127,15 +127,15 @@ func TestPreviewLive(t *testing.T) {
 	providers := NewProviders()
 	segments := []Segment{{ID: "preview-one", Start: 0, End: 2000, Arabic: "السلام عليكم", French: "Bonjour à tous."}}
 	for _, kind := range []string{"cleanup", "translate"} {
-		t.Run("Gemini/"+kind, func(t *testing.T) {
+		t.Run("DeepSeek/"+kind, func(t *testing.T) {
 			providers.Client.Transport = previewTransport{t}
-			if secret("GEMINI_API_KEY") == "" {
-				t.Fatal("Gemini secret unavailable")
+			if secret("OPENROUTER_API_KEY") == "" {
+				t.Fatal("OpenRouter secret unavailable")
 			}
 			limited, stop := context.WithTimeout(ctx, 90*time.Second)
 			defer stop()
 			for attempt := 0; attempt < 3; attempt++ {
-				_, err := providers.Text(limited, secret("GEMINI_API_KEY"), kind, segments, nil)
+				_, err := providers.Text(limited, secret("OPENROUTER_API_KEY"), kind, segments, nil)
 				if err == nil {
 					return
 				}

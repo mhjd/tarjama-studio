@@ -51,6 +51,7 @@ def deadline_expired(signum, frame):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
+    parser.error("Historical Gemini/no-web comparison retired; use make web-research-check")
     args = parser.parse_args()
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=False)

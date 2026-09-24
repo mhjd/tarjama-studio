@@ -468,7 +468,7 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 	if len(raw) > len(chunks) {
 		return errors.New("Morceaux incohérents")
 	}
-	key, scope, e := w.provider(ctx, j, "gemini")
+	key, scope, e := w.provider(ctx, j, "openrouter")
 	if e != nil {
 		return e
 	}
@@ -498,7 +498,7 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 	for _, chunk := range chunks[:i+1] {
 		completed += len(chunk)
 	}
-	return w.Store.Chunk(ctx, j, i, result, GeminiModel, PromptVersion(j.Kind), completed*99/len(j.Input.Segments))
+	return w.Store.Chunk(ctx, j, i, result, TextModel, PromptVersion(j.Kind), completed*99/len(j.Input.Segments))
 }
 
 // Saved results define immutable completed boundaries, including those written by

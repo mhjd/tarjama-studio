@@ -34,11 +34,11 @@ export function Keys({ close }: { close: () => void }) {
         Votre clé sert uniquement à vos propres traitements, avec le même
         modèle.
       </p>
-      {["gemini", "groq"].map((p) => (
+      {["openrouter", "groq"].map((p) => (
         <section key={p}>
           <h2>
-            {p === "gemini"
-              ? "Google AI Studio · Gemini"
+            {p === "openrouter"
+              ? "OpenRouter · DeepSeek"
               : "Groq · transcription"}
           </h2>
           <p>{status[p] ? "Clé personnelle configurée" : "Service partagé"}</p>
@@ -64,19 +64,19 @@ export function Keys({ close }: { close: () => void }) {
           <details>
             <summary>Comment obtenir une clé</summary>
             <p>
-              Guide texte vérifié le 21 septembre 2026. La vidéo tutorielle n’a
+              Guide texte vérifié le 24 septembre 2026. La vidéo tutorielle n’a
               pas encore été fournie.
             </p>
             <ol>
               <li>
                 Ouvrez{" "}
-                {p === "gemini" ? (
+                {p === "openrouter" ? (
                   <a
-                    href="https://aistudio.google.com/apikey"
+                    href="https://openrouter.ai/settings/keys"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Google AI Studio
+                    OpenRouter
                   </a>
                 ) : (
                   <a

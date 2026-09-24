@@ -47,7 +47,7 @@ func run() error {
 	if c.Mode != "test" {
 		return errors.New("fixture requires APP_MODE=test")
 	}
-	c.GeminiKey = "mock-only"
+	c.OpenRouterKey = "mock-only"
 	c.GroqKey = "mock-only"
 	s, e := studio.Open(ctx, c.DB)
 	if e != nil {

@@ -38,7 +38,7 @@ func unseal(key []byte, owner, provider string, data []byte) (string, error) {
 	return string(v), e
 }
 func (s *Store) SetKey(ctx context.Context, c Config, owner, provider, value string) error {
-	if provider != "gemini" && provider != "groq" {
+	if provider != "openrouter" && provider != "groq" {
 		return errors.New("Fournisseur invalide")
 	}
 	value = strings.TrimSpace(value)
@@ -74,6 +74,9 @@ func (s *Store) SetKey(ctx context.Context, c Config, owner, provider, value str
 	return tx.Commit(ctx)
 }
 func (s *Store) Key(ctx context.Context, c Config, owner, provider string) (string, string, error) {
+	if provider != "openrouter" && provider != "groq" {
+		return "", "", errors.New("Fournisseur invalide")
+	}
 	var b []byte
 	e := s.DB.QueryRow(ctx, "SELECT ciphertext FROM credentials WHERE owner_id=$1 AND provider=$2", owner, provider).Scan(&b)
 	if e == nil {
@@ -83,7 +86,7 @@ func (s *Store) Key(ctx context.Context, c Config, owner, provider string) (stri
 	if !errors.Is(e, pgx.ErrNoRows) {
 		return "", "", e
 	}
-	v := c.GeminiKey
+	v := c.OpenRouterKey
 	if provider == "groq" {
 		v = c.GroqKey
 	}

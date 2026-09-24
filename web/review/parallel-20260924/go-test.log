@@ -1,0 +1,13 @@
+ Container tarjama-isolated-test-db-1 Running 
+ Container tarjama-isolated-test-db-1 Waiting 
+ Container tarjama-isolated-test-db-1 Healthy 
+ Container tarjama-isolated-test-checks-run-0a103c410d89 Creating 
+ Container tarjama-isolated-test-checks-run-0a103c410d89 Created 
+?   	tarjama/web/cmd/fixture	[no test files]
+?   	tarjama/web/cmd/media-diagnostic	[no test files]
+?   	tarjama/web/cmd/research-check	[no test files]
+ok  	tarjama/web/cmd/tarjama	1.246s
+?   	tarjama/web/cmd/text-benchmark	[no test files]
+?   	tarjama/web/cmd/ui-review	[no test files]
+ok  	tarjama/web/internal/research	1.105s
+ok  	tarjama/web/internal/studio	17.890s

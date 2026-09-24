@@ -9,11 +9,11 @@ import (
 )
 
 type Config struct {
-	Mode, Addr, Origin, DB, Storage, Frontend string
-	Issuer, ClientID, ClientSecret            string
-	EncryptionKey                             []byte
-	GroqKey, GeminiKey, MediaURL, MediaToken  string
-	MediaEngine, JobsURL, JobsToken, JobsCA   string
+	Mode, Addr, Origin, DB, Storage, Frontend    string
+	Issuer, ClientID, ClientSecret               string
+	EncryptionKey                                []byte
+	GroqKey, OpenRouterKey, MediaURL, MediaToken string
+	MediaEngine, JobsURL, JobsToken, JobsCA      string
 }
 
 func secret(name string) string {
@@ -44,7 +44,7 @@ func LoadWorkerConfig() (Config, error) {
 }
 
 func loadConfig(identityRequired bool) (Config, error) {
-	c := Config{Mode: os.Getenv("APP_MODE"), Addr: os.Getenv("LISTEN_ADDR"), Origin: os.Getenv("PUBLIC_ORIGIN"), DB: secret("DATABASE_URL"), Storage: os.Getenv("STORAGE_DIR"), Frontend: os.Getenv("FRONTEND_DIR"), Issuer: os.Getenv("OIDC_ISSUER"), ClientID: os.Getenv("OIDC_CLIENT_ID"), ClientSecret: secret("OIDC_CLIENT_SECRET"), GroqKey: secret("GROQ_API_KEY"), GeminiKey: secret("GEMINI_API_KEY"), MediaURL: os.Getenv("MEDIA_URL"), MediaToken: secret("MEDIA_TOKEN")}
+	c := Config{Mode: os.Getenv("APP_MODE"), Addr: os.Getenv("LISTEN_ADDR"), Origin: os.Getenv("PUBLIC_ORIGIN"), DB: secret("DATABASE_URL"), Storage: os.Getenv("STORAGE_DIR"), Frontend: os.Getenv("FRONTEND_DIR"), Issuer: os.Getenv("OIDC_ISSUER"), ClientID: os.Getenv("OIDC_CLIENT_ID"), ClientSecret: secret("OIDC_CLIENT_SECRET"), GroqKey: secret("GROQ_API_KEY"), OpenRouterKey: secret("OPENROUTER_API_KEY"), MediaURL: os.Getenv("MEDIA_URL"), MediaToken: secret("MEDIA_TOKEN")}
 	c.MediaEngine = os.Getenv("MEDIA_ENGINE")
 	c.JobsURL = os.Getenv("VPS_JOBS_URL")
 	c.JobsToken = secret("VPS_JOBS_TOKEN")

@@ -80,27 +80,27 @@ func TestResumeOldTextBoundaries(t *testing.T) {
 		t.Fatal("duplicated checkpoint accepted")
 	}
 }
-func TestLiteRequestBudget(t *testing.T) {
+func TestDeepSeekRequestBudget(t *testing.T) {
 	p := NewProviders()
-	if !strings.Contains(p.GeminiURL, "/gemini-3.5-flash-lite:generateContent") {
-		t.Fatal(p.GeminiURL)
+	p.Research.Key = "parallel-fixture-only"
+	if !strings.Contains(p.TextURL, "openrouter.ai/api/v1/chat/completions") {
+		t.Fatal(p.TextURL)
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var b struct {
-			GenerationConfig struct {
-				MaxOutputTokens int `json:"maxOutputTokens"`
-			} `json:"generationConfig"`
+			Model           string `json:"model"`
+			MaxOutputTokens int    `json:"max_tokens"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 			t.Fatal(err)
 		}
-		if b.GenerationConfig.MaxOutputTokens != 32768 {
+		if b.MaxOutputTokens != 32768 || b.Model != TextModel {
 			t.Error("insufficient output budget")
 		}
-		fmt.Fprint(w, `{"candidates":[{"finishReason":"STOP","content":{"parts":[{"text":"{\"segments\":[{\"id\":\"a\",\"text\":\"Bonjour\"}]}"}]}}]}`)
+		fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":"{\"segments\":[{\"id\":\"a\",\"text\":\"Bonjour\"}]}"}}]}`)
 	}))
 	defer server.Close()
-	p.GeminiURL = server.URL
+	p.TextURL = server.URL
 	if _, err := p.Text(context.Background(), "test-only", "translate", []Segment{{ID: "a", Arabic: "سلام"}}, nil); err != nil {
 		t.Fatal(err)
 	}

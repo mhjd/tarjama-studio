@@ -1,3 +1,4 @@
+# HISTORICAL GEMINI RECIPE: do not use for the new DeepSeek/Parallel candidate.
 # Explicit qualification job; append under jobs in an active reviewed recipe.
   preview-check:
     image: preview.local/atelier/web@sha256:8f42e12ceaaa74278982b7352576d4e964aafd532277dfca41cb8b270a1cfd82

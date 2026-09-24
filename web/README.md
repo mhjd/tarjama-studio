@@ -43,7 +43,13 @@ Textes sauvegardés au blur uniquement lorsqu'ils ont changé. Navigation, valid
 
 Chaque média/segment/job/export appartient au propriétaire du projet. Les sessions ne prennent aucun ID utilisateur du navigateur. Les URL de vidéos sont normalisées vers des vidéos YouTube individuelles ; import de fichier disponible dès la création ou dans le même projet après échec d'un lien.
 
-Les modèles sont fixes : `whisper-large-v3` et `gemini-3.5-flash-lite`. Clé partagée par défaut, personnelle facultative, aucune bascule silencieuse d'une clé personnelle invalide. Pas d'OpenRouter, crédits, prompts personnalisés, historique utilisateur ou sauvegarde manuelle.
+Le candidat utilise `whisper-large-v3` pour la transcription et
+`deepseek/deepseek-v4.1-flash` via OpenRouter pour correction/traduction. Gemini
+est retiré. Search/Fetch passent exclusivement par Parallel. Clé partagée par
+défaut, personnelle facultative, aucune bascule silencieuse d'une clé personnelle
+invalide. Pas de crédits applicatifs, prompts personnalisés, historique utilisateur
+ou sauvegarde manuelle. Ce candidat attend sa qualification réelle Parallel et
+la migration 003 ; voir [les décisions](../docs/REFERENCE_TOOLS_AND_PARALLEL.md).
 
 ## Aperçu privé administré
 

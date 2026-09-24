@@ -1,0 +1,43 @@
+ Container tarjama-isolated-test-db-1 Running 
+ Container tarjama-isolated-test-db-1 Waiting 
+ Container tarjama-isolated-test-db-1 Healthy 
+ Container tarjama-isolated-test-checks-run-1661c13762f1 Creating 
+ Container tarjama-isolated-test-checks-run-1661c13762f1 Created 
+
+Running 33 tests using 1 worker
+
+  ✓   1 tests/design-capture.spec.ts:8:3 › design capture iphone15 (6.0s)
+  ✓   2 tests/design-capture.spec.ts:8:3 › design capture pixel6 (6.5s)
+  ✓   3 tests/design-capture.spec.ts:8:3 › design capture macbook15 (7.3s)
+  ✓   4 tests/duplicate-video.spec.ts:7:3 › duplicate link opens the existing project without starting work (390px) (1.6s)
+  ✓   5 tests/duplicate-video.spec.ts:7:3 › duplicate link opens the existing project without starting work (1440px) (1.8s)
+  ✓   6 tests/editor.spec.ts:9:1 › download shows durable stages and stops claiming activity when polling fails (8.0s)
+  ✓   7 tests/editor.spec.ts:62:1 › follow stays enabled on manual scroll, is explicit, and seeks the same subtitle (2.4s)
+  ✓   8 tests/editor.spec.ts:125:1 › private projects, unchanged blur, offline draft, IME flush, review and real export (8.7s)
+  ✓   9 tests/editor.spec.ts:252:1 › two tabs conflict keeps the second draft and blocks advancing (1.9s)
+  ✓  10 tests/editor.spec.ts:272:1 › file import is a first class creation path and real media converges to Arabic review (4.2s)
+  ✓  11 tests/editor.spec.ts:294:1 › blur saves only that field and never overwrites characters typed during a slow response (1.9s)
+  ✓  12 tests/editor.spec.ts:327:1 › step waits for compositionend when clicked while Arabic composition is active (3.2s)
+  ✓  13 tests/editor.spec.ts:360:1 › audio keeps playing while editing without stealing focus (1.5s)
+  ✓  14 tests/editor.spec.ts:383:1 › desktop playback shortcuts preserve text, range and button keyboard behavior (2.3s)
+  ✓  15 tests/editor.spec.ts:456:1 › source link copies the exact URL and reports clipboard refusal (1.2s)
+  ✓  16 tests/editor.spec.ts:489:1 › link download offers upload only after failure or cancellation (11.8s)
+  ✓  17 tests/editor.spec.ts:530:1 › raw Arabic is hidden until automatic cleanup has finished (3.2s)
+  ✓  18 tests/journey-record.spec.ts:25:3 › record full UI journey macbook-air15 (24.6s)
+  ✓  19 tests/journey-record.spec.ts:25:3 › record full UI journey pixel6 (24.3s)
+  ✓  20 tests/journey-record.spec.ts:25:3 › record full UI journey iphone15 (23.9s)
+  ✓  21 tests/keys.spec.ts:3:1 › personal keys expose DeepSeek/OpenRouter and Groq only (1.5s)
+  ✓  22 tests/playback-speed.spec.ts:4:3 › speed controls preserve transport centering at 320px (2.2s)
+  ✓  23 tests/playback-speed.spec.ts:4:3 › speed controls preserve transport centering at 393px (2.3s)
+  ✓  24 tests/playback-speed.spec.ts:4:3 › speed controls preserve transport centering at 412px (2.1s)
+  ✓  25 tests/playback-speed.spec.ts:4:3 › speed controls preserve transport centering at 1440px (2.5s)
+  ✓  26 tests/player-layout.spec.ts:8:3 › player contains injected controls at 1440px (2.0s)
+  ✓  27 tests/player-layout.spec.ts:8:3 › player contains injected controls at 393px (1.9s)
+  ✓  28 tests/player-layout.spec.ts:8:3 › player contains injected controls at 412px (1.8s)
+  ✓  29 tests/routes.spec.ts:18:1 › project deep links reload, preserve login destination, and support back/forward (2.3s)
+  ✓  30 tests/routes.spec.ts:51:1 › URL edits cannot skip preparation, correction or review; polling updates canonical route (10.2s)
+  ✓  31 tests/routes.spec.ts:83:1 › browser back refuses to lose an unsaved draft (1.4s)
+  ✓  32 tests/routes.spec.ts:96:1 › foreign and missing project routes do not reveal a project (2.4s)
+  ✓  33 tests/routes.spec.ts:117:1 › browser back saves a title even without a blur (1.6s)
+
+  33 passed (3.1m)

@@ -4,7 +4,7 @@ package studio
 // checkpoints retain their original prompt/model metadata during a resume.
 func PromptVersion(kind string) string {
 	if kind == "translate" {
-		return "translation-desktop-v2"
+		return "translation-parallel-v3"
 	}
 	return kind + "-v1"
 }

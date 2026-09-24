@@ -68,3 +68,12 @@ COPY --from=text-benchmark-build /text-benchmark /usr/local/bin/text-benchmark
 COPY --chown=10001:10001 review/translation-lite/*.json /benchmark-inputs/
 ENTRYPOINT ["/usr/local/bin/text-benchmark"]
 CMD []
+
+# Model/Parallel qualification only. No database, media, or live user data.
+FROM backend AS research-check-build
+RUN CGO_ENABLED=0 go build -trimpath -o /research-check ./cmd/research-check
+FROM debian:bookworm-slim AS research-check
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=research-check-build /research-check /usr/local/bin/research-check
+USER 10001:10001
+ENTRYPOINT ["/usr/local/bin/research-check"]

@@ -31,7 +31,7 @@ type reviewTransport struct{ base http.RoundTripper }
 
 func (t reviewTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	response, err := t.base.RoundTrip(r)
-	if r.URL.Hostname() == "generativelanguage.googleapis.com" || r.URL.Hostname() == "api.groq.com" {
+	if r.URL.Hostname() == "openrouter.ai" || r.URL.Hostname() == "api.parallel.ai" || r.URL.Hostname() == "api.groq.com" {
 		if err != nil {
 			log.Printf("Provider %s transport error", r.URL.Hostname())
 		} else {
@@ -56,14 +56,6 @@ func (t reviewTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 					for _, category := range []string{"quota", "rate limit", "overloaded", "high demand", "billing", "capacity"} {
 						if strings.Contains(strings.ToLower(payload.Error.Message), category) {
 							log.Printf("Provider error category: %s", category)
-						}
-					}
-					validMetric := regexp.MustCompile(`^[A-Za-z0-9_./-]{1,160}$`)
-					for _, detail := range payload.Error.Details {
-						for _, violation := range detail.Violations {
-							if strings.HasPrefix(violation.Metric, "generativelanguage.googleapis.com/") && validMetric.MatchString(violation.Metric) && validMetric.MatchString(violation.ID) {
-								log.Printf("Gemini quota metric=%s id=%s", violation.Metric, violation.ID)
-							}
 						}
 					}
 				}

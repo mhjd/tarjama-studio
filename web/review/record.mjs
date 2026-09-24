@@ -7,6 +7,8 @@ if(!sourceVideo||!/^https:\/\/www.youtube.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test
 const selectedDevices=devices.filter(d=>d.name===process.env.REVIEW_DEVICE);
 if(selectedDevices.length!==1)throw Error('One device per isolated review run required');
 const videoID=new URL(sourceVideo).searchParams.get('v');
+const waitMinutes=Number(process.env.REVIEW_WAIT_MINUTES||30);
+if(!Number.isInteger(waitMinutes)||waitMinutes<1||waitMinutes>50)throw Error('Wait must be 1–50 minutes');
 for(const device of selectedDevices){
  const {name,...options}=device;
  const context=await browser.newContext({...options,baseURL:'http://127.0.0.1:8090',acceptDownloads:true,recordVideo:{dir:root,size:device.viewport} });
@@ -14,7 +16,8 @@ for(const device of selectedDevices){
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  let previousStatus='',terminalFailure='';
  const waitReady=async locator=>{
-  const deadline=Date.now()+30*60000;
+  // Reserve five minutes to persist the recording before the one-hour job limit.
+  const deadline=Math.min(Date.now()+waitMinutes*60000,started+55*60000);
   while(Date.now()<deadline){
    if(terminalFailure)throw Error(terminalFailure);
    if(await locator.isVisible())return;

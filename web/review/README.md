@@ -133,3 +133,10 @@ Après correction d’un défaut et examen d’un job réellement échoué, ajou
 échoué, clique une seule fois sur « Réessayer » et reprend la surveillance. Ce
 mode est explicite : un échec nouveau n’est pas masqué ni réessayé en boucle par
 le recorder. Les reprises applicatives continuent de suivre la file persistante.
+
+Pour une reprise limitée à un rendu long, `REVIEW_WAIT_MINUTES=50` augmente
+l’attente de phase (30 minutes par défaut, maximum 50). Le recorder borne aussi
+ses attentes à 55 minutes depuis son lancement afin de conserver cinq minutes
+pour fermer Chromium et transférer la vidéo avant la limite administrée d’une
+heure. Ce budget ne rend pas un parcours arbitrairement long exécutable en un
+seul job ; reprendre ensuite avec un nouveau préfixe si nécessaire.

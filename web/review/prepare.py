@@ -12,7 +12,10 @@ p.add_argument('--video', required=True)
 p.add_argument('--resume', action='store_true')
 p.add_argument('--retry-failed', action='store_true')
 p.add_argument('--artifact-prefix', default='')
+p.add_argument('--wait-minutes', type=int, default=30)
 a=p.parse_args()
+if not 1 <= a.wait_minutes <= 50:
+    raise SystemExit('wait-minutes must be between 1 and 50')
 if not re.fullmatch('[a-z0-9][a-z0-9_]{0,19}',a.run):
     raise SystemExit('run must use 1–20 lowercase letters, digits or underscores')
 if not re.fullmatch('[a-z0-9-]{0,30}',a.artifact_prefix) or (a.resume and not a.artifact_prefix):
@@ -35,7 +38,7 @@ name='ui-'+a.run.replace('_','-')
 r['jobs']={name:dict(image=a.recorder_image,uid=10004,gid=10004,
     command=['node'],args=['/src/frontend/recording/record.mjs'],
     configs=[dict(name='ui-recording',path='/src/frontend/recording')],
-    env=dict(REVIEW_DEVICE=a.device,REVIEW_VIDEO=a.video,REVIEW_RESUME='1' if a.resume else '0',REVIEW_RETRY_FAILED='1' if a.retry_failed else '0',REVIEW_ARTIFACT_PREFIX=a.artifact_prefix),
+    env=dict(REVIEW_DEVICE=a.device,REVIEW_VIDEO=a.video,REVIEW_RESUME='1' if a.resume else '0',REVIEW_RETRY_FAILED='1' if a.retry_failed else '0',REVIEW_ARTIFACT_PREFIX=a.artifact_prefix,REVIEW_WAIT_MINUTES=str(a.wait_minutes)),
     connect=['review'],resources=dict(cpu='2000m',memory='2048Mi'),
     tmp='1024Mi',timeout=3600)}
 r['jobs']['results-'+a.run.replace('_','-')]=dict(image=a.recorder_image,uid=10004,gid=10004,

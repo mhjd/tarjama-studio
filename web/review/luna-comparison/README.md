@@ -24,6 +24,30 @@ par appel dans un processus séparé. Arrêt entre séries si le coût **déclar
 atteint 2 USD : ce seuil ne plafonne pas les trois appels déjà en vol et ne
 couvre pas un coût absent des métadonnées.
 
+Pour ne tester que GPT-6 Luna avec raisonnement et outils Parallel, utiliser
+l'API Responses (Chat Completions ne prend en charge ses outils qu'à `none`) :
+
+```sh
+make web-luna-compare BENCHMARK_OUTPUT=data/model_outputs/luna-medium-NOUVEAU BENCHMARK_MODEL=openai/gpt-6-luna BENCHMARK_API=responses BENCHMARK_REASONING=medium
+make web-luna-compare BENCHMARK_OUTPUT=data/model_outputs/luna-medium-split-NOUVEAU BENCHMARK_MODEL=openai/gpt-6-luna BENCHMARK_API=responses BENCHMARK_REASONING=medium BENCHMARK_SPLIT=1
+```
+
+Chaque commande ci-dessus fait quatre appels. `BENCHMARK_CASE=corpus` permet un
+seul appel sur le corpus entier ; il ne se combine pas avec `BENCHMARK_SPLIT=1`.
+Le niveau de raisonnement est enregistré avec les tokens de raisonnement
+**retournés par l'API** : une option demandée ne prouve pas son exécution.
+Le contrôle web avec raisonnement autorise 8 192 tokens de sortie au lieu de
+2 048 ; les traductions restent à 32 768, raisonnement compris. Les erreurs HTTP
+400/401/403/404/422 arrêtent la série pour éviter de répéter une configuration
+rejetée. Une sortie linguistique ou JSON invalide reste un résultat du test.
+
+Les messages et le schéma sont transposés au format Responses sans réécriture du
+prompt. Tous les textes de sortie sont conservés pour la validation, y compris
+un éventuel préambule indésirable. Le statut `completed` est requis ; un appel
+de fonction client non exécuté ou un refus ne devient jamais une traduction.
+Changer d'API en même temps que le raisonnement est un facteur de comparaison à
+déclarer. Un contrôle Responses à `none` permet de mieux les distinguer.
+
 Le mode normal exécute un contrôle web distinct, les 16 difficultés linguistiques,
 le corpus complet, puis les mêmes difficultés une seconde fois. Le mode split
 exécute seulement les quatre quarts du corpus, avec deux segments de contexte de

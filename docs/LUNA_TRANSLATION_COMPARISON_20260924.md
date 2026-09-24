@@ -1,5 +1,7 @@
 # GPT-6 Luna, GPT-5.6 Luna et DeepSeek V4.1 Flash — 24 septembre 2026
 
+Complément ultérieur : [GPT-6 avec raisonnement medium et high](LUNA_REASONING_COMPARISON_20260924.md).
+
 **GPT-6 Luna produit globalement le français le plus naturel dans cet essai,
 mais ne constitue pas un remplacement fiable en l'état.** DeepSeek est le seul
 à rendre le passage long complet avec tous ses IDs ; il contient néanmoins de

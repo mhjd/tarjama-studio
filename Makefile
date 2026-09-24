@@ -234,7 +234,7 @@ web-research-check:
 .PHONY: web-luna-compare web-luna-compare-test
 web-luna-compare: web-prompts-check
 	@test -n "$(BENCHMARK_OUTPUT)" || { echo 'Set BENCHMARK_OUTPUT to a new directory.' >&2; exit 1; }
-	python3 -B web/review/luna-comparison/run.py --output "$(BENCHMARK_OUTPUT)" $(if $(filter 1,$(BENCHMARK_SPLIT)),--split-corpus,)
+	python3 -B web/review/luna-comparison/run.py --output "$(BENCHMARK_OUTPUT)" $(if $(filter 1,$(BENCHMARK_SPLIT)),--split-corpus,) $(if $(BENCHMARK_MODEL),--model "$(BENCHMARK_MODEL)",) $(if $(BENCHMARK_API),--api "$(BENCHMARK_API)",) $(if $(BENCHMARK_REASONING),--reasoning "$(BENCHMARK_REASONING)",) $(if $(BENCHMARK_CASE),--case "$(BENCHMARK_CASE)",)
 
 web-luna-compare-test: web-prompts-check
 	python3 -B -m unittest discover -s web/review/luna-comparison -p 'test_*.py'

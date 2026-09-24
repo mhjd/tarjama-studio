@@ -45,33 +45,67 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def request_body(model, prompt, source, capability=False, context_source=()):
+def request_body(model, prompt, source, capability=False, context_source=(), api='chat', reasoning='none'):
     instruction = prompt + '\nRetourne uniquement du JSON brut, sans balises Markdown ni texte autour, conforme à ce schéma : ' + json.dumps(SCHEMA, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
-    return {'model': model, 'messages': [{'role': 'system', 'content': instruction},
+    body = {'model': model, 'messages': [{'role': 'system', 'content': instruction},
         {'role': 'user', 'content': json.dumps({'segments': [{'id': s['id'], 'text': s['arabic']} for s in source],
          'context_only': [{'id': s['id'], 'text': s['arabic']} for s in context_source]}, ensure_ascii=False, separators=(',', ':'), sort_keys=True)}],
         'tools': TOOLS, 'tool_choice': 'auto', 'max_tool_calls': 4 if capability else 16,
-        'max_tokens': 2048 if capability else 32768, 'reasoning': {'effort': 'none'},
+        'max_tokens': (8192 if reasoning != 'none' else 2048) if capability else 32768,
+        'reasoning': {'effort': reasoning},
         'response_format': {'type': 'json_schema', 'json_schema': {'name': 'translation', 'strict': True, 'schema': SCHEMA}},
         'provider': {'require_parameters': True, 'allow_fallbacks': False,
                      'max_price': {'prompt': 1, 'completion': 3}}}
+    if api == 'responses':
+        messages = body.pop('messages')
+        body['instructions'] = messages[0]['content']
+        body['input'] = [{'type': 'message', 'role': 'user', 'content': [
+            {'type': 'input_text', 'text': messages[1]['content']}]}]
+        body['max_output_tokens'] = body.pop('max_tokens')
+        body['text'] = {'format': {'type': 'json_schema', **body.pop('response_format')['json_schema']}}
+        body['store'] = False
+    return body
+
+
+def final_text(result, api):
+    if api == 'responses':
+        if result.get('status') != 'completed': raise ValueError('unfinished_response')
+        texts = []
+        for item in result.get('output', []):
+            if item.get('type') == 'function_call': raise ValueError('unexpected_client_tool')
+            if item.get('type') != 'message': continue
+            if item.get('role') != 'assistant' or item.get('status') != 'completed':
+                raise ValueError('unfinished_message')
+            for part in item.get('content', []):
+                if part.get('type') != 'output_text': raise ValueError('unexpected_content')
+                texts.append(part['text'])
+        # Preserve every text part: never hide a preamble or select a convenient answer.
+        if not texts: raise ValueError('empty_response')
+        return ''.join(texts)
+    choices = result['choices']
+    if len(choices) != 1: raise ValueError('invalid_choices')
+    choice = choices[0]
+    if choice['finish_reason'] != 'stop': raise ValueError('unfinished_response')
+    if choice['message'].get('tool_calls'): raise ValueError('unexpected_client_tool')
+    return choice['message']['content']
 
 
 def deadline_expired(signum, frame):
     raise TimeoutError('provider_deadline')
 
 
-def run_call(out, model, case, prompt, source, key, capability=False, context_source=()):
+def run_call(out, model, case, prompt, source, key, capability=False, context_source=(), api='chat', reasoning='none'):
     folder = out / (case + '-' + model.split('/')[1]); folder.mkdir(mode=0o700)
     save(folder / 'input.json', source)
-    body = request_body(model, prompt, source, capability, context_source)
+    body = request_body(model, prompt, source, capability, context_source, api, reasoning)
     save(folder / 'request.json', body)
     start = time.monotonic()
-    summary = {'model': model, 'case': case, 'valid': False, 'reasoning_requested': 'none'}
+    summary = {'model': model, 'case': case, 'valid': False, 'reasoning_requested': reasoning, 'api': api}
     signal.signal(signal.SIGALRM, deadline_expired)
     signal.alarm(300)
     try:
-        req = urllib.request.Request(ENDPOINT, data=json.dumps(body).encode(),
+        endpoint = 'https://openrouter.ai/api/v1/responses' if api == 'responses' else ENDPOINT
+        req = urllib.request.Request(endpoint, data=json.dumps(body).encode(),
             headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
         opener = urllib.request.build_opener(NoRedirect())
         with opener.open(req, timeout=300) as response:
@@ -86,6 +120,8 @@ def run_call(out, model, case, prompt, source, key, capability=False, context_so
         summary.update({k: result.get(k) for k in ['id', 'provider', 'usage']})
         summary['model_returned'] = result.get('model')
         usage = result.get('usage') or {}
+        token_details = usage.get('output_tokens_details') or usage.get('completion_tokens_details') or {}
+        summary['reasoning_tokens'] = token_details.get('reasoning_tokens')
         details = usage.get('server_tool_use_details') or usage.get('server_tool_use') or {}
         summary['search_requests'] = details.get('web_search_requests', 0)
         summary['tool_calls'] = details.get('tool_calls_executed', 0)
@@ -94,12 +130,9 @@ def run_call(out, model, case, prompt, source, key, capability=False, context_so
         summary['fetch_inferred'] = summary['tool_calls'] > summary['search_requests'] > 0
         if result.get('error'): raise ValueError('error_in_response')
         if result.get('model') != model: raise ValueError('unexpected_model')
-        choices = result['choices']
-        if len(choices) != 1: raise ValueError('invalid_choices')
-        choice = choices[0]; summary['finish_reason'] = choice['finish_reason']
-        if choice['finish_reason'] != 'stop': raise ValueError('unfinished_response')
-        if choice['message'].get('tool_calls'): raise ValueError('unexpected_client_tool')
-        answer = json.loads(choice['message']['content'])
+        summary['finish_reason'] = result.get('status') if api == 'responses' else (
+            (result.get('choices') or [{}])[0].get('finish_reason'))
+        answer = json.loads(final_text(result, api))
         validator.validate(answer, source)
         save(folder / 'translation.json', answer)
         summary['valid'] = True
@@ -123,21 +156,29 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
     parser.add_argument('--split-corpus', action='store_true', help='12 comparative calls: four equal parts, two context segments on each side')
+    parser.add_argument('--model', choices=MODELS, help='Only test this model')
+    parser.add_argument('--api', choices=['chat', 'responses'], default='chat')
+    parser.add_argument('--reasoning', choices=['none', 'low', 'medium', 'high'], default='none')
+    parser.add_argument('--case', choices=['capability', 'challenges-1', 'corpus', 'challenges-2'])
     args = parser.parse_args()
+    target_models = [args.model] if args.model else MODELS
+    if args.reasoning != 'none' and args.api == 'chat' and MODELS[0] in target_models:
+        parser.error('GPT-6 Luna reasoning with tools requires --api responses')
+    if args.case and args.split_corpus: parser.error('--case and --split-corpus are separate modes')
     out = Path(args.output); out.mkdir(parents=True, exist_ok=False); out.chmod(0o700)
     prompt = (ROOT / 'web/backend/internal/studio/prompts/translate.txt').read_text()
     models = json.load(urllib.request.urlopen('https://openrouter.ai/api/v1/models', timeout=30))['data']
-    selected = [m for m in models if m['id'] in MODELS]
-    if len(selected) != 3: raise ValueError('requested_model_missing')
+    selected = [m for m in models if m['id'] in target_models]
+    if len(selected) != len(target_models): raise ValueError('requested_model_missing')
     save(out / 'models.json', selected)
     with (out / 'runner-used.py').open('x') as f:
         f.write(Path(__file__).read_text())
-    save(out / 'protocol.json', {'models': MODELS, 'max_http_calls': 12, 'retries': 0,
-        'reasoning': 'none for all models: common Chat Completions tool-compatible setting',
+    save(out / 'protocol.json', {'models': target_models, 'max_http_calls': (1 if args.case else 4) * len(target_models), 'retries': 0,
+        'reasoning': args.reasoning, 'api': args.api, 'case': args.case,
         'provider_fallbacks': False, 'max_price_per_million_usd': {'prompt': 1, 'completion': 3},
         'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(), 'prompt': prompt,
         'parallel_tools': TOOLS, 'timeout_seconds': 300,
-        'cost_stop_between_rounds_usd': 2, 'comparative_calls_concurrency': 3, 'split_corpus': args.split_corpus})
+        'cost_stop_between_rounds_usd': 2, 'comparative_calls_concurrency': len(target_models), 'split_corpus': args.split_corpus})
     key = Path('/etc/vps-agent-secrets/openrouter.api_key').read_text().strip()
     if not key: raise ValueError('registered_key_unavailable')
     summaries = []
@@ -153,6 +194,7 @@ def main():
     if args.split_corpus:
         if len(corpus) < 4: raise ValueError('corpus_too_small')
         cases = [(f'corpus-part-{i+1}', 'corpus') for i in range((len(corpus) + chunk_size - 1) // chunk_size)]
+    if args.case: cases = [c for c in cases if c[0] == args.case]
     for index, (case, fixture) in enumerate(cases):
         if sum((x.get('usage') or {}).get('cost', 0) or 0 for x in summaries) >= 2: break
         source = json.loads((ROOT / f'web/review/translation-lite/{fixture}.json').read_text()) if fixture else [
@@ -162,11 +204,13 @@ def main():
             start, end = index * chunk_size, min(len(corpus), (index + 1) * chunk_size)
             source = corpus[start:end]
             context_source = corpus[max(0, start - 2):start] + corpus[end:end + 2]
-        order = MODELS[index % 3:] + MODELS[:index % 3]
-        with ProcessPoolExecutor(max_workers=3) as pool:
+        rotation = index % len(target_models)
+        order = target_models[rotation:] + target_models[:rotation]
+        with ProcessPoolExecutor(max_workers=len(target_models)) as pool:
             futures = [pool.submit(run_call, out, model, case, prompt if fixture else capability_prompt,
-                        source, key, not fixture, context_source) for model in order]
+                        source, key, not fixture, context_source, args.api, args.reasoning) for model in order]
             summaries.extend(f.result() for f in futures)
+        if any(s.get('http_status') in [400, 401, 403, 404, 422] for s in summaries): break
     save(out / 'results.json', summaries)
     save(out / 'hashes.json', {str(p.relative_to(out)): hashlib.sha256(p.read_bytes()).hexdigest()
                              for p in sorted(out.rglob('*.json'))})

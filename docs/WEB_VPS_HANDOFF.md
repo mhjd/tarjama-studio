@@ -678,3 +678,12 @@ Le lecteur propose 0,5× à 2× (pas de 0,25×), par défaut 1× ; Maj + ↑ acc
 et Maj + ↓ ralentit hors saisie. Le réglage occupe une ligne distincte de la
 barre de lecture. Le son conserve sa hauteur. Aucun changement de vitesse
 n'est appliqué au fichier exporté.
+
+### Protection de la relecture — 24 septembre
+
+La transcription brute ne doit pas être présentée comme un texte à corriger :
+masquer les champs et le suivi pendant la transcription et le nettoyage, jusqu'à
+publication atomique de la correction. L'API refuse déjà les modifications à ces
+étapes. Les réponses IA mal structurées peuvent être reprises de manière bornée,
+avec découpage plus fin et conservation des morceaux validés ; aucun résultat
+partiel n'est publié. Voir `web/review/cleanup-recovery-20260924/RESULTS.md`.

@@ -526,3 +526,50 @@ test("link download offers upload only after failure or cancellation", async ({
   await expect(file).toHaveCount(0);
   await page.screenshot({ path: "test-results/download-exclusive.png" });
 });
+
+test("raw Arabic is hidden until automatic cleanup has finished", async ({
+  page,
+}) => {
+  await login(page);
+  let stage = "cleaning";
+  await page.route("**/api/projects/fixture", async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    data.project.stage = stage;
+    data.project.segments = [
+      { id: "raw", start_ms: 0, end_ms: 2000, arabic: "نص خام", version: 1 },
+    ];
+    data.jobs =
+      stage === "cleaning"
+        ? [
+            {
+              id: "cleanup",
+              kind: "cleanup",
+              state: "failed",
+              progress: 49,
+              message: "Réponse incomplète",
+            },
+          ]
+        : [];
+    await route.fulfill({ response, json: data });
+  });
+  await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+  await expect(
+    page.getByText(/Vous pourrez relire et modifier l’arabe/),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /Arabe/ })).toHaveCount(0);
+  await expect(page.getByText("نص خام", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Valider et traduire", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Suivi activé" })).toHaveCount(
+    0,
+  );
+  stage = "arabic";
+  await expect(
+    page.getByRole("textbox", { name: "Arabe raw", exact: true }),
+  ).toBeEditable();
+  await expect(
+    page.getByText(/Vous pourrez relire et modifier l’arabe/),
+  ).toHaveCount(0);
+});

@@ -186,6 +186,9 @@ func (p *HTTPProviders) Text(ctx context.Context, key, kind string, s, contextSe
 			} `json:"content"`
 		} `json:"candidates"`
 	}
+	if json.Unmarshal(raw, &envelope) == nil && len(envelope.Candidates) == 1 && envelope.Candidates[0].FinishReason == "MAX_TOKENS" {
+		return TextResult{}, errors.New("Réponse IA tronquée")
+	}
 	if json.Unmarshal(raw, &envelope) != nil || len(envelope.Candidates) != 1 || envelope.Candidates[0].FinishReason != "STOP" {
 		return TextResult{}, errors.New("Réponse IA tronquée ou refusée")
 	}

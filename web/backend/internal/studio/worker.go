@@ -221,6 +221,18 @@ func jobFailureReason(err error) string {
 		return "conflict"
 	}
 	switch err.Error() {
+	case "Réponse IA incomplète":
+		return "text_incomplete"
+	case "Réponse IA mal alignée":
+		return "text_misaligned"
+	case "Réponse IA invalide":
+		return "text_invalid_json"
+	case "Réponse IA tronquée":
+		return "text_truncated"
+	case "Réponse IA tronquée ou refusée":
+		return "text_truncated_or_refused"
+	case "Marqueur technique interdit", "Commentaire technique interdit":
+		return "text_invalid_marker"
 	case "Segment Groq invalide":
 		return "asr_invalid_segment"
 	case "Timestamp Groq hors morceau":
@@ -387,6 +399,28 @@ func (w *Worker) transcribe(ctx context.Context, j Job) error {
 	}
 	return w.Store.Chunk(ctx, j, len(chunks), ASRChunk{Start: start, Duration: info.ChunkDuration, Response: response, Raw: audit}, GroqModel, "asr-desktop-v1", min(99, int(100*(start+info.ChunkDuration)/duration)))
 }
+
+// Bounded retries keep malformed model output out of the project, while preserving
+// completed chunks. Refusals and unclassified failures keep their original policy.
+func textResponseFailure(j Job, err error) error {
+	switch jobFailureReason(err) {
+	case "text_incomplete", "text_misaligned", "text_invalid_json", "text_invalid_marker", "text_truncated":
+		log.Printf("invalid text response job=%s kind=%s attempt=%d reason=%s", j.ID, j.Kind, j.Attempts, jobFailureReason(err))
+		message := "Le service a renvoyé une réponse incomplète ou mal structurée. Les morceaux terminés sont conservés. "
+		if j.Attempts < 2 {
+			message += "Nouvelle tentative automatique sur un morceau plus court."
+		} else {
+			message += "Les tentatives automatiques ont échoué ; vous pouvez réessayer."
+		}
+		return &ProviderError{
+			Public:    message,
+			Temporary: j.Attempts < 2,
+			After:     10 * time.Second,
+		}
+	}
+	return err
+}
+
 func (w *Worker) text(ctx context.Context, j Job) error {
 	raw, e := w.Store.Chunks(ctx, j)
 	if e != nil {
@@ -439,6 +473,7 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 		return e
 	}
 	i := len(raw)
+	chunks = smallerTextRetry(chunks, i, j.Attempts)
 	contextSegments := []Segment{}
 	if i > 0 {
 		previous := chunks[i-1]
@@ -450,12 +485,20 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 	}
 	result, e := w.Providers.Text(ctx, key, j.Kind, chunks[i], contextSegments)
 	if e != nil {
+		retry := textResponseFailure(j, e)
+		if retry != e {
+			return retry
+		}
 		return w.providerFailure(ctx, j, scope, e)
 	}
 	if e = ValidateText(result, chunks[i]); e != nil {
-		return e
+		return textResponseFailure(j, e)
 	}
-	return w.Store.Chunk(ctx, j, i, result, GeminiModel, PromptVersion(j.Kind), (i+1)*99/len(chunks))
+	completed := 0
+	for _, chunk := range chunks[:i+1] {
+		completed += len(chunk)
+	}
+	return w.Store.Chunk(ctx, j, i, result, GeminiModel, PromptVersion(j.Kind), completed*99/len(j.Input.Segments))
 }
 
 // Saved results define immutable completed boundaries, including those written by
@@ -480,4 +523,20 @@ func resumeTextChunks(segments []Segment, saved []json.RawMessage) ([][]Segment,
 		offset += n
 	}
 	return append(chunks, TextChunks(segments[offset:])...), nil
+}
+
+// Completed boundaries are immutable; only split the next unfinished chunk.
+func smallerTextRetry(chunks [][]Segment, next, attempts int) [][]Segment {
+	if attempts <= 0 || next >= len(chunks) || len(chunks[next]) < 2 {
+		return chunks
+	}
+	source := chunks[next]
+	size := max(1, len(source)/(1<<min(attempts, 2)))
+	out := append([][]Segment{}, chunks[:next]...)
+	for len(source) > 0 {
+		n := min(size, len(source))
+		out = append(out, source[:n])
+		source = source[n:]
+	}
+	return append(out, chunks[next+1:]...)
 }

@@ -786,66 +786,75 @@ export function Editor({
           </div>
         </section>
       )}
-      {p.segments.length > 0 && (
-        <>
-          <div className="editor-toolbar">
-            {p.segments.length > 0 && (
-              <button
-                className="follow-toggle"
-                aria-pressed={follow}
-                onClick={() => setFollow((value) => !value)}
-                title={
-                  focused && follow
-                    ? "Le défilement attend la fin de votre saisie"
-                    : undefined
-                }
-              >
-                Suivi {follow ? "activé" : "désactivé"}
-              </button>
-            )}
-            <h2>{french ? "Relire arabe et français" : "Correction arabe"}</h2>
-          </div>
-          <details className="translation-help">
-            <summary>À propos de la traduction</summary>
-            <p>
-              La traduction reste modifiable. La vérification automatique des
-              citations religieuses n’est pas activée ; vérifiez les références
-              avant publication.
-            </p>
-          </details>
-          {p.stage === "arabic" &&
-            p.translation_source > 0 &&
-            p.translation_source !== p.arabic_version && (
-              <p className="notice">
-                L’arabe a changé. La traduction précédente est conservée ; une
-                nouvelle traduction remplacera les retouches françaises après
-                votre confirmation.
-              </p>
-            )}
-          <div className="segments">
-            {p.segments.map((s) => (
-              <article
-                id={`segment-${s.id}`}
-                key={s.id}
-                className={`segment ${s.id === active ? "active" : ""}`}
-              >
-                <button
-                  className="timestamp"
-                  onClick={() => {
-                    seekTo(s.start_ms / 1000);
-                  }}
-                >
-                  {time(s.start_ms)} — {time(s.end_ms)}
-                </button>
-                <div className={french ? "fields bilingual" : "fields"}>
-                  {field(s, "arabic")}
-                  {french && field(s, "french")}
-                </div>
-              </article>
-            ))}
-          </div>
-        </>
+      {["transcribing", "cleaning"].includes(p.stage) && (
+        <p className="notice" role="status">
+          La transcription est en cours de préparation. Vous pourrez relire et
+          modifier l’arabe une fois la correction automatique terminée.
+        </p>
       )}
+      {["arabic", "translating", "review", "ready"].includes(p.stage) &&
+        p.segments.length > 0 && (
+          <>
+            <div className="editor-toolbar">
+              {p.segments.length > 0 && (
+                <button
+                  className="follow-toggle"
+                  aria-pressed={follow}
+                  onClick={() => setFollow((value) => !value)}
+                  title={
+                    focused && follow
+                      ? "Le défilement attend la fin de votre saisie"
+                      : undefined
+                  }
+                >
+                  Suivi {follow ? "activé" : "désactivé"}
+                </button>
+              )}
+              <h2>
+                {french ? "Relire arabe et français" : "Correction arabe"}
+              </h2>
+            </div>
+            <details className="translation-help">
+              <summary>À propos de la traduction</summary>
+              <p>
+                La traduction reste modifiable. La vérification automatique des
+                citations religieuses n’est pas activée ; vérifiez les
+                références avant publication.
+              </p>
+            </details>
+            {p.stage === "arabic" &&
+              p.translation_source > 0 &&
+              p.translation_source !== p.arabic_version && (
+                <p className="notice">
+                  L’arabe a changé. La traduction précédente est conservée ; une
+                  nouvelle traduction remplacera les retouches françaises après
+                  votre confirmation.
+                </p>
+              )}
+            <div className="segments">
+              {p.segments.map((s) => (
+                <article
+                  id={`segment-${s.id}`}
+                  key={s.id}
+                  className={`segment ${s.id === active ? "active" : ""}`}
+                >
+                  <button
+                    className="timestamp"
+                    onClick={() => {
+                      seekTo(s.start_ms / 1000);
+                    }}
+                  >
+                    {time(s.start_ms)} — {time(s.end_ms)}
+                  </button>
+                  <div className={french ? "fields bilingual" : "fields"}>
+                    {field(s, "arabic")}
+                    {french && field(s, "french")}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
+        )}
       {nextStep()}
       <section className="danger">
         {deleteOpen ? (

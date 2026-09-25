@@ -1,5 +1,7 @@
 # GPT-6 Luna avec raisonnement — complément du 24 septembre 2026
 
+Complément du 25 septembre : [position des erreurs par rapport aux frontières des blocs](LUNA_CHUNK_BOUNDARIES_20260925.md).
+
 **Avec raisonnement et reprises bornées, GPT-6 Luna restitue finalement les
 384 segments valides : 139 s cumulées et 0,008145 $, échecs inclus.** Son français
 est généralement plus naturel ; il est ici plus rapide, mais plus cher que DeepSeek.

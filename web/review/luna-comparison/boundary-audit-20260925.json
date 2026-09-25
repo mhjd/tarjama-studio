@@ -1,0 +1,347 @@
+{
+  "purpose": "Read-only audit of archived request boundaries; no API calls or secret access",
+  "date": "2026-09-25",
+  "position_basis": "one-based ordinal in requested target array, not numeric ID; distance excludes segment itself",
+  "cases": [
+    {
+      "label": "medium: remarque du cheikh",
+      "source": "data/model_outputs/luna-reasoning-medium-split-20260924-01/corpus-part-4-gpt-6-luna",
+      "request_sha256": "02a6ac5c39efca772f8b28924238c9dc6dcafa6136a014a2f67a31e7bedd5151",
+      "input_sha256": "476d265bc08fb5e9be1b3f7ec41b6287b7938b7af246d079ced5261d583b16dd",
+      "target_ids": [
+        "289",
+        "403"
+      ],
+      "target_count": 96,
+      "start_ms": 669980,
+      "end_ms": 940700,
+      "context_ids": [
+        "287",
+        "288"
+      ],
+      "positions": [
+        {
+          "id": "365",
+          "position": 58,
+          "before_segments": 57,
+          "after_segments": 38,
+          "from_start_ms": 166620,
+          "to_end_ms": 101840
+        }
+      ]
+    },
+    {
+      "label": "medium: citation complétée",
+      "source": "data/model_outputs/luna-reasoning-medium-split-20260924-01/corpus-part-3-gpt-6-luna",
+      "request_sha256": "522a782ef31c9a391aadaef385b128b99dd49645361b5a0a30d5135fd2a1927b",
+      "input_sha256": "78f7fa5f286c4ca9e7e110875e273a7d4092758c839826b20649bf218241fa27",
+      "target_ids": [
+        "193",
+        "288"
+      ],
+      "target_count": 96,
+      "start_ms": 445640,
+      "end_ms": 669980,
+      "context_ids": [
+        "191",
+        "192",
+        "289",
+        "290"
+      ],
+      "positions": [
+        {
+          "id": "253",
+          "position": 61,
+          "before_segments": 60,
+          "after_segments": 35,
+          "from_start_ms": 132100,
+          "to_end_ms": 88240
+        }
+      ]
+    },
+    {
+      "label": "medium: contester après reprise",
+      "source": "data/model_outputs/luna-medium-halves-20260924-01/part-2-half-2-gpt-6-luna",
+      "request_sha256": "4f63ef150409926aa1f2d4b2b4e9e500afd69510ddb7bd3726d2bb25e7484db2",
+      "input_sha256": "0ab2b9433c777f8eddef44f8c4e9951adbea8e48a7e7add97cf0743f86419f05",
+      "target_ids": [
+        "145",
+        "192"
+      ],
+      "target_count": 48,
+      "start_ms": 344920,
+      "end_ms": 445640,
+      "context_ids": [
+        "143",
+        "144",
+        "193",
+        "194"
+      ],
+      "positions": [
+        {
+          "id": "151",
+          "position": 7,
+          "before_segments": 6,
+          "after_segments": 41,
+          "from_start_ms": 12080,
+          "to_end_ms": 86140
+        }
+      ]
+    },
+    {
+      "label": "medium: passage avant redécoupage",
+      "source": "data/model_outputs/luna-reasoning-medium-split-20260924-01/corpus-part-2-gpt-6-luna",
+      "request_sha256": "03bdbc99553ec067c85cc5e609a8d2f901aaa67b8d07e10da80319861375efcc",
+      "input_sha256": "50bead1cfa20e4c110013d58b4aad29781e90bd24f5821a868a792a63da84953",
+      "target_ids": [
+        "97",
+        "192"
+      ],
+      "target_count": 96,
+      "start_ms": 250320,
+      "end_ms": 445640,
+      "context_ids": [
+        "95",
+        "96",
+        "193",
+        "194"
+      ],
+      "positions": [
+        {
+          "id": "147",
+          "position": 51,
+          "before_segments": 50,
+          "after_segments": 45,
+          "from_start_ms": 98880,
+          "to_end_ms": 94000
+        },
+        {
+          "id": "151",
+          "position": 55,
+          "before_segments": 54,
+          "after_segments": 41,
+          "from_start_ms": 106680,
+          "to_end_ms": 86140
+        }
+      ]
+    },
+    {
+      "label": "medium: deuxième appel avant redécoupage",
+      "source": "data/model_outputs/luna-medium-retry-part2-20260924-01/corpus-part-2-gpt-6-luna",
+      "request_sha256": "03bdbc99553ec067c85cc5e609a8d2f901aaa67b8d07e10da80319861375efcc",
+      "input_sha256": "50bead1cfa20e4c110013d58b4aad29781e90bd24f5821a868a792a63da84953",
+      "target_ids": [
+        "97",
+        "192"
+      ],
+      "target_count": 96,
+      "start_ms": 250320,
+      "end_ms": 445640,
+      "context_ids": [
+        "95",
+        "96",
+        "193",
+        "194"
+      ],
+      "positions": [
+        {
+          "id": "151",
+          "position": 55,
+          "before_segments": 54,
+          "after_segments": 41,
+          "from_start_ms": 106680,
+          "to_end_ms": 86140
+        }
+      ]
+    },
+    {
+      "label": "medium: explicitation au dernier segment",
+      "source": "data/model_outputs/luna-medium-halves-20260924-01/part-2-half-1-gpt-6-luna",
+      "request_sha256": "0eee58ae9f65473e2e66b5ceeb47be9fd06f541003f7c704376a85a84adf2850",
+      "input_sha256": "024aa8f6cd89b8e0f33f5403626b0c0b995db1e6ce63cead4030a35f35d423e6",
+      "target_ids": [
+        "97",
+        "144"
+      ],
+      "target_count": 48,
+      "start_ms": 250320,
+      "end_ms": 344920,
+      "context_ids": [
+        "95",
+        "96",
+        "145",
+        "146"
+      ],
+      "positions": [
+        {
+          "id": "144",
+          "position": 48,
+          "before_segments": 47,
+          "after_segments": 0,
+          "from_start_ms": 92380,
+          "to_end_ms": 0
+        }
+      ]
+    },
+    {
+      "label": "medium: déplacements entre sous-titres",
+      "source": "data/model_outputs/luna-reasoning-medium-split-20260924-01/corpus-part-4-gpt-6-luna",
+      "request_sha256": "02a6ac5c39efca772f8b28924238c9dc6dcafa6136a014a2f67a31e7bedd5151",
+      "input_sha256": "476d265bc08fb5e9be1b3f7ec41b6287b7938b7af246d079ced5261d583b16dd",
+      "target_ids": [
+        "289",
+        "403"
+      ],
+      "target_count": 96,
+      "start_ms": 669980,
+      "end_ms": 940700,
+      "context_ids": [
+        "287",
+        "288"
+      ],
+      "positions": [
+        {
+          "id": "347",
+          "position": 40,
+          "before_segments": 39,
+          "after_segments": 56,
+          "from_start_ms": 126880,
+          "to_end_ms": 141440
+        },
+        {
+          "id": "348",
+          "position": 41,
+          "before_segments": 40,
+          "after_segments": 55,
+          "from_start_ms": 129280,
+          "to_end_ms": 140340
+        }
+      ]
+    },
+    {
+      "label": "none: omission du dernier ID",
+      "source": "data/model_outputs/luna-comparison-20260924-split-01/corpus-part-1-gpt-6-luna",
+      "request_sha256": "1245f56d1ae105af3c3f925c6b62efce52bb16a18b011009901cfccac5f0ac39",
+      "input_sha256": "b51574167d9ff49b2fec74cb3122cab5004986d15b37592795fd2f7c78d5fffe",
+      "target_ids": [
+        "0",
+        "96"
+      ],
+      "target_count": 96,
+      "start_ms": 0,
+      "end_ms": 250320,
+      "context_ids": [
+        "97",
+        "98"
+      ],
+      "positions": [
+        {
+          "id": "95",
+          "position": 95,
+          "before_segments": 94,
+          "after_segments": 1,
+          "from_start_ms": 246080,
+          "to_end_ms": 3140
+        },
+        {
+          "id": "96",
+          "position": 96,
+          "before_segments": 95,
+          "after_segments": 0,
+          "from_start_ms": 247180,
+          "to_end_ms": 0
+        }
+      ]
+    },
+    {
+      "label": "none: JSON invalide intérieur",
+      "source": "data/model_outputs/luna-comparison-20260924-split-01/corpus-part-2-gpt-6-luna",
+      "request_sha256": "8cfa620da7c5f4e963c6162104df3db7d0cd515ab7de870e88205dbcf953d9f9",
+      "input_sha256": "50bead1cfa20e4c110013d58b4aad29781e90bd24f5821a868a792a63da84953",
+      "target_ids": [
+        "97",
+        "192"
+      ],
+      "target_count": 96,
+      "start_ms": 250320,
+      "end_ms": 445640,
+      "context_ids": [
+        "95",
+        "96",
+        "193",
+        "194"
+      ],
+      "positions": [
+        {
+          "id": "151",
+          "position": 55,
+          "before_segments": 54,
+          "after_segments": 41,
+          "from_start_ms": 106680,
+          "to_end_ms": 86140
+        }
+      ]
+    },
+    {
+      "label": "none: JSON invalide intérieur",
+      "source": "data/model_outputs/luna-comparison-20260924-split-01/corpus-part-3-gpt-6-luna",
+      "request_sha256": "542b774628b3769d407c9ba358f7ebc67d20a2ba371ece585705d11ac062dc9b",
+      "input_sha256": "78f7fa5f286c4ca9e7e110875e273a7d4092758c839826b20649bf218241fa27",
+      "target_ids": [
+        "193",
+        "288"
+      ],
+      "target_count": 96,
+      "start_ms": 445640,
+      "end_ms": 669980,
+      "context_ids": [
+        "191",
+        "192",
+        "289",
+        "290"
+      ],
+      "positions": [
+        {
+          "id": "226",
+          "position": 34,
+          "before_segments": 33,
+          "after_segments": 62,
+          "from_start_ms": 76000,
+          "to_end_ms": 147100
+        }
+      ]
+    },
+    {
+      "label": "none: pronom du corpus entier",
+      "source": "data/model_outputs/luna-comparison-20260924-01/corpus-gpt-6-luna",
+      "request_sha256": "2454928eacc3d3509b01d11850efc2a35e8b08b043c920e7f6ce8c1960b9ce45",
+      "input_sha256": "2b5bc9bc7c07277fece00c0b183e73c5e5e5bd7459a80e1a7612f8f737f024c4",
+      "target_ids": [
+        "0",
+        "403"
+      ],
+      "target_count": 384,
+      "start_ms": 0,
+      "end_ms": 940700,
+      "context_ids": [],
+      "positions": [
+        {
+          "id": "332",
+          "position": 318,
+          "before_segments": 317,
+          "after_segments": 66,
+          "from_start_ms": 773580,
+          "to_end_ms": 163400
+        },
+        {
+          "id": "378",
+          "position": 359,
+          "before_segments": 358,
+          "after_segments": 25,
+          "from_start_ms": 864380,
+          "to_end_ms": 74240
+        }
+      ]
+    }
+  ]
+}

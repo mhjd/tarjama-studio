@@ -1,0 +1,415 @@
+{
+  "raw_directory": "data/model_outputs/lite-vs-luna-replay-20260925-01",
+  "calls": [
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "luna-medium-block-1-attempt-1",
+      "valid": true,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790343248-YPdZlRSvbCVIspTK92Ct",
+      "provider": null,
+      "usage": {
+        "input_tokens": 3797,
+        "input_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 3794
+        },
+        "output_tokens": 2569,
+        "output_tokens_details": {
+          "reasoning_tokens": 506
+        },
+        "total_tokens": 6366,
+        "cost": 0.00175905,
+        "cost_details": {
+          "upstream_inference_cost": 0.00175905,
+          "upstream_inference_input_cost": 0.00047455,
+          "upstream_inference_output_cost": 0.0012845
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 506,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "OpenAI",
+      "generation_model": "openai/gpt-6-luna-20260922",
+      "response_provider_matches": false,
+      "finish_reason": "completed",
+      "elapsed_seconds": 42.852
+    },
+    {
+      "model": "google/gemini-3.1-flash-lite",
+      "case": "gemini31-high-block-1-attempt-1",
+      "valid": true,
+      "reasoning_requested": "high",
+      "api": "chat",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790343290-EZKOFhWX6zVvZNy29OjQ",
+      "provider": "OpenAI",
+      "usage": {
+        "prompt_tokens": 3996,
+        "completion_tokens": 8647,
+        "total_tokens": 12643,
+        "cost": 0.0139695,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 5210,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0139695,
+          "upstream_inference_prompt_cost": 0.000999,
+          "upstream_inference_completions_cost": 0.0129705
+        }
+      },
+      "model_returned": "google/gemini-3.1-flash-lite",
+      "reasoning_tokens": 5210,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "Google AI Studio",
+      "generation_model": "google/gemini-3.1-flash-lite-20260507",
+      "response_provider_matches": false,
+      "finish_reason": "stop",
+      "elapsed_seconds": 46.531
+    },
+    {
+      "model": "google/gemini-3.1-flash-lite",
+      "case": "gemini31-high-block-2-attempt-1",
+      "valid": true,
+      "reasoning_requested": "high",
+      "api": "chat",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790343337-mxXLpyWGsbJr5uzloUzk",
+      "provider": "OpenAI",
+      "usage": {
+        "prompt_tokens": 4810,
+        "completion_tokens": 8692,
+        "total_tokens": 13502,
+        "cost": 0.0142405,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 4504,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0142405,
+          "upstream_inference_prompt_cost": 0.0012025,
+          "upstream_inference_completions_cost": 0.013038
+        }
+      },
+      "model_returned": "google/gemini-3.1-flash-lite",
+      "reasoning_tokens": 4504,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "Google AI Studio",
+      "generation_model": "google/gemini-3.1-flash-lite-20260507",
+      "response_provider_matches": false,
+      "finish_reason": "stop",
+      "elapsed_seconds": 45.114
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "luna-medium-block-2-attempt-1",
+      "valid": true,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790343382-4uiDqd4pBC5QEJwsyJa0",
+      "provider": null,
+      "usage": {
+        "input_tokens": 4418,
+        "input_tokens_details": {
+          "cached_tokens": 1845,
+          "cache_write_tokens": 2570
+        },
+        "output_tokens": 2997,
+        "output_tokens_details": {
+          "reasoning_tokens": 707
+        },
+        "total_tokens": 7415,
+        "cost": 0.0018385,
+        "cost_details": {
+          "upstream_inference_cost": 0.0018385,
+          "upstream_inference_input_cost": 0.00034,
+          "upstream_inference_output_cost": 0.0014985
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 707,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "OpenAI",
+      "generation_model": "openai/gpt-6-luna-20260922",
+      "response_provider_matches": false,
+      "finish_reason": "completed",
+      "elapsed_seconds": 50.104
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "luna-medium-block-3-attempt-1",
+      "valid": false,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790343432-k4xHGeER0uQsztgJ2Ijf",
+      "provider": null,
+      "usage": {
+        "input_tokens": 4185,
+        "input_tokens_details": {
+          "cached_tokens": 1845,
+          "cache_write_tokens": 2337
+        },
+        "output_tokens": 3086,
+        "output_tokens_details": {
+          "reasoning_tokens": 987
+        },
+        "total_tokens": 7271,
+        "cost": 0.001853875,
+        "cost_details": {
+          "upstream_inference_cost": 0.001853875,
+          "upstream_inference_input_cost": 0.000310875,
+          "upstream_inference_output_cost": 0.001543
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 987,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "OpenAI",
+      "generation_model": "openai/gpt-6-luna-20260922",
+      "response_provider_matches": false,
+      "finish_reason": "completed",
+      "error": "JSONDecodeError",
+      "elapsed_seconds": 52.029
+    },
+    {
+      "model": "openai/gpt-6-luna",
+      "case": "luna-medium-block-3-attempt-2",
+      "valid": false,
+      "reasoning_requested": "medium",
+      "api": "responses",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790343484-6lM3zx86rDCbyjtwxlm6",
+      "provider": null,
+      "usage": {
+        "input_tokens": 4185,
+        "input_tokens_details": {
+          "cached_tokens": 4182
+        },
+        "output_tokens": 3089,
+        "output_tokens_details": {
+          "reasoning_tokens": 1034
+        },
+        "total_tokens": 7274,
+        "cost": 0.00158662,
+        "cost_details": {
+          "upstream_inference_cost": 0.00158662,
+          "upstream_inference_input_cost": 4.212e-05,
+          "upstream_inference_output_cost": 0.0015445
+        }
+      },
+      "model_returned": "openai/gpt-6-luna",
+      "reasoning_tokens": 1034,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "OpenAI",
+      "generation_model": "openai/gpt-6-luna-20260922",
+      "response_provider_matches": false,
+      "finish_reason": "completed",
+      "error": "JSONDecodeError",
+      "elapsed_seconds": 50.974
+    },
+    {
+      "model": "google/gemini-3.1-flash-lite",
+      "case": "gemini31-high-block-3-attempt-1",
+      "valid": true,
+      "reasoning_requested": "high",
+      "api": "chat",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790343535-xqdK3Z1flwKgc4BuGnpk",
+      "provider": "OpenAI",
+      "usage": {
+        "prompt_tokens": 4591,
+        "completion_tokens": 2651,
+        "total_tokens": 7242,
+        "cost": 0.00512425,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 0,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00512425,
+          "upstream_inference_prompt_cost": 0.00114775,
+          "upstream_inference_completions_cost": 0.0039765
+        }
+      },
+      "model_returned": "google/gemini-3.1-flash-lite",
+      "reasoning_tokens": 0,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "Google AI Studio",
+      "generation_model": "google/gemini-3.1-flash-lite-20260507",
+      "response_provider_matches": false,
+      "finish_reason": "stop",
+      "elapsed_seconds": 30.409
+    },
+    {
+      "model": "google/gemini-3.1-flash-lite",
+      "case": "gemini31-high-block-4-attempt-1",
+      "valid": true,
+      "reasoning_requested": "high",
+      "api": "chat",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790343565-z8Ao9ctFNAkkOLRsfFlI",
+      "provider": "OpenAI",
+      "usage": {
+        "prompt_tokens": 4074,
+        "completion_tokens": 6886,
+        "total_tokens": 10960,
+        "cost": 0.0113475,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 3860,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.0113475,
+          "upstream_inference_prompt_cost": 0.0010185,
+          "upstream_inference_completions_cost": 0.010329
+        }
+      },
+      "model_returned": "google/gemini-3.1-flash-lite",
+      "reasoning_tokens": 3860,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "Google AI Studio",
+      "generation_model": "google/gemini-3.1-flash-lite-20260507",
+      "response_provider_matches": false,
+      "finish_reason": "stop",
+      "elapsed_seconds": 42.212
+    }
+  ],
+  "arms": {
+    "luna-medium": {
+      "calls": 4,
+      "valid_blocks": 2,
+      "accepted_segments": 204,
+      "cost_usd": 0.007038045,
+      "elapsed_seconds": 195.959,
+      "stopped": "two_invalid_attempts",
+      "complete": false
+    },
+    "gemini31-high": {
+      "calls": 4,
+      "valid_blocks": 4,
+      "accepted_segments": 384,
+      "cost_usd": 0.04468175,
+      "elapsed_seconds": 164.266,
+      "stopped": null,
+      "complete": true
+    }
+  },
+  "continuity_verified": true,
+  "known_total_cost_usd": 0.051719795,
+  "hashes": {
+    "gemini31-high-block-1-attempt-1-gemini-3.1-flash-lite/generation.json": "55305e5375c58c89753b34a511abe969e56259bb4533b81e68c89c5cab9fde5d",
+    "gemini31-high-block-1-attempt-1-gemini-3.1-flash-lite/input.json": "5ac595196b3bf6b929dfee0f2921412b98982c1ca02c11b18393ec16e436f5fc",
+    "gemini31-high-block-1-attempt-1-gemini-3.1-flash-lite/request.json": "45bd30cf0a78c36e8c0d0107629b624606d381acdde4540cf2a2f051a7ca5015",
+    "gemini31-high-block-1-attempt-1-gemini-3.1-flash-lite/response.json": "8805deea4503d79d89c43795c40fab76e3e1e610b954831f950545b3fdd72956",
+    "gemini31-high-block-1-attempt-1-gemini-3.1-flash-lite/summary.json": "4435c145a22a98acaca929da1faacec72408d31efb0ae14af21b6027d47d74ca",
+    "gemini31-high-block-1-attempt-1-gemini-3.1-flash-lite/translation.json": "f23827cdb491197d21713a5f2096b304048f4379641de980b66eb48495b42c0e",
+    "gemini31-high-block-2-attempt-1-gemini-3.1-flash-lite/generation.json": "b85393865557f5067b5479c73977731baae28ba5d276eaef478e0634152623db",
+    "gemini31-high-block-2-attempt-1-gemini-3.1-flash-lite/input.json": "2d4ccebfcff043e7b6398898ffe1c3725a38ac7d60cfe942daab3a69442622ce",
+    "gemini31-high-block-2-attempt-1-gemini-3.1-flash-lite/request.json": "bc1c7c2dbdcc2230b43c8eb44ab960d1a82495689a5bb98cb6ad34068e1dbb6d",
+    "gemini31-high-block-2-attempt-1-gemini-3.1-flash-lite/response.json": "94178b04a5d02d282ee573270fc95ac9a6fdfb1ad19d193884fcd5a717317d01",
+    "gemini31-high-block-2-attempt-1-gemini-3.1-flash-lite/summary.json": "3ba84df44e8b748bf3e1899994eeb15c2423965549fa48b1bda86dfe9348a123",
+    "gemini31-high-block-2-attempt-1-gemini-3.1-flash-lite/translation.json": "15d8cb2638909d093c56c8e88e064efb794936b75f57d774010294e80af635d3",
+    "gemini31-high-block-3-attempt-1-gemini-3.1-flash-lite/generation.json": "ce466fdfac1afd8cc035436af77d274492c8c5d8cf48f87459d31de05ac9c3bd",
+    "gemini31-high-block-3-attempt-1-gemini-3.1-flash-lite/input.json": "a2fd250edd2b5fe30c8b2e4b7383c9e9787734334f69a4b498ae2674bc6cb242",
+    "gemini31-high-block-3-attempt-1-gemini-3.1-flash-lite/request.json": "c0e17f2032dc5863757389b7219276b2b3e91d74eab9859e7443d2c35cc5b4b9",
+    "gemini31-high-block-3-attempt-1-gemini-3.1-flash-lite/response.json": "1fee16ec77c87232246c74616bf3dce60007879698ac309c9edb7b53fd4c7a28",
+    "gemini31-high-block-3-attempt-1-gemini-3.1-flash-lite/summary.json": "81b515e72faa8eccf8661af41f447413c649789dada67749ddc00f4834277b50",
+    "gemini31-high-block-3-attempt-1-gemini-3.1-flash-lite/translation.json": "99dff62adcc2a9a66ae00c6b27736445f6c9bc0bf2db4686324d5df0d996701d",
+    "gemini31-high-block-4-attempt-1-gemini-3.1-flash-lite/generation.json": "e89e6516ff1c3f209a9a772c4100c9cf13d4c7f360dbadd4c30b0e7954e7e909",
+    "gemini31-high-block-4-attempt-1-gemini-3.1-flash-lite/input.json": "a9f8b308da8c607fa66c350fe19c365e79063c07e2191046dbc7bed0b837be08",
+    "gemini31-high-block-4-attempt-1-gemini-3.1-flash-lite/request.json": "e354ebb65331541a9f9f3a08702aee02c1dcda55cd42cacf9668f253e4d2ba41",
+    "gemini31-high-block-4-attempt-1-gemini-3.1-flash-lite/response.json": "c4a12e4c6f6c7c2c9b9ba48e437bf1aa6160731776a2a2d9f5d98af3b81d52c2",
+    "gemini31-high-block-4-attempt-1-gemini-3.1-flash-lite/summary.json": "d5d8bcaa483b820cc91608007500e5e73d71fff7f06472c7d880681eb58ff8b1",
+    "gemini31-high-block-4-attempt-1-gemini-3.1-flash-lite/translation.json": "082af43a33741f2202e666bfef461810efc5f4cc44bde25cad93186c67665679",
+    "gemini31-high-endpoints.json": "9e7294adc5c137e2c46dd4bac362c9caa5884d0552bdafd6f34726540ecf15f6",
+    "luna-medium-block-1-attempt-1-gpt-6-luna/generation.json": "bc0478c199bbe2d4e150443cd4c26f24b87875af6e9ba845650cef41abfe40f7",
+    "luna-medium-block-1-attempt-1-gpt-6-luna/input.json": "5ac595196b3bf6b929dfee0f2921412b98982c1ca02c11b18393ec16e436f5fc",
+    "luna-medium-block-1-attempt-1-gpt-6-luna/request.json": "bc65f3726033903a210155ce3872eacfd8e5a6fa581a5a4bf74476bd40d0359b",
+    "luna-medium-block-1-attempt-1-gpt-6-luna/response.json": "ed2ee6201ea7e25815dfc794509f4b6408771610ce48620c90ef6193076eb1f6",
+    "luna-medium-block-1-attempt-1-gpt-6-luna/summary.json": "8fed3291241bc88e5b3500efdc2f161d43e15f3e875cdb812216f56890647ce9",
+    "luna-medium-block-1-attempt-1-gpt-6-luna/translation.json": "29856c1eaf7cad51de7fabf6f0af28fc20eb3c39624a007f4c39cf8fe1b80f2f",
+    "luna-medium-block-2-attempt-1-gpt-6-luna/generation.json": "50f1ed99118992453ed6a2200863923ed24a5d5ad121e24a44d917d3e47dcbd9",
+    "luna-medium-block-2-attempt-1-gpt-6-luna/input.json": "2d4ccebfcff043e7b6398898ffe1c3725a38ac7d60cfe942daab3a69442622ce",
+    "luna-medium-block-2-attempt-1-gpt-6-luna/request.json": "ba1f68e7112f7406c05f17d8d7884ee7d44964482ed965c6e5a0e2bfa7a30bb9",
+    "luna-medium-block-2-attempt-1-gpt-6-luna/response.json": "b70b5719d8372a6b455af5ce0ba4b8c7facd91f3fec2b3c8315ed530d29d214d",
+    "luna-medium-block-2-attempt-1-gpt-6-luna/summary.json": "8ea1408949bf89d4e99bda349b1d1339aa263986f92738512940794189b0d3da",
+    "luna-medium-block-2-attempt-1-gpt-6-luna/translation.json": "dabf5dd016be60a2a8f36b8d737778d402b3eec1b9e37c9c88eb4e1544c6b915",
+    "luna-medium-block-3-attempt-1-gpt-6-luna/generation.json": "81b441ef262da3eb58451542e49ea7985566326df6bbb771670ba24258b38017",
+    "luna-medium-block-3-attempt-1-gpt-6-luna/input.json": "a2fd250edd2b5fe30c8b2e4b7383c9e9787734334f69a4b498ae2674bc6cb242",
+    "luna-medium-block-3-attempt-1-gpt-6-luna/request.json": "545f184bc0c98bc2ba4a10da055bda66d81c886dfb20459b9165c21f6af3f89d",
+    "luna-medium-block-3-attempt-1-gpt-6-luna/response.json": "2cf1b15a415a77a1f30e9cb452c33d0f0a7eab7b1d4a787cf7ed9ede216e0da3",
+    "luna-medium-block-3-attempt-1-gpt-6-luna/summary.json": "145e58bb568203062e69c94f46c6187802dc003b675371d1a98dd6df4f1f5c1f",
+    "luna-medium-block-3-attempt-2-gpt-6-luna/generation.json": "1e499a070fc74aa5c10149dc49d3731f7498ba2bad938d955999d89e9e2dfcf4",
+    "luna-medium-block-3-attempt-2-gpt-6-luna/input.json": "a2fd250edd2b5fe30c8b2e4b7383c9e9787734334f69a4b498ae2674bc6cb242",
+    "luna-medium-block-3-attempt-2-gpt-6-luna/request.json": "545f184bc0c98bc2ba4a10da055bda66d81c886dfb20459b9165c21f6af3f89d",
+    "luna-medium-block-3-attempt-2-gpt-6-luna/response.json": "68496837f872c44b6d90704c7147e736fe8cbc1632a69b817738f22ca28a983f",
+    "luna-medium-block-3-attempt-2-gpt-6-luna/summary.json": "52b0657bcd5c2490685149f84985d8a27f75def14b6fc23dcaeb63fb0b318206",
+    "luna-medium-endpoints.json": "20623260a77a4c484f75d127ea2c1dbd7489527d0697330fde3e4d04cd107102",
+    "models.json": "14e2c1f0988b771469932a5e10614f33967f331e223ba99929b47c8ce7189785",
+    "protocol.json": "0f7b7018e8dc1338aa671ae2bd19b464931fbed5c5172b32d64214c15e43bee9",
+    "results.json": "57553cb4bdf83609bf0a236b220ff087f4961484b01c9743aaefddb01c636fc1",
+    "states.json": "b5e17109dc9dbd84000da7669dc0050f9a346e9c411657c55f4de82e7c0cbc51"
+  },
+  "supervisor": {
+    "state": "finished",
+    "returncode": 0,
+    "restart": false
+  }
+}

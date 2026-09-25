@@ -260,3 +260,8 @@ web-gemini-lite-benchmark: web-prompts-check
 
 web-gemini-lite-benchmark-check: web-luna-compare-test
 	python3 -B web/review/luna-comparison/gemini_lite.py --dry-run
+
+.PHONY: web-lite-vs-luna
+web-lite-vs-luna: web-prompts-check
+	@test -n "$(BENCHMARK_OUTPUT)" || { echo 'Set BENCHMARK_OUTPUT to a new directory.' >&2; exit 1; }
+	python3 -B web/review/luna-comparison/lite_vs_luna.py --output "$(BENCHMARK_OUTPUT)"

@@ -21,7 +21,7 @@ class InlinePool:
 
 class ReplayTests(unittest.TestCase):
     def replay(self, failure=None, candidate=None):
-        catalog_arms = trial.ARMS + [('gemini35-high', 'google/gemini-3.5-flash-lite', 'chat', 'high', 'google-ai-studio', 'Google AI Studio')]
+        catalog_arms = trial.ARMS + [('mistral4-high', 'mistralai/mistral-small-2603', 'chat', 'high', 'mistral', 'Mistral'), ('gemini35-high', 'google/gemini-3.5-flash-lite', 'chat', 'high', 'google-ai-studio', 'Google AI Studio')]
         calls = []
         def fake_call(out, model, case, prompt, source, key, **kw):
             self.assertEqual(key, 'fake-test-key')
@@ -85,3 +85,10 @@ class ReplayTests(unittest.TestCase):
         self.assertTrue(all(model == 'google/gemini-3.5-flash-lite' for model, case in calls))
         self.assertEqual(list(states), ['gemini35-high'])
         self.assertEqual(states['gemini35-high']['valid_blocks'], 4)
+
+    def test_mistral_only_does_not_rerun_comparators(self):
+        calls, states = self.replay(candidate='mistral4')
+        self.assertEqual(len(calls), 4)
+        self.assertTrue(all(model == 'mistralai/mistral-small-2603' for model, case in calls))
+        self.assertEqual(list(states), ['mistral4-high'])
+        self.assertEqual(states['mistral4-high']['valid_blocks'], 4)

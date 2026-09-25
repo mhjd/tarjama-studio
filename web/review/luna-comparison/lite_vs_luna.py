@@ -14,10 +14,12 @@ ARMS = [('luna-medium', 'openai/gpt-6-luna', 'responses', 'medium', 'openai', 'O
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True)
-    parser.add_argument('--candidate', choices=['gemini35'], help='Run only Gemini 3.5 Lite against archived comparators')
+    parser.add_argument('--candidate', choices=['gemini35', 'mistral4'], help='Run one candidate against archived comparators')
     args = parser.parse_args()
     arms = ([('gemini35-high', 'google/gemini-3.5-flash-lite', 'chat', 'high', 'google-ai-studio', 'Google AI Studio')]
             if args.candidate == 'gemini35' else ARMS)
+    if args.candidate == 'mistral4':
+        arms = [('mistral4-high', 'mistralai/mistral-small-2603', 'chat', 'high', 'mistral', 'Mistral')]
     out = Path(args.output); out.mkdir(parents=True, exist_ok=False, mode=0o700)
     corpus = json.loads((run.ROOT / 'web/review/translation-lite/corpus.json').read_text())
     prompt = (run.ROOT / 'web/backend/internal/studio/prompts/translate.txt').read_text()

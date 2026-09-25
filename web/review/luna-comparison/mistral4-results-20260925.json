@@ -1,0 +1,105 @@
+{
+  "raw_directory": "data/model_outputs/mistral4-replay-20260925-01",
+  "calls": [
+    {
+      "model": "mistralai/mistral-small-2603",
+      "case": "mistral4-high-block-1-attempt-1",
+      "valid": false,
+      "reasoning_requested": "high",
+      "api": "chat",
+      "timeout_seconds": 300,
+      "http_status": 200,
+      "id": "gen-1790351348-jXPWTdstwrrlu8dhnFMi",
+      "provider": "OpenAI",
+      "usage": {
+        "prompt_tokens": 3979,
+        "completion_tokens": 3428,
+        "total_tokens": 7407,
+        "cost": 0.00265365,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 580,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0.00265365,
+          "upstream_inference_prompt_cost": 0.00059685,
+          "upstream_inference_completions_cost": 0.0020568
+        }
+      },
+      "model_returned": "mistralai/mistral-small-2603",
+      "reasoning_tokens": 580,
+      "search_requests": 0,
+      "tool_calls": 0,
+      "fetch_inferred": false,
+      "generation_provider": "Mistral",
+      "generation_model": "mistralai/mistral-small-2603",
+      "response_provider_matches": false,
+      "finish_reason": "stop",
+      "error": "JSONDecodeError",
+      "elapsed_seconds": 60.183
+    },
+    {
+      "model": "mistralai/mistral-small-2603",
+      "case": "mistral4-high-block-1-attempt-2",
+      "valid": false,
+      "reasoning_requested": "high",
+      "api": "chat",
+      "timeout_seconds": 300,
+      "http_status": 429,
+      "error": "provider_http_error",
+      "elapsed_seconds": 6.851
+    }
+  ],
+  "accepted_blocks": 0,
+  "known_cost_usd": 0.00265365,
+  "cost_unknown_http429": true,
+  "elapsed_seconds": 67.034,
+  "diagnostic_only_valid_after_stripping_fences": true,
+  "diagnostic_segments": 90,
+  "protocol_matches": {
+    "prompt_sha256": true,
+    "corpus_sha256": true,
+    "ranges": true,
+    "max_attempts_per_block": true,
+    "timeout_seconds": true,
+    "no_output_limit": true,
+    "continuity": true,
+    "context_lines": true,
+    "strict_schema": true,
+    "repair": true
+  },
+  "supervisor": {
+    "state": "finished",
+    "returncode": 0,
+    "restart": false
+  },
+  "hashes": {
+    "base-runner-used.py": "2d608149537047cca24d1aaf5ee88e96127aade6f024377a1656bb8102d97794",
+    "hashes.json": "4dad88d4cd642b5fb75c85a3c84d1b816165f9525f8c83ddce30ec273753ff08",
+    "mistral4-high-block-1-attempt-1-mistral-small-2603/generation.json": "947ebab98122a4ad81768a2100395368673867c318603bbdce9c001ccbe3a37d",
+    "mistral4-high-block-1-attempt-1-mistral-small-2603/input.json": "5ac595196b3bf6b929dfee0f2921412b98982c1ca02c11b18393ec16e436f5fc",
+    "mistral4-high-block-1-attempt-1-mistral-small-2603/request.json": "8e2bfafb1f60286679653551a6619705e125abb2b6626af7fb9fb0e5409ed036",
+    "mistral4-high-block-1-attempt-1-mistral-small-2603/response.json": "15962b2eb7d6a5f235d0c0abd70d7b1a9eadc3bcbb901baa2c7de07851bba907",
+    "mistral4-high-block-1-attempt-1-mistral-small-2603/summary.json": "62ab5094a6e9a60431747c934c246c9f4ad2922a3bcb4e3bc34ee390f2853be9",
+    "mistral4-high-block-1-attempt-2-mistral-small-2603/input.json": "5ac595196b3bf6b929dfee0f2921412b98982c1ca02c11b18393ec16e436f5fc",
+    "mistral4-high-block-1-attempt-2-mistral-small-2603/request.json": "8e2bfafb1f60286679653551a6619705e125abb2b6626af7fb9fb0e5409ed036",
+    "mistral4-high-block-1-attempt-2-mistral-small-2603/summary.json": "f6522de1f988783f677476967c09e657fc9c0fbde040dc8715851f1fe5f18011",
+    "mistral4-high-endpoints.json": "2d298f34c4ef301c5424b7941da2bf21e0b95a50fa2bad9dd920dfa16141c57f",
+    "models.json": "a4b2cf45bc671d116f6355d1c80848269ca3131ca52b901c5612b5682e018cdd",
+    "protocol.json": "2b8860ec96874f82cfb8a94f12535964fdd7a5e0e2d50c3f6e4d85b38abc1697",
+    "results.json": "ea5e4d8bf5ea2ec31f11e4f8cefa1d3bffa47a8c8f6ff234885cc9a3cc9cf14b",
+    "runner-used.py": "8e1b865682c5d3d47e26609a5c1b475d8acdbd6a7de575caa1183978ea8003e1",
+    "states.json": "a9854d1d912a79578e570a24fa506858a75ee41aa158b73e100ea7d02cb6f64c",
+    "supervisor-calls.py": "c61e1ab44f00f59d785f851cd5357b5cd7552b9fff141f23fc368f0f623259f8",
+    "supervisor-run.log": "f89173c4a91483fd17160a89841b7d7183f738da28316e9c36bfe973254f7b52",
+    "supervisor-status.json": "b32ef7efbb8c64001daf8342a3dc452e5cb32fa7ea66e810223a4c7265dd87b1",
+    "supervisor-supervise.py": "301569b23bc8d85ac7bbf94bc008abd627ace21ae762b276698ca6cfd793db76"
+  }
+}

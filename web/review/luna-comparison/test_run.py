@@ -14,6 +14,22 @@ class Response(io.BytesIO):
 
 
 class ComparisonEvidenceTests(unittest.TestCase):
+    def test_timed_chunks_preserve_segments_and_exact_ten_minute_boundary(self):
+        source = [{'start_ms': 0, 'end_ms': 599000},
+                  {'start_ms': 599000, 'end_ms': 600000},
+                  {'start_ms': 600000, 'end_ms': 601000}]
+        self.assertEqual(run.timed_ranges(source, 10), [(0, 2), (2, 3)])
+        corpus = json.loads((run.ROOT / 'web/review/translation-lite/corpus.json').read_text())
+        ranges = run.timed_ranges(corpus, 10)
+        self.assertEqual([s for a, b in ranges for s in corpus[a:b]], corpus)
+        for a, b in ranges:
+            self.assertLessEqual(corpus[b-1]['end_ms']-corpus[a]['start_ms'], 600000)
+
+    def test_timed_chunks_reject_overlap_and_unsplittable_segment(self):
+        for source in [[{'start_ms': 0, 'end_ms': 600001}],
+                       [{'start_ms': 0, 'end_ms': 5}, {'start_ms': 4, 'end_ms': 7}]]:
+            with self.assertRaises(ValueError): run.timed_ranges(source, 10)
+
     def test_responses_preserves_prompt_schema_and_parallel_tools(self):
         source = [{'id': 'a', 'arabic': 'السلام'}]
         chat = run.request_body(run.MODELS[0], 'Translate', source)

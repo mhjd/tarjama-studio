@@ -95,3 +95,38 @@ rejoue ses deux moitiés à `medium` sur Responses, deux appels payants maximum.
 Voir le complément « résultat complet après reprises » dans
 `docs/LUNA_REASONING_COMPARISON_20260924.md` pour le cumul des échecs et succès.
 Les données originales et les trois autres blocs acceptés restent inchangés.
+
+
+## GLM-5.3-Flash et blocs temporels
+
+Le modèle `z-ai/glm-5.3-flash` est disponible explicitement ; il n'est pas ajouté
+au trio par défaut. La nouvelle option `BENCHMARK_CHUNK_MINUTES=10` conserve
+le contrôle Parallel et les deux passages des difficultés, mais remplace le
+corpus entier par des blocs temporels d'au plus dix minutes. Les segments ne
+sont ni coupés ni réordonnés ; deux segments de contexte de chaque côté sont
+conservés. Un segment individuel trop long ou des temps incohérents sont refusés.
+Cette option est incompatible avec `BENCHMARK_SPLIT`.
+`BENCHMARK_CASE=corpus-timed-1` permet de ne reprendre que le premier bloc, dans
+un nouveau dossier. `BENCHMARK_TIMEOUT_SECONDS=600` autorise explicitement un
+essai diagnostique de dix minutes au lieu de cinq ; cette variation figure dans
+le protocole et ne modifie pas le timeout applicatif.
+
+Le 25 septembre, le catalogue déclare `low`, `high`, `max` pour GLM, raisonnement
+obligatoire. `medium` n'étant pas proposé, le benchmark demandé utilise `high`,
+le niveau intermédiaire disponible. Le programme refuse un effort explicitement
+absent des niveaux publiés avant de lire la clé ou de faire un appel payant.
+Le réglage demandé et les tokens de raisonnement retournés restent distincts.
+
+```sh
+make web-luna-compare BENCHMARK_OUTPUT=data/model_outputs/glm53-NOUVEAU \
+  BENCHMARK_MODEL=z-ai/glm-5.3-flash BENCHMARK_REASONING=high \
+  BENCHMARK_CHUNK_MINUTES=10
+```
+
+Pour le corpus de 384 segments, cela produit cinq appels au maximum : contrôle
+web, difficultés, deux blocs de 259 et 125 segments (599,98 s et 340,72 s), puis
+difficultés répétées. Pas de retry caché, pas de réparation de JSON. Le catalogue
+et les frontières figurent dans les preuves de chaque exécution. Les options
+restent isolées de la configuration et du déploiement de l'application.
+
+Résultats et limites : [rapport GLM du 25 septembre](../../../docs/GLM53_TRANSLATION_BENCHMARK_20260925.md).

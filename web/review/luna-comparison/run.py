@@ -18,6 +18,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[3]
 MODELS = ['openai/gpt-6-luna', 'openai/gpt-5.6-luna', 'deepseek/deepseek-v4.1-flash']
+SUPPORTED_MODELS = MODELS + ['z-ai/glm-5.3-flash']
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 MAX_BYTES = 4 * 1024 * 1024
 SCHEMA = {'type': 'object', 'additionalProperties': False, 'properties': {
@@ -94,21 +95,40 @@ def deadline_expired(signum, frame):
     raise TimeoutError('provider_deadline')
 
 
-def run_call(out, model, case, prompt, source, key, capability=False, context_source=(), api='chat', reasoning='none'):
+def timed_ranges(source, minutes):
+    """Never cut a segment or exceed the requested time span."""
+    limit = minutes * 60000
+    ranges = []
+    start = 0
+    for i, segment in enumerate(source):
+        begin, end = segment['start_ms'], segment['end_ms']
+        if begin < 0 or end <= begin or end - begin > limit:
+            raise ValueError('invalid_or_oversized_segment')
+        if i and begin < source[i-1]['end_ms']:
+            raise ValueError('overlapping_or_unordered_segments')
+        if end - source[start]['start_ms'] > limit:
+            ranges.append((start, i))
+            start = i
+    if source:
+        ranges.append((start, len(source)))
+    return ranges
+
+
+def run_call(out, model, case, prompt, source, key, capability=False, context_source=(), api='chat', reasoning='none', timeout_seconds=300):
     folder = out / (case + '-' + model.split('/')[1]); folder.mkdir(mode=0o700)
     save(folder / 'input.json', source)
     body = request_body(model, prompt, source, capability, context_source, api, reasoning)
     save(folder / 'request.json', body)
     start = time.monotonic()
-    summary = {'model': model, 'case': case, 'valid': False, 'reasoning_requested': reasoning, 'api': api}
+    summary = {'model': model, 'case': case, 'valid': False, 'reasoning_requested': reasoning, 'api': api, 'timeout_seconds': timeout_seconds}
     signal.signal(signal.SIGALRM, deadline_expired)
-    signal.alarm(300)
+    signal.alarm(timeout_seconds)
     try:
         endpoint = 'https://openrouter.ai/api/v1/responses' if api == 'responses' else ENDPOINT
         req = urllib.request.Request(endpoint, data=json.dumps(body).encode(),
             headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
         opener = urllib.request.build_opener(NoRedirect())
-        with opener.open(req, timeout=300) as response:
+        with opener.open(req, timeout=timeout_seconds) as response:
             raw = response.read(MAX_BYTES + 1)
             summary['http_status'] = response.status
         if len(raw) > MAX_BYTES: raise ValueError('response_too_large')
@@ -156,15 +176,22 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
     parser.add_argument('--split-corpus', action='store_true', help='12 comparative calls: four equal parts, two context segments on each side')
-    parser.add_argument('--model', choices=MODELS, help='Only test this model')
+    parser.add_argument('--model', choices=SUPPORTED_MODELS, help='Only test this model')
+    parser.add_argument('--chunk-minutes', type=int, choices=range(1, 21), help='Time-based corpus blocks, plus web check and repeated challenges')
+    parser.add_argument('--timeout-seconds', type=int, choices=[300, 600], default=300, help='Explicit bounded diagnostic timeout; default 300')
     parser.add_argument('--api', choices=['chat', 'responses'], default='chat')
     parser.add_argument('--reasoning', choices=['none', 'low', 'medium', 'high'], default='none')
     parser.add_argument('--case', choices=['capability', 'challenges-1', 'corpus', 'challenges-2',
-                                         'corpus-part-1', 'corpus-part-2', 'corpus-part-3', 'corpus-part-4'])
+                                         'corpus-part-1', 'corpus-part-2', 'corpus-part-3', 'corpus-part-4'] +
+                                        [f'corpus-timed-{i}' for i in range(1, 17)])
     args = parser.parse_args()
     target_models = [args.model] if args.model else MODELS
     if args.reasoning != 'none' and args.api == 'chat' and MODELS[0] in target_models:
         parser.error('GPT-6 Luna reasoning with tools requires --api responses')
+    if args.chunk_minutes and (args.split_corpus or (args.case and not args.case.startswith('corpus-timed-'))):
+        parser.error('Time-based benchmark only supports a corpus-timed case, without --split-corpus')
+    if args.case and args.case.startswith('corpus-timed-') and not args.chunk_minutes:
+        parser.error('A timed case requires --chunk-minutes')
     if args.case and args.case.startswith('corpus-part-'): args.split_corpus = True
     if args.case and args.split_corpus and not args.case.startswith('corpus-part-'):
         parser.error('A whole-corpus case cannot be combined with --split-corpus')
@@ -174,14 +201,23 @@ def main():
     selected = [m for m in models if m['id'] in target_models]
     if len(selected) != len(target_models): raise ValueError('requested_model_missing')
     save(out / 'models.json', selected)
+    for model in selected:
+        efforts = (model.get('reasoning') or {}).get('supported_efforts')
+        if efforts is not None and args.reasoning not in efforts:
+            raise ValueError('requested_reasoning_not_supported')
+    corpus = json.loads((ROOT / 'web/review/translation-lite/corpus.json').read_text())
+    timed = timed_ranges(corpus, args.chunk_minutes) if args.chunk_minutes else []
+    if args.case and args.case.startswith('corpus-timed-') and int(args.case.rsplit('-', 1)[1]) > len(timed):
+        parser.error('Requested timed block does not exist')
     with (out / 'runner-used.py').open('x') as f:
         f.write(Path(__file__).read_text())
-    save(out / 'protocol.json', {'models': target_models, 'max_http_calls': (1 if args.case else 4) * len(target_models), 'retries': 0,
+    save(out / 'protocol.json', {'models': target_models, 'max_http_calls': (1 if args.case else len(timed)+3 if args.chunk_minutes else 4) * len(target_models), 'retries': 0,
         'reasoning': args.reasoning, 'api': args.api, 'case': args.case,
         'provider_fallbacks': False, 'max_price_per_million_usd': {'prompt': 1, 'completion': 3},
         'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(), 'prompt': prompt,
-        'parallel_tools': TOOLS, 'timeout_seconds': 300,
-        'cost_stop_between_rounds_usd': 2, 'comparative_calls_concurrency': len(target_models), 'split_corpus': args.split_corpus})
+        'parallel_tools': TOOLS, 'timeout_seconds': args.timeout_seconds,
+        'cost_stop_between_rounds_usd': 2, 'comparative_calls_concurrency': len(target_models), 'split_corpus': args.split_corpus,
+        'chunk_minutes': args.chunk_minutes, 'timed_ranges': timed})
     key = Path('/etc/vps-agent-secrets/openrouter.api_key').read_text().strip()
     if not key: raise ValueError('registered_key_unavailable')
     summaries = []
@@ -192,8 +228,10 @@ def main():
         "exactement son ID et un texte non vide dans le JSON final brut. N'insère aucun commentaire ni marqueur de "
         "recherche dans le sous-titre. Ne prétends pas avoir cherché ou lu si tu n'as pas exécuté ces outils.")
     cases = [('capability', None), ('challenges-1', 'challenges'), ('corpus', 'corpus'), ('challenges-2', 'challenges')]
-    corpus = json.loads((ROOT / 'web/review/translation-lite/corpus.json').read_text())
     chunk_size = (len(corpus) + 3) // 4
+    if args.chunk_minutes:
+        cases = [('capability', None), ('challenges-1', 'challenges')] + [
+            (f'corpus-timed-{i+1}', 'corpus') for i in range(len(timed))] + [('challenges-2', 'challenges')]
     if args.split_corpus:
         if len(corpus) < 4: raise ValueError('corpus_too_small')
         cases = [(f'corpus-part-{i+1}', 'corpus') for i in range((len(corpus) + chunk_size - 1) // chunk_size)]
@@ -203,6 +241,10 @@ def main():
         source = json.loads((ROOT / f'web/review/translation-lite/{fixture}.json').read_text()) if fixture else [
             {'id': 'name', 'arabic': 'منظمة الأمم المتحدة للتربية والعلم والثقافة'}]
         context_source = []
+        if case.startswith('corpus-timed-'):
+            start, end = timed[int(case.rsplit('-', 1)[1])-1]
+            source = corpus[start:end]
+            context_source = corpus[max(0, start-2):start] + corpus[end:end+2]
         if args.split_corpus:
             part = int(case.rsplit('-', 1)[1]) - 1
             start, end = part * chunk_size, min(len(corpus), (part + 1) * chunk_size)
@@ -212,7 +254,7 @@ def main():
         order = target_models[rotation:] + target_models[:rotation]
         with ProcessPoolExecutor(max_workers=len(target_models)) as pool:
             futures = [pool.submit(run_call, out, model, case, prompt if fixture else capability_prompt,
-                        source, key, not fixture, context_source, args.api, args.reasoning) for model in order]
+                        source, key, not fixture, context_source, args.api, args.reasoning, args.timeout_seconds) for model in order]
             summaries.extend(f.result() for f in futures)
         if any(s.get('http_status') in [400, 401, 403, 404, 422] for s in summaries): break
     save(out / 'results.json', summaries)

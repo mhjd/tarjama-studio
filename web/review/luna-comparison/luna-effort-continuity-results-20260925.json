@@ -1,0 +1,152 @@
+{
+  "high": {
+    "raw_directory": "data/model_outputs/luna-high-4min-continuity-20260925-01",
+    "calls": [
+      {
+        "model": "openai/gpt-6-luna",
+        "case": "corpus-timed-1",
+        "valid": false,
+        "reasoning_requested": "high",
+        "api": "responses",
+        "timeout_seconds": 300,
+        "http_status": 200,
+        "id": "gen-1790330056-60NiQYmbj6fO8lr7Z2wi",
+        "provider": null,
+        "usage": {
+          "input_tokens": 3797,
+          "input_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 3794
+          },
+          "output_tokens": 4354,
+          "output_tokens_details": {
+            "reasoning_tokens": 2408
+          },
+          "total_tokens": 8151,
+          "cost": 0.00265155,
+          "cost_details": {
+            "upstream_inference_cost": 0.00265155,
+            "upstream_inference_input_cost": 0.00047455,
+            "upstream_inference_output_cost": 0.002177
+          }
+        },
+        "model_returned": "openai/gpt-6-luna",
+        "reasoning_tokens": 2408,
+        "search_requests": 0,
+        "tool_calls": 0,
+        "fetch_inferred": false,
+        "generation_provider": "OpenAI",
+        "generation_model": "openai/gpt-6-luna-20260922",
+        "response_provider_matches": false,
+        "finish_reason": "completed",
+        "error": "JSONDecodeError",
+        "elapsed_seconds": 44.799
+      }
+    ],
+    "accepted_segments": 0,
+    "format_diagnostic": {
+      "error": "Expecting ':' delimiter",
+      "offset": 5100,
+      "excerpt": "prend que des vérités absolues et certaines,\"},{\"id\":\"67\",\"text\":\"sans place pour l’interprétation ni l’erreur,\"},{\"id\":"
+    },
+    "sha256": {
+      "runner-used.py": "c68fa32ed401ec149fce02e24a33377fecee5f43ca31d4bff1f2c6f41d616c9f",
+      "hashes.json": "31ac10f2bfba6ac46caa374e505c1a487bf6d7aba69df49f93bb08ff0c239fe7",
+      "protocol.json": "8f577612b0fa61e055b7ed27711ed5841d9facfd9c45468c6cadcfd539d9af94",
+      "models.json": "7b2ba33bdf7be11142ec823c4fd47ae40be8e8d04c3835f41d16bf99a548ac16",
+      "results.json": "ff7b4936e25a9e427eaf054aed669fc62a74d9744a22aafb387485768d5bd20b",
+      "endpoints.json": "696ac2cfe342ec25a3af885c177f943a4f10d2af5bf742eda0da3d8a2082f6a8",
+      "corpus-timed-1-gpt-6-luna/input.json": "5ac595196b3bf6b929dfee0f2921412b98982c1ca02c11b18393ec16e436f5fc",
+      "corpus-timed-1-gpt-6-luna/response.json": "ceb0aa05e6143838842adfaa396e8340c4db51eb33e844f0eafc4bd4477ad2b9",
+      "corpus-timed-1-gpt-6-luna/request.json": "df77af1024cee05dfe0587849ad1ca8c7352f4160031a78cc0c0d790f947829c",
+      "corpus-timed-1-gpt-6-luna/generation.json": "4ea326fb7a9522c12f44ef45a2b5d245308dc9d78287eaca53df2e2a54a66c62",
+      "corpus-timed-1-gpt-6-luna/summary.json": "ced6ce69a855797bc3b19ad781b9f715cc3d8574a28d21e22982e9665d736dae"
+    }
+  },
+  "medium": {
+    "raw_directory": "data/model_outputs/luna-medium-4min-continuity-20260925-02",
+    "calls": [
+      {
+        "model": "openai/gpt-6-luna",
+        "case": "corpus-timed-1",
+        "valid": false,
+        "reasoning_requested": "medium",
+        "api": "responses",
+        "timeout_seconds": 300,
+        "http_status": 200,
+        "id": "gen-1790330248-CEwyHI48sp8zY3k3SZbw",
+        "provider": null,
+        "usage": {
+          "input_tokens": 3797,
+          "input_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 3794
+          },
+          "output_tokens": 2657,
+          "output_tokens_details": {
+            "reasoning_tokens": 583
+          },
+          "total_tokens": 6454,
+          "cost": 0.00180305,
+          "cost_details": {
+            "upstream_inference_cost": 0.00180305,
+            "upstream_inference_input_cost": 0.00047455,
+            "upstream_inference_output_cost": 0.0013285
+          }
+        },
+        "model_returned": "openai/gpt-6-luna",
+        "reasoning_tokens": 583,
+        "search_requests": 0,
+        "tool_calls": 0,
+        "fetch_inferred": false,
+        "generation_provider": "OpenAI",
+        "generation_model": "openai/gpt-6-luna-20260922",
+        "response_provider_matches": false,
+        "finish_reason": "completed",
+        "error": "ValueError",
+        "elapsed_seconds": 46.918
+      }
+    ],
+    "accepted_segments": 0,
+    "format_diagnostic": {
+      "expected_count": 90,
+      "received_count": 89,
+      "missing_ids": [
+        "87"
+      ]
+    },
+    "sha256": {
+      "runner-used.py": "c68fa32ed401ec149fce02e24a33377fecee5f43ca31d4bff1f2c6f41d616c9f",
+      "hashes.json": "0697b6d02e0b22fe48eb217520f2a292497b09610abdd90ce43d76a0b399a383",
+      "protocol.json": "71a74dbbc07f2adfea02f7516c577fc66c14d782e302e5d522918fa411a32178",
+      "models.json": "7b2ba33bdf7be11142ec823c4fd47ae40be8e8d04c3835f41d16bf99a548ac16",
+      "results.json": "7c71e8c7f9a592a6449c34280d47c66e97dba500a80f617859850a9da5f4a783",
+      "endpoints.json": "0f9fee48bd614ce362fdcef61b0bcf03d0656cf3dc2044f67474ee76318c9261",
+      "corpus-timed-1-gpt-6-luna/input.json": "5ac595196b3bf6b929dfee0f2921412b98982c1ca02c11b18393ec16e436f5fc",
+      "corpus-timed-1-gpt-6-luna/response.json": "d50315a97aa54f187fd5b7109b6b064bb33c9600b0e83ae94b22d223c34e92d3",
+      "corpus-timed-1-gpt-6-luna/request.json": "bc65f3726033903a210155ce3872eacfd8e5a6fa581a5a4bf74476bd40d0359b",
+      "corpus-timed-1-gpt-6-luna/generation.json": "c37c9a9e83acded44050b869a3aa534d1638d1a5a764e0a47b17c61c1a8222c2",
+      "corpus-timed-1-gpt-6-luna/summary.json": "2a6e439b0c647dd8666c5df5f209a1798437a54854c1ed10de4ca151d0575bff"
+    }
+  },
+  "requests_equal_except_reasoning": true,
+  "known_cost_usd": 0.0044545999999999995,
+  "scope": "One common block, 90 Arabic segments / 237.12 seconds. Both chains stopped before block 2.",
+  "interrupted_medium_attempt": {
+    "raw_directory": "data/model_outputs/luna-medium-4min-continuity-20260925-01",
+    "artifacts": [],
+    "cost": "unknown; no request archived"
+  },
+  "supervisors": {
+    "luna-effort-guard": {
+      "state": "lease_expired",
+      "returncode": -15,
+      "restart": false
+    },
+    "luna-effort-medium-guard": {
+      "state": "finished",
+      "returncode": 0,
+      "restart": false
+    }
+  }
+}

@@ -14,6 +14,13 @@ class Response(io.BytesIO):
 
 
 class ComparisonEvidenceTests(unittest.TestCase):
+    def test_no_output_limit_on_both_transports(self):
+        for api in ['chat', 'responses']:
+            body = run.request_body(run.MODELS[0], 'Translate', [], api=api, reasoning='high', no_output_limit=True)
+            self.assertNotIn('max_tokens', body)
+            self.assertNotIn('max_output_tokens', body)
+            self.assertEqual(body['reasoning'], {'effort': 'high'})
+
     def test_explicit_gemini_price_limit_preserves_defaults(self):
         body = run.request_body('google/gemini-3.8-flash', 'Translate', [],
                                 reasoning='high', provider='google-ai-studio', max_completion_price=4)

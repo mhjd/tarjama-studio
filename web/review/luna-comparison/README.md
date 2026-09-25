@@ -216,3 +216,10 @@ de 300 secondes subsistent. Ce choix est enregistré dans le protocole.
 l'[audit du prompt et de l'effort Gemini](../../../docs/GEMINI_REVIEW_AUDIT_20260925.md).
 Les valeurs par défaut medium/v1 restent inchangées. V2 explicite le contrôle
 segmentaire, la vérification des raccords et le schéma dans le texte système.
+
+### High / medium avec continuité, sans plafond de sortie
+
+`BENCHMARK_NO_OUTPUT_LIMIT=1` omet `max_tokens` / `max_output_tokens` ;
+les délais et l’arrêt sur sortie invalide restent actifs. Utiliser sous
+surveillance externe pour éviter des appels après interruption de session.
+[Protocole, limites et résultats du 25 septembre](../../../docs/LUNA_EFFORT_CONTINUITY_20260925.md).

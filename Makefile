@@ -253,3 +253,10 @@ web-luna-recover:
 web-luna-review:
 	@test -n "$(BENCHMARK_OUTPUT)" || (echo 'BENCHMARK_OUTPUT is required'; exit 1)
 	python3 -B web/review/luna-comparison/review.py --output "$(BENCHMARK_OUTPUT)" $(if $(BENCHMARK_MODEL),--model "$(BENCHMARK_MODEL)",) $(if $(filter 1,$(BENCHMARK_NO_OUTPUT_LIMIT)),--no-output-limit,) $(if $(BENCHMARK_REASONING),--reasoning "$(BENCHMARK_REASONING)",) $(if $(BENCHMARK_PROMPT_VERSION),--prompt-version "$(BENCHMARK_PROMPT_VERSION)",)
+
+.PHONY: web-gemini-lite-benchmark web-gemini-lite-benchmark-check
+web-gemini-lite-benchmark: web-prompts-check
+	python3 -B web/review/luna-comparison/gemini_lite.py
+
+web-gemini-lite-benchmark-check: web-luna-compare-test
+	python3 -B web/review/luna-comparison/gemini_lite.py --dry-run

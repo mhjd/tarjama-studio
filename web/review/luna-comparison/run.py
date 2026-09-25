@@ -19,7 +19,7 @@ import urllib.parse
 
 ROOT = Path(__file__).resolve().parents[3]
 MODELS = ['openai/gpt-6-luna', 'openai/gpt-5.6-luna', 'deepseek/deepseek-v4.1-flash']
-SUPPORTED_MODELS = MODELS + ['z-ai/glm-5.3-flash', 'google/gemini-3.8-flash']
+SUPPORTED_MODELS = MODELS + ['google/gemini-3.1-flash-lite', 'google/gemini-3.5-flash-lite', 'z-ai/glm-5.3-flash', 'google/gemini-3.8-flash']
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 MAX_BYTES = 4 * 1024 * 1024
 SCHEMA = {'type': 'object', 'additionalProperties': False, 'properties': {

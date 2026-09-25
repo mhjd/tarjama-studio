@@ -53,6 +53,12 @@ COPY --from=preview-check-build /preview-check /usr/local/bin/preview-check
 ENTRYPOINT ["/usr/local/bin/preview-check"]
 CMD ["-test.v", "-test.run", "^TestPreviewLive$", "-test.timeout", "12m"]
 
+# Same immutable corpus as the worker; bounded tests, no database or media access.
+FROM worker AS reference-check
+COPY --from=preview-check-build /preview-check /usr/local/bin/preview-check
+ENTRYPOINT ["/usr/local/bin/preview-check"]
+CMD ["-test.v", "-test.run", "^TestReferenceDeployment$", "-test.timeout", "4m"]
+
 # Explicit private UI qualification only; not part of api/media release images.
 FROM backend AS ui-review-build
 RUN CGO_ENABLED=0 go build -trimpath -o /ui-review ./cmd/ui-review

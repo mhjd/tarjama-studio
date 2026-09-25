@@ -149,13 +149,15 @@ web-api-image: web-prompts-check
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target api -t tarjama-web:review web
 
 .PHONY: web-worker-image
+WORKER_IMAGE_TARGET ?= worker
+WORKER_IMAGE_TAG ?= tarjama-worker:review
 web-worker-image: web-prompts-check
 	@set -eu; mkdir -p web/.cache; corpus_context=$$(mktemp -d web/.cache/reference-image.XXXXXX); \
 	trap 'rm -rf "$$corpus_context"' EXIT; \
 	cp "$(REFERENCE_CORPUS)/manifest.json" "$(REFERENCE_CORPUS)/entries.jsonl" "$(REFERENCE_CORPUS)/NOTICE.txt" "$(REFERENCE_CORPUS)/provenance.json" "$$corpus_context/"; \
 	chmod 755 "$$corpus_context"; chmod 444 "$$corpus_context"/*; \
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) \
-	  --build-context reference-corpus="$$corpus_context" -f web/deploy/Dockerfile --target worker -t tarjama-worker:review web
+	  --build-context reference-corpus="$$corpus_context" -f web/deploy/Dockerfile --target "$(WORKER_IMAGE_TARGET)" -t "$(WORKER_IMAGE_TAG)" web
 
 web-images: web-api-image
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target media -t tarjama-media:review web

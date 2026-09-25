@@ -201,3 +201,8 @@ Parallel limité à deux recherches et deux lectures. Provenance contrôlée via
 Generation. Cette commande seule ne fournit pas la surveillance externe par lease.
 
 Voir [protocole, interruption et résultats](../../../docs/LUNA_SECOND_PASS_20260925.md).
+
+La même relecture aveugle accepte `BENCHMARK_MODEL=google/gemini-3.8-flash`
+(Google AI Studio imposé, Chat Completions, medium, schéma et entrée inchangés,
+8192 tokens sortie maximum). Voir le [test de Gemini réviseur](../../../docs/GEMINI_SECOND_PASS_20260925.md).
+Ce réglage reste opt-in, avec un seul appel et sans application des suggestions.

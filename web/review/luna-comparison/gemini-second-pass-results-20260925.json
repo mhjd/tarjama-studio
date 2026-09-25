@@ -1,0 +1,78 @@
+{
+  "date": "2026-09-25",
+  "directory": "data/model_outputs/gemini-blind-review-20260925-01",
+  "summary": {
+    "valid": false,
+    "model": "google/gemini-3.8-flash",
+    "http_status": 200,
+    "id": "gen-1790328673-tpKQ7qmrCcGzlsEKiPjN",
+    "usage": {
+      "prompt_tokens": 25761,
+      "completion_tokens": 7875,
+      "total_tokens": 33636,
+      "cost": 0.048852,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 7861,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.048852,
+        "upstream_inference_prompt_cost": 0.01932075,
+        "upstream_inference_completions_cost": 0.02953125
+      }
+    },
+    "status": null,
+    "generation_provider": "Google AI Studio",
+    "generation_model": "google/gemini-3.8-flash-20260902",
+    "error": "JSONDecodeError",
+    "elapsed_seconds": 44.494
+  },
+  "generation": {
+    "id": "gen-1790328673-tpKQ7qmrCcGzlsEKiPjN",
+    "model": "google/gemini-3.8-flash-20260902",
+    "provider_name": "Google AI Studio",
+    "upstream_id": null,
+    "total_cost": 0,
+    "native_tokens_prompt": 0,
+    "native_tokens_completion": 0,
+    "provider_responses": []
+  },
+  "same_input_and_prompt_as_luna_review": true,
+  "diagnostic_only": true,
+  "response_content": "```json\n{\n  \"issues\": []\n}\n```",
+  "known_findings_detected": [],
+  "expected_known_findings": [
+    "365",
+    "253",
+    "347-348",
+    "151 (reserve)",
+    "144 (reserve)"
+  ],
+  "review_cost_usd": "0.048852",
+  "two_phase_attempt_cost_usd": "0.056996895",
+  "two_phase_attempt_cost_per_hour_usd": "0.2181235484213883278409694908",
+  "reasoning_tokens": 7861,
+  "reported_completion_tokens": 7875,
+  "completion_minus_reasoning_tokens": 14,
+  "raw_format_valid": false,
+  "sha256": {
+    "prompt-used.txt": "eb6bebcec47b87e8c073fd6968575292985bd959168183f9c0c13f48425cabda",
+    "supervisor-final-status.json": "b32ef7efbb8c64001daf8342a3dc452e5cb32fa7ea66e810223a4c7265dd87b1",
+    "review-used.py": "db20c0cfa83cf5bbdb7117a5ab2e0f13ac325c7753fa8b2db05e1a22704f40d8",
+    "hashes.json": "e699de7906bf3ca88a0e9d773e7fcf9b5a6ecd70196742a685bccb2c82d7745b",
+    "input.json": "0756115b14446fca44cb7d30857ff29e1acc1478992e0f1431fe21e15a01e6f4",
+    "response.json": "dee77fd04ebd6e27a4448ac1bc367bbe1de29fa23896ce474790c99d6a9ae5cb",
+    "request.json": "a17e291ae3f365f52309e26ff5530020e99a6692b3592f9e1e4a5596203696f3",
+    "generation.json": "086b9a8982607a9440b3108b9aef93fa1017ac853e073a7cc43413d4e5ee012a",
+    "summary.json": "dee9c72e846a6f16995e31ae9e76ccb45b128ee774de09d89515d80cacb296ba",
+    "protocol.json": "835ceb63892dd01740043e3da004605224dc10bc639c153374092bfff7dcc1b4",
+    "supervisor-used.py": "7ff0f4b4f217a250d0a794a1ae731759cd59605261373cfc8329bd9416b9fcc2"
+  }
+}

@@ -39,7 +39,14 @@ def validate_review(answer, rows):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
+    parser.add_argument('--model', choices=[MODEL, 'google/gemini-3.8-flash'], default=MODEL)
     args = parser.parse_args()
+    model = args.model
+    gemini = model == 'google/gemini-3.8-flash'
+    api = 'chat' if gemini else 'responses'
+    provider = 'google-ai-studio' if gemini else 'openai'
+    expected_provider = 'Google AI Studio' if gemini else 'OpenAI'
+
     out = Path(args.output); out.mkdir(parents=True, exist_ok=False); out.chmod(0o700)
     source_path = run.ROOT / 'web/review/translation-lite/corpus.json'
     baseline_path = Path(__file__).with_name('recovery-results-20260924.json')
@@ -49,7 +56,7 @@ def main():
     rows = [{**s, 'french': t['text']} for s, t in zip(source, baseline['segments'])]
     prompt = Path(__file__).with_name('review-prompt.txt').read_text()
     run.save(out / 'input.json', rows)
-    run.save(out / 'protocol.json', {'model': MODEL, 'reasoning': 'medium', 'calls_max': 1,
+    run.save(out / 'protocol.json', {'model': model, 'api': api, 'provider': provider, 'reasoning': 'medium', 'calls_max': 1,
         'retries': 0, 'timeout_seconds': 300, 'review_span_seconds': 940.7,
         'source_sha256': hashlib.sha256(source_path.read_bytes()).hexdigest(),
         'baseline_sha256': hashlib.sha256(baseline_path.read_bytes()).hexdigest(),
@@ -59,21 +66,29 @@ def main():
     tools = json.loads(json.dumps(run.TOOLS))
     tools[0]['parameters'].update(max_uses=2, max_total_results=40)
     tools[1]['parameters'].update(max_uses=2, max_content_tokens=4000)
-    body = {'model': MODEL, 'instructions': prompt,
+    body = {'model': model, 'instructions': prompt,
         'input': [{'type': 'message', 'role': 'user', 'content': [{'type': 'input_text',
                    'text': json.dumps({'segments': rows}, ensure_ascii=False)}]}],
         'reasoning': {'effort': 'medium'}, 'max_output_tokens': 8192, 'store': False,
         'text': {'format': {'type': 'json_schema', 'name': 'translation_review', 'strict': True, 'schema': SCHEMA}},
         'tools': tools, 'tool_choice': 'auto', 'max_tool_calls': 4,
-        'provider': {'only': ['openai'], 'order': ['openai'], 'allow_fallbacks': False,
-                     'require_parameters': True, 'max_price': {'prompt': 1, 'completion': 3}}}
+        'provider': {'only': [provider], 'order': [provider], 'allow_fallbacks': False,
+                     'require_parameters': True, 'max_price': {'prompt': 1, 'completion': 4 if gemini else 3}}}
+    if gemini:
+        body['messages'] = [{'role': 'system', 'content': body.pop('instructions')},
+                            {'role': 'user', 'content': body.pop('input')[0]['content'][0]['text']}]
+        body['max_tokens'] = body.pop('max_output_tokens')
+        body.pop('store')
+        fmt = body.pop('text')['format']
+        body['response_format'] = {'type': 'json_schema', 'json_schema': {
+            'name': fmt['name'], 'strict': fmt['strict'], 'schema': fmt['schema']}}
     run.save(out / 'request.json', body)
     key = Path('/etc/vps-agent-secrets/openrouter.api_key').read_text().strip()
     if not key: raise ValueError('missing_credential')
-    summary = {'valid': False, 'model': MODEL}; start = time.monotonic()
+    summary = {'valid': False, 'model': model}; start = time.monotonic()
     signal.signal(signal.SIGALRM, run.deadline_expired); signal.alarm(300)
     try:
-        req = urllib.request.Request('https://openrouter.ai/api/v1/responses', data=json.dumps(body).encode(),
+        req = urllib.request.Request('https://openrouter.ai/api/v1/' + ('chat/completions' if gemini else 'responses'), data=json.dumps(body).encode(),
                  headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
         opener = urllib.request.build_opener(run.NoRedirect())
         with opener.open(req, timeout=300) as response:
@@ -84,14 +99,14 @@ def main():
         result = json.loads(json.dumps(result).replace(key, '[redacted]'))
         run.save(out / 'response.json', result)
         summary.update({k: result.get(k) for k in ['id', 'model', 'usage', 'status']})
-        if result.get('model') != MODEL: raise ValueError('unexpected_model')
+        if result.get('model') != model: raise ValueError('unexpected_model')
         metadata = run.generation_metadata(opener, key, result.get('id'))
         run.save(out / 'generation.json', metadata)
         summary['generation_provider'] = metadata.get('provider_name')
         summary['generation_model'] = metadata.get('model')
-        if not run.provenance_matches(metadata, result.get('id'), MODEL, 'OpenAI'):
+        if not run.provenance_matches(metadata, result.get('id'), model, expected_provider):
             raise ValueError('unverified_provenance')
-        answer = json.loads(run.final_text(result, 'responses'))
+        answer = json.loads(run.final_text(result, api))
         validate_review(answer, rows)
         run.save(out / 'review.json', answer)
         summary.update(valid=True, issues=len(answer['issues']))

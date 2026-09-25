@@ -252,4 +252,4 @@ web-luna-recover:
 .PHONY: web-luna-review
 web-luna-review:
 	@test -n "$(BENCHMARK_OUTPUT)" || (echo 'BENCHMARK_OUTPUT is required'; exit 1)
-	python3 -B web/review/luna-comparison/review.py --output "$(BENCHMARK_OUTPUT)"
+	python3 -B web/review/luna-comparison/review.py --output "$(BENCHMARK_OUTPUT)" $(if $(BENCHMARK_MODEL),--model "$(BENCHMARK_MODEL)",)

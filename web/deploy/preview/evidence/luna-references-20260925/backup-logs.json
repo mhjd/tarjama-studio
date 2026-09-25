@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-backup-66a6a867-8sgnk",
+      "log": "f99de1cdffe9b19f414c5115ac665d70d934782198c401b9ca6230a8ef1572eb  /storage/backups/pre-response-recovery-dab84b9-20260925T210505Z.dump\nBackup complete; no media modified.\n"
+    },
+    {
+      "pod": "pv-job-backup-7679e530-ncj9q",
+      "log": "2643ed3a12271e58c9dc3215080ddc32dfd615041ae5276903e28a9194759fff  /storage/backups/pre-response-recovery-dab84b9-20260924T225808Z.dump\nBackup complete; no media modified.\n"
+    }
+  ]
+}

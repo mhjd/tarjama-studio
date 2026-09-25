@@ -6,8 +6,9 @@ Il distingue la cible produit, le code candidat et la qualification réelle.
 
 Mise à jour du 25 septembre : les trois outils locaux sont maintenant implémentés
 et testés, avec corpus versionnés et raccordement optionnel au worker. Voir
-[leur contrat et leur couverture](LOCAL_REFERENCE_TOOLS.md). Ils ne sont pas
-activés sur le déploiement existant ; le panneau de remarques reste distinct.
+[leur contrat et leur couverture](LOCAL_REFERENCE_TOOLS.md). Ils n'étaient
+initialement activés sur aucun déploiement ; leur activation du 25 septembre
+est décrite ci-dessous. Le panneau de remarques reste distinct.
 Le propriétaire a ensuite explicitement réautorisé des benchmarks Gemini :
 l'exclusion historique ci-dessous concerne le choix applicatif de ce moment,
 pas les campagnes expérimentales ultérieures. Voir
@@ -21,11 +22,12 @@ DeepSeek pour le traitement texte partagé (correction arabe et traduction).
 Parallel et les trois outils locaux optionnels restent inchangés. Les résultats
 expérimentaux ne garantissent pas une traduction publiable sans relecture.
 
-La configuration est préparée dans le code ; ce changement ne constitue pas un
-déploiement. Le corpus local doit encore être monté dans le worker et configuré
-par `REFERENCE_CORPUS_DIR` pour activer ses outils sur le VPS. Les références et
+Le propriétaire a ensuite demandé le déploiement : Luna medium et le corpus
+local sont activés dans le worker d'atelier. Voir le
+[rapport et les preuves](DEPLOY_LUNA_REFERENCES_20260925.md). Les références et
 URL sont auditées côté serveur ; leur affichage avec les timecodes dans l'UI
-reste à réaliser. Aucun nouvel appel payant n'est nécessaire pour ce choix.
+reste à réaliser. Un diagnostic réel borné a qualifié leur invocation après
+déploiement ; il ne constitue pas une nouvelle campagne qualité.
 
 ## Historique du 24 septembre : Gemini retiré, DeepSeek retenu
 

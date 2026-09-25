@@ -1,5 +1,13 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **Décision et déploiement du 25 septembre 2026 : Luna medium.**
+> Ce choix remplace DeepSeek comme défaut pour correction/traduction. Les trois
+> outils locaux sont implémentés et activés dans le worker avec le corpus
+> `20260925-v2`. Les références restent auditées côté serveur ; le panneau UI
+> avec association aux timecodes n'est pas encore livré. Les mentions antérieures
+> de modèles et d'outils « non implémentés » ci-dessous sont historiques.
+> Voir [le rapport de déploiement](DEPLOY_LUNA_REFERENCES_20260925.md).
+
 > **Décision du 24 septembre 2026 — blocs de texte de 10 minutes.**
 > La correction arabe et la traduction utilisent désormais un maximum cible de
 > 10 minutes par appel, aux frontières des sous-titres, avec les gardes de volume

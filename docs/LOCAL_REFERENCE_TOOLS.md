@@ -1,9 +1,10 @@
 # Outils locaux de références — 25 septembre 2026
 
 Les trois outils sont implémentés en Go, consultables hors réseau et raccordés à
-la boucle OpenRouter. Ils restent désactivés dans le déploiement existant.
-Le travail est sur `web-vps` ; aucune migration ni activation n'est nécessaire
-pour les essais locaux.
+la boucle OpenRouter. Le propriétaire a autorisé leur activation le 25 septembre :
+le worker d'atelier charge désormais le corpus `20260925-v2` depuis son image
+en lecture seule. Voir le [rapport de déploiement](DEPLOY_LUNA_REFERENCES_20260925.md).
+Le travail reste sur `web-vps` ; aucune migration de base n'est nécessaire.
 
 ## Contrats
 
@@ -87,8 +88,12 @@ L'import refuse un dossier existant. `manifest.json` et `provenance.json` tracen
 versions, sommes de contrôle, couverture, licences et sources. Le chargement
 vérifie SHA256 et cardinalités avant de servir la moindre référence.
 
-Pour une future activation autorisée : monter le dossier en lecture seule dans
-le **worker texte** et définir `REFERENCE_CORPUS_DIR` vers ce dossier. Aucun
+La recette active embarque le dossier dans l'image privée du **worker texte**
+et définit `REFERENCE_CORPUS_DIR=/app/references`. La racine du conteneur est
+en lecture seule. `make web-worker-image` prépare un contexte limité aux fichiers
+du corpus, à leur provenance et aux notices ; les archives brutes et les données
+utilisateur sont exclues. Le chargement est vérifié pendant le build puis au
+démarrage. Aucun
 secret supplémentaire, aucun port réseau, aucun accès accordé au composant média.
 Un dossier configuré mais invalide empêche le démarrage du worker ; une absence
 de configuration conserve les capacités actuelles. Le prompt commun décrit les

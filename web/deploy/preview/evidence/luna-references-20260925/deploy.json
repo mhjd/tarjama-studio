@@ -1,0 +1,49 @@
+{
+  "revision": "6b720a240cec4a7a",
+  "services": [
+    "db",
+    "egress",
+    "web",
+    "worker"
+  ],
+  "jobs": [
+    "backup",
+    "migrate",
+    "preview-check",
+    "reference-check"
+  ],
+  "images": {
+    "db": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "egress": "preview.local/atelier/web@sha256:b93f5b42a91637c67a63de67be034ea1652e5ac60e3e7c82fed3d762096314d3",
+    "web": "preview.local/atelier/web@sha256:20ca74eee63361e1bfbc0254a8d7411235dbcc618b88a713044a0c0f5147782b",
+    "worker": "preview.local/atelier/web@sha256:735e53ac9e975438793cef7aa1dbadccb2c75e73d919fd29106802676eec21dd",
+    "backup": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "migrate": "preview.local/atelier/web@sha256:20ca74eee63361e1bfbc0254a8d7411235dbcc618b88a713044a0c0f5147782b",
+    "preview-check": "preview.local/atelier/web@sha256:4dff7cee0fb7d5897043aabae7022e2789c81de22f503f947e509edc9af18ac0",
+    "reference-check": "preview.local/atelier/web@sha256:4dff7cee0fb7d5897043aabae7022e2789c81de22f503f947e509edc9af18ac0"
+  },
+  "volumes": {
+    "database": {
+      "size": "2Gi"
+    },
+    "library": {
+      "size": "14Gi"
+    }
+  },
+  "service_addresses": {
+    "db": "pv-db:5432",
+    "egress": "pv-egress:8092",
+    "web": "web:8080"
+  },
+  "data_deleted": false,
+  "cpu_limits_m": 2250,
+  "memory_limits_mi": 2176,
+  "storage_requested_gi": 16,
+  "services_to_stop": [],
+  "applied": true,
+  "database_rollback": false,
+  "ok": true,
+  "accepted": "deploy",
+  "url": "https://atelier.preview.runagen.com",
+  "next": "Consulter status ; migrations et tâches sont lancées explicitement avec run."
+}

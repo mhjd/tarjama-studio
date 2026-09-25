@@ -1,0 +1,3 @@
+{"org.opencontainers.image.revision":"6c6a9d6e67859f77aba85ae18e43ee8967a797e0","org.opencontainers.image.source":"https://github.com/mhjd/tarjama-studio"} sha256:8228c05d575b7059990ea02180fb6119e574238c60d02e3fe9b0b0450f08d482
+{"org.opencontainers.image.revision":"6c6a9d6e67859f77aba85ae18e43ee8967a797e0","org.opencontainers.image.source":"https://github.com/mhjd/tarjama-studio"} sha256:e4eea8addbb0404eca74d2e4f5f1f1b09d941a746f8c3f9df4d7ce6e96de86b4
+{"org.opencontainers.image.revision":"6c6a9d6e67859f77aba85ae18e43ee8967a797e0","org.opencontainers.image.source":"https://github.com/mhjd/tarjama-studio"} sha256:222f3a348b45f252702e4b1390190ed55b43a2b115ef34515937b39615393e49

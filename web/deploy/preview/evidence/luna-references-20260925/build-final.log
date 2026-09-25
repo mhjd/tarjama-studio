@@ -1,0 +1,202 @@
+python3 -B web/scripts/sync_translation_prompt.py --check
+python3 -B -m unittest discover -s web/scripts -p test_translation_prompt.py -v
+test_all_business_lines_are_preserved (test_translation_prompt.DesktopTranslationParity.test_all_business_lines_are_preserved) ... ok
+test_changed_format_requires_explicit_review (test_translation_prompt.DesktopTranslationParity.test_changed_format_requires_explicit_review) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.001s
+
+OK
+docker build --platform linux/amd64 --label org.opencontainers.image.revision=$(git rev-parse HEAD) -f web/deploy/Dockerfile --target api -t tarjama-web:review web
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 4.81kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/golang:1.27.1-bookworm
+#2 DONE 0.6s
+
+#3 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#3 DONE 0.6s
+
+#4 [internal] load metadata for docker.io/library/node:22.23.2-bookworm-slim
+#4 DONE 0.6s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 575B done
+#5 DONE 0.0s
+
+#6 [backend 1/6] FROM docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+#6 resolve docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 0.0s done
+#6 DONE 0.0s
+
+#7 [api 1/4] FROM docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
+#7 resolve docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 0.0s done
+#7 DONE 0.0s
+
+#8 [frontend 1/6] FROM docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9
+#8 resolve docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9 0.0s done
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 8.52kB 0.1s done
+#9 DONE 0.1s
+
+#10 [backend 3/6] COPY backend/go.mod backend/go.sum ./
+#10 CACHED
+
+#11 [backend 2/6] WORKDIR /src/backend
+#11 CACHED
+
+#12 [backend 4/6] RUN go mod download
+#12 CACHED
+
+#13 [backend 5/6] COPY backend/ ./
+#13 DONE 0.0s
+
+#14 [backend 6/6] RUN CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama
+#14 DONE 18.9s
+
+#15 [frontend 4/6] RUN npm ci
+#15 CACHED
+
+#16 [frontend 5/6] COPY frontend/ ./
+#16 CACHED
+
+#17 [frontend 6/6] RUN npm run build
+#17 CACHED
+
+#18 [api 2/4] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir /storage && chown 10001:10001 /storage
+#18 CACHED
+
+#19 [api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama
+#19 CACHED
+
+#20 [frontend 2/6] WORKDIR /src/frontend
+#20 CACHED
+
+#21 [frontend 3/6] COPY frontend/package*.json ./
+#21 CACHED
+
+#22 [api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend
+#22 CACHED
+
+#23 exporting to image
+#23 exporting layers done
+#23 exporting manifest sha256:5b7e33392c187b8bf613bb2c795b85f23f3db60030eb59e927b173bd73fdb05c 0.0s done
+#23 exporting config sha256:a4134fa257aa006119401fdbc43c9637526f97bfd3b7d83da4c11b34cc8f77c7 0.0s done
+#23 exporting attestation manifest sha256:5a260d77053c019022231f24305b45dfe093342b5939a6b4ccfa2ab35a49b6ef 0.0s done
+#23 exporting manifest list sha256:94ae903a55bdfe643b3ec7521a2ca4c86ebb493f0de900922a6cbbc063a6e7d7 done
+#23 naming to docker.io/library/tarjama-web:review done
+#23 unpacking to docker.io/library/tarjama-web:review 0.0s done
+#23 DONE 0.1s
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 4.81kB done
+#1 DONE 0.0s
+
+#2 [context reference-corpus] load .dockerignore
+#2 transferring reference-corpus: 2B done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/golang:1.27.1-bookworm
+#3 ...
+
+#4 [internal] load metadata for docker.io/library/node:22.23.2-bookworm-slim
+#4 DONE 0.2s
+
+#5 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#5 DONE 0.2s
+
+#3 [internal] load metadata for docker.io/library/golang:1.27.1-bookworm
+#3 DONE 0.2s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 575B done
+#6 DONE 0.0s
+
+#7 [api 1/4] FROM docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
+#7 resolve docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 0.0s done
+#7 DONE 0.0s
+
+#8 [backend 1/6] FROM docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+#8 resolve docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 0.0s done
+#8 DONE 0.0s
+
+#9 [frontend 1/6] FROM docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9
+#9 resolve docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9 0.0s done
+#9 DONE 0.0s
+
+#10 [internal] load build context
+#10 transferring context: 5.09kB 0.1s done
+#10 DONE 0.1s
+
+#11 [context reference-corpus] load from client
+#11 ...
+
+#12 [backend 5/6] COPY backend/ ./
+#12 CACHED
+
+#13 [backend 2/6] WORKDIR /src/backend
+#13 CACHED
+
+#14 [backend 3/6] COPY backend/go.mod backend/go.sum ./
+#14 CACHED
+
+#15 [backend 4/6] RUN go mod download
+#15 CACHED
+
+#16 [backend 6/6] RUN CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama
+#16 CACHED
+
+#11 [context reference-corpus] load from client
+#11 transferring reference-corpus: 25.17MB 0.3s done
+#11 DONE 0.3s
+
+#17 [reference-build 1/1] RUN CGO_ENABLED=0 go build -trimpath -o /references ./cmd/references
+#17 DONE 0.7s
+
+#18 [worker 1/3] COPY --from=reference-build /references /usr/local/bin/references
+#18 CACHED
+
+#19 [worker 2/3] COPY --from=reference-corpus / /app/references/
+#19 CACHED
+
+#20 [api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama
+#20 CACHED
+
+#21 [frontend 6/6] RUN npm run build
+#21 CACHED
+
+#22 [frontend 2/6] WORKDIR /src/frontend
+#22 CACHED
+
+#23 [frontend 3/6] COPY frontend/package*.json ./
+#23 CACHED
+
+#24 [frontend 4/6] RUN npm ci
+#24 CACHED
+
+#25 [api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend
+#25 CACHED
+
+#26 [api 2/4] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir /storage && chown 10001:10001 /storage
+#26 CACHED
+
+#27 [frontend 5/6] COPY frontend/ ./
+#27 CACHED
+
+#28 [worker 3/3] RUN /usr/local/bin/references --corpus /app/references --tools >/dev/null
+#28 CACHED
+
+#29 exporting to image
+#29 exporting layers done
+#29 exporting manifest sha256:75b92bfc5b378914881d8980968f2d114d91ba2f0e3025e9a3eb53fc6248bd6d done
+#29 exporting config sha256:768af20d570c5cbdc0b97de1f1d9f76be9b76782d3edf56dfd3e3a44fa0513c2 done
+#29 exporting attestation manifest sha256:d98dede2413e0e6aa123defc67a86b4acd2b92cc9c80d6d1da67404a98e86997 done
+#29 exporting manifest list sha256:ecb45297e6efe052a5ede1f759ae5de7e7671f1b829d143469f0660577cae61f done
+#29 naming to docker.io/library/tarjama-worker:review done
+#29 unpacking to docker.io/library/tarjama-worker:review done
+#29 DONE 0.1s

@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-reference-check-78ee2673-9vrcr",
+      "log": "=== RUN   TestReferenceDeployment\n    preview_live_test.go:33: Provider openrouter.ai HTTP 200\n    preview_live_test.go:33: Provider openrouter.ai HTTP 200\n    reference_deployment_test.go:48: model=openai/gpt-6-luna reasoning=medium requests=2 local_calls=3 reported_cost_usd=0.00041273\n    reference_deployment_test.go:73: tool=quran_fr corpus=20260925-v2 collection=quran reference=112:1 source=https://tanzil.net/#trans/fr.hamidullah/112:1\n    reference_deployment_test.go:73: tool=sahih_ar corpus=20260925-v2 collection=bukhari reference=1 source=https://sunnah.com/bukhari:1\n    reference_deployment_test.go:73: tool=hadith_ar corpus=20260925-v2 collection=riyadussalihin reference=1 source=https://sunnah.com/riyadussalihin:1\n--- PASS: TestReferenceDeployment (8.64s)\nPASS\n"
+    }
+  ]
+}

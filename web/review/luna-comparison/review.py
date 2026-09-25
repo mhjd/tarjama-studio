@@ -39,6 +39,8 @@ def validate_review(answer, rows):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
+    parser.add_argument('--reasoning', choices=['medium', 'high'], default='medium')
+    parser.add_argument('--prompt-version', choices=['v1', 'v2'], default='v1')
     parser.add_argument('--no-output-limit', action='store_true', help='Omit caller-imposed output token limit; provider/model defaults apply')
     parser.add_argument('--model', choices=[MODEL, 'google/gemini-3.8-flash'], default=MODEL)
     args = parser.parse_args()
@@ -55,9 +57,11 @@ def main():
     baseline = json.loads(baseline_path.read_text())['translation']
     run.validator.validate(baseline, source)
     rows = [{**s, 'french': t['text']} for s, t in zip(source, baseline['segments'])]
-    prompt = Path(__file__).with_name('review-prompt.txt').read_text()
+    prompt = Path(__file__).with_name('review-prompt.txt' if args.prompt_version == 'v1' else 'review-prompt-v2.txt').read_text()
+    if args.prompt_version == 'v2':
+        prompt += '\nSchéma exact : ' + json.dumps(SCHEMA, ensure_ascii=False, sort_keys=True)
     run.save(out / 'input.json', rows)
-    run.save(out / 'protocol.json', {'model': model, 'api': api, 'provider': provider, 'reasoning': 'medium', 'calls_max': 1,
+    run.save(out / 'protocol.json', {'model': model, 'api': api, 'provider': provider, 'reasoning': args.reasoning, 'prompt_version': args.prompt_version, 'calls_max': 1,
         'retries': 0, 'timeout_seconds': 300, 'review_span_seconds': 940.7,
         'caller_output_token_limit': None if args.no_output_limit else 8192,
         'source_sha256': hashlib.sha256(source_path.read_bytes()).hexdigest(),
@@ -71,7 +75,7 @@ def main():
     body = {'model': model, 'instructions': prompt,
         'input': [{'type': 'message', 'role': 'user', 'content': [{'type': 'input_text',
                    'text': json.dumps({'segments': rows}, ensure_ascii=False)}]}],
-        'reasoning': {'effort': 'medium'}, 'max_output_tokens': 8192, 'store': False,
+        'reasoning': {'effort': args.reasoning}, 'max_output_tokens': 8192, 'store': False,
         'text': {'format': {'type': 'json_schema', 'name': 'translation_review', 'strict': True, 'schema': SCHEMA}},
         'tools': tools, 'tool_choice': 'auto', 'max_tool_calls': 4,
         'provider': {'only': [provider], 'order': [provider], 'allow_fallbacks': False,

@@ -1,0 +1,309 @@
+{
+  "runs": [
+    {
+      "directory": "data/model_outputs/gemini-review-audit-high-v1-20260925-01",
+      "summary": {
+        "valid": false,
+        "model": "google/gemini-3.8-flash",
+        "http_status": 200,
+        "id": "gen-1790329285-8yMN2qlJQC0DUdIBc4Ap",
+        "usage": {
+          "prompt_tokens": 25761,
+          "completion_tokens": 37644,
+          "total_tokens": 63405,
+          "cost": 0.16048575,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 0,
+            "audio_tokens": 0,
+            "video_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 36585,
+            "image_tokens": 0,
+            "audio_tokens": 0
+          },
+          "cost_details": {
+            "upstream_inference_cost": 0.16048575,
+            "upstream_inference_prompt_cost": 0.01932075,
+            "upstream_inference_completions_cost": 0.141165
+          }
+        },
+        "status": null,
+        "generation_provider": "Google AI Studio",
+        "generation_model": "google/gemini-3.8-flash-20260902",
+        "error": "JSONDecodeError",
+        "elapsed_seconds": 151.744
+      },
+      "protocol": {
+        "model": "google/gemini-3.8-flash",
+        "api": "chat",
+        "provider": "google-ai-studio",
+        "reasoning": "high",
+        "prompt_version": "v1",
+        "calls_max": 1,
+        "retries": 0,
+        "timeout_seconds": 300,
+        "review_span_seconds": 940.7,
+        "caller_output_token_limit": null,
+        "source_sha256": "eac1e2d869253e9012e9f6a92b5335d46d97288488f2b11c399cc31ed7ae5744",
+        "baseline_sha256": "5d3932f18773892e5f164f07bc146daa8581447678a18bb39b4ba5010d6c58b8",
+        "prompt_sha256": "eb6bebcec47b87e8c073fd6968575292985bd959168183f9c0c13f48425cabda",
+        "known_errors_supplied": false
+      },
+      "generation": {
+        "id": "gen-1790329285-8yMN2qlJQC0DUdIBc4Ap",
+        "model": "google/gemini-3.8-flash-20260902",
+        "provider_name": "Google AI Studio",
+        "upstream_id": null,
+        "total_cost": 0,
+        "native_tokens_prompt": 0,
+        "native_tokens_completion": 0,
+        "provider_responses": []
+      },
+      "issues": [
+        {
+          "id": "115",
+          "before": "ceux qui nient Dieu,",
+          "after": "ceux qui démentent Dieu,",
+          "justification": "« تكذيب لله » signifie « démentir Dieu » (rejeter Sa parole ou l'accuser de mensonge) et non « nier Dieu » (qui traduirait l'athéisme). Les courants hérétiques mentionnés ici restent musulmans et croient en Dieu, comme l'indique la suite du propos.",
+          "confidence": 0.95
+        },
+        {
+          "id": "116",
+          "before": "ou nient Son Messager, que Dieu le bénisse et le salue,",
+          "after": "ou démentent Son Messager, que Dieu le bénisse et le salue,",
+          "justification": "Dans la continuité du segment précédent, « تكذيب لرسوله » signifie « démentir Son Messager » et non « nier Son Messager ».",
+          "confidence": 0.95
+        },
+        {
+          "id": "253",
+          "before": "et du flanc : « au sujet de ce qu’ils ont négligé envers Dieu » ;",
+          "after": "et du flanc : « envers Dieu » ;",
+          "justification": "Ajout non justifié issu d'une complétion de mémoire de la citation coranique (Coran 39:56). L'arabe ne cite que « ومثل الجنب: في جنب الله » ; la formule « au sujet de ce qu'ils ont négligé » (qui traduit « على ما فرطت ») est absente du texte source.",
+          "confidence": 0.99
+        },
+        {
+          "id": "288",
+          "before": "selon ce qui leur ressemble et s’en rapproche. »",
+          "after": "selon ce qui leur ressemble et s’en rapproche,",
+          "justification": "Ponctuation erronée coupant la phrase en plein milieu par un point et un guillemet fermant prématuré, alors que la proposition se poursuit dans le sous-titre suivant.",
+          "confidence": 0.98
+        },
+        {
+          "id": "289",
+          "before": "à quelque chose de raisonnable,",
+          "after": "parmi ce qui est rationnel,",
+          "justification": "Erreur de syntaxe et de sens. « مما هو معقول » signifie « parmi ce qui est rationnel/intelligible » et complète la proposition débutée au segment 287 (« nous les interprétons selon ce qui leur ressemble et s'en rapproche... »). La tournure « à quelque chose de raisonnable, » est un fragment agrammatical.",
+          "confidence": 0.98
+        },
+        {
+          "id": "347",
+          "before": "que ces paroles sont vraies : « Le Tout Miséricordieux S’est établi sur le Trône. »",
+          "after": "que ces paroles sont vraies : « Le Tout Miséricordieux sur le Trône",
+          "justification": "Décalage de contenu entre sous-titres. Le segment 347 s'arrête à « الرحمن على العرش ». Le verbe « S'est établi » (استوى) est prononcé dans le segment 348 et a été anticipé à tort ici avec une fermeture prématurée de la citation.",
+          "confidence": 0.98
+        },
+        {
+          "id": "348",
+          "before": "Nous y croyons.",
+          "after": "s’est établi ». Nous y croyons.",
+          "justification": "Omission consécutive au décalage avec le segment précédent : le verbe « استوى » (s'est établi), prononcé au début du segment 348 en arabe, avait disparu de la traduction française.",
+          "confidence": 0.98
+        },
+        {
+          "id": "372",
+          "before": "ils vous répondent : « C’est nous, les sunnites et la communauté. »",
+          "after": "ils vous répondent : « C’est nous le groupe sauvé, les gens de la Sunna et de la communauté. »",
+          "justification": "Omission de « الفرقة الناجية » (« le groupe sauvé ») et contresens sur l'expression théologique consacrée « أهل السنة والجماعة », traduite à tort par « les sunnites et la communauté » (comme s'il s'agissait de deux entités distinctes coordonnées) au lieu de « les gens de la Sunna et de la communauté ».",
+          "confidence": 0.99
+        }
+      ],
+      "diagnostic_only": true,
+      "known_findings_detected": [
+        "253",
+        "347-348"
+      ],
+      "known_findings_missed": [
+        "365",
+        "151 (reserve)",
+        "144 (reserve)"
+      ],
+      "sha256": {
+        "prompt-used.txt": "eb6bebcec47b87e8c073fd6968575292985bd959168183f9c0c13f48425cabda",
+        "review-used.py": "ef06942a6e8e5f97321997bf5c20e40c462b41c47842d6c63a09a5f22d6555d2",
+        "hashes.json": "da7b47d724bf529a6b66eadff046ef77a4608ec8f01b2d1cb53d015192b48daf",
+        "input.json": "0756115b14446fca44cb7d30857ff29e1acc1478992e0f1431fe21e15a01e6f4",
+        "response.json": "3701cf7e610d093b591aa5c83576d560c70148dd0da41e43d07a10dbc22e9b33",
+        "request.json": "850250e90ca95f3e4362a7764e07e0584de4c6315fce67352b05e9ed98b67126",
+        "generation.json": "8a1e96c55ad660a9c2c53821d8d7ada1de30a1a29047a6657f9abc382eea5939",
+        "summary.json": "e7f85d018b40f4524da2ca58022d71d36b7cd84383cebe7deb2783b1d17b6940",
+        "protocol.json": "1a9f114c09cce21eae41ca2faa9ea5fec64f8b3f23c1e3a11439e2b3dce40e42"
+      }
+    },
+    {
+      "directory": "data/model_outputs/gemini-review-audit-high-v2-20260925-01",
+      "summary": {
+        "valid": true,
+        "model": "google/gemini-3.8-flash",
+        "http_status": 200,
+        "id": "gen-1790329437-be6LsxIWo1zJcrJwZZhA",
+        "usage": {
+          "prompt_tokens": 26043,
+          "completion_tokens": 31358,
+          "total_tokens": 57401,
+          "cost": 0.13712475,
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "cache_write_tokens": 0,
+            "audio_tokens": 0,
+            "video_tokens": 0
+          },
+          "completion_tokens_details": {
+            "reasoning_tokens": 30570,
+            "image_tokens": 0,
+            "audio_tokens": 0
+          },
+          "cost_details": {
+            "upstream_inference_cost": 0.13712475,
+            "upstream_inference_prompt_cost": 0.01953225,
+            "upstream_inference_completions_cost": 0.1175925
+          }
+        },
+        "status": null,
+        "generation_provider": "Google AI Studio",
+        "generation_model": "google/gemini-3.8-flash-20260902",
+        "issues": 9,
+        "elapsed_seconds": 137.386
+      },
+      "protocol": {
+        "model": "google/gemini-3.8-flash",
+        "api": "chat",
+        "provider": "google-ai-studio",
+        "reasoning": "high",
+        "prompt_version": "v2",
+        "calls_max": 1,
+        "retries": 0,
+        "timeout_seconds": 300,
+        "review_span_seconds": 940.7,
+        "caller_output_token_limit": null,
+        "source_sha256": "eac1e2d869253e9012e9f6a92b5335d46d97288488f2b11c399cc31ed7ae5744",
+        "baseline_sha256": "5d3932f18773892e5f164f07bc146daa8581447678a18bb39b4ba5010d6c58b8",
+        "prompt_sha256": "95c1410bf82dc729d5625f109580eb5dbae87c3910d263cda11345d094ae21fe",
+        "known_errors_supplied": false
+      },
+      "generation": {
+        "id": "gen-1790329437-be6LsxIWo1zJcrJwZZhA",
+        "model": "google/gemini-3.8-flash-20260902",
+        "provider_name": "Google AI Studio",
+        "upstream_id": null,
+        "total_cost": 0,
+        "native_tokens_prompt": 0,
+        "native_tokens_completion": 0,
+        "provider_responses": []
+      },
+      "issues": [
+        {
+          "after": "au point que les gens en viennent aux mains parce que celui-ci vient d’Al-Azhar",
+          "before": "au point que les gens se disputeraient pour savoir si celui-ci vient d’Al-Azhar",
+          "confidence": "certain",
+          "explanation": "« يتضارب » signifie s'affronter ou en venir aux mains, et « على أن » introduit le motif (« du fait que / parce que ») et non une interrogation indirecte (« pour savoir si »).",
+          "id": "56"
+        },
+        {
+          "after": "et celui-là de la Zitouna.",
+          "before": "ou celui-là de la Zitouna.",
+          "confidence": "certain",
+          "explanation": "La conjonction arabe est « و » (et), coordonnant les deux appartenances en opposition, et non la disjonction « ou ».",
+          "id": "57"
+        },
+        {
+          "after": "en disant : « Comment nie-t-Il toute ressemblance",
+          "before": "Quelqu’un aurait dit : « Comment nie-t-Il toute ressemblance",
+          "confidence": "certain",
+          "explanation": "« يقول » est en position de hal dépendant de « لم نسمع أحداً [...] يقول » (nous n'avons entendu personne dire). Le traduire par une proposition indépendante avec « Quelqu’un aurait dit » brise la négation globale.",
+          "id": "154"
+        },
+        {
+          "after": "Ali ibn Ismaïl al-Achari,",
+          "before": "« Ali ibn Ismaïl al-Achari,",
+          "confidence": "certain",
+          "explanation": "Suppression du guillemet ouvrant erroné : la citation directe des propos ne commence qu'au segment 286.",
+          "id": "282"
+        },
+        {
+          "after": "selon ce qui leur ressemble et s’en rapproche,",
+          "before": "selon ce qui leur ressemble et s’en rapproche. »",
+          "confidence": "certain",
+          "explanation": "La proposition et la citation se poursuivent au segment 289 (« مما هو معقول ») ; le point final et le guillemet fermant étaient prématurés et cassaient la phrase.",
+          "id": "288"
+        },
+        {
+          "after": "parmi ce qui est intelligible,",
+          "before": "à quelque chose de raisonnable,",
+          "confidence": "certain",
+          "explanation": "« مما هو معقول » signifie « parmi ce qui est intelligible / rationnel », en apposition à ce qui précède, et non « à quelque chose de raisonnable » qui provoquait une rupture syntaxique.",
+          "id": "289"
+        },
+        {
+          "after": "car les Compagnons l’ont fait. »",
+          "before": "car les Compagnons l’ont fait.",
+          "confidence": "certain",
+          "explanation": "Fermeture du guillemet de la citation commencée au segment 286.",
+          "id": "290"
+        },
+        {
+          "after": "que ces paroles sont vraies : « Le Tout Miséricordieux sur le Trône",
+          "before": "que ces paroles sont vraies : « Le Tout Miséricordieux S’est établi sur le Trône. »",
+          "confidence": "certain",
+          "explanation": "Le segment arabe s'arrête à « الرحمن على العرش ». Le verbe « استوى » n'est prononcé qu'au segment suivant ; la citation a été complétée de mémoire.",
+          "id": "347"
+        },
+        {
+          "after": "S’est établi. » Nous y croyons.",
+          "before": "Nous y croyons.",
+          "confidence": "certain",
+          "explanation": "Rétablissement de la traduction de « استوى » (« S'est établi. » »), prononcé au début de ce segment et omis dans la traduction reçue.",
+          "id": "348"
+        }
+      ],
+      "diagnostic_only": false,
+      "known_findings_detected": [
+        "347-348"
+      ],
+      "known_findings_missed": [
+        "365",
+        "253",
+        "151 (reserve)",
+        "144 (reserve)"
+      ],
+      "sha256": {
+        "prompt-used.txt": "95c1410bf82dc729d5625f109580eb5dbae87c3910d263cda11345d094ae21fe",
+        "supervisor-final-status.json": "b32ef7efbb8c64001daf8342a3dc452e5cb32fa7ea66e810223a4c7265dd87b1",
+        "review-used.py": "ef06942a6e8e5f97321997bf5c20e40c462b41c47842d6c63a09a5f22d6555d2",
+        "candidate-reviewed-not-applied.json": "ec51370b1d77c1f424778fbd7d56b8ec0c56c8ed93003016b6b0a8df3aef283d",
+        "supervisor-calls-used.py": "e0a1775de3ba5f1726fc31467233f396946554a35f74102c1ed11ba16f04ba7c",
+        "hashes.json": "40f2c26e4ccaf5711298494ab492daaaa355af06e8e22ba84546c8f00880cb28",
+        "input.json": "0756115b14446fca44cb7d30857ff29e1acc1478992e0f1431fe21e15a01e6f4",
+        "response.json": "d511e1edca3a06a75cb15af00d06d80859bf27316b633b897df286e98b21486b",
+        "request.json": "b539691c52912d5385cd23bbda402ed21b3d5e7c01c8a7806f84735a2519a671",
+        "generation.json": "6deeebf4a90ae26e454c8eaf051a9904bf2a8e589f6c689d28eb8c7ccc144a77",
+        "summary.json": "4210e2b50012bd1578791c0b90671b01a5499f2300828dc84aae09664f6dabfe",
+        "review.json": "2e8014e25bf330131d2e9a7e6f358a379098272111fdba4570520bbe6d7379bb",
+        "protocol.json": "da53a4925bfc7219e68f6ba646d6fb61d5b3bd2c7dca1b6d02c02d698fb33361",
+        "supervisor-used.py": "b9eab5b5989afdd571700616e2cf55d04ba44414e8285b56ca6a68a4a14bd630"
+      }
+    }
+  ],
+  "audit_cost_usd": "0.29761050",
+  "luna_plus_v2_review_attempt_usd": "0.145269645",
+  "extrapolated_luna_plus_v2_review_attempt_usd_per_hour": "0.5559378356542999893696183693",
+  "all_inputs_identical": true,
+  "request_differences_verified": {
+    "medium_to_A": "reasoning.effort only",
+    "A_to_B": "system prompt only"
+  },
+  "no_output_limit_sent": true,
+  "no_production_changes": true,
+  "review_limitations": "One observation per setting; known development corpus, no independent human judge. Not proof of full error correction."
+}

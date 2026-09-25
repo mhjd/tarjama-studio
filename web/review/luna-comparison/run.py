@@ -19,7 +19,7 @@ import urllib.parse
 
 ROOT = Path(__file__).resolve().parents[3]
 MODELS = ['openai/gpt-6-luna', 'openai/gpt-5.6-luna', 'deepseek/deepseek-v4.1-flash']
-SUPPORTED_MODELS = MODELS + ['z-ai/glm-5.3-flash']
+SUPPORTED_MODELS = MODELS + ['z-ai/glm-5.3-flash', 'google/gemini-3.8-flash']
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 MAX_BYTES = 4 * 1024 * 1024
 SCHEMA = {'type': 'object', 'additionalProperties': False, 'properties': {
@@ -68,7 +68,7 @@ def validate_answer(answer, source, continuity=False):
     validator.validate({'segments': answer['segments']}, source)
 
 
-def request_body(model, prompt, source, capability=False, context_source=(), api='chat', reasoning='none', continuity=False, previous_summary='', provider=None, expected_provider=None, json_object=False):
+def request_body(model, prompt, source, capability=False, context_source=(), api='chat', reasoning='none', continuity=False, previous_summary='', provider=None, expected_provider=None, json_object=False, max_completion_price=3):
 
     instruction = prompt + '\nRetourne uniquement du JSON brut, sans balises Markdown ni texte autour, conforme à ce schéma : ' + json.dumps(SCHEMA, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
     body = {'model': model, 'messages': [{'role': 'system', 'content': instruction},
@@ -79,7 +79,7 @@ def request_body(model, prompt, source, capability=False, context_source=(), api
         'reasoning': {'effort': reasoning},
         'response_format': {'type': 'json_schema', 'json_schema': {'name': 'translation', 'strict': True, 'schema': SCHEMA}},
         'provider': {'require_parameters': True, 'allow_fallbacks': False,
-                     'max_price': {'prompt': 1, 'completion': 3}}}
+                     'max_price': {'prompt': 1, 'completion': max_completion_price}}}
     if provider:
         body['provider'].update({'only': [provider], 'order': [provider]})
     if continuity:
@@ -180,10 +180,10 @@ def generation_metadata(opener, key, generation_id):
     return {'error': 'generation_unavailable'}
 
 
-def run_call(out, model, case, prompt, source, key, capability=False, context_source=(), api='chat', reasoning='none', timeout_seconds=300, continuity=False, previous_summary='', provider=None, expected_provider=None, json_object=False):
+def run_call(out, model, case, prompt, source, key, capability=False, context_source=(), api='chat', reasoning='none', timeout_seconds=300, continuity=False, previous_summary='', provider=None, expected_provider=None, json_object=False, max_completion_price=3):
     folder = out / (case + '-' + model.split('/')[1]); folder.mkdir(mode=0o700)
     save(folder / 'input.json', source)
-    body = request_body(model, prompt, source, capability, context_source, api, reasoning, continuity, previous_summary, provider, expected_provider, json_object)
+    body = request_body(model, prompt, source, capability, context_source, api, reasoning, continuity, previous_summary, provider, expected_provider, json_object, max_completion_price)
     save(folder / 'request.json', body)
     start = time.monotonic()
     summary = {'model': model, 'case': case, 'valid': False, 'reasoning_requested': reasoning, 'api': api, 'timeout_seconds': timeout_seconds}
@@ -253,6 +253,7 @@ def main():
     parser.add_argument('--split-corpus', action='store_true', help='12 comparative calls: four equal parts, two context segments on each side')
     parser.add_argument('--model', choices=SUPPORTED_MODELS, help='Only test this model')
     parser.add_argument('--chunk-minutes', type=int, choices=range(1, 21), help='Time-based corpus blocks, plus web check and repeated challenges')
+    parser.add_argument('--max-completion-price', type=float, default=3, help='USD per million output tokens, between 0 and 10; default 3')
     parser.add_argument('--json-object', action='store_true', help='JSON mode without provider-enforced schema; local validator stays strict')
     parser.add_argument('--provider', help='Pin a published provider endpoint; reject mismatched response provider')
     parser.add_argument('--continuity', action='store_true', help='Sequential timed corpus with cumulative summary and five preceding bilingual lines')
@@ -264,6 +265,8 @@ def main():
                                         [f'corpus-timed-{i}' for i in range(1, 17)])
     args = parser.parse_args()
     target_models = [args.model] if args.model else MODELS
+    if not 0 < args.max_completion_price <= 10:
+        parser.error('Completion price limit must be positive and at most 10 USD/M')
     if args.json_object and args.api != 'chat':
         parser.error('JSON object mode is only implemented for Chat')
     if args.provider and not args.model:
@@ -305,7 +308,7 @@ def main():
         f.write(Path(__file__).read_text())
     save(out / 'protocol.json', {'models': target_models, 'max_http_calls': (len(timed) if args.continuity else 1 if args.case else len(timed)+3 if args.chunk_minutes else 4) * len(target_models), 'retries': 0,
         'reasoning': args.reasoning, 'api': args.api, 'case': args.case,
-        'json_object': args.json_object, 'provider_fallbacks': False, 'provider_only': args.provider, 'expected_provider': expected_provider, 'max_price_per_million_usd': {'prompt': 1, 'completion': 3},
+        'json_object': args.json_object, 'provider_fallbacks': False, 'provider_only': args.provider, 'expected_provider': expected_provider, 'max_price_per_million_usd': {'prompt': 1, 'completion': args.max_completion_price},
         'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(), 'prompt': prompt,
         'parallel_tools': TOOLS, 'timeout_seconds': args.timeout_seconds,
         'cost_stop_between_rounds_usd': 2, 'comparative_calls_concurrency': len(target_models), 'split_corpus': args.split_corpus,
@@ -356,7 +359,7 @@ def main():
         order = target_models[rotation:] + target_models[:rotation]
         with ProcessPoolExecutor(max_workers=len(target_models)) as pool:
             futures = [pool.submit(run_call, out, model, case, prompt if fixture else capability_prompt,
-                        source, key, not fixture, context_source, args.api, args.reasoning, args.timeout_seconds, args.continuity, previous_summary, args.provider, expected_provider, args.json_object) for model in order]
+                        source, key, not fixture, context_source, args.api, args.reasoning, args.timeout_seconds, args.continuity, previous_summary, args.provider, expected_provider, args.json_object, args.max_completion_price) for model in order]
             summaries.extend(f.result() for f in futures)
         if args.continuity:
             if not summaries[-1]['valid']:

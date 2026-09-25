@@ -14,6 +14,15 @@ class Response(io.BytesIO):
 
 
 class ComparisonEvidenceTests(unittest.TestCase):
+    def test_explicit_gemini_price_limit_preserves_defaults(self):
+        body = run.request_body('google/gemini-3.8-flash', 'Translate', [],
+                                reasoning='high', provider='google-ai-studio', max_completion_price=4)
+        self.assertEqual(body['provider']['max_price'], {'prompt': 1, 'completion': 4})
+        self.assertEqual(body['provider']['only'], ['google-ai-studio'])
+        default = run.request_body('z-ai/glm-5.3-flash', 'Translate', [])
+        self.assertEqual(default['provider']['max_price']['completion'], 3)
+        self.assertNotIn('google/gemini-3.8-flash', run.MODELS)
+
     def test_generation_provenance_and_json_mode(self):
         meta = {'id': 'gen-1', 'model': 'z-ai/glm-5.3-flash-20260826', 'provider_name': 'Z.AI'}
         self.assertTrue(run.provenance_matches(meta, 'gen-1', 'z-ai/glm-5.3-flash', 'Z.AI'))

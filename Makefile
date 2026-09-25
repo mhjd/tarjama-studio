@@ -155,7 +155,9 @@ web-worker-image: web-prompts-check
 	@set -eu; mkdir -p web/.cache; corpus_context=$$(mktemp -d web/.cache/reference-image.XXXXXX); \
 	trap 'rm -rf "$$corpus_context"' EXIT; \
 	cp "$(REFERENCE_CORPUS)/manifest.json" "$(REFERENCE_CORPUS)/entries.jsonl" "$(REFERENCE_CORPUS)/NOTICE.txt" "$(REFERENCE_CORPUS)/provenance.json" "$$corpus_context/"; \
+	mkdir "$$corpus_context/originals"; cp "$(REFERENCE_CORPUS)/originals/HADITH_LICENSE" "$$corpus_context/originals/"; \
 	chmod 755 "$$corpus_context"; chmod 444 "$$corpus_context"/*; \
+	chmod 755 "$$corpus_context/originals"; chmod 444 "$$corpus_context/originals/HADITH_LICENSE"; \
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) \
 	  --build-context reference-corpus="$$corpus_context" -f web/deploy/Dockerfile --target "$(WORKER_IMAGE_TARGET)" -t "$(WORKER_IMAGE_TAG)" web
 

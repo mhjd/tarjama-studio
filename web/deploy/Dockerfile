@@ -22,7 +22,7 @@ ENV FRONTEND_DIR=/app/frontend STORAGE_DIR=/storage
 ENTRYPOINT ["/usr/local/bin/tarjama"]
 CMD ["api"]
 
-# The named context contains only the four reviewed corpus files, no raw archives.
+# The named context contains reviewed corpus files and notices, no raw archives.
 # Only the worker image carries references; the web API and media images do not.
 FROM backend AS reference-build
 RUN CGO_ENABLED=0 go build -trimpath -o /references ./cmd/references

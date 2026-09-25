@@ -206,3 +206,8 @@ La même relecture aveugle accepte `BENCHMARK_MODEL=google/gemini-3.8-flash`
 (Google AI Studio imposé, Chat Completions, medium, schéma et entrée inchangés,
 8192 tokens sortie maximum). Voir le [test de Gemini réviseur](../../../docs/GEMINI_SECOND_PASS_20260925.md).
 Ce réglage reste opt-in, avec un seul appel et sans application des suggestions.
+
+`BENCHMARK_NO_OUTPUT_LIMIT=1` retire tout plafond de tokens de sortie côté client
+pour une relecture, sans changer le prompt ni demander une traduction complète.
+Les limites propres au fournisseur, l'appel unique, les bornes d'outils et le délai
+de 300 secondes subsistent. Ce choix est enregistré dans le protocole.

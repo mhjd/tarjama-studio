@@ -113,3 +113,63 @@ Cette commande seule ne lance pas la surveillance externe. Le modèle de relectu
 par défaut reste Luna ; aucun modèle applicatif changé. Treize tests runner et
 deux tests de parité des prompts passent. Les textes et prompts sont connus :
 ce n'est pas un corpus indépendant et il n'y a pas de juge humain indépendant.
+
+
+## Complément demandé : sans plafond de sortie côté client
+
+L'utilisateur demande de retirer le plafond artificiel de tokens, en conservant
+une réponse limitée aux erreurs trouvées, pas une nouvelle traduction complète.
+Une nouvelle tentative explicite est lancée dans
+`data/model_outputs/gemini-blind-review-unlimited-20260925-01`, même prompt,
+entrée, modèle, fournisseur et raisonnement medium. Seul le plafond de sortie
+est retiré : ni `max_tokens` ni `max_output_tokens` envoyé. Les limites propres
+au modèle/fournisseur subsistent ; aucun budget de raisonnement séparé ajouté.
+Un seul appel, pas de reprise automatique, surveillance de présence 60 secondes
+et délai global 300 secondes conservés. Le premier essai n'avait pas de marqueur
+de troncature ; son résultat ne peut être attribué au plafond sans preuve.
+
+Reprise en cas de coupure : consulter
+`web/.cache/gemini-review-unlimited-guard/status.json`, son `run.log` et les
+artefacts. Ne pas relancer automatiquement.
+
+### Résultat du complément
+
+**Deux suggestions, aucune des cinq erreurs/réserves suivies détectée.** Gemini
+propose de retirer le point et les guillemets fermants prématurés en 288, puis
+« parmi ce qui est intelligible » à la place de « à quelque chose de raisonnable »
+en 289. C'est une amélioration syntaxique locale plausible de l'enchaînement arabe,
+mais pas une résolution des défauts principaux identifiés. Aucun texte corrigé
+complet validé ou appliqué.
+
+La réponse est encore entourée de balises Markdown ; les objets utilisent
+`justification` au lieu de `explanation` et une confiance numérique `0.95` au lieu
+de l'énumération demandée. Même en retirant les balises à titre diagnostique, le
+contrat ne serait pas conforme. Les champs avant correspondent exactement au
+texte fourni. `finish_reason=stop`, provenance Generation Google AI Studio et
+`google/gemini-3.8-flash-20260902`.
+
+- Temps : **66,206 s** ; un seul appel supplémentaire explicitement demandé.
+- Entrée : **25 761 tokens**, dont **20 445 en cache** ; coût **0,005520375 USD**.
+- Sortie : **11 754 tokens**, dont **11 569 de raisonnement** et une différence
+  de **185 tokens** pour la réponse visible ; coût **0,0440775 USD**.
+- Total relecture : **0.049597875 USD**. Le coût reste voisin de l'essai plafonné
+  grâce au cache d'entrée, malgré davantage de tokens de raisonnement/sortie.
+- Luna initial + cette seule seconde passe : **0.057742770 USD**, extrapolé à
+  **0.221 USD/h** à densité comparable ; coût d'une stratégie tentée,
+  pas d'un résultat corrigé et validé.
+- Les **deux essais Gemini de révision** ont coûté au total **0,098449875 USD**.
+  Ce montant expérimental ne doit pas être présenté comme le prix d'une seule passe.
+
+La requête est vérifiée identique à la précédente hormis le retrait de `max_tokens`.
+Aucun `max_output_tokens` ni plafond séparé de raisonnement n'est envoyé. Les limites
+propres au fournisseur subsistent. Un seul essai par condition ne permet pas de
+séparer effet du plafond et variabilité du modèle. L'essai ne confirme pas que
+Gemini retrouve systématiquement les erreurs de Luna, même avec une sortie libre.
+Le surveillant a terminé normalement ; aucun processus ni appel restant.
+
+[Mesures du complément](../web/review/luna-comparison/gemini-second-pass-unlimited-results-20260925.json).
+
+```sh
+make web-luna-review BENCHMARK_OUTPUT=data/model_outputs/gemini-review-NOUVEAU \
+  BENCHMARK_MODEL=google/gemini-3.8-flash BENCHMARK_NO_OUTPUT_LIMIT=1
+```

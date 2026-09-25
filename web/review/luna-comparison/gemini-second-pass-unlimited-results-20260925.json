@@ -1,0 +1,78 @@
+{
+  "directory": "data/model_outputs/gemini-blind-review-unlimited-20260925-01",
+  "summary": {
+    "valid": false,
+    "model": "google/gemini-3.8-flash",
+    "http_status": 200,
+    "id": "gen-1790328877-3TcA7E1z2fb9vZ0bYkOi",
+    "usage": {
+      "prompt_tokens": 25761,
+      "completion_tokens": 11754,
+      "total_tokens": 37515,
+      "cost": 0.049597875,
+      "prompt_tokens_details": {
+        "cached_tokens": 20445,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 11569,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.049597875,
+        "upstream_inference_prompt_cost": 0.005520375,
+        "upstream_inference_completions_cost": 0.0440775
+      }
+    },
+    "status": null,
+    "generation_provider": "Google AI Studio",
+    "generation_model": "google/gemini-3.8-flash-20260902",
+    "error": "JSONDecodeError",
+    "elapsed_seconds": 66.206
+  },
+  "generation": {
+    "id": "gen-1790328877-3TcA7E1z2fb9vZ0bYkOi",
+    "model": "google/gemini-3.8-flash-20260902",
+    "provider_name": "Google AI Studio",
+    "upstream_id": null,
+    "total_cost": 0,
+    "native_tokens_prompt": 0,
+    "native_tokens_completion": 0,
+    "provider_responses": []
+  },
+  "caller_output_limit": null,
+  "only_request_difference_from_previous": "max_tokens removed",
+  "diagnostic_only": true,
+  "response_content": "```json\n{\n  \"issues\": [\n    {\n      \"id\": \"288\",\n      \"before\": \"selon ce qui leur ressemble et s’en rapproche. »\",\n      \"after\": \"selon ce qui leur ressemble et s’en rapproche,\",\n      \"justification\": \"La phrase arabe continue dans le segment suivant (« مما هو معقول »). Le point et la fermeture des guillemets coupent arbitrairement la proposition en plein milieu.\",\n      \"confidence\": 0.95\n    },\n    {\n      \"id\": \"289\",\n      \"before\": \"à quelque chose de raisonnable,\",\n      \"after\": \"parmi ce qui est intelligible,\",\n      \"justification\": \"« مما هو معقول » est le complément de la proposition précédente (« ce qui leur ressemble [...] parmi ce qui est intelligible/rationnel »). La traduction « à quelque chose de raisonnable, » crée une rupture syntaxique incohérente et traduit inexactement « مما ».\",\n      \"confidence\": 0.95\n    }\n  ]\n}\n```",
+  "known_findings_detected": [],
+  "additional_findings_ids": [
+    "288",
+    "289"
+  ],
+  "additional_findings_assessment": "Plausible local syntactic improvement across adjacent fragments; no full corrected text accepted or applied.",
+  "raw_format_valid": false,
+  "contract_errors": [
+    "markdown_fence",
+    "justification_instead_of_explanation",
+    "numeric_confidence_instead_of_enum"
+  ],
+  "review_cost_usd": "0.049597875",
+  "two_phase_attempt_cost_usd": "0.057742770",
+  "two_phase_attempt_cost_per_hour_usd": "0.2209779653449558839162325928",
+  "sha256": {
+    "prompt-used.txt": "eb6bebcec47b87e8c073fd6968575292985bd959168183f9c0c13f48425cabda",
+    "supervisor-final-status.json": "b32ef7efbb8c64001daf8342a3dc452e5cb32fa7ea66e810223a4c7265dd87b1",
+    "review-used.py": "6db3242d1c495985187c7d5f07aee9850250e462e345232d1dd9870616e02f4c",
+    "hashes.json": "0658b245b4a2a667825fc61cc9ff5ea862f2f23a22acb024853c1622301832ab",
+    "input.json": "0756115b14446fca44cb7d30857ff29e1acc1478992e0f1431fe21e15a01e6f4",
+    "response.json": "3a6a1d8ea5b21a63e53dd6a23e680e72e8a2dc228887a1c1138288bf0d5d9288",
+    "request.json": "e100cbfe768d88140117918ebda7a41cbec29969272736d86caee03614e01adb",
+    "generation.json": "33b3e61644b6a70c960f187ffaf3426952e5f720a31cd400aa1b569ce549be14",
+    "summary.json": "ee740fd4333df221fddcc66c74954584f3fb6f7f1c3bf6c3c4ced643f2e1ece0",
+    "protocol.json": "7f7252526aa7e9acb54e6807b5f849c8a01b50867b6729f72da08eddb7ed513c",
+    "supervisor-used.py": "480dd2b27560b8a9f6e53071c679aae56d44c4014384cb860abdccb8b8de2011"
+  }
+}

@@ -39,6 +39,7 @@ def validate_review(answer, rows):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
+    parser.add_argument('--no-output-limit', action='store_true', help='Omit caller-imposed output token limit; provider/model defaults apply')
     parser.add_argument('--model', choices=[MODEL, 'google/gemini-3.8-flash'], default=MODEL)
     args = parser.parse_args()
     model = args.model
@@ -58,6 +59,7 @@ def main():
     run.save(out / 'input.json', rows)
     run.save(out / 'protocol.json', {'model': model, 'api': api, 'provider': provider, 'reasoning': 'medium', 'calls_max': 1,
         'retries': 0, 'timeout_seconds': 300, 'review_span_seconds': 940.7,
+        'caller_output_token_limit': None if args.no_output_limit else 8192,
         'source_sha256': hashlib.sha256(source_path.read_bytes()).hexdigest(),
         'baseline_sha256': hashlib.sha256(baseline_path.read_bytes()).hexdigest(),
         'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(), 'known_errors_supplied': False})
@@ -82,6 +84,9 @@ def main():
         fmt = body.pop('text')['format']
         body['response_format'] = {'type': 'json_schema', 'json_schema': {
             'name': fmt['name'], 'strict': fmt['strict'], 'schema': fmt['schema']}}
+    if args.no_output_limit:
+        body.pop('max_tokens', None)
+        body.pop('max_output_tokens', None)
     run.save(out / 'request.json', body)
     key = Path('/etc/vps-agent-secrets/openrouter.api_key').read_text().strip()
     if not key: raise ValueError('missing_credential')

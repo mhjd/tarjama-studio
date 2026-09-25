@@ -248,3 +248,8 @@ BENCHMARK_PART ?= 2
 web-luna-recover:
 	@test -n "$(BENCHMARK_OUTPUT)" || (echo 'Set a new BENCHMARK_OUTPUT directory'; exit 1)
 	python3 -B web/review/luna-comparison/recover.py --part "$(BENCHMARK_PART)" --output "$(BENCHMARK_OUTPUT)"
+
+.PHONY: web-luna-review
+web-luna-review:
+	@test -n "$(BENCHMARK_OUTPUT)" || (echo 'BENCHMARK_OUTPUT is required'; exit 1)
+	python3 -B web/review/luna-comparison/review.py --output "$(BENCHMARK_OUTPUT)"

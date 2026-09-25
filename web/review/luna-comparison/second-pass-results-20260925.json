@@ -1,0 +1,204 @@
+{
+  "date": "2026-09-25",
+  "directory": "data/model_outputs/luna-blind-review-20260925-01",
+  "summary": {
+    "valid": false,
+    "model": "openai/gpt-6-luna",
+    "http_status": 200,
+    "id": "gen-1790327509-Be84quUQ1qQtbzjBYUs9",
+    "usage": {
+      "input_tokens": 21861,
+      "input_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 21858
+      },
+      "output_tokens": 5212,
+      "output_tokens_details": {
+        "reasoning_tokens": 4405
+      },
+      "total_tokens": 27073,
+      "cost": 0.00533855,
+      "cost_details": {
+        "upstream_inference_cost": 0.00533855,
+        "upstream_inference_input_cost": 0.00273255,
+        "upstream_inference_output_cost": 0.002606
+      }
+    },
+    "status": "completed",
+    "generation_provider": "OpenAI",
+    "generation_model": "openai/gpt-6-luna-20260922",
+    "error": "ValueError",
+    "elapsed_seconds": 73.833
+  },
+  "generation": {
+    "id": "gen-1790327509-Be84quUQ1qQtbzjBYUs9",
+    "model": "openai/gpt-6-luna-20260922",
+    "provider_name": "OpenAI",
+    "upstream_id": null,
+    "total_cost": 0,
+    "native_tokens_prompt": 0,
+    "native_tokens_completion": 0,
+    "provider_responses": []
+  },
+  "format_accepted": false,
+  "format_error": "issues use justification instead of explanation, and high instead of certain/probable/uncertain",
+  "diagnostic_only": true,
+  "known_findings": [
+    {
+      "ids": [
+        "365"
+      ],
+      "type": "attribution",
+      "detected": false
+    },
+    {
+      "ids": [
+        "253"
+      ],
+      "type": "expanded_quote",
+      "detected": true
+    },
+    {
+      "ids": [
+        "347",
+        "348"
+      ],
+      "type": "alignment",
+      "detected": false
+    },
+    {
+      "ids": [
+        "151"
+      ],
+      "type": "debatable_strengthening",
+      "detected": true
+    },
+    {
+      "ids": [
+        "144"
+      ],
+      "type": "contextual_explicitness",
+      "detected": false
+    }
+  ],
+  "issues_reviewed": [
+    {
+      "id": "151",
+      "before": "contester devant le Prophète, que la paix et les bénédictions d’Allah soient sur lui,",
+      "after": "trouver problématique auprès du Prophète — que la paix et les bénédictions d’Allah soient sur lui — le fait que",
+      "justification": "استشكل على النبي signifie que quelqu’un a trouvé la chose problématique et l’a soulevée auprès du Prophète ; « contester devant le Prophète » suggère plutôt une contestation.",
+      "confidence": "high",
+      "arabic": "استشكل على النبي صلى الله عليه وسلم",
+      "assessment": "known_detected_but_bad_patch",
+      "assessment_detail": "Détecte le durcissement. Le remplacement finit par « le fait que » avant ID 152 « cette parole d’Allah », produisant une phrase mal construite."
+    },
+    {
+      "id": "203",
+      "before": "qu’il soit Africain, Perse, Turc, Romain ou Russe, ou",
+      "after": "qu’il soit Africain, Perse, Turc, Romain ou Russe, ou qu’il fasse partie des habitants de cette terre,",
+      "justification": "Le segment suivant précise « ou parmi les habitants de cette terre » ; « ailleurs sur cette terre » n’est pas dans la source et ne rend pas ce groupe de personnes.",
+      "confidence": "high",
+      "arabic": "إفريقي أو فارسي أو تركي أو رومي أو روسي، أو",
+      "assessment": "new_alignment_regression",
+      "assessment_detail": "Le défaut « ailleurs » appartient à ID 204 ; la correction le déplace à ID 203 sans modifier 204, créant une répétition."
+    },
+    {
+      "id": "221",
+      "before": "comment comprendre ces textes ?",
+      "after": "comment traiter ces textes ?",
+      "justification": "نتعامل مع هذه النصوص signifie « traiter ces textes » ou « se comporter à leur égard », et non spécifiquement les comprendre.",
+      "confidence": "high",
+      "arabic": "كيف نتعامل مع هذه النصوص؟",
+      "assessment": "plausible_minor_precision",
+      "assessment_detail": "« Aborder/traiter » est plus proche du verbe que « comprendre », sans contresens net de la version initiale dans ce contexte."
+    },
+    {
+      "id": "253",
+      "before": "et du flanc : « au sujet de ce qu’ils ont négligé envers Dieu » ;",
+      "after": "et du flanc : « dans le flanc de Dieu » ;",
+      "justification": "La source cite le syntagme في جنب الله (« dans le flanc/le côté de Dieu »). La traduction actuelle le remplace par une paraphrase plus longue qui n’est pas présente dans ce segment.",
+      "confidence": "high",
+      "arabic": "ومثل الجنب: في جنب الله،",
+      "assessment": "known_detected_correction_unsettled",
+      "assessment_detail": "Détecte les mots absents ; « dans le flanc de Dieu » est très littéral et la citation doit être revue avant application."
+    },
+    {
+      "id": "293",
+      "before": "que Dieu les agrée tous deux, ont rapporté",
+      "after": "que Dieu les agrée tous deux, il est attesté à leur sujet",
+      "justification": "ثبت عنهما indique que le propos est établi ou attesté à leur sujet, pas qu’ils l’ont eux-mêmes rapporté.",
+      "confidence": "high",
+      "arabic": "رضي الله عنهما، ثبت عنهما",
+      "assessment": "useful_attribution_precision",
+      "assessment_detail": "Distingue une attestation à leur sujet de « ils ont rapporté » ; clarification utile."
+    },
+    {
+      "id": "295",
+      "before": "sur la proximité générale de Dieu,",
+      "after": "sur la présence générale de Dieu,",
+      "justification": "المعية désigne le fait d’être avec ou la présence ; « proximité » peut suggérer une proximité spatiale que le terme arabe n’implique pas à lui seul.",
+      "confidence": "high",
+      "arabic": "عن المعية العامة",
+      "assessment": "useful_terminology_precision",
+      "assessment_detail": "Présence/être avec plus précis que proximité ; ne remplace pas une revue doctrinale."
+    },
+    {
+      "id": "298",
+      "before": "La proximité générale est mentionnée dans deux versets du Livre de Dieu,",
+      "after": "La présence générale de Dieu est mentionnée dans deux versets du Livre de Dieu,",
+      "justification": "Même terme que dans les segments précédents : المعية signifie ici le fait d’être avec, plutôt qu’une proximité spatiale.",
+      "confidence": "high",
+      "arabic": "المعية العامة جاءت فيها آيتان من كتاب الله",
+      "assessment": "same_terminology_issue",
+      "assessment_detail": "Même correction de maiyya que 295, pas un défaut indépendant."
+    },
+    {
+      "id": "306",
+      "before": "Voilà la proximité générale.",
+      "after": "Voilà la présence générale de Dieu.",
+      "justification": "المعية العامة désigne la présence ou le fait d’être avec ; « proximité générale » peut induire une lecture spatiale.",
+      "confidence": "high",
+      "arabic": "هذه المعية العامة،",
+      "assessment": "same_terminology_issue",
+      "assessment_detail": "Même correction de maiyya que 295, pas un défaut indépendant."
+    },
+    {
+      "id": "307",
+      "before": "Elle signifie donc la science et l’omniscience.",
+      "after": "Elle signifie donc la connaissance et l’appréhension de toute chose.",
+      "justification": "العلم والإحاطة signifie « la connaissance et l’appréhension englobante » ; « la science et l’omniscience » rend mal cette distinction.",
+      "confidence": "high",
+      "arabic": "فمعناها العلم والإحاطة.",
+      "assessment": "debatable_terminology",
+      "assessment_detail": "Proposition plus explicite, mais ne corrige pas le même vocabulaire en 297 ; pas une amélioration certaine universelle."
+    },
+    {
+      "id": "388",
+      "before": "Dans la lecture d’Ibn Muhaysin de La Mecque, qui fait partie des quatre lectures ajoutées aux dix lectures canoniques,",
+      "after": "Dans la lecture d’Ibn Muhaysin de La Mecque, qui fait partie des quatorze lectures ajoutées aux dix lectures canoniques,",
+      "justification": "الأربعة عشرة désigne quatorze, et non quatre ; la traduction comporte donc une erreur de nombre.",
+      "confidence": "high",
+      "arabic": "وفي قراءة ابن محيصن المكي، وهي من القراءات الأربعة عشرة الزائدة على العشر:",
+      "assessment": "source_ambiguity_not_resolved",
+      "assessment_detail": "Choisit quatorze lectures ajoutées aux dix dans une transcription déjà ambiguë ; sans audio/source, impossible de certifier cette correction."
+    }
+  ],
+  "review_cost_usd": "0.00533855",
+  "initial_translation_cost_including_retries_usd": "0.008144895",
+  "two_phase_attempt_cost_usd": "0.013483445",
+  "extrapolated_two_phase_attempt_cost_per_hour_usd": "0.05160029977676198575528861486",
+  "all_before_fields_match": true,
+  "sha256": {
+    "generation.json": "68934f5b819ac2e9d6b593008322f7e0e06392f667acc95f1d2190ee70486165",
+    "hashes.json": "d8f21eff4f226488a073182884c97ad3ff2822e9979d2d239a4099dc276e52ce",
+    "input.json": "0756115b14446fca44cb7d30857ff29e1acc1478992e0f1431fe21e15a01e6f4",
+    "prompt-used.txt": "eb6bebcec47b87e8c073fd6968575292985bd959168183f9c0c13f48425cabda",
+    "protocol.json": "ad7852c787ebbe45fb50f1e43674321e5d9443c8c4d0964210fa11a6ea72f8dc",
+    "request.json": "072cb239e5b1487d413a518f82d77d90d1f3d2daff9f713cebf101c2e48a9728",
+    "response.json": "0a4d4a5682d2be2556db4cd66c5eed1fb8e5676698ba3dbad8bedd14b416d244",
+    "review-used.py": "e6430aa2e9e72fbab13fd43d47954a99e0f605ae60fc753af4a0c3b8936a6b27",
+    "summary.json": "fb81f3a796c03de757e806db069415396affed9883f6798cd43802309be523d7",
+    "supervisor-final-status.json": "b32ef7efbb8c64001daf8342a3dc452e5cb32fa7ea66e810223a4c7265dd87b1",
+    "supervisor-used.py": "81d9aae7df1757fd32bc3655f34c516ff76befcb3944515d306f1eb53b4f947b"
+  }
+}

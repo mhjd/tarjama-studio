@@ -188,3 +188,16 @@ sans changer le trio par défaut ni l'application. Pour reprendre le protocole
 `BENCHMARK_MAX_COMPLETION_PRICE=4` relève explicitement le plafond de sortie
 USD/M pour cet essai (défaut 3, valeur positive ≤10). Le plafond d'entrée reste 1.
 Le prix maximal par token ne constitue pas un budget total garanti.
+
+## Seconde passe de révision Luna
+
+`make web-luna-review BENCHMARK_OUTPUT=data/model_outputs/luna-review-NOUVEAU`
+révise en un seul appel la traduction medium assemblée et validée conservée dans
+`recovery-results-20260924.json`, avec ses 384 segments arabes. Aucun défaut connu
+n'est transmis comme indice. Prompt dédié `review-prompt.txt`, sortie différentielle
+avec IDs et texte avant exact, aucun correctif appliqué automatiquement. Un seul
+appel Responses medium, 8192 tokens sortie, 300 secondes maximum, sans retry ;
+Parallel limité à deux recherches et deux lectures. Provenance contrôlée via
+Generation. Cette commande seule ne fournit pas la surveillance externe par lease.
+
+Voir [protocole, interruption et résultats](../../../docs/LUNA_SECOND_PASS_20260925.md).

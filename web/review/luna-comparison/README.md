@@ -178,3 +178,13 @@ make web-luna-compare BENCHMARK_OUTPUT=data/model_outputs/glm53-zai-NOUVEAU \
 ```
 
 Voir [audit du routage et résultats Z.AI](../../../docs/GLM53_ZAI_ROUTING_20260925.md).
+
+## Gemini 3.8 Flash, candidat explicite
+
+`BENCHMARK_MODEL=google/gemini-3.8-flash` est disponible uniquement sur demande,
+sans changer le trio par défaut ni l'application. Pour reprendre le protocole
+4 minutes + continuité chez Google AI Studio, voir le
+[rapport du 25 septembre](../../../docs/GEMINI38_CONTINUITY_BENCHMARK_20260925.md).
+`BENCHMARK_MAX_COMPLETION_PRICE=4` relève explicitement le plafond de sortie
+USD/M pour cet essai (défaut 3, valeur positive ≤10). Le plafond d'entrée reste 1.
+Le prix maximal par token ne constitue pas un budget total garanti.

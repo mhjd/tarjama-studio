@@ -28,3 +28,6 @@ Ne pas relancer le script automatiquement, ne pas toucher la clé, ne jamais
 l'appel en vol comme coût inconnu et ne pas prétendre qu'il était gratuit.
 Les résumés, requêtes et réponses sont enregistrés au fil de l'eau, même si
 `results.json` final n'a pas pu être écrit.
+
+Terminé normalement : quatre blocs valides, coût déclaré 0,30602625 USD. Aucun
+appel restant. Voir [le bilan](GEMINI38_CONTINUITY_BENCHMARK_20260925.md).

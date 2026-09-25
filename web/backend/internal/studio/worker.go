@@ -147,7 +147,9 @@ func RunWorker(ctx context.Context, s *Store, c Config) error {
 			return fmt.Errorf("reference corpus: %w", err)
 		}
 		providers.References = corpus
+		log.Printf("Local reference corpus loaded: tools=%d", len(corpus.Tools()))
 	}
+	log.Printf("Text worker configured: model=%s", TextModel)
 	w := &Worker{Store: s, Config: c, Providers: providers, Media: media}
 	if isolated != nil {
 		cleanupCtx, stop := context.WithCancel(ctx)

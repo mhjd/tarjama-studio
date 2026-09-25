@@ -22,6 +22,18 @@ ENV FRONTEND_DIR=/app/frontend STORAGE_DIR=/storage
 ENTRYPOINT ["/usr/local/bin/tarjama"]
 CMD ["api"]
 
+# The named context contains only the four reviewed corpus files, no raw archives.
+# Only the worker image carries references; the web API and media images do not.
+FROM backend AS reference-build
+RUN CGO_ENABLED=0 go build -trimpath -o /references ./cmd/references
+
+FROM api AS worker
+COPY --from=reference-build /references /usr/local/bin/references
+COPY --from=reference-corpus / /app/references/
+ENV REFERENCE_CORPUS_DIR=/app/references
+RUN /usr/local/bin/references --corpus /app/references --tools >/dev/null
+CMD ["worker"]
+
 FROM debian:bookworm-slim AS media
 LABEL org.opencontainers.image.source="https://github.com/mhjd/tarjama-studio"
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg fonts-noto-core bubblewrap util-linux python3 python3-venv && rm -rf /var/lib/apt/lists/*

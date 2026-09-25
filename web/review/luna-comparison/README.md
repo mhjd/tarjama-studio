@@ -152,3 +152,29 @@ blocs et le contexte, donc ne mesure pas isolément l'effet de chacune de ces
 variables. Les contrôles web/difficultés de l'essai précédent ne sont pas rejoués.
 
 Résultats : [essai avec continuité du 25 septembre](../../../docs/GLM53_CONTINUITY_BENCHMARK_20260925.md).
+
+## Vérifier le fournisseur réellement déclaré
+
+`BENCHMARK_PROVIDER=z-ai` fixe `provider.only` et `provider.order` à `z-ai`, sans
+repli, après vérification du catalogue d'endpoints. Chaque réponse est recoupée
+avec `/api/v1/generation` : ID exact, modèle demandé (ou sa version datée) et
+fournisseur attendu sont requis. Une métadonnée absente ou contradictoire arrête
+la chaîne. Le champ `provider` de Chat est conservé, mais ne fait pas foi seul :
+les tests du 25 septembre montrent des valeurs différentes de celles de Generation.
+La consultation de Generation est bornée, avec deux reprises à cinq secondes
+pour une disponibilité différée (404), dans le délai global de l'appel.
+
+`BENCHMARK_JSON_OBJECT=1` demande `response_format: {"type":"json_object"}`,
+nécessaire pour l'endpoint Z.AI qui refuse notre schéma strict natif. Le schéma
+reste dans le prompt et le validateur local ne change pas : pas de suppression
+de balises ni réparation de réponse. Cette différence de format fait partie du
+protocole archivé et doit être mentionnée dans toute comparaison.
+
+```sh
+make web-luna-compare BENCHMARK_OUTPUT=data/model_outputs/glm53-zai-NOUVEAU \
+  BENCHMARK_MODEL=z-ai/glm-5.3-flash BENCHMARK_REASONING=high \
+  BENCHMARK_CHUNK_MINUTES=4 BENCHMARK_CONTINUITY=1 \
+  BENCHMARK_PROVIDER=z-ai BENCHMARK_JSON_OBJECT=1
+```
+
+Voir [audit du routage et résultats Z.AI](../../../docs/GLM53_ZAI_ROUTING_20260925.md).

@@ -14,6 +14,31 @@ class Response(io.BytesIO):
 
 
 class ComparisonEvidenceTests(unittest.TestCase):
+    def test_generation_provenance_and_json_mode(self):
+        meta = {'id': 'gen-1', 'model': 'z-ai/glm-5.3-flash-20260826', 'provider_name': 'Z.AI'}
+        self.assertTrue(run.provenance_matches(meta, 'gen-1', 'z-ai/glm-5.3-flash', 'Z.AI'))
+        for bad in [dict(meta, id='gen-other'), dict(meta, model='other'), dict(meta, provider_name='OpenAI'), {}]:
+            self.assertFalse(run.provenance_matches(bad, 'gen-1', 'z-ai/glm-5.3-flash', 'Z.AI'))
+        body = run.request_body('z-ai/glm-5.3-flash', 'Translate', [], continuity=True, json_object=True)
+        self.assertEqual(body['response_format'], {'type': 'json_object'})
+        self.assertIn('continuity_summary', body['messages'][0]['content'])
+
+    def test_provider_pin_and_mismatch_rejection(self):
+        body = run.request_body('z-ai/glm-5.3-flash', 'Translate', [], provider='z-ai')
+        self.assertEqual(body['provider']['only'], ['z-ai'])
+        self.assertEqual(body['provider']['order'], ['z-ai'])
+        self.assertFalse(body['provider']['allow_fallbacks'])
+        result = {'model': 'z-ai/glm-5.3-flash', 'provider': 'OpenAI',
+                  'usage': {'cost': 0.01}, 'choices': [{'finish_reason': 'stop',
+                  'message': {'content': '{"segments":[{"id":"a","text":"Paix."}]}'}}]}
+        with tempfile.TemporaryDirectory() as tmp, patch('run.urllib.request.build_opener') as opener, contextlib.redirect_stdout(io.StringIO()):
+            opener.return_value.open.return_value = Response(json.dumps(result).encode())
+            summary = run.run_call(Path(tmp), 'z-ai/glm-5.3-flash', 'pin', 'Translate',
+                [{'id': 'a', 'arabic': 'السلام'}], 'test-credential', provider='z-ai', expected_provider='Z.AI')
+            self.assertFalse(summary['valid'])
+            self.assertEqual(summary['provenance_error'], 'unverified_provider_or_model')
+            self.assertFalse(list(Path(tmp).glob('*/translation.json')))
+
     def test_continuity_keeps_bilingual_context_out_of_targets(self):
         source = [{'id': 'b', 'arabic': 'نعم'}]
         context = [{'id': 'a', 'arabic': 'السلام', 'french': 'Paix.'}]

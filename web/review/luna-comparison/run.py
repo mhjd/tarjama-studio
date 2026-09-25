@@ -15,6 +15,7 @@ from pathlib import Path
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 
 ROOT = Path(__file__).resolve().parents[3]
 MODELS = ['openai/gpt-6-luna', 'openai/gpt-5.6-luna', 'deepseek/deepseek-v4.1-flash']
@@ -67,7 +68,7 @@ def validate_answer(answer, source, continuity=False):
     validator.validate({'segments': answer['segments']}, source)
 
 
-def request_body(model, prompt, source, capability=False, context_source=(), api='chat', reasoning='none', continuity=False, previous_summary=''):
+def request_body(model, prompt, source, capability=False, context_source=(), api='chat', reasoning='none', continuity=False, previous_summary='', provider=None, expected_provider=None, json_object=False):
 
     instruction = prompt + '\nRetourne uniquement du JSON brut, sans balises Markdown ni texte autour, conforme à ce schéma : ' + json.dumps(SCHEMA, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
     body = {'model': model, 'messages': [{'role': 'system', 'content': instruction},
@@ -79,6 +80,8 @@ def request_body(model, prompt, source, capability=False, context_source=(), api
         'response_format': {'type': 'json_schema', 'json_schema': {'name': 'translation', 'strict': True, 'schema': SCHEMA}},
         'provider': {'require_parameters': True, 'allow_fallbacks': False,
                      'max_price': {'prompt': 1, 'completion': 3}}}
+    if provider:
+        body['provider'].update({'only': [provider], 'order': [provider]})
     if continuity:
         schema = json.loads(json.dumps(SCHEMA))
         schema['properties']['continuity_summary'] = {'type': 'string', 'minLength': 1, 'maxLength': 1500}
@@ -89,6 +92,8 @@ def request_body(model, prompt, source, capability=False, context_source=(), api
         payload['context_only'] = list(context_source)
         body['messages'][1]['content'] = json.dumps(payload, ensure_ascii=False, sort_keys=True)
         body['response_format']['json_schema']['schema'] = schema
+    if json_object:
+        body['response_format'] = {'type': 'json_object'}
     if api == 'responses':
         messages = body.pop('messages')
         body['instructions'] = messages[0]['content']
@@ -146,10 +151,39 @@ def timed_ranges(source, minutes):
     return ranges
 
 
-def run_call(out, model, case, prompt, source, key, capability=False, context_source=(), api='chat', reasoning='none', timeout_seconds=300, continuity=False, previous_summary=''):
+def provenance_matches(metadata, generation_id, model, provider):
+    returned = metadata.get('model')
+    return bool(generation_id and metadata.get('id') == generation_id
+                and isinstance(returned, str) and (returned == model or returned.startswith(model + '-'))
+                and metadata.get('provider_name') == provider)
+
+
+def generation_metadata(opener, key, generation_id):
+    if not generation_id:
+        return {'error': 'missing_generation_id'}
+    for attempt in range(3):
+        req = urllib.request.Request('https://openrouter.ai/api/v1/generation?id=' + urllib.parse.quote(generation_id),
+                                     headers={'Authorization': 'Bearer ' + key})
+        try:
+            with opener.open(req, timeout=15) as response:
+                data = json.loads(response.read(MAX_BYTES))['data']
+            selected = {k: data.get(k) for k in ['id', 'model', 'provider_name', 'upstream_id',
+                        'total_cost', 'native_tokens_prompt', 'native_tokens_completion', 'provider_responses']}
+            return json.loads(json.dumps(selected).replace(key, '[redacted]'))
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404 and attempt < 2:
+                time.sleep(5)
+                continue
+            return {'http_status': exc.code}
+        except Exception as exc:
+            return {'error': type(exc).__name__}
+    return {'error': 'generation_unavailable'}
+
+
+def run_call(out, model, case, prompt, source, key, capability=False, context_source=(), api='chat', reasoning='none', timeout_seconds=300, continuity=False, previous_summary='', provider=None, expected_provider=None, json_object=False):
     folder = out / (case + '-' + model.split('/')[1]); folder.mkdir(mode=0o700)
     save(folder / 'input.json', source)
-    body = request_body(model, prompt, source, capability, context_source, api, reasoning, continuity, previous_summary)
+    body = request_body(model, prompt, source, capability, context_source, api, reasoning, continuity, previous_summary, provider, expected_provider, json_object)
     save(folder / 'request.json', body)
     start = time.monotonic()
     summary = {'model': model, 'case': case, 'valid': False, 'reasoning_requested': reasoning, 'api': api, 'timeout_seconds': timeout_seconds}
@@ -182,6 +216,15 @@ def run_call(out, model, case, prompt, source, key, capability=False, context_so
         summary['fetch_inferred'] = summary['tool_calls'] > summary['search_requests'] > 0
         if result.get('error'): raise ValueError('error_in_response')
         if result.get('model') != model: raise ValueError('unexpected_model')
+        if expected_provider:
+            metadata = generation_metadata(opener, key, result.get('id'))
+            save(folder / 'generation.json', metadata)
+            summary['generation_provider'] = metadata.get('provider_name')
+            summary['generation_model'] = metadata.get('model')
+            summary['response_provider_matches'] = result.get('provider') == expected_provider
+            if not provenance_matches(metadata, result.get('id'), model, expected_provider):
+                summary['provenance_error'] = 'unverified_provider_or_model'
+                raise ValueError('unverified_provider_or_model')
         summary['finish_reason'] = result.get('status') if api == 'responses' else (
             (result.get('choices') or [{}])[0].get('finish_reason'))
         answer = json.loads(final_text(result, api))
@@ -210,6 +253,8 @@ def main():
     parser.add_argument('--split-corpus', action='store_true', help='12 comparative calls: four equal parts, two context segments on each side')
     parser.add_argument('--model', choices=SUPPORTED_MODELS, help='Only test this model')
     parser.add_argument('--chunk-minutes', type=int, choices=range(1, 21), help='Time-based corpus blocks, plus web check and repeated challenges')
+    parser.add_argument('--json-object', action='store_true', help='JSON mode without provider-enforced schema; local validator stays strict')
+    parser.add_argument('--provider', help='Pin a published provider endpoint; reject mismatched response provider')
     parser.add_argument('--continuity', action='store_true', help='Sequential timed corpus with cumulative summary and five preceding bilingual lines')
     parser.add_argument('--timeout-seconds', type=int, choices=[300, 600], default=300, help='Explicit bounded diagnostic timeout; default 300')
     parser.add_argument('--api', choices=['chat', 'responses'], default='chat')
@@ -219,6 +264,10 @@ def main():
                                         [f'corpus-timed-{i}' for i in range(1, 17)])
     args = parser.parse_args()
     target_models = [args.model] if args.model else MODELS
+    if args.json_object and args.api != 'chat':
+        parser.error('JSON object mode is only implemented for Chat')
+    if args.provider and not args.model:
+        parser.error('Provider pinning requires one explicit model')
     if args.continuity and (not args.chunk_minutes or not args.model or args.case or args.split_corpus):
         parser.error('Continuity requires one explicit model and timed full corpus, without case/split')
     if args.reasoning != 'none' and args.api == 'chat' and MODELS[0] in target_models:
@@ -240,6 +289,14 @@ def main():
         efforts = (model.get('reasoning') or {}).get('supported_efforts')
         if efforts is not None and args.reasoning not in efforts:
             raise ValueError('requested_reasoning_not_supported')
+    expected_provider = None
+    if args.provider:
+        endpoints = json.load(urllib.request.urlopen('https://openrouter.ai/api/v1/models/' + args.model + '/endpoints', timeout=30))
+        save(out / 'endpoints.json', endpoints)
+        names = {e['provider_name'] for e in endpoints['data']['endpoints']
+                 if e['tag'] == args.provider or e['tag'].split('/')[0] == args.provider}
+        if len(names) != 1: raise ValueError('provider_endpoint_not_unambiguous')
+        expected_provider = names.pop()
     corpus = json.loads((ROOT / 'web/review/translation-lite/corpus.json').read_text())
     timed = timed_ranges(corpus, args.chunk_minutes) if args.chunk_minutes else []
     if args.case and args.case.startswith('corpus-timed-') and int(args.case.rsplit('-', 1)[1]) > len(timed):
@@ -248,7 +305,7 @@ def main():
         f.write(Path(__file__).read_text())
     save(out / 'protocol.json', {'models': target_models, 'max_http_calls': (len(timed) if args.continuity else 1 if args.case else len(timed)+3 if args.chunk_minutes else 4) * len(target_models), 'retries': 0,
         'reasoning': args.reasoning, 'api': args.api, 'case': args.case,
-        'provider_fallbacks': False, 'max_price_per_million_usd': {'prompt': 1, 'completion': 3},
+        'json_object': args.json_object, 'provider_fallbacks': False, 'provider_only': args.provider, 'expected_provider': expected_provider, 'max_price_per_million_usd': {'prompt': 1, 'completion': 3},
         'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(), 'prompt': prompt,
         'parallel_tools': TOOLS, 'timeout_seconds': args.timeout_seconds,
         'cost_stop_between_rounds_usd': 2, 'comparative_calls_concurrency': len(target_models), 'split_corpus': args.split_corpus,
@@ -299,7 +356,7 @@ def main():
         order = target_models[rotation:] + target_models[:rotation]
         with ProcessPoolExecutor(max_workers=len(target_models)) as pool:
             futures = [pool.submit(run_call, out, model, case, prompt if fixture else capability_prompt,
-                        source, key, not fixture, context_source, args.api, args.reasoning, args.timeout_seconds, args.continuity, previous_summary) for model in order]
+                        source, key, not fixture, context_source, args.api, args.reasoning, args.timeout_seconds, args.continuity, previous_summary, args.provider, expected_provider, args.json_object) for model in order]
             summaries.extend(f.result() for f in futures)
         if args.continuity:
             if not summaries[-1]['valid']:

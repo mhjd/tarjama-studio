@@ -1,5 +1,12 @@
 # GLM-5.3-Flash : quatre minutes et mémoire de continuité
 
+> Complément de provenance : la vérification ultérieure de Generation indique
+> GLM-5.3-Flash chez InferenceNet pour l'appel `gen-1790323149-qEsCOviK2vep2HfssjWn`
+> du second essai à quatre minutes, malgré « OpenAI » dans la réponse Chat.
+> Les autres anciens appels ne sont pas tous revérifiés. Le champ Chat isolé
+> ne prouve donc pas une substitution. Voir [l'audit de routage et le nouvel essai Z.AI](GLM53_ZAI_ROUTING_20260925.md).
+
+
 ## Protocole demandé
 
 Essai isolé du 25 septembre 2026, sur `z-ai/glm-5.3-flash`, raisonnement `high`

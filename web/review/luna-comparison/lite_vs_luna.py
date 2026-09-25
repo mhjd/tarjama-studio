@@ -14,16 +14,19 @@ ARMS = [('luna-medium', 'openai/gpt-6-luna', 'responses', 'medium', 'openai', 'O
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True)
+    parser.add_argument('--candidate', choices=['gemini35'], help='Run only Gemini 3.5 Lite against archived comparators')
     args = parser.parse_args()
+    arms = ([('gemini35-high', 'google/gemini-3.5-flash-lite', 'chat', 'high', 'google-ai-studio', 'Google AI Studio')]
+            if args.candidate == 'gemini35' else ARMS)
     out = Path(args.output); out.mkdir(parents=True, exist_ok=False, mode=0o700)
     corpus = json.loads((run.ROOT / 'web/review/translation-lite/corpus.json').read_text())
     prompt = (run.ROOT / 'web/backend/internal/studio/prompts/translate.txt').read_text()
     ranges = run.timed_ranges(corpus, 4)
     assert len(ranges) == 4
     catalog = json.load(urllib.request.urlopen('https://openrouter.ai/api/v1/models', timeout=30))['data']
-    selected = [x for x in catalog if x['id'] in [a[1] for a in ARMS]]
+    selected = [x for x in catalog if x['id'] in [a[1] for a in arms]]
     run.save(out / 'models.json', selected)
-    for label, model, api, effort, provider, expected in ARMS:
+    for label, model, api, effort, provider, expected in arms:
         metadata = next(x for x in selected if x['id'] == model)
         if effort not in (metadata.get('reasoning') or {}).get('supported_efforts', []):
             raise ValueError('unsupported_reasoning')
@@ -31,7 +34,7 @@ def main():
         run.save(out / (label + '-endpoints.json'), endpoints)
         if not any(e['tag'].split('/')[0] == provider and e['provider_name'] == expected for e in endpoints['data']['endpoints']):
             raise ValueError('provider_missing')
-    run.save(out / 'protocol.json', {'arms': ARMS, 'ranges': ranges, 'max_calls': 16,
+    run.save(out / 'protocol.json', {'arms': arms, 'ranges': ranges, 'max_calls': len(arms) * 8,
         'max_attempts_per_block': 2, 'timeout_seconds': 300, 'cost_stop_between_calls_usd': 2,
         'no_output_limit': True, 'continuity': True, 'context_lines': 5,
         'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(), 'prompt': prompt,
@@ -41,10 +44,10 @@ def main():
     (out / 'base-runner-used.py').write_text(Path(run.__file__).read_text())
     key = Path('/etc/vps-agent-secrets/openrouter.api_key').read_text().strip()
     if not key: raise ValueError('missing_key')
-    states = {a[0]: {'summary': '', 'translations': {}, 'active': True, 'valid_blocks': 0} for a in ARMS}
+    states = {a[0]: {'summary': '', 'translations': {}, 'active': True, 'valid_blocks': 0} for a in arms}
     results = []
     for index, (lo, hi) in enumerate(ranges):
-        for label, model, api, effort, provider, expected in (ARMS if index % 2 == 0 else list(reversed(ARMS))):
+        for label, model, api, effort, provider, expected in (arms if index % 2 == 0 else list(reversed(arms))):
             state = states[label]
             if not state['active']: continue
             context = [{'id': s['id'], 'arabic': s['arabic'], 'french': state['translations'][s['id']]}

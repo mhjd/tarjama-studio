@@ -20,7 +20,8 @@ class InlinePool:
 
 
 class ReplayTests(unittest.TestCase):
-    def replay(self, failure=None):
+    def replay(self, failure=None, candidate=None):
+        catalog_arms = trial.ARMS + [('gemini35-high', 'google/gemini-3.5-flash-lite', 'chat', 'high', 'google-ai-studio', 'Google AI Studio')]
         calls = []
         def fake_call(out, model, case, prompt, source, key, **kw):
             self.assertEqual(key, 'fake-test-key')
@@ -41,9 +42,9 @@ class ReplayTests(unittest.TestCase):
             return result
         def public_catalog(url, **kwargs):
             if url.endswith('/models'):
-                value = {'data': [{'id': a[1], 'reasoning': {'supported_efforts': [a[3]]}} for a in trial.ARMS]}
+                value = {'data': [{'id': a[1], 'reasoning': {'supported_efforts': [a[3]]}} for a in catalog_arms]}
             else:
-                arm = next(a for a in trial.ARMS if a[1] + '/endpoints' in url)
+                arm = next(a for a in catalog_arms if a[1] + '/endpoints' in url)
                 value = {'data': {'endpoints': [{'tag': arm[4], 'provider_name': arm[5]}]}}
             return io.StringIO(json.dumps(value))
         original_read = Path.read_text
@@ -52,7 +53,7 @@ class ReplayTests(unittest.TestCase):
             return original_read(path, *args, **kwargs)
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / 'trial'
-            with patch('sys.argv', ['trial', '--output', str(out)]), \
+            with patch('sys.argv', ['trial', '--output', str(out)] + (['--candidate', candidate] if candidate else [])), \
                  patch.object(Path, 'read_text', read), \
                  patch.object(trial.urllib.request, 'urlopen', side_effect=public_catalog), \
                  patch.object(trial, 'ProcessPoolExecutor', InlinePool), \
@@ -77,3 +78,10 @@ class ReplayTests(unittest.TestCase):
         calls, states = self.replay('TimeoutError')
         self.assertEqual(len(calls), 5)
         self.assertEqual(states['luna-medium']['stopped'], 'non_retryable_failure')
+
+    def test_gemini35_only_does_not_rerun_comparators(self):
+        calls, states = self.replay(candidate='gemini35')
+        self.assertEqual(len(calls), 4)
+        self.assertTrue(all(model == 'google/gemini-3.5-flash-lite' for model, case in calls))
+        self.assertEqual(list(states), ['gemini35-high'])
+        self.assertEqual(states['gemini35-high']['valid_blocks'], 4)

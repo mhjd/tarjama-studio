@@ -1,0 +1,87 @@
+{
+  "campaign": "quality-20260925",
+  "criteria_met": false,
+  "heldout_used": false,
+  "api_calls_reserved": 48,
+  "confirmed_usd": 0.074581275,
+  "unknown_charge_upper_usd": 0.03,
+  "budget_usd": 2,
+  "fx_usd_per_eur": 1.1403,
+  "rows": [
+    {
+      "method": "H1 petits lots (reprise incluse)",
+      "cost_usd": 0.016900705,
+      "source_seconds": 237.12,
+      "eur_per_hour_extrapolated": 0.2250194254228857,
+      "decision": "échec : référent et relation causale"
+    },
+    {
+      "method": "H2 source + sens + français",
+      "cost_usd": 0.00524,
+      "source_seconds": 237.12,
+      "eur_per_hour_extrapolated": 0.06976642626540852,
+      "decision": "échec : référent et force du verbe"
+    },
+    {
+      "method": "H3a exemples + Luna high",
+      "cost_usd": 0.004712065,
+      "source_seconds": 237.12,
+      "eur_per_hour_extrapolated": 0.06273739224815117,
+      "decision": "échec : relation causale et portée"
+    },
+    {
+      "method": "H3c exemples + Lite medium",
+      "cost_usd": 0.0082545,
+      "source_seconds": 237.12,
+      "eur_per_hour_extrapolated": 0.10990209267324706,
+      "decision": "échec : inversion agent/effet"
+    },
+    {
+      "method": "H6 phrases complètes",
+      "cost_usd": 0.0044215,
+      "source_seconds": 237.12,
+      "eur_per_hour_extrapolated": 0.05886875071230988,
+      "decision": "échec avant alignement ; prix incomplet du pipeline"
+    },
+    {
+      "method": "H3b outils à la demande",
+      "cost_usd": 0.002941975,
+      "source_seconds": 158.86,
+      "eur_per_hour_extrapolated": 0.05846659421543453,
+      "decision": "citations locales utilisées ; reste imparfait"
+    },
+    {
+      "method": "H3b références préchargées",
+      "cost_usd": 0.002776025,
+      "source_seconds": 158.86,
+      "eur_per_hour_extrapolated": 0.05516862896758186,
+      "decision": "citations locales utilisées ; déplacement de sens en293"
+    },
+    {
+      "method": "H4 réécriture arbitre",
+      "new_arbitration_usd": 0.00538505,
+      "eur_per_hour_projected_including_archived_drafts": 0.15032507306046516,
+      "decision": "échec ; aucun candidat promu"
+    },
+    {
+      "method": "H4b choix par segment",
+      "new_arbitration_usd": 0.003406175,
+      "eur_per_hour_projected_including_archived_drafts": 0.12397792863757201,
+      "decision": "échec ; aucun candidat promu"
+    },
+    {
+      "method": "H4c choix par phrase",
+      "new_arbitration_usd": 0.00278655,
+      "eur_per_hour_projected_including_archived_drafts": 0.11572811530270488,
+      "decision": "échec ; aucun candidat promu"
+    },
+    {
+      "method": "H8 choix par phrase Lite",
+      "new_arbitration_usd": 0.0056525,
+      "eur_per_hour_projected_including_archived_drafts": 0.15388595678273304,
+      "decision": "échec ; aucun candidat promu"
+    }
+  ],
+  "artifacts": "data/model_outputs/quality-20260925/",
+  "qualification": "local-tools-real-provider: 3 actual client tools, 2 HTTP requests, $0.0004249"
+}

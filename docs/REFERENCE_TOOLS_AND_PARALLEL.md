@@ -4,6 +4,15 @@ Décisions du propriétaire — 24 septembre 2026. Ce document remplace les
 propositions antérieures de recherche native et d’outil documentaire unique.
 Il distingue la cible produit, le code candidat et la qualification réelle.
 
+Mise à jour du 25 septembre : les trois outils locaux sont maintenant implémentés
+et testés, avec corpus versionnés et raccordement optionnel au worker. Voir
+[leur contrat et leur couverture](LOCAL_REFERENCE_TOOLS.md). Ils ne sont pas
+activés sur le déploiement existant ; le panneau de remarques reste distinct.
+Le propriétaire a ensuite explicitement réautorisé des benchmarks Gemini :
+l'exclusion historique ci-dessous concerne le choix applicatif de ce moment,
+pas les campagnes expérimentales ultérieures. Voir
+[la campagne qualité à budget borné](QUALITY_CAMPAIGN_20260925.md).
+
 ## Décision ultérieure prioritaire : Gemini retiré
 
 Le propriétaire élimine définitivement Gemini pour qualité insuffisante. Ne plus

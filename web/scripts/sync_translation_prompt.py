@@ -47,7 +47,7 @@ def render(source):
         'Le contexte context_only sert à comprendre le passage ; ne le renvoie pas. '
         'Un bloc du prompt ci-dessous désigne un segment JSON identifié par son ID.\n\n'
         + body + '\n\nCapacités de ce candidat : web_search et web_fetch via Parallel. '
-        'Les outils quran_fr, sahih_ar et hadith_ar ne sont pas encore installés. '
+        'Les outils quran_fr, sahih_ar et hadith_ar sont disponibles uniquement si leurs définitions figurent dans la requête. '
         'Leur absence ne doit pas être masquée par une recherche web de remplacement. '
         'Aucun champ de remarque n’est encore accepté dans ce contrat JSON : '
         'ne place aucune note ni avertissement dans les sous-titres.\n')

@@ -1,0 +1,191 @@
+[
+  {
+    "tool": "quran_fr",
+    "arguments": {
+      "surah": 112,
+      "verse": 1,
+      "end_verse": 4
+    },
+    "result": {
+      "status": "found",
+      "match": "exact_reference",
+      "version": "20260925-v2",
+      "coverage": {
+        "quran": {
+          "count": 6236,
+          "edition": "Tanzil Simple 1.1 + fr.hamidullah (2011-07-18)",
+          "license": "Arabic CC BY 3.0, verbatim only; French non-commercial only: https://tanzil.net/trans/",
+          "source": "https://tanzil.net",
+          "complete": true
+        }
+      },
+      "entries": [
+        {
+          "collection": "quran",
+          "reference": "112:1",
+          "arabic": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ قُلْ هُوَ اللَّهُ أَحَدٌ",
+          "french": "Dis: «Il est Allah, Unique.",
+          "source_url": "https://tanzil.net/#trans/fr.hamidullah/112:1",
+          "canonical_url": "https://quran.com/112/1",
+          "numbering": "surah:verse"
+        },
+        {
+          "collection": "quran",
+          "reference": "112:2",
+          "arabic": "اللَّهُ الصَّمَدُ",
+          "french": "Allah, Le Seul à être imploré pour ce que nous désirons.",
+          "source_url": "https://tanzil.net/#trans/fr.hamidullah/112:2",
+          "canonical_url": "https://quran.com/112/2",
+          "numbering": "surah:verse"
+        },
+        {
+          "collection": "quran",
+          "reference": "112:3",
+          "arabic": "لَمْ يَلِدْ وَلَمْ يُولَدْ",
+          "french": "Il n'a jamais engendré, n'a pas été engendré non plus.",
+          "source_url": "https://tanzil.net/#trans/fr.hamidullah/112:3",
+          "canonical_url": "https://quran.com/112/3",
+          "numbering": "surah:verse"
+        },
+        {
+          "collection": "quran",
+          "reference": "112:4",
+          "arabic": "وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ",
+          "french": "Et nul n'est égal à Lui».",
+          "source_url": "https://tanzil.net/#trans/fr.hamidullah/112:4",
+          "canonical_url": "https://quran.com/112/4",
+          "numbering": "surah:verse"
+        }
+      ],
+      "more_candidates": false
+    }
+  },
+  {
+    "tool": "sahih_ar",
+    "arguments": {
+      "collection": "muslim",
+      "reference": "1907"
+    },
+    "result": {
+      "status": "ambiguous",
+      "match": "reference_variants",
+      "version": "20260925-v2",
+      "coverage": {
+        "muslim": {
+          "count": 3087,
+          "edition": "open-hadith-data v1.1.0@1d6365b2d7e97b56627bfdca2c41052877d8a5dd; Arabic text only",
+          "license": "Structured data CC0; classical Arabic public domain; English excluded",
+          "source": "https://raw.githubusercontent.com/Jaguar16/open-hadith-data/1d6365b2d7e97b56627bfdca2c41052877d8a5dd/DATA_LICENSE.md",
+          "complete": false
+        }
+      },
+      "entries": [
+        {
+          "collection": "muslim",
+          "reference": "1907a",
+          "arabic": "حَدَّثَنَا عَبْدُ اللَّهِ بْنُ مَسْلَمَةَ بْنِ قَعْنَبٍ، حَدَّثَنَا مَالِكٌ، عَنْ يَحْيَى بْنِ سَعِيدٍ، عَنْ مُحَمَّدِ، بْنِ إِبْرَاهِيمَ عَنْ عَلْقَمَةَ بْنِ وَقَّاصٍ، عَنْ عُمَرَ بْنِ الْخَطَّابِ، قَالَ قَالَ رَسُولُ اللَّهِ صلى الله عليه وسلم \" إِنَّمَا الأَعْمَالُ بِالنِّيَّةِ وَإِنَّمَا لاِمْرِئٍ مَا نَوَى فَمَنْ كَانَتْ هِجْرَتُهُ إِلَى اللَّهِ وَرَسُولِهِ فَهِجْرَتُهُ إِلَى اللَّهِ وَرَسُولِهِ وَمَنْ كَانَتْ هِجْرَتُهُ لِدُنْيَا يُصِيبُهَا أَوِ امْرَأَةٍ يَتَزَوَّجُهَا فَهِجْرَتُهُ إِلَى مَا هَاجَرَ إِلَيْهِ \" .",
+          "source_url": "https://sunnah.com/muslim:1907a",
+          "canonical_url": "https://sunnah.com/muslim:1907a",
+          "numbering": "Sunnah reference and variant as recorded by open-hadith-data v1.1.0"
+        }
+      ],
+      "more_candidates": false
+    }
+  },
+  {
+    "tool": "sahih_ar",
+    "arguments": {
+      "collection": "muslim",
+      "reference": "1907a"
+    },
+    "result": {
+      "status": "found",
+      "match": "exact_reference",
+      "version": "20260925-v2",
+      "coverage": {
+        "muslim": {
+          "count": 3087,
+          "edition": "open-hadith-data v1.1.0@1d6365b2d7e97b56627bfdca2c41052877d8a5dd; Arabic text only",
+          "license": "Structured data CC0; classical Arabic public domain; English excluded",
+          "source": "https://raw.githubusercontent.com/Jaguar16/open-hadith-data/1d6365b2d7e97b56627bfdca2c41052877d8a5dd/DATA_LICENSE.md",
+          "complete": false
+        }
+      },
+      "entries": [
+        {
+          "collection": "muslim",
+          "reference": "1907a",
+          "arabic": "حَدَّثَنَا عَبْدُ اللَّهِ بْنُ مَسْلَمَةَ بْنِ قَعْنَبٍ، حَدَّثَنَا مَالِكٌ، عَنْ يَحْيَى بْنِ سَعِيدٍ، عَنْ مُحَمَّدِ، بْنِ إِبْرَاهِيمَ عَنْ عَلْقَمَةَ بْنِ وَقَّاصٍ، عَنْ عُمَرَ بْنِ الْخَطَّابِ، قَالَ قَالَ رَسُولُ اللَّهِ صلى الله عليه وسلم \" إِنَّمَا الأَعْمَالُ بِالنِّيَّةِ وَإِنَّمَا لاِمْرِئٍ مَا نَوَى فَمَنْ كَانَتْ هِجْرَتُهُ إِلَى اللَّهِ وَرَسُولِهِ فَهِجْرَتُهُ إِلَى اللَّهِ وَرَسُولِهِ وَمَنْ كَانَتْ هِجْرَتُهُ لِدُنْيَا يُصِيبُهَا أَوِ امْرَأَةٍ يَتَزَوَّجُهَا فَهِجْرَتُهُ إِلَى مَا هَاجَرَ إِلَيْهِ \" .",
+          "source_url": "https://sunnah.com/muslim:1907a",
+          "canonical_url": "https://sunnah.com/muslim:1907a",
+          "numbering": "Sunnah reference and variant as recorded by open-hadith-data v1.1.0"
+        }
+      ],
+      "more_candidates": false
+    }
+  },
+  {
+    "tool": "hadith_ar",
+    "arguments": {
+      "collection": "riyadussalihin",
+      "reference": "1"
+    },
+    "result": {
+      "status": "found",
+      "match": "exact_reference",
+      "version": "20260925-v2",
+      "coverage": {
+        "riyadussalihin": {
+          "count": 1896,
+          "edition": "open-hadith-data v1.1.0@1d6365b2d7e97b56627bfdca2c41052877d8a5dd; Arabic text only",
+          "license": "Structured data CC0; classical Arabic public domain; English excluded",
+          "source": "https://raw.githubusercontent.com/Jaguar16/open-hadith-data/1d6365b2d7e97b56627bfdca2c41052877d8a5dd/DATA_LICENSE.md",
+          "complete": false
+        }
+      },
+      "entries": [
+        {
+          "collection": "riyadussalihin",
+          "reference": "1",
+          "arabic": "وعن أمير المؤمنين أبي حفص عمر بن الخطاب بن نفيل بن عبد العزى بن رياح بن قرط بن رزاح بن عدى بن لؤى ابن غالب القرشى العدوى. رضي الله عنه، قال: سمعت رسول الله صلى الله عليه وسلم يقول: \" إنما الأعمال بالنيات، وإنما لكل امرىء ما نوى فمن كانت هجرته إلى الله ورسوله فهجرته إلى الله ورسوله، ومن كانت هجرته لدنيا يصيبها، أو امرأة ينكحها فهجرته إلى ما هاجر إليه\" ((متفق على صحته. رواه إماما المحدثين: أبو عبدالله محمد بن إسماعيل بن إبراهيم بن المغيرة بن بَرْدِزْبَهْ الجعفي البخاري، أبو الحسين مسلم بن الحجاج بن مسلم القشيرى النيسابورى رضي الله عنهما في صحيحهما اللذين هما أصح الكتب المصنفة)).",
+          "source_url": "https://sunnah.com/riyadussalihin:1",
+          "canonical_url": "https://sunnah.com/riyadussalihin:1",
+          "numbering": "Sunnah reference and variant as recorded by open-hadith-data v1.1.0"
+        }
+      ],
+      "more_candidates": false
+    }
+  },
+  {
+    "tool": "hadith_ar",
+    "arguments": {
+      "collection": "abudawud",
+      "reference": "1"
+    },
+    "result": {
+      "status": "found",
+      "match": "exact_reference",
+      "version": "20260925-v2",
+      "coverage": {
+        "abudawud": {
+          "count": 5274,
+          "edition": "open-hadith-data v1.1.0@1d6365b2d7e97b56627bfdca2c41052877d8a5dd; Arabic text only",
+          "license": "Structured data CC0; classical Arabic public domain; English excluded",
+          "source": "https://raw.githubusercontent.com/Jaguar16/open-hadith-data/1d6365b2d7e97b56627bfdca2c41052877d8a5dd/DATA_LICENSE.md",
+          "complete": false
+        }
+      },
+      "entries": [
+        {
+          "collection": "abudawud",
+          "reference": "1",
+          "arabic": "حَدَّثَنَا عَبْدُ اللَّهِ بْنُ مَسْلَمَةَ بْنِ قَعْنَبٍ الْقَعْنَبِيُّ، حَدَّثَنَا عَبْدُ الْعَزِيزِ، - يَعْنِي ابْنَ مُحَمَّدٍ - عَنْ مُحَمَّدٍ، - يَعْنِي ابْنَ عَمْرٍو - عَنْ أَبِي سَلَمَةَ، عَنِ الْمُغِيرَةِ بْنِ شُعْبَةَ، أَنَّ النَّبِيَّ صلى الله عليه وسلم كَانَ إِذَا ذَهَبَ الْمَذْهَبَ أَبْعَدَ .",
+          "source_url": "https://sunnah.com/abudawud:1",
+          "canonical_url": "https://sunnah.com/abudawud:1",
+          "numbering": "Sunnah reference and variant as recorded by open-hadith-data v1.1.0"
+        }
+      ],
+      "more_candidates": false
+    }
+  }
+]

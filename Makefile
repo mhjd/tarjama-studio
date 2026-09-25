@@ -84,6 +84,32 @@ web-test: web-prompts-check
 web-build: web-prompts-check
 	web/scripts/tools.sh sh -c 'go build -o /work/web/.cache/tarjama ./cmd/tarjama && cd /work/web/frontend && npm run build'
 
+.PHONY: references-import references-build references-test references-query
+REFERENCE_CORPUS ?= data/reference_corpus/20260925-v2
+references-import:
+	python3 web/scripts/import_references.py --output "$(REFERENCE_CORPUS)"
+references-build:
+	web/scripts/tools.sh go build -o /work/web/.cache/references ./cmd/references
+references-test:
+	web/scripts/tools.sh go test ./internal/references ./internal/research
+references-query: references-build
+	web/.cache/references --corpus "$(REFERENCE_CORPUS)" $(ARGS)
+
+.PHONY: quality-campaign quality-budget-test quality-arbitrate quality-prepare quality-sentence
+quality-campaign:
+	python3 web/review/quality-campaign-20260925/run.py $(ARGS)
+quality-budget-test:
+	python3 -m unittest discover -s web/review/quality-campaign-20260925 -p 'test_*.py'
+quality-arbitrate:
+	python3 web/review/quality-campaign-20260925/arbitrate.py $(ARGS)
+quality-prepare:
+	python3 web/review/quality-campaign-20260925/prepare.py $(ARGS)
+quality-sentence:
+	python3 web/review/quality-campaign-20260925/sentence.py $(ARGS)
+.PHONY: quality-capability
+quality-capability:
+	python3 web/review/quality-campaign-20260925/capability.py $(ARGS)
+
 WEB_ENV ?= web/deploy/.env
 web-config:
 	docker compose --env-file $(WEB_ENV) -f web/deploy/compose.yml config --quiet

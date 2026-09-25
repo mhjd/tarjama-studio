@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"log"
 	"math"
 	"net/http"
 	"os"
 	"strings"
+	"tarjama/web/internal/references"
 	"time"
 )
 
@@ -138,7 +140,15 @@ func RunWorker(ctx context.Context, s *Store, c Config) error {
 	default:
 		return errors.New("Moteur média inconnu")
 	}
-	w := &Worker{Store: s, Config: c, Providers: NewProviders(), Media: media}
+	providers := NewProviders()
+	if c.ReferenceCorpus != "" {
+		corpus, err := references.Load(c.ReferenceCorpus)
+		if err != nil {
+			return fmt.Errorf("reference corpus: %w", err)
+		}
+		providers.References = corpus
+	}
+	w := &Worker{Store: s, Config: c, Providers: providers, Media: media}
 	if isolated != nil {
 		cleanupCtx, stop := context.WithCancel(ctx)
 		done := make(chan struct{})

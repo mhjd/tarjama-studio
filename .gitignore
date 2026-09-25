@@ -23,6 +23,7 @@ ui/electron/generated_defaults.ts
 ui/tsconfig.tsbuildinfo
 
 data/raw/
+data/reference_corpus/
 data/model_outputs/
 data/workspaces/
 exports/

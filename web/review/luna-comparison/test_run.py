@@ -14,6 +14,23 @@ class Response(io.BytesIO):
 
 
 class ComparisonEvidenceTests(unittest.TestCase):
+    def test_continuity_keeps_bilingual_context_out_of_targets(self):
+        source = [{'id': 'b', 'arabic': 'نعم'}]
+        context = [{'id': 'a', 'arabic': 'السلام', 'french': 'Paix.'}]
+        body = run.request_body('z-ai/glm-5.3-flash', 'Translate', source,
+                                context_source=context, continuity=True, previous_summary='Un salut.')
+        payload = json.loads(body['messages'][1]['content'])
+        self.assertEqual(payload['segments'], [{'id': 'b', 'text': 'نعم'}])
+        self.assertEqual(payload['context_only'], context)
+        self.assertEqual(payload['previous_summary'], 'Un salut.')
+        answer = {'segments': [{'id': 'b', 'text': 'Oui.'}], 'continuity_summary': 'Un salut et une réponse.'}
+        run.validate_answer(answer, source, True)
+        for invalid in [dict(answer, continuity_summary=''), dict(answer, continuity_summary='x'*1501),
+                        dict(answer, segments=[{'id': 'a', 'text': 'Paix.'}]),
+                        dict(answer, segments=answer['segments'] + [{'id': 'a', 'text': 'Paix.'}])]:
+            with self.assertRaises(ValueError): run.validate_answer(invalid, source, True)
+        self.assertNotIn('continuity_summary', run.SCHEMA['properties'])
+
     def test_timed_chunks_preserve_segments_and_exact_ten_minute_boundary(self):
         source = [{'start_ms': 0, 'end_ms': 599000},
                   {'start_ms': 599000, 'end_ms': 600000},

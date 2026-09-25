@@ -130,3 +130,25 @@ et les frontières figurent dans les preuves de chaque exécution. Les options
 restent isolées de la configuration et du déploiement de l'application.
 
 Résultats et limites : [rapport GLM du 25 septembre](../../../docs/GLM53_TRANSLATION_BENCHMARK_20260925.md).
+
+## Blocs avec mémoire de continuité
+
+`BENCHMARK_CONTINUITY=1` avec un modèle explicite et `BENCHMARK_CHUNK_MINUTES=4`
+lance uniquement les blocs du corpus, dans l'ordre. Chaque réponse inclut un
+`continuity_summary` cumulatif (1 à 1500 caractères), transmis au bloc suivant
+avec les cinq dernières lignes arabes et leurs traductions validées. Aucun
+contexte futur n'est ajouté. Le résumé est une donnée, pas une instruction, et
+reste séparé des sous-titres. Les IDs du contexte sont interdits dans la sortie.
+
+```sh
+make web-luna-compare BENCHMARK_OUTPUT=data/model_outputs/glm53-4min-NOUVEAU   BENCHMARK_MODEL=z-ai/glm-5.3-flash BENCHMARK_REASONING=high   BENCHMARK_CHUNK_MINUTES=4 BENCHMARK_CONTINUITY=1
+```
+
+L'essai s'arrête au premier bloc invalide, sans correction JSON ni résumé fabriqué.
+Les réponses acceptées restent conservées. Le résumé est produit dans le même
+appel que la traduction : son temps et son coût sont inclus. Aucune propagation
+vers l'application ; ce protocole expérimental change à la fois la taille des
+blocs et le contexte, donc ne mesure pas isolément l'effet de chacune de ces
+variables. Les contrôles web/difficultés de l'essai précédent ne sont pas rejoués.
+
+Résultats : [essai avec continuité du 25 septembre](../../../docs/GLM53_CONTINUITY_BENCHMARK_20260925.md).

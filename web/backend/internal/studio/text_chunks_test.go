@@ -87,7 +87,7 @@ func TestResumeOldTextBoundaries(t *testing.T) {
 		t.Fatal("duplicated checkpoint accepted")
 	}
 }
-func TestDeepSeekRequestBudget(t *testing.T) {
+func TestLunaMediumRequestBudget(t *testing.T) {
 	p := NewProviders()
 	if !strings.Contains(p.TextURL, "openrouter.ai/api/v1/chat/completions") {
 		t.Fatal(p.TextURL)
@@ -96,18 +96,23 @@ func TestDeepSeekRequestBudget(t *testing.T) {
 		var b struct {
 			Model           string `json:"model"`
 			MaxOutputTokens int    `json:"max_tokens"`
+			Reasoning       struct {
+				Effort string `json:"effort"`
+			} `json:"reasoning"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 			t.Fatal(err)
 		}
-		if b.MaxOutputTokens != 32768 || b.Model != TextModel {
-			t.Error("insufficient output budget")
+		if b.MaxOutputTokens != 32768 || b.Model != "openai/gpt-6-luna" || b.Reasoning.Effort != "medium" {
+			t.Errorf("unexpected application model configuration: %+v", b)
 		}
 		fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":"{\"segments\":[{\"id\":\"a\",\"text\":\"Bonjour\"}]}"}}]}`)
 	}))
 	defer server.Close()
 	p.TextURL = server.URL
-	if _, err := p.Text(context.Background(), "test-only", "translate", []Segment{{ID: "a", Arabic: "سلام"}}, nil); err != nil {
-		t.Fatal(err)
+	for _, kind := range []string{"translate", "cleanup"} {
+		if _, err := p.Text(context.Background(), "test-only", kind, []Segment{{ID: "a", Arabic: "سلام"}}, nil); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

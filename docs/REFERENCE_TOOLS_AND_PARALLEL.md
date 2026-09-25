@@ -13,7 +13,21 @@ l'exclusion historique ci-dessous concerne le choix applicatif de ce moment,
 pas les campagnes expérimentales ultérieures. Voir
 [la campagne qualité à budget borné](QUALITY_CAMPAIGN_20260925.md).
 
-## Décision ultérieure prioritaire : Gemini retiré
+## Choix actuel — 25 septembre : Luna medium
+
+Après la campagne qualité, le propriétaire retient GPT‑6 Luna avec raisonnement
+`medium` via OpenRouter (`openai/gpt-6-luna`). Ce choix remplace le défaut
+DeepSeek pour le traitement texte partagé (correction arabe et traduction).
+Parallel et les trois outils locaux optionnels restent inchangés. Les résultats
+expérimentaux ne garantissent pas une traduction publiable sans relecture.
+
+La configuration est préparée dans le code ; ce changement ne constitue pas un
+déploiement. Le corpus local doit encore être monté dans le worker et configuré
+par `REFERENCE_CORPUS_DIR` pour activer ses outils sur le VPS. Les références et
+URL sont auditées côté serveur ; leur affichage avec les timecodes dans l'UI
+reste à réaliser. Aucun nouvel appel payant n'est nécessaire pour ce choix.
+
+## Historique du 24 septembre : Gemini retiré, DeepSeek retenu
 
 Le propriétaire élimine définitivement Gemini pour qualité insuffisante. Ne plus
 le proposer, le sélectionner ou relancer ses benchmarks. Le candidat retient

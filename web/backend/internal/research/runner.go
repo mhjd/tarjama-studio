@@ -39,6 +39,7 @@ type Runner struct {
 	LocalTools                    LocalTools
 	Client                        *http.Client
 	Endpoint, Model               string
+	ReasoningEffort               string
 	MaxOutputTokens, MaxToolCalls int
 }
 type ModelHTTPError struct {
@@ -96,6 +97,9 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 	}, "tools": ServerTools(), "tool_choice": "auto", "max_tool_calls": maxTools, "max_tokens": maxTokens,
 		"response_format": map[string]any{"type": "json_schema", "json_schema": map[string]any{"name": "translation", "strict": true, "schema": schema}},
 		"provider":        map[string]any{"require_parameters": true}}
+	if r.ReasoningEffort != "" {
+		payload["reasoning"] = map[string]string{"effort": r.ReasoningEffort}
+	}
 	if r.LocalTools != nil {
 		payload["tools"] = append(ServerTools(), r.LocalTools.Tools()...)
 	}

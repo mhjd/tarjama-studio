@@ -22,7 +22,7 @@ import (
 //go:embed prompts/*.txt
 var prompts embed.FS
 
-const TextModel = "deepseek/deepseek-v4.1-flash"
+const TextModel = "openai/gpt-6-luna"
 const TextMaxOutputTokens = 32768
 const GroqModel = "whisper-large-v3"
 
@@ -145,6 +145,9 @@ func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, 
 	input := map[string]any{"segments": target, "context_only": contextText}
 	schema := map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"segments": map[string]any{"type": "array", "items": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"id": map[string]string{"type": "string"}, "text": map[string]string{"type": "string"}}, "required": []string{"id", "text"}}}}, "required": []string{"segments"}}
 	runner := research.Runner{Client: p.Client, Endpoint: endpoint, Model: model, LocalTools: p.References}
+	if model == TextModel {
+		runner.ReasoningEffort = "medium"
+	}
 	output, err := runner.Run(ctx, key, string(prompt), input, schema)
 	if err != nil {
 		var modelError *research.ModelHTTPError

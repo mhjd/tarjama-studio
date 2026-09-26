@@ -41,25 +41,6 @@ func TestPreviewLive(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	t.Run("SSOHeaders", func(t *testing.T) {
-		client := &http.Client{Timeout: 15 * time.Second}
-		for _, n := range []int{24576, 80 * 1024} {
-			req, _ := http.NewRequestWithContext(ctx, "GET", "http://web:8080/readyz", nil)
-			req.Header.Set("Cookie", "release_probe="+strings.Repeat("x", n))
-			r, err := client.Do(req)
-			if err != nil {
-				t.Fatal("Header probe failed")
-			}
-			r.Body.Close()
-			want := 204
-			if n == 80*1024 {
-				want = 431
-			}
-			if r.StatusCode != want {
-				t.Fatalf("%d bytes: status %d, expected %d", n, r.StatusCode, want)
-			}
-		}
-	})
 	t.Run("HTTPAndOIDCStart", func(t *testing.T) {
 		client := &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 		// A newly created pod may not have network connectivity yet. Poll actual
@@ -108,6 +89,25 @@ func TestPreviewLive(t *testing.T) {
 				if !valid {
 					t.Fatal("Login cookie protection missing")
 				}
+			}
+		}
+	})
+	t.Run("SSOHeaders", func(t *testing.T) {
+		client := &http.Client{Timeout: 15 * time.Second}
+		for _, n := range []int{24576, 80 * 1024} {
+			req, _ := http.NewRequestWithContext(ctx, "GET", "http://web:8080/readyz", nil)
+			req.Header.Set("Cookie", "release_probe="+strings.Repeat("x", n))
+			r, err := client.Do(req)
+			if err != nil {
+				t.Fatal("Header probe failed")
+			}
+			r.Body.Close()
+			want := 204
+			if n == 80*1024 {
+				want = 431
+			}
+			if r.StatusCode != want {
+				t.Fatalf("%d bytes: status %d, expected %d", n, r.StatusCode, want)
 			}
 		}
 	})

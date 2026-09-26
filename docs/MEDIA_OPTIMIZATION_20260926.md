@@ -139,3 +139,6 @@ PostgreSQL de fixtures). L'image candidate a été construite et testée. Statut
 atelier relevé ensuite : révision `5dcf2e33fbe5a269` inchangée, web/worker/db/egress
 prêts, service de revue arrêté. Les anciennes tâches terminées restent visibles
 au statut ; aucune tâche de qualification nouvelle n'a été lancée sur atelier.
+
+Commit applicatif testé : `8b80b7dc05f5ae9142c932d81241dbe16592c2ce`. Proposition administrateur
+structurée : `web/deploy/preview/media-optimization.proposal.json`, état non activé.

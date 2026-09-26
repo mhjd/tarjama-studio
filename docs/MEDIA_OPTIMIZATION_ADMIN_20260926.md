@@ -22,8 +22,9 @@ ou un redéploiement web n'affecte pas ses profils Docker.
 - Point d'entrée : `/usr/local/bin/tarjama isolated-tool`.
 - Fichiers modifiés de l'entrée :
   `web/backend/internal/studio/isolated_tool.go` et `media_remux.go`.
-- Ancienne base applicative avant optimisation : `d6599aa` ; le commit source
-  testé est renseigné dans `web/deploy/preview/media-optimization.proposal.json`.
+- Commit source testé : `8b80b7dc05f5ae9142c932d81241dbe16592c2ce` ; base avant optimisation : `d6599aa`.
+  Proposition structurée : `web/deploy/preview/media-optimization.proposal.json`.
+  Diff de code : `git diff d6599aa 8b80b7dc05f5ae9142c932d81241dbe16592c2ce -- web/backend/internal/studio/isolated_tool.go web/backend/internal/studio/media_remux.go`.
 - Profils à examiner exclusivement : **`tarjama-normalize-v1` et `tarjama-export-v1`**.
   Ne pas remplacer `tarjama-download-v1`, ses réglages, son image ou son relais.
   Les autres profils conservent également leur image et leurs paramètres.

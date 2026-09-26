@@ -1,0 +1,133 @@
+{
+  "status": "prepared-not-registered",
+  "source_commit": "8b80b7dc05f5ae9142c932d81241dbe16592c2ce",
+  "base_commit": "d6599aa",
+  "docker_image_tag": "tarjama-media:optimization-20260926",
+  "docker_image_id": "sha256:61e1817537c3f5ab0f332384377365f36e5b7f74988971f5b75264bca59b74b2",
+  "entrypoint": [
+    "/usr/local/bin/tarjama",
+    "isolated-tool"
+  ],
+  "security": {
+    "network": "none",
+    "uid": 10002,
+    "gid": 10002,
+    "capabilities": [],
+    "no_new_privileges": true,
+    "seccomp": "runtime default",
+    "apparmor": "runtime default",
+    "read_only_root": true,
+    "application_secrets": false,
+    "runtime_socket": false
+  },
+  "concurrency_proposal": 1,
+  "profiles": [
+    {
+      "name": "tarjama-normalize-v1",
+      "argv": [
+        "normalize",
+        "{width}",
+        "{height}",
+        "{quality}",
+        "4"
+      ],
+      "parameters": {
+        "width": {
+          "type": "integer-string",
+          "min": 2,
+          "max": 8192,
+          "multiple_of": 2
+        },
+        "height": {
+          "type": "integer-string",
+          "min": 2,
+          "max": 8192,
+          "multiple_of": 2
+        },
+        "quality": {
+          "type": "enum-string",
+          "values": [
+            "high"
+          ]
+        }
+      },
+      "inputs": {
+        "media": 1073741824
+      },
+      "max_input_bytes": 1073741824,
+      "outputs": {
+        "result.mp4": 1073741824
+      },
+      "max_output_bytes": 1073741824,
+      "timeout_seconds": 14400,
+      "memory_mib_proposal": 3072,
+      "cpu_proposal": 4,
+      "pids_proposal": 128,
+      "relay": null
+    },
+    {
+      "name": "tarjama-export-v1",
+      "argv": [
+        "export",
+        "{width}",
+        "{height}",
+        "{quality}",
+        "4"
+      ],
+      "parameters": {
+        "width": {
+          "type": "integer-string",
+          "min": 2,
+          "max": 8192,
+          "multiple_of": 2
+        },
+        "height": {
+          "type": "integer-string",
+          "min": 2,
+          "max": 8192,
+          "multiple_of": 2
+        },
+        "quality": {
+          "type": "enum-string",
+          "values": [
+            "low",
+            "high"
+          ]
+        }
+      },
+      "inputs": {
+        "media": 1073741824,
+        "subtitles.ass": 16777216
+      },
+      "max_input_bytes": 1090519040,
+      "outputs": {
+        "result.mp4": 1073741824
+      },
+      "max_output_bytes": 1073741824,
+      "timeout_seconds": 14400,
+      "memory_mib_proposal": 3072,
+      "cpu_proposal": 4,
+      "pids_proposal": 128,
+      "relay": null
+    }
+  ],
+  "compatibility": {
+    "two_cpu_option": "Use the same image, keep the original argv without final 4 and the original 2 CPU limit.",
+    "worker_api_change_required": false,
+    "application_deploy_required": false,
+    "other_profiles": "Keep images, argv, resource limits and network unchanged."
+  },
+  "rollback": {
+    "requirement": "Record actual prior profile state before applying; restore image, argv and CPU limit together.",
+    "documented_previous_image": "sha256:da630b6315542d51fbaa689432ecbae41ac364bd824200b0a60d00a10555c6d3",
+    "documented_previous_cpu": 2,
+    "documented_previous_argv": "No final thread argument."
+  },
+  "qualification": {
+    "local_default_protections_2_cpu": "passed",
+    "local_default_protections_4_cpu": "passed",
+    "broker_real_profiles": "pending administrator review/qualification",
+    "evidence": "web/review/media-performance-20260926",
+    "handoff": "docs/MEDIA_OPTIMIZATION_ADMIN_20260926.md"
+  }
+}

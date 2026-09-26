@@ -16,5 +16,6 @@ renommé après création du job, HTTP Range206, refus d'un autre propriétaire 
 d'un export non terminé. `go test -race` ; preuves dans
 `web/review/export-filename-20260926/tests.log`.
 
-Modification préparée dans le backend API, non déployée pendant cette tâche.
+Modification déployée ensuite sur instruction du propriétaire : révision
+`34008606bc133fc5`. Voir [le rapport de déploiement](DEPLOY_EXPORT_FILENAME_20260926.md).
 Aucune dépendance nouvelle, migration ou modification du profil média administré.

@@ -1,5 +1,11 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **Redéploiement du 26 septembre, 16:10 UTC :** les téléchargements MP4
+> prennent le titre actuel du projet. API `d42189b`, révision `34008606bc133fc5`,
+> quatre services prêts et qualification HTTP/OIDC/en-têtes/TLS réussie.
+> Les optimisations média restent en attente du remplacement des profils administrés.
+> [Rapport et périmètre exact](DEPLOY_EXPORT_FILENAME_20260926.md).
+
 > **Correction déployée le 26 septembre :** les reprises automatiques
 > d'une réponse IA invalide n'exposent plus de diagnostic technique à l'utilisateur.
 > Un échec définitif reste explicite et réessayable. Code `b93a8e4`, révision

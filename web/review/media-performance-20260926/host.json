@@ -1,0 +1,9 @@
+{
+  "logical_cpus": 6,
+  "started_utc": "20260926T151043Z",
+  "source": "web/.cache/real-ui-10min/ui-review-tenmin_short3/tarjama-gbrDbQVYDuQ-macbook-air15-m4-fr-high.mp4",
+  "note": "Offline local containers only. No production profile changes.",
+  "source_sha256": "b7f43e123872bcde70b0dda13dad039b0259d722c02c80d36a1c47f5898d3b6e",
+  "tools_image_id": "sha256:e9a5dff6011038495545b5959cf685de8a9abc13f3711c8457fb3cb1be04530e",
+  "identity_recorded_after_run": true
+}

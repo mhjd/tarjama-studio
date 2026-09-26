@@ -30,6 +30,44 @@ func runIsolatedTool(ctx context.Context, args []string, in, out string) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	if args[0] == "normalize" || args[0] == "export" {
+		// Inspect inside the same sandbox as FFmpeg. Never trust a filename or
+		// caller-supplied codec, and never expose a general-purpose copy profile.
+		probeProgram, probeArgs, _, _, probeTimeout, _ := isolatedToolCommand([]string{"probe"}, in, out)
+		probeCtx, stopProbe := context.WithTimeout(ctx, probeTimeout)
+		raw, probeErr := runIsolatedCommand(probeCtx, probeProgram, probeArgs, out, false)
+		stopProbe()
+		if probeErr != nil {
+			return probeErr
+		}
+		if _, probeErr = parseMediaProbe(raw); probeErr != nil {
+			return probeErr
+		}
+		width, _ := strconv.Atoi(args[1])
+		height, _ := strconv.Atoi(args[2])
+		if args[0] == "normalize" && canCopyMediaVideo(raw, width, height) {
+			argv = remuxMediaArgs(filepath.Join(in, "media"), result, canCopyMediaAudio(raw))
+		} else {
+			argv = isolatedRenderArgs(args, in, out, canCopyMediaAudio(raw))
+		}
+	}
+	stdout, e := runIsolatedCommand(ctx, program, argv, out, args[0] == "download")
+	if e != nil {
+		return e
+	}
+	if args[0] == "probe" {
+		if e = os.WriteFile(result, stdout, 0600); e != nil {
+			return e
+		}
+	}
+	st, e := os.Lstat(result)
+	if e != nil || !st.Mode().IsRegular() || st.Size() <= 0 || st.Size() > limit {
+		return errors.New("Sortie isolée invalide ou hors limites")
+	}
+	return nil
+}
+
+func runIsolatedCommand(ctx context.Context, program string, argv []string, out string, download bool) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "prlimit", append([]string{"--fsize=1073741824", "--cpu=14400", "--nofile=128", "--", program}, argv...)...)
 	cmd.Dir = out
 	cmd.Env = []string{"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/tmp", "LANG=C.UTF-8"}
@@ -40,25 +78,16 @@ func runIsolatedTool(ctx context.Context, args []string, in, out string) error {
 	stderr := &limitedBuffer{Limit: 32 * 1024}
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
-	if e = cmd.Run(); e != nil {
+	if e := cmd.Run(); e != nil {
 		// Download has only a canonical public URL as input and no app secrets.
 		// Keep its bounded, redacted tail in the private broker diagnostic, not
 		// application logs. Other tools may echo user file contents: do not dump them.
-		if args[0] == "download" {
+		if download {
 			fmt.Fprintln(os.Stderr, safeDownloadDiagnostic(stderr.String()))
 		}
-		return fmt.Errorf("Outil isolé en échec (error_category=%s)", isolatedFailureReason(stderr.String()))
+		return nil, fmt.Errorf("Outil isolé en échec (error_category=%s)", isolatedFailureReason(stderr.String()))
 	}
-	if args[0] == "probe" {
-		if e = os.WriteFile(result, stdout.Bytes(), 0600); e != nil {
-			return e
-		}
-	}
-	st, e := os.Lstat(result)
-	if e != nil || !st.Mode().IsRegular() || st.Size() <= 0 || st.Size() > limit {
-		return errors.New("Sortie isolée invalide ou hors limites")
-	}
-	return nil
+	return stdout.Bytes(), nil
 }
 
 func isolatedToolCommand(args []string, in, out string) (program string, argv []string, result string, limit int64, timeout time.Duration, err error) {
@@ -102,7 +131,9 @@ func isolatedToolCommand(args []string, in, out string) (program string, argv []
 		result = filepath.Join(out, "audio.flac")
 		argv = append(base, "-ss", fmt.Sprintf("%.3f", float64(start)/1000), "-t", fmt.Sprintf("%.3f", float64(duration)/1000), "-i", media, "-vn", "-map", "0:a:0", "-ar", "16000", "-ac", "1", "-sample_fmt", "s16", "-c:a", "flac", result)
 	case "normalize", "export":
-		if len(args) != 4 {
+		// Optional fixed administrator argument, not a user-controlled parameter.
+		// Existing profiles retain two threads until their CPU limit is reviewed.
+		if len(args) != 4 && (len(args) != 5 || args[4] != "4") {
 			return
 		}
 		w, ok := integer(args[1], 2, 8192)
@@ -120,16 +151,8 @@ func isolatedToolCommand(args []string, in, out string) (program string, argv []
 		if args[0] == "normalize" && quality != "high" {
 			return
 		}
-		filter := fmt.Sprintf("scale=%d:%d,setsar=1", w, h)
-		crf := "23"
-		if args[0] == "export" {
-			filter += ",ass=" + filepath.Join(in, "subtitles.ass")
-			if quality == "low" {
-				crf = "28"
-			}
-		}
 		result = filepath.Join(out, "result.mp4")
-		argv = append(base, "-i", media, "-map", "0:v:0", "-map", "0:a:0", "-vf", filter, "-c:v", "libx264", "-threads", "2", "-preset", "veryfast", "-crf", crf, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-map_metadata", "-1", result)
+		argv = isolatedRenderArgs(args, in, out, false)
 	case "mux":
 		if len(args) != 1 {
 			return
@@ -161,6 +184,30 @@ func isolatedToolCommand(args []string, in, out string) (program string, argv []
 	}
 	err = nil
 	return
+}
+
+// Called only after the fixed profile arguments have been validated above.
+func isolatedRenderArgs(args []string, in, out string, copyAudio bool) []string {
+	threads := "2"
+	if len(args) == 5 {
+		threads = args[4]
+	}
+	filter := "scale=" + args[1] + ":" + args[2] + ",setsar=1"
+	crf := "23"
+	if args[0] == "export" {
+		filter += ",ass=" + filepath.Join(in, "subtitles.ass")
+		if args[3] == "low" {
+			crf = "28"
+		}
+	}
+	argv := []string{"-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-threads", "2", "-filter_threads", "1", "-protocol_whitelist", "file,pipe", "-i", filepath.Join(in, "media"),
+		"-map", "0:v:0", "-map", "0:a:0", "-vf", filter, "-c:v", "libx264", "-threads", threads, "-preset", "veryfast", "-crf", crf, "-pix_fmt", "yuv420p"}
+	if copyAudio {
+		argv = append(argv, "-c:a", "copy")
+	} else {
+		argv = append(argv, "-c:a", "aac", "-b:a", "128k")
+	}
+	return append(argv, "-movflags", "+faststart", "-map_metadata", "-1", "-map_metadata:s", "-1", "-map_chapters", "-1", filepath.Join(out, "result.mp4"))
 }
 
 var diagnosticURL = regexp.MustCompile(`(?i)https?://[^\s"<>]+`)

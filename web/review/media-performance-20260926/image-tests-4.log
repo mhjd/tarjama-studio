@@ -1,0 +1,5 @@
+sh web/scripts/isolated-image-test.sh
+Packet identity, subtitle rendering and full output decode passed in the candidate image.
+Private download diagnostic passed without network or credentials.
+Synthetic image probe, fractional FLAC and MP4 passed under network-none/default protections.
+This does not qualify the real broker path, maximum sizes or YouTube.

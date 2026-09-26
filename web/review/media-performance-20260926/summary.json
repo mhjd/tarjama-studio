@@ -1,0 +1,194 @@
+[
+  {
+    "source": "static",
+    "variant": "export-original",
+    "wall_seconds": 6.58922050052206,
+    "bytes": 508793,
+    "cpu_seconds": 12.865119500000006,
+    "ssim": 0.9988430300000026
+  },
+  {
+    "source": "static",
+    "variant": "export-preset",
+    "wall_seconds": 5.772320226999,
+    "bytes": 568664,
+    "cpu_seconds": 11.233918499999994,
+    "ssim": 0.9995032099999955
+  },
+  {
+    "source": "static",
+    "variant": "export-audio",
+    "wall_seconds": 6.442271227482706,
+    "bytes": 516649,
+    "cpu_seconds": 12.566664,
+    "ssim": 0.9988430300000026
+  },
+  {
+    "source": "static",
+    "variant": "export-combined",
+    "wall_seconds": 5.848343760997523,
+    "bytes": 576520,
+    "cpu_seconds": 11.393208499999997,
+    "ssim": 0.9995032099999955
+  },
+  {
+    "source": "static",
+    "variant": "normalize-original",
+    "wall_seconds": 5.8072160340088885,
+    "bytes": 476455,
+    "cpu_seconds": 11.39001600000001,
+    "ssim": null
+  },
+  {
+    "source": "static",
+    "variant": "normalize-remux",
+    "wall_seconds": 0.12575638049747795,
+    "bytes": 527421,
+    "cpu_seconds": 0.12312450000001007,
+    "ssim": null
+  },
+  {
+    "source": "static",
+    "variant": "export-4-veryfast",
+    "wall_seconds": 3.4904601645248476,
+    "bytes": 516649,
+    "cpu_seconds": 12.571528500000001,
+    "ssim": 0.9988430300000026
+  },
+  {
+    "source": "static",
+    "variant": "export-4-superfast",
+    "wall_seconds": 3.1163310345145874,
+    "bytes": 576520,
+    "cpu_seconds": 10.918450000000004,
+    "ssim": 0.9995032099999955
+  },
+  {
+    "source": "motion",
+    "variant": "export-original",
+    "wall_seconds": 11.031529651518213,
+    "bytes": 11160721,
+    "cpu_seconds": 21.815804999999997,
+    "ssim": 0.9946520740000001
+  },
+  {
+    "source": "motion",
+    "variant": "export-preset",
+    "wall_seconds": 8.703272287501022,
+    "bytes": 22539536,
+    "cpu_seconds": 17.178268499999994,
+    "ssim": 0.9981668499999996
+  },
+  {
+    "source": "motion",
+    "variant": "export-audio",
+    "wall_seconds": 10.814729185483884,
+    "bytes": 11168577,
+    "cpu_seconds": 21.380555000000022,
+    "ssim": 0.9946520740000001
+  },
+  {
+    "source": "motion",
+    "variant": "export-combined",
+    "wall_seconds": 8.141894982516533,
+    "bytes": 22547392,
+    "cpu_seconds": 16.067894500000044,
+    "ssim": 0.9981668499999996
+  },
+  {
+    "source": "motion",
+    "variant": "normalize-original",
+    "wall_seconds": 10.450289494998287,
+    "bytes": 11109621,
+    "cpu_seconds": 20.71783950000001,
+    "ssim": null
+  },
+  {
+    "source": "motion",
+    "variant": "normalize-remux",
+    "wall_seconds": 0.15212865849025548,
+    "bytes": 20003281,
+    "cpu_seconds": 0.15022049999996767,
+    "ssim": null
+  },
+  {
+    "source": "motion",
+    "variant": "export-4-veryfast",
+    "wall_seconds": 5.990867379005067,
+    "bytes": 11168558,
+    "cpu_seconds": 21.153313000000004,
+    "ssim": 0.99465237
+  },
+  {
+    "source": "motion",
+    "variant": "export-4-superfast",
+    "wall_seconds": 4.390743082476547,
+    "bytes": 22547350,
+    "cpu_seconds": 16.318199500000006,
+    "ssim": 0.9981668479999997
+  },
+  {
+    "source": "real",
+    "variant": "export-original",
+    "wall_seconds": 9.586000057985075,
+    "bytes": 2725867,
+    "cpu_seconds": 18.86717849999996,
+    "ssim": 0.9953225079681269
+  },
+  {
+    "source": "real",
+    "variant": "export-preset",
+    "wall_seconds": 7.56817276251968,
+    "bytes": 4935945,
+    "cpu_seconds": 14.864825999999992,
+    "ssim": 0.9961549003984059
+  },
+  {
+    "source": "real",
+    "variant": "export-audio",
+    "wall_seconds": 9.158251409506192,
+    "bytes": 2720633,
+    "cpu_seconds": 18.00472900000001,
+    "ssim": 0.9953225079681269
+  },
+  {
+    "source": "real",
+    "variant": "export-combined",
+    "wall_seconds": 7.352007291017799,
+    "bytes": 4930711,
+    "cpu_seconds": 14.45226500000006,
+    "ssim": 0.9961549003984059
+  },
+  {
+    "source": "real",
+    "variant": "normalize-original",
+    "wall_seconds": 8.86821794800926,
+    "bytes": 2756383,
+    "cpu_seconds": 17.514044000000034,
+    "ssim": null
+  },
+  {
+    "source": "real",
+    "variant": "normalize-remux",
+    "wall_seconds": 0.13882896048016846,
+    "bytes": 2900004,
+    "cpu_seconds": 0.13642150000002307,
+    "ssim": null
+  },
+  {
+    "source": "real",
+    "variant": "export-4-veryfast",
+    "wall_seconds": 5.455173839494819,
+    "bytes": 2720761,
+    "cpu_seconds": 18.250385500000007,
+    "ssim": 0.9953231274900399
+  },
+  {
+    "source": "real",
+    "variant": "export-4-superfast",
+    "wall_seconds": 4.216958398988936,
+    "bytes": 4928858,
+    "cpu_seconds": 15.057437500000011,
+    "ssim": 0.9961547709163345
+  }
+]

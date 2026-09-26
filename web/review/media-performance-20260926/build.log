@@ -1,0 +1,92 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 4.81kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/golang:1.27.1-bookworm
+#2 ...
+
+#3 [internal] load metadata for docker.io/library/node:22.23.2-bookworm-slim
+#3 DONE 1.2s
+
+#4 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#4 DONE 1.2s
+
+#2 [internal] load metadata for docker.io/library/golang:1.27.1-bookworm
+#2 DONE 1.2s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 575B done
+#5 DONE 0.0s
+
+#6 [frontend 1/6] FROM docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9
+#6 resolve docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9 0.0s done
+#6 DONE 0.0s
+
+#7 [media 1/5] FROM docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
+#7 resolve docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 0.0s done
+#7 DONE 0.0s
+
+#8 [backend 1/6] FROM docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+#8 resolve docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 0.0s done
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 29.62kB 0.1s done
+#9 DONE 0.2s
+
+#10 [backend 3/6] COPY backend/go.mod backend/go.sum ./
+#10 CACHED
+
+#11 [backend 2/6] WORKDIR /src/backend
+#11 CACHED
+
+#12 [frontend 5/6] COPY frontend/ ./
+#12 CACHED
+
+#13 [frontend 3/6] COPY frontend/package*.json ./
+#13 CACHED
+
+#14 [frontend 4/6] RUN npm ci
+#14 CACHED
+
+#15 [frontend 2/6] WORKDIR /src/frontend
+#15 CACHED
+
+#16 [backend 4/6] RUN go mod download
+#16 CACHED
+
+#17 [frontend 6/6] RUN npm run build
+#17 CACHED
+
+#18 [backend 5/6] COPY backend/ ./
+#18 DONE 0.0s
+
+#19 [backend 6/6] RUN CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama
+#19 DONE 19.0s
+
+#20 [media 2/5] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg fonts-noto-core bubblewrap util-linux python3 python3-venv && rm -rf /var/lib/apt/lists/*
+#20 CACHED
+
+#21 [media 3/5] RUN python3 -m venv /usr/local/yt-dlp && /usr/local/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==2026.8.19" && ln -s /usr/local/yt-dlp/bin/yt-dlp /usr/local/bin/yt-dlp
+#21 CACHED
+
+#22 [media 4/5] COPY --from=backend /tarjama /usr/local/bin/tarjama
+#22 DONE 0.0s
+
+#23 [media 5/5] COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
+#23 DONE 0.4s
+
+#24 exporting to image
+#24 exporting layers
+#24 exporting layers 5.8s done
+#24 exporting manifest sha256:839c68f8b560dabb3b79870bb25e9d00940da8453ca3e19175db5d4d0f17f872
+#24 exporting manifest sha256:839c68f8b560dabb3b79870bb25e9d00940da8453ca3e19175db5d4d0f17f872 done
+#24 exporting config sha256:07e1af328ed1c9b43823085b7f20bd0d3feef7dee9a7f85a93d93704c96142d9 done
+#24 exporting attestation manifest sha256:80895d9fd02f9ce229bfc0df993f2b58a89e1cb3ccc26fbc95a52ef6fc96de7a done
+#24 exporting manifest list sha256:61e1817537c3f5ab0f332384377365f36e5b7f74988971f5b75264bca59b74b2 done
+#24 naming to docker.io/library/tarjama-media:optimization-20260926 done
+#24 unpacking to docker.io/library/tarjama-media:optimization-20260926
+#24 unpacking to docker.io/library/tarjama-media:optimization-20260926 1.5s done
+#24 DONE 7.4s

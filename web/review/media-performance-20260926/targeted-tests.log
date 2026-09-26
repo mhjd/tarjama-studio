@@ -1,0 +1,62 @@
+=== RUN   TestIsolatedToolContracts
+--- PASS: TestIsolatedToolContracts (0.00s)
+=== RUN   TestRemuxCompatibility
+=== RUN   TestRemuxCompatibility/vp9
+=== RUN   TestRemuxCompatibility/av1
+=== RUN   TestRemuxCompatibility/10bit
+=== RUN   TestRemuxCompatibility/444
+=== RUN   TestRemuxCompatibility/profile
+=== RUN   TestRemuxCompatibility/level
+=== RUN   TestRemuxCompatibility/interlaced
+=== RUN   TestRemuxCompatibility/unknown_interlace
+=== RUN   TestRemuxCompatibility/sar
+=== RUN   TestRemuxCompatibility/missing_sar
+=== RUN   TestRemuxCompatibility/hdr
+=== RUN   TestRemuxCompatibility/rotation
+=== RUN   TestRemuxCompatibility/tag_rotation
+=== RUN   TestRemuxCompatibility/attached
+=== RUN   TestRemuxCompatibility/resize
+=== RUN   TestRemuxCompatibility/odd
+=== RUN   TestRemuxCompatibility/fps
+=== RUN   TestRemuxCompatibility/nan_fps
+=== RUN   TestRemuxCompatibility/unknown_fps
+=== RUN   TestRemuxCompatibility/offset
+=== RUN   TestRemuxCompatibility/nan_start
+=== RUN   TestRemuxCompatibility/opus
+=== RUN   TestRemuxCompatibility/he_aac
+=== RUN   TestRemuxCompatibility/surround
+=== RUN   TestRemuxCompatibility/sample_rate
+=== RUN   TestRemuxCompatibility/missing_audio
+--- PASS: TestRemuxCompatibility (0.01s)
+    --- PASS: TestRemuxCompatibility/vp9 (0.00s)
+    --- PASS: TestRemuxCompatibility/av1 (0.00s)
+    --- PASS: TestRemuxCompatibility/10bit (0.00s)
+    --- PASS: TestRemuxCompatibility/444 (0.00s)
+    --- PASS: TestRemuxCompatibility/profile (0.00s)
+    --- PASS: TestRemuxCompatibility/level (0.00s)
+    --- PASS: TestRemuxCompatibility/interlaced (0.00s)
+    --- PASS: TestRemuxCompatibility/unknown_interlace (0.00s)
+    --- PASS: TestRemuxCompatibility/sar (0.00s)
+    --- PASS: TestRemuxCompatibility/missing_sar (0.00s)
+    --- PASS: TestRemuxCompatibility/hdr (0.00s)
+    --- PASS: TestRemuxCompatibility/rotation (0.00s)
+    --- PASS: TestRemuxCompatibility/tag_rotation (0.00s)
+    --- PASS: TestRemuxCompatibility/attached (0.00s)
+    --- PASS: TestRemuxCompatibility/resize (0.00s)
+    --- PASS: TestRemuxCompatibility/odd (0.00s)
+    --- PASS: TestRemuxCompatibility/fps (0.00s)
+    --- PASS: TestRemuxCompatibility/nan_fps (0.00s)
+    --- PASS: TestRemuxCompatibility/unknown_fps (0.00s)
+    --- PASS: TestRemuxCompatibility/offset (0.00s)
+    --- PASS: TestRemuxCompatibility/nan_start (0.00s)
+    --- PASS: TestRemuxCompatibility/opus (0.00s)
+    --- PASS: TestRemuxCompatibility/he_aac (0.00s)
+    --- PASS: TestRemuxCompatibility/surround (0.00s)
+    --- PASS: TestRemuxCompatibility/sample_rate (0.00s)
+    --- PASS: TestRemuxCompatibility/missing_audio (0.00s)
+=== RUN   TestIsolatedRemuxRealMedia
+--- PASS: TestIsolatedRemuxRealMedia (3.60s)
+=== RUN   TestRenderAudioAndAdminThreadLimit
+--- PASS: TestRenderAudioAndAdminThreadLimit (0.00s)
+PASS
+ok  	tarjama/web/internal/studio	3.614s

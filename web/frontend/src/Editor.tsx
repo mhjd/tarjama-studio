@@ -320,6 +320,14 @@ export function Editor({
   const validating =
     (step === "corriger" && p.stage === "arabic") ||
     (step === "traduire" && p.stage === "review");
+  const selectedExport = jobs.find(
+    (job) =>
+      job.kind === `export_fr_${quality}` && job.source_version === p.version,
+  );
+  const exportActive =
+    selectedExport &&
+    ["queued", "running", "waiting_provider"].includes(selectedExport.state);
+  const exportReady = selectedExport?.state === "succeeded";
   function visibleJob(job: Job) {
     if (job.kind === "translate")
       return step === "traduire" && translationPending;
@@ -773,9 +781,19 @@ export function Editor({
           </p>
           <button
             className="primary"
-            disabled={busy}
+            disabled={busy || Boolean(exportActive) || exportReady}
             onClick={() =>
               void action(async () => {
+                if (
+                  selectedExport?.source_version === d.project.version &&
+                  ["cancelled", "failed"].includes(selectedExport.state)
+                ) {
+                  await request(
+                    `/api/projects/${p.id}/jobs/${selectedExport.id}/retry`,
+                    "POST",
+                  );
+                  return;
+                }
                 await request(`/api/projects/${p.id}/exports`, "POST", {
                   version: d.project.version,
                   track: "fr",
@@ -784,7 +802,17 @@ export function Editor({
               })
             }
           >
-            Créer la vidéo
+            {busy
+              ? "Envoi de la demande…"
+              : exportReady
+                ? "Vidéo prête à télécharger"
+                : exportActive
+                  ? "Création en cours…"
+                  : selectedExport?.state === "cancelled"
+                    ? "Reprendre la création"
+                    : selectedExport?.state === "failed"
+                      ? "Réessayer la création"
+                      : "Créer la vidéo"}
           </button>
           {jobs
             .filter(

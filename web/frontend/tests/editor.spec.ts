@@ -625,3 +625,86 @@ test("raw Arabic is hidden until automatic cleanup has finished", async ({
     page.getByText(/Vous pourrez relire et modifier l’arabe/),
   ).toHaveCount(0);
 });
+
+for (const state of ["cancelled", "failed"]) {
+  test(`export ${state}: primary action resumes the existing job and exposes its state`, async ({
+    page,
+  }) => {
+    await login(page);
+    const job = {
+      id: "existing-low-export",
+      kind: "export_fr_low",
+      state,
+      progress: 33,
+      message: "",
+      source_version: 0,
+    };
+    await page.route("**/api/projects/fixture", async (route) => {
+      const response = await route.fetch();
+      const data = await response.json();
+      data.project.stage = "ready";
+      job.source_version = data.project.version;
+      data.jobs = [job];
+      await route.fulfill({ response, json: data });
+    });
+    let creates = 0;
+    page.on("request", (r) => {
+      if (r.method() === "POST" && r.url().endsWith("/exports")) creates++;
+    });
+    let retries = 0;
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/jobs/existing-low-export/retry", async (route) => {
+      expect(route.request().method()).toBe("POST");
+      retries++;
+      await held;
+      job.state = "queued";
+      await route.fulfill({ status: 204 });
+    });
+    await page.goto("/projets/fixture/exporter");
+    const panel = page.locator(".export-panel");
+    await panel
+      .getByRole("button", {
+        name:
+          state === "cancelled"
+            ? "Reprendre la création"
+            : "Réessayer la création",
+      })
+      .click();
+    await expect(
+      panel.getByRole("button", { name: "Envoi de la demande…" }),
+    ).toBeDisabled();
+    expect(retries).toBe(1);
+    expect(creates).toBe(0);
+    release();
+    await expect(
+      panel.getByRole("button", { name: "Création en cours…" }),
+    ).toBeDisabled();
+    for (const active of ["running", "waiting_provider"]) {
+      job.state = active;
+      await page.reload();
+      await expect(
+        panel.getByRole("button", { name: "Création en cours…" }),
+      ).toBeDisabled();
+    }
+    job.state = "succeeded";
+    await expect(
+      panel.getByRole("button", { name: "Vidéo prête à télécharger" }),
+    ).toBeDisabled();
+    await expect(
+      panel.getByRole("link", { name: "Télécharger · Low · français" }),
+    ).toBeVisible();
+    await panel.getByLabel("Qualité").selectOption("high");
+    await expect(
+      panel.getByRole("button", { name: "Créer la vidéo" }),
+    ).toBeEnabled();
+    await panel.getByLabel("Qualité").selectOption("low");
+    await expect(
+      panel.getByRole("button", { name: "Vidéo prête à télécharger" }),
+    ).toBeDisabled();
+    expect(retries).toBe(1);
+    expect(creates).toBe(0);
+  });
+}

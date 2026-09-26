@@ -23,7 +23,7 @@ import {
   type Field,
 } from "./api";
 import { Drafts } from "./drafts";
-import { JobProgress } from "./JobProgress";
+import { JobProgress, isAutomaticTextRecovery } from "./JobProgress";
 import { canVisitStep, currentStep, steps, type ProjectStep } from "./routes";
 const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const speedLabel = (value: number) => `${value.toLocaleString("fr-FR")}×`;
@@ -628,14 +628,15 @@ export function Editor({
               }[j.kind] || "Création de la vidéo sous-titrée"}
             </h2>
             {j.message && <p>{j.message}</p>}
-            {j.state === "waiting_provider" && (
+            {j.state === "waiting_provider" && !isAutomaticTextRecovery(j) && (
               <p className="progress-note">
                 Cette étape doit se terminer avant de continuer. La reprise est
                 automatique : vous pouvez revenir plus tard.
               </p>
             )}
             {!connectionLost && <JobProgress job={j} />}
-            {j.state === "failed" || j.state === "waiting_provider" ? (
+            {j.state === "failed" ||
+            (j.state === "waiting_provider" && !isAutomaticTextRecovery(j)) ? (
               <button
                 onClick={() =>
                   void action(async () => {

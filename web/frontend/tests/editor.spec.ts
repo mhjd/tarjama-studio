@@ -6,51 +6,62 @@ async function login(page: Page, user = "alice") {
     page.getByRole("heading", { name: "Mes projets" }),
   ).toBeVisible();
 }
-test("text recovery stays neutral while terminal failures remain actionable", async ({
-  page,
-}) => {
-  await login(page);
-  const job = {
-    id: "recovery",
-    kind: "cleanup",
-    state: "running",
-    progress: 42,
-    message: "",
-  };
-  await page.route("**/api/projects/fixture", async (route) => {
-    const response = await route.fetch();
-    const data = await response.json();
-    data.project.stage = "cleaning";
-    data.jobs = [job];
-    await route.fulfill({ response, json: data });
-  });
-  await page.getByRole("button", { name: /Cours d’arabe/ }).click();
-  const panel = page.locator(".job");
-  for (const state of ["running", "waiting_provider", "running"]) {
-    job.state = state;
-    await expect(panel).toContainText(
-      state === "waiting_provider"
-        ? "En attente — reprise automatique"
-        : "Traitement en cours…",
-    );
-    await expect(panel).not.toContainText(
-      /incomplète|mal structurée|plus court|échoué|Intervention nécessaire/,
-    );
-    await expect(page.locator(".segments textarea")).toHaveCount(0);
-    if (state === "running") {
+for (const kind of ["cleanup", "translate"]) {
+  test(`${kind} recovery stays neutral while provider waits and failures remain actionable`, async ({
+    page,
+  }) => {
+    await login(page);
+    const job = {
+      id: "recovery",
+      kind,
+      state: "running",
+      progress: 42,
+      message: "",
+    };
+    await page.route("**/api/projects/fixture", async (route) => {
+      const response = await route.fetch();
+      const data = await response.json();
+      data.project.stage = kind === "cleanup" ? "cleaning" : "translating";
+      data.jobs = [job];
+      await route.fulfill({ response, json: data });
+    });
+    await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+    const panel = page.locator(".job");
+    for (const state of ["running", "waiting_provider", "running"]) {
+      job.state = state;
+      await expect(panel).toContainText("Traitement en cours…");
+      await expect(panel).not.toContainText(
+        /incomplète|mal structurée|plus court|échoué|Intervention nécessaire/,
+      );
+      await expect(page.locator(".segments textarea")).toHaveCount(0);
+      await expect(
+        panel.getByRole("button", { name: "Réessayer" }),
+      ).toHaveCount(0);
+      await expect(
+        panel.getByRole("button", { name: "Annuler" }),
+      ).toBeVisible();
       await expect(panel.getByRole("progressbar")).toHaveAttribute(
         "value",
         "42",
       );
     }
-  }
-  job.state = "failed";
-  job.message =
-    "Le traitement n’a pas pu se terminer. Votre progression est conservée. Vous pouvez réessayer.";
-  await expect(panel).toContainText(job.message);
-  await expect(panel).toContainText("Intervention nécessaire");
-  await expect(panel.getByRole("button", { name: "Réessayer" })).toBeVisible();
-});
+    job.state = "waiting_provider";
+    job.message = "Le fournisseur est temporairement limité.";
+    await expect(panel).toContainText("En attente — reprise automatique");
+    await expect(
+      panel.getByRole("button", { name: "Réessayer" }),
+    ).toBeVisible();
+    await expect(panel.getByRole("progressbar")).toHaveCount(0);
+    job.state = "failed";
+    job.message =
+      "Le traitement n’a pas pu se terminer. Votre progression est conservée. Vous pouvez réessayer.";
+    await expect(panel).toContainText(job.message);
+    await expect(panel).toContainText("Intervention nécessaire");
+    await expect(
+      panel.getByRole("button", { name: "Réessayer" }),
+    ).toBeVisible();
+  });
+}
 test("download shows durable stages and stops claiming activity when polling fails", async ({
   page,
 }) => {

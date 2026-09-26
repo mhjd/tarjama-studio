@@ -1,5 +1,15 @@
 import type { Job } from "./api";
 
+// Text retries deliberately have no public error message until recovery ends.
+// Provider outages/quota waits carry a message and remain explicitly actionable.
+export function isAutomaticTextRecovery(job: Job) {
+  return (
+    (job.kind === "cleanup" || job.kind === "translate") &&
+    job.state === "waiting_provider" &&
+    job.message === ""
+  );
+}
+
 export function JobProgress({ job }: { job: Job }) {
   const total =
     job.kind === "download"
@@ -7,8 +17,9 @@ export function JobProgress({ job }: { job: Job }) {
       : job.kind === "prepare" || job.kind.startsWith("export_")
         ? 3
         : 0;
-  const active = job.state === "running";
-  const waiting = job.state === "waiting_provider";
+  const recovering = isAutomaticTextRecovery(job);
+  const active = job.state === "running" || recovering;
+  const waiting = job.state === "waiting_provider" && !recovering;
   const progress = Math.max(0, Math.min(100, job.progress));
   const completed = total ? Math.round((progress * total) / 100) : 0;
   return (
@@ -23,7 +34,7 @@ export function JobProgress({ job }: { job: Job }) {
               ? "Traitement en cours…"
               : "En file d’attente…"}
       </p>
-      {!["failed", "waiting_provider"].includes(job.state) && (
+      {job.state !== "failed" && !waiting && (
         <>
           {total ? (
             <>

@@ -1,0 +1,147 @@
+{
+  "ok": true,
+  "url": "https://atelier.preview.runagen.com",
+  "revision": "504c3b05c5075793",
+  "partial": false,
+  "services": {
+    "pv-db": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-egress": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-review": {
+      "replicas": 0,
+      "ready": 0
+    },
+    "pv-worker": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "web": {
+      "replicas": 1,
+      "ready": 1
+    }
+  },
+  "pods": [
+    {
+      "pod": "pv-db-5b64bc558c-wthvp",
+      "component": "db",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "pv-egress-d6d7db4f-f5vlq",
+      "component": "egress",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-66a6a867-8sgnk",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-79e78970-jrn8g",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-8783ef76-b5qlq",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-diagnose-project-5db998a5-xtd78",
+      "component": "diagnose-project",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-14c3d635-rrtlr",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-367729db-9br6x",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-reference-check-78ee2673-9vrcr",
+      "component": "reference-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-worker-bd8b95d86-hghfp",
+      "component": "worker",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "web-65699c4774-xfttf",
+      "component": "web",
+      "phase": "Running",
+      "reasons": []
+    }
+  ],
+  "jobs": [
+    {
+      "name": "pv-job-backup-66a6a867",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-backup-79e78970",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-backup-8783ef76",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-diagnose-project-5db998a5",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-14c3d635",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-367729db",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-reference-check-78ee2673",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    }
+  ]
+}

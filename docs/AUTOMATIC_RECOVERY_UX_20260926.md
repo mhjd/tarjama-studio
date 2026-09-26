@@ -26,4 +26,22 @@ TypeScript/Vite, 46 tests Playwright (dont les parcours MacBook, Pixel et iPhone
 sauvegarde/restauration de la base de test. Journal local :
 `web/.cache/automatic-recovery-tests.log`.
 
-**Non déployé : attendre le signal explicite du propriétaire avant toute mise en service.**
+Déployé le 26 septembre à 08:12 UTC après le signal explicite du propriétaire.
+Code applicatif testé : `b93a8e43f1d1cd9f9b631a11ed46abb2666d1a8a`.
+Recette : `web/deploy/preview/active-automatic-recovery-20260926.yml`.
+Révision : `bc8dfb4c73dabc15`. Images locales API/worker construites depuis ce
+commit, importées par digest ; corpus et image de qualification inchangés.
+
+Sauvegarde réussie avant remplacement : `pv-job-backup-79e78970`, fichier
+`/storage/backups/pre-archive-session-20260926T081118Z.dump`, empreinte SHA-256
+`e58d452e2f7268c3736d2611e197af2fe96ab4f583cad1822022d633e6985594`.
+Pas de changement de schéma, pas de migration exécutée.
+
+Quatre services prêts ; worker avec trois outils locaux et Luna configuré.
+Qualification `pv-job-preview-check-70bd5867` réussie : HTTP/readiness,
+contrôle d'accès anonyme, démarrage OIDC/PKCE, taille des en-têtes et TLS
+de la passerelle. Le parcours MFA complet et les appels IA réels ne sont pas
+relancés pour cette correction. Les 46 tests UI sont ceux du commit préparé.
+Preuves : `web/deploy/preview/evidence/automatic-recovery-20260926/`.
+Retour arrière possible vers la recette `504c3b05c5075793`, sans restauration
+des données ; aucun changement de modèle, de droits ou de réseau dans cette livraison.

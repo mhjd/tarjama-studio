@@ -1,9 +1,10 @@
 # Passation complète — Tarjama Studio web sur VPS
 
-> **Correction préparée le 26 septembre, non déployée :** les reprises automatiques
+> **Correction déployée le 26 septembre :** les reprises automatiques
 > d'une réponse IA invalide n'exposent plus de diagnostic technique à l'utilisateur.
-> Un échec définitif reste explicite et réessayable. Attendre le signal du propriétaire
-> avant redéploiement. [Décision et tests](AUTOMATIC_RECOVERY_UX_20260926.md).
+> Un échec définitif reste explicite et réessayable. Code `b93a8e4`, révision
+> `bc8dfb4c73dabc15`, quatre services prêts et qualification HTTP/OIDC/TLS réussie.
+> [Décision et tests](AUTOMATIC_RECOVERY_UX_20260926.md).
 
 > **Livraison du 26 septembre : archives et sessions.** Archivage/restauration
 > sans supprimer les médias, liens déjà présents identifiés par le titre du projet,

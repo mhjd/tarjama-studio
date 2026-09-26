@@ -15,12 +15,16 @@ import (
 // Audit contains provider metadata, never provenance asserted in subtitle JSON.
 // Engine records the requested engine; usage/annotations record returned evidence.
 type Audit struct {
-	Local       []LocalEvidence   `json:"local_references,omitempty"`
-	Engine      string            `json:"engine"`
-	ModelUsage  []json.RawMessage `json:"model_usage"`
-	Annotations json.RawMessage   `json:"annotations,omitempty"`
-	RequestID   string            `json:"request_id,omitempty"`
-	ModelCalls  int               `json:"model_calls"` // HTTP requests, not hidden inference rounds
+	LocalCalls      int               `json:"local_calls"`
+	Local           []LocalEvidence   `json:"local_references,omitempty"`
+	Engine          string            `json:"engine"`
+	ModelUsage      []json.RawMessage `json:"model_usage"`
+	Annotations     json.RawMessage   `json:"annotations,omitempty"`
+	RequestIDs      []string          `json:"request_ids,omitempty"`
+	WebCalls        int               `json:"web_calls"`
+	WebUsageUnknown bool              `json:"web_usage_unknown,omitempty"`
+	RequestID       string            `json:"request_id,omitempty"`
+	ModelCalls      int               `json:"model_calls"` // HTTP requests, not hidden inference rounds
 }
 type LocalTools interface {
 	Tools() []any
@@ -94,7 +98,7 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 	prompt += "\nRetourne uniquement du JSON brut, sans balises Markdown ni texte autour, conforme à ce schéma : " + string(contract)
 	payload := map[string]any{"model": r.Model, "messages": []any{
 		map[string]string{"role": "system", "content": prompt}, map[string]string{"role": "user", "content": string(user)},
-	}, "tools": ServerTools(), "tool_choice": "auto", "max_tool_calls": maxTools, "max_tokens": maxTokens,
+	}, "tools": ServerTools(), "tool_choice": "auto", "max_tool_calls": min(4, maxTools), "max_tokens": maxTokens,
 		"response_format": map[string]any{"type": "json_schema", "json_schema": map[string]any{"name": "translation", "strict": true, "schema": schema}},
 		"provider":        map[string]any{"require_parameters": true}}
 	if r.ReasoningEffort != "" {
@@ -104,7 +108,9 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 		payload["tools"] = append(ServerTools(), r.LocalTools.Tools()...)
 	}
 	localCalls, serverCalls := 0, 0
-	for round := 0; round < 5; round++ {
+	for round := 0; round < 6; round++ {
+		deadline, _ := ctx.Deadline()
+		finalize := round == 5 || localCalls >= 8 || (round > 0 && time.Until(deadline) < 90*time.Second)
 		if err := ctx.Err(); err != nil {
 			return out, &ConnectionError{Service: "modèle"}
 		}
@@ -113,14 +119,24 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 			available := []any{}
 			if remaining > 0 {
 				available = append(available, ServerTools()...)
-				payload["max_tool_calls"] = remaining
+				payload["max_tool_calls"] = min(4, remaining)
 			} else {
 				delete(payload, "max_tool_calls")
 			}
-			if localCalls < 8 {
+			if localCalls < 8 && r.LocalTools != nil {
 				available = append(available, r.LocalTools.Tools()...)
 			}
 			payload["tools"] = available
+		}
+		if finalize {
+			// Keep the schemas and tool results in the conversation, but force a
+			// final answer. No new research budget is granted on this turn.
+			payload["tool_choice"] = "none"
+			payload["tools"] = []any{}
+			if r.LocalTools != nil {
+				payload["tools"] = r.LocalTools.Tools()
+			}
+			delete(payload, "max_tool_calls")
 		}
 		b, e := json.Marshal(payload)
 		if e != nil {
@@ -132,6 +148,10 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+key)
+		// Reserve a bounded slice before the HTTP call. Incomplete usage may
+		// not refund it; it cannot renew the full allowance on continuation.
+		allowance, _ := payload["max_tool_calls"].(int)
+		serverCalls += allowance
 		out.Audit.ModelCalls++
 		response, e := r.Client.Do(req)
 		if e != nil {
@@ -154,9 +174,30 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 		// Inspect only the numeric status; never expose its message or metadata.
 		var failure struct {
 			Error json.RawMessage `json:"error"`
+			ID    string          `json:"id"`
+			Usage json.RawMessage `json:"usage"`
 		}
 		if json.Unmarshal(raw, &failure) != nil {
 			return out, errors.New("Réponse OpenRouter invalide")
+		}
+		out.Audit.RequestID = failure.ID
+		if failure.ID != "" {
+			out.Audit.RequestIDs = append(out.Audit.RequestIDs, failure.ID)
+		}
+		if len(failure.Usage) > 0 && string(failure.Usage) != "null" {
+			out.Audit.ModelUsage = append(out.Audit.ModelUsage, failure.Usage)
+		}
+		if allowance > 0 {
+			used, complete := serverToolCalls(failure.Usage)
+			out.Audit.WebCalls += used
+			if complete && used <= allowance {
+				serverCalls -= allowance - used
+			} else {
+				if used > allowance {
+					serverCalls += used - allowance
+				}
+				out.Audit.WebUsageUnknown = true
+			}
 		}
 		if len(failure.Error) > 0 && string(failure.Error) != "null" {
 			var detail struct {
@@ -170,7 +211,6 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 			return out, errors.New("Erreur OpenRouter sans statut")
 		}
 		var envelope struct {
-			ID      string `json:"id"`
 			Choices []struct {
 				Finish  string `json:"finish_reason"`
 				Message struct {
@@ -179,23 +219,19 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 					Annotations json.RawMessage   `json:"annotations"`
 				} `json:"message"`
 			} `json:"choices"`
-			Usage json.RawMessage `json:"usage"`
 		}
 		if json.Unmarshal(raw, &envelope) != nil || len(envelope.Choices) != 1 {
 			return out, errors.New("Réponse OpenRouter invalide")
 		}
-		out.Audit.RequestID = envelope.ID
-		if len(envelope.Usage) > 0 {
-			out.Audit.ModelUsage = append(out.Audit.ModelUsage, envelope.Usage)
-		}
+
 		candidate := envelope.Choices[0]
 		out.Audit.Annotations = candidate.Message.Annotations
 		if candidate.Finish == "length" {
 			return out, ErrTruncated
 		}
 		if len(candidate.Message.Calls) > 0 {
-			if r.LocalTools == nil || candidate.Finish != "tool_calls" || round == 4 || localCalls+len(candidate.Message.Calls) > 8 {
-				return out, errors.New("Limite ou protocole des outils locaux invalide")
+			if r.LocalTools == nil || candidate.Finish != "tool_calls" || finalize || len(candidate.Message.Calls) > 64 {
+				return out, &ProtocolError{Code: "tool_protocol"}
 			}
 			var original struct {
 				Choices []struct {
@@ -203,10 +239,11 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 				} `json:"choices"`
 			}
 			if json.Unmarshal(raw, &original) != nil {
-				return out, errors.New("Message outil invalide")
+				return out, &ProtocolError{Code: "tool_message"}
 			}
 			messages := payload["messages"].([]any)
 			messages = append(messages, original.Choices[0].Message)
+			seen := map[string]bool{}
 			for _, callRaw := range candidate.Message.Calls {
 				var call struct {
 					ID       string `json:"id"`
@@ -216,15 +253,24 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 						Arguments string `json:"arguments"`
 					} `json:"function"`
 				}
-				if json.Unmarshal(callRaw, &call) != nil || call.ID == "" || call.Type != "function" {
-					return out, errors.New("Appel outil invalide")
+				if json.Unmarshal(callRaw, &call) != nil || call.ID == "" || seen[call.ID] || call.Type != "function" {
+					return out, &ProtocolError{Code: "tool_call"}
 				}
+				seen[call.ID] = true
 				switch call.Function.Name {
 				case "quran_fr", "sahih_ar", "hadith_ar":
 				default:
-					return out, errors.New("Outil local interdit")
+					return out, &ProtocolError{Code: "tool_forbidden"}
 				}
-				value, err := r.LocalTools.Call(call.Function.Name, json.RawMessage(call.Function.Arguments))
+				var value any
+				var err error
+				if localCalls < 8 {
+					value, err = r.LocalTools.Call(call.Function.Name, json.RawMessage(call.Function.Arguments))
+					localCalls++
+					out.Audit.LocalCalls++
+				} else {
+					value = map[string]string{"status": "budget_exhausted", "message": "Recherche non effectuée. Termine avec les éléments déjà obtenus, sans inventer de vérification ni de référence."}
+				}
 				if err != nil {
 					// A validation error is data the model can correct, within the
 					// same fixed call/round budget. No provider request is retried.
@@ -232,7 +278,7 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 				}
 				encoded, err := json.Marshal(value)
 				if err != nil || len(encoded) > 512*1024 {
-					return out, errors.New("Résultat outil local invalide")
+					return out, &ProtocolError{Code: "tool_result"}
 				}
 				arguments := json.RawMessage(call.Function.Arguments)
 				if !json.Valid(arguments) {
@@ -242,19 +288,8 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 				}
 				out.Audit.Local = append(out.Audit.Local, LocalEvidence{call.Function.Name, arguments, encoded})
 				messages = append(messages, map[string]any{"role": "tool", "tool_call_id": call.ID, "content": string(encoded)})
-				localCalls++
 			}
-			// Missing server counters must not grant another complete web budget.
-			var usage struct {
-				Details *struct {
-					Calls int `json:"tool_calls_executed"`
-				} `json:"server_tool_use_details"`
-			}
-			if json.Unmarshal(envelope.Usage, &usage) == nil && usage.Details != nil && usage.Details.Calls >= 0 {
-				serverCalls += usage.Details.Calls
-			} else {
-				serverCalls = maxTools
-			}
+
 			payload["messages"] = messages
 			continue
 		}
@@ -267,5 +302,49 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 		out.Text = candidate.Message.Content
 		return out, nil
 	}
-	return out, errors.New("Limite des continuations atteinte")
+	return out, &ProtocolError{Code: "tool_round_limit"}
+}
+
+// Protocol errors carry a stable private code, without provider-controlled text.
+type ProtocolError struct{ Code string }
+
+func (e *ProtocolError) Error() string { return "Protocole des outils invalide" }
+
+func serverToolCalls(raw json.RawMessage) (int, bool) {
+	var usage struct {
+		Details *struct {
+			Calls *int `json:"tool_calls_executed"`
+		} `json:"server_tool_use_details"`
+		Tools map[string]*int `json:"server_tool_use"`
+	}
+	if json.Unmarshal(raw, &usage) != nil {
+		return 0, false
+	}
+	if usage.Details != nil && usage.Details.Calls != nil && *usage.Details.Calls >= 0 && *usage.Details.Calls <= 30 {
+		return *usage.Details.Calls, true
+	}
+	// Partial counters are useful diagnostics but cannot refund a reservation.
+	// In particular, absence of fetch usage does not prove no fetch happened.
+	if len(usage.Tools) == 0 {
+		return 0, false
+	}
+	total := 0
+	for name, value := range usage.Tools {
+		if value == nil {
+			return 0, false
+		}
+		count := *value
+		if count < 0 || count > 30 {
+			return 0, false
+		}
+		switch name {
+		case "web_search_requests", "web_fetch_requests":
+			total += count
+		default:
+			return 0, false
+		}
+	}
+	_, search := usage.Tools["web_search_requests"]
+	_, fetch := usage.Tools["web_fetch_requests"]
+	return total, search && fetch
 }

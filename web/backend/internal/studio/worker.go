@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"log"
 	"math"
 	"net/http"
 	"os"
 	"strings"
 	"tarjama/web/internal/references"
+	"tarjama/web/internal/research"
 	"time"
 )
 
@@ -218,16 +220,38 @@ func (w *Worker) Once(ctx context.Context) (bool, error) {
 	<-done
 	if e != nil {
 		log.Printf("job failed id=%s kind=%s reason=%s", j.ID, j.Kind, jobFailureReason(e))
-		w.Store.Fail(ctx, j, e)
+		if saveErr := w.Store.Fail(ctx, j, e); saveErr != nil {
+			return true, saveErr
+		}
 	}
 	return true, nil
 }
 
 // Fixed diagnostic labels only: never log provider payloads, URLs or credentials.
 func jobFailureReason(err error) string {
+	if errors.Is(err, context.Canceled) {
+		return "cancelled"
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "deadline"
+	}
+	var database *pgconn.PgError
+	if errors.As(err, &database) {
+		return "database"
+	}
 	var provider *ProviderError
 	if errors.As(err, &provider) {
+		if provider.Code != "" {
+			return provider.Code
+		}
 		return "provider"
+	}
+	var protocol *research.ProtocolError
+	if errors.As(err, &protocol) {
+		return protocol.Code
+	}
+	if errors.Is(err, errTextBudget) {
+		return "text_attempt_budget"
 	}
 	if errors.Is(err, ErrConflict) {
 		return "conflict"
@@ -281,7 +305,7 @@ func (w *Worker) provider(ctx context.Context, j Job, provider string) (string, 
 		return "", "", e
 	}
 	if delay > 0 {
-		return "", "", &ProviderError{Public: "Le service est temporairement à sa limite. Votre progression est conservée ; reprise automatique.", Temporary: true, After: delay}
+		return "", "", &ProviderError{Public: "Le service est temporairement à sa limite. Votre progression est conservée ; reprise automatique.", Temporary: true, After: delay, Passive: true, Code: "quota_wait"}
 	}
 	return key, scope, nil
 }
@@ -292,8 +316,10 @@ func (w *Worker) providerFailure(ctx context.Context, j Job, scope string, e err
 		if delay <= 0 {
 			delay = time.Duration(10*(1<<min(j.Attempts, 8)))*time.Second + time.Duration(time.Now().UnixNano()%5000)*time.Millisecond
 		}
-		if ce := w.Store.SetCooldown(ctx, scope, delay); ce != nil {
-			return ce
+		if p.SharedCooldown {
+			if ce := w.Store.SetCooldown(ctx, scope, delay); ce != nil {
+				return ce
+			}
 		}
 		p.After = delay
 	}
@@ -424,18 +450,19 @@ func (w *Worker) transcribe(ctx context.Context, j Job) error {
 // completed chunks. Refusals and unclassified failures keep their original policy.
 func textResponseFailure(j Job, err error) error {
 	switch jobFailureReason(err) {
-	case "text_incomplete", "text_misaligned", "text_invalid_json", "text_invalid_marker", "text_truncated", "text_invalid_envelope", "text_empty":
-		log.Printf("invalid text response job=%s kind=%s attempt=%d reason=%s", j.ID, j.Kind, j.Attempts, jobFailureReason(err))
+	case "text_incomplete", "text_misaligned", "text_invalid_json", "text_invalid_marker", "text_truncated", "text_invalid_envelope", "text_empty", "tool_protocol", "tool_call", "tool_round_limit":
+		log.Printf("invalid text response job=%s kind=%s attempt=%d reason=%s", j.ID, j.Kind, j.TextFailures, jobFailureReason(err))
 		// Automatic recovery is ordinary processing in the UI. Keep its reason
 		// in the diagnostic log above, and only ask for action when retries end.
 		message := ""
-		if j.Attempts >= 2 {
+		if j.TextFailures >= 2 {
 			message = "Le traitement n’a pas pu se terminer. Votre progression est conservée. Vous pouvez réessayer."
 		}
 		return &ProviderError{
 			Public:    message,
-			Temporary: j.Attempts < 2,
-			After:     10 * time.Second,
+			Temporary: j.TextFailures < 2,
+			Malformed: true, Code: jobFailureReason(err),
+			After: 10 * time.Second,
 		}
 	}
 	return err
@@ -493,7 +520,7 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 		return e
 	}
 	i := len(raw)
-	chunks = smallerTextRetry(chunks, i, j.Attempts)
+	chunks = smallerTextRetry(chunks, i, j.TextFailures)
 	contextSegments := []Segment{}
 	if i > 0 {
 		previous := chunks[i-1]
@@ -503,16 +530,27 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 		next := chunks[i+1]
 		contextSegments = append(contextSegments, next[:min(2, len(next))]...)
 	}
+	attempt, e := w.Store.beginTextAttempt(ctx, j, i)
+	if errors.Is(e, errTextBudget) {
+		return &ProviderError{Code: "text_attempt_budget", Public: "Le traitement n’a pas pu se terminer. Votre progression est conservée. Vous pouvez réessayer."}
+	}
+	if e != nil {
+		return e
+	}
+	started := time.Now()
 	result, e := w.Providers.Text(ctx, key, j.Kind, chunks[i], contextSegments)
+	if e == nil {
+		e = ValidateText(result, chunks[i])
+	}
+	if saveErr := w.Store.finishTextAttempt(ctx, attempt, time.Since(started), result, e); saveErr != nil {
+		return saveErr
+	}
 	if e != nil {
 		retry := textResponseFailure(j, e)
 		if retry != e {
 			return retry
 		}
 		return w.providerFailure(ctx, j, scope, e)
-	}
-	if e = ValidateText(result, chunks[i]); e != nil {
-		return textResponseFailure(j, e)
 	}
 	completed := 0
 	for _, chunk := range chunks[:i+1] {

@@ -47,11 +47,11 @@ func TestTenMinuteTextChunks(t *testing.T) {
 	if count != len(s) {
 		t.Fatal("dropped segments")
 	}
-	short := make([]Segment, 601)
+	short := make([]Segment, 301)
 	for i := range short {
 		short[i] = Segment{ID: fmt.Sprint(i), Start: int64(i), End: int64(i + 1), Arabic: "نعم"}
 	}
-	if chunks = TextChunks(short); len(chunks) != 2 || len(chunks[0]) != 600 {
+	if chunks = TextChunks(short); len(chunks) != 2 || len(chunks[0]) != 300 {
 		t.Fatal("count guard")
 	}
 }

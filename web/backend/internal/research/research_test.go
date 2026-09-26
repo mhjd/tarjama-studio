@@ -25,7 +25,7 @@ func TestOpenRouterServerToolsSingleCredential(t *testing.T) {
 				if json.NewDecoder(r.Body).Decode(&body) != nil {
 					t.Fatal("body")
 				}
-				if body["model"] != model || body["max_tool_calls"] != float64(16) || body["max_tokens"] != float64(32768) {
+				if body["model"] != model || body["max_tool_calls"] != float64(4) || body["max_tokens"] != float64(32768) {
 					t.Error("limits/model", body)
 				}
 				messages := body["messages"].([]any)

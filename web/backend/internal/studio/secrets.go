@@ -67,7 +67,7 @@ func (s *Store) SetKey(ctx context.Context, c Config, owner, provider, value str
 	if provider == "groq" {
 		kinds = []string{"transcribe"}
 	}
-	_, e = tx.Exec(ctx, `UPDATE jobs SET state='queued',next_attempt_at=now(),message='',attempts=0 WHERE owner_id=$1 AND kind=ANY($2) AND state IN ('waiting_provider','failed')`, owner, kinds)
+	_, e = tx.Exec(ctx, `UPDATE jobs SET state='queued',next_attempt_at=now(),message='',attempts=0,text_failures=0,text_epoch=text_epoch+1 WHERE owner_id=$1 AND kind=ANY($2) AND state IN ('waiting_provider','failed')`, owner, kinds)
 	if e != nil {
 		return e
 	}

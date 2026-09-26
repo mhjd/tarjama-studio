@@ -6,5 +6,8 @@ func PromptVersion(kind string) string {
 	if kind == "translate" {
 		return "translation-parallel-v3"
 	}
+	if kind == "cleanup" {
+		return "cleanup-v2"
+	}
 	return kind + "-v1"
 }

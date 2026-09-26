@@ -1,9 +1,7 @@
-//go:build reliability_audit
-
 package studio
 
-// Characterization of the deployed behavior, not the desired regression contract.
-// Run explicitly with make web-llm-reliability-audit; no paid API is contacted.
+// Regression contract for the structural failures reproduced by the audit.
+// Also runs in the normal suite; make web-llm-reliability-audit isolates it; no paid API is contacted.
 import (
 	"context"
 	"encoding/json"
@@ -11,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,7 +29,7 @@ func (a *auditReferenceTools) Call(string, json.RawMessage) (any, error) {
 func auditToolResponse(w http.ResponseWriter, count int) {
 	calls := []any{}
 	for i := 0; i < count; i++ {
-		calls = append(calls, map[string]any{"id": fmt.Sprintf("call-%d", i), "type": "function", "function": map[string]string{"name": "quran_fr", "arguments": fmt.Sprintf(`{"surah":1,"verse":%d}`, i+1)}})
+		calls = append(calls, map[string]any{"id": fmt.Sprintf("call-%d", i), "type": "function", "function": map[string]string{"name": "quran_fr", "arguments": fmt.Sprintf(`{"surah":2,"verse":%d}`, i+1)}})
 	}
 	json.NewEncoder(w).Encode(map[string]any{"id": "audit-request", "choices": []any{map[string]any{"finish_reason": "tool_calls", "message": map[string]any{"role": "assistant", "tool_calls": calls}}}, "usage": map[string]any{"cost": 0.001, "server_tool_use": map[string]int{"web_search_requests": 0}}})
 }
@@ -61,13 +60,41 @@ func auditDue(t *testing.T, s *Store, clearCooldown bool) {
 }
 
 func TestReliabilityAudit(t *testing.T) {
-	t.Run("local_tool_limits_become_unclassified_terminal_failures", func(t *testing.T) {
+	t.Run("local_tool_limits_reserve_a_final_answer", func(t *testing.T) {
 		for _, batch := range []int{1, 9} {
 			t.Run(fmt.Sprint(batch), func(t *testing.T) {
 				s, owner, p := auditQueued(t)
 				local := &auditReferenceTools{}
 				requests := 0
-				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { requests++; auditToolResponse(w, batch) }))
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					requests++
+					var body map[string]any
+					json.NewDecoder(r.Body).Decode(&body)
+					if body["tool_choice"] == "none" {
+						if _, ok := body["max_tool_calls"]; ok {
+							t.Error("finalization renewed server budget")
+						}
+						for _, tool := range body["tools"].([]any) {
+							if tool.(map[string]any)["type"] != "function" {
+								t.Error("finalization still exposes server tools")
+							}
+						}
+						if batch == 9 {
+							messages := body["messages"].([]any)
+							if len(messages) != 12 {
+								t.Error("missing tool replies", len(messages))
+							} else {
+								last := messages[11].(map[string]any)["content"].(string)
+								if !strings.Contains(last, "budget_exhausted") {
+									t.Error("unexecuted lookup fabricated a result", last)
+								}
+							}
+						}
+						fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{\"segments\":[{\"id\":\"one\",\"text\":\"Bonjour\"},{\"id\":\"two\",\"text\":\"Merci\"}]}"}}]}`)
+						return
+					}
+					auditToolResponse(w, batch)
+				}))
 				defer server.Close()
 				provider := NewProviders()
 				provider.TextURL = server.URL
@@ -80,21 +107,18 @@ func TestReliabilityAudit(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				wantRequests, wantLocal := 5, 4
+				wantRequests, wantLocal := 6, 5
 				if batch == 9 {
-					wantRequests, wantLocal = 1, 0
+					wantRequests, wantLocal = 2, 8
 				}
-				if len(jobs) != 1 || jobs[0].State != "failed" || requests != wantRequests || local.calls != wantLocal {
+				if len(jobs) != 1 || jobs[0].State != "queued" || requests != wantRequests || local.calls != wantLocal {
 					t.Fatal(jobs, requests, local.calls)
 				}
-				if jobFailureReason(errors.New("Limite ou protocole des outils locaux invalide")) != "unclassified" {
-					t.Fatal("classification changed")
-				}
-				t.Logf("batch=%d HTTP=%d local_executed=%d state=failed reason=unclassified; no final-answer turn", batch, requests, local.calls)
+				t.Logf("batch=%d HTTP=%d local_executed=%d; validated chunk saved after final-answer turn", batch, requests, local.calls)
 			})
 		}
 	})
-	t.Run("cooldown_waits_consume_malformed_response_retry_allowance", func(t *testing.T) {
+	t.Run("cooldown_waits_preserve_malformed_response_retry_allowance", func(t *testing.T) {
 		s, owner, p := auditQueued(t)
 		provider := &scriptedProvider{failure: errors.New("Réponse IA incomplète")}
 		worker := Worker{Store: s, Config: Config{OpenRouterKey: "fixture"}, Providers: provider}
@@ -118,12 +142,12 @@ func TestReliabilityAudit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if jobs[0].State != "failed" || provider.calls != 1 {
+		if jobs[0].State != "waiting_provider" || provider.calls != 1 {
 			t.Fatal(jobs, provider.calls)
 		}
-		t.Log("2 passive cooldown waits + first malformed answer => failed after only 1 provider call")
+		t.Log("2 passive cooldown waits + first malformed answer => automatic retry remains available")
 	})
-	t.Run("failed_attempt_loses_usage_and_reference_audit", func(t *testing.T) {
+	t.Run("failed_attempt_retains_usage_and_reference_audit", func(t *testing.T) {
 		local := &auditReferenceTools{}
 		requests := 0
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -144,12 +168,12 @@ func TestReliabilityAudit(t *testing.T) {
 		provider.TextURL = server.URL
 		provider.References = local
 		result, err := provider.Text(context.Background(), "fixture", "translate", []Segment{{ID: "one", Arabic: "سلام"}}, nil)
-		if err == nil || len(result.Grounding) != 0 {
+		if err == nil || len(result.Grounding) == 0 {
 			t.Fatal(result, err)
 		}
-		t.Log("runner retains 1 reference and 1 usage; provider adapter returns empty audit on failure")
+		t.Log("runner retains 1 reference and 1 usage; provider adapter preserves audit on failure")
 	})
-	t.Run("documented_usage_shape_disables_web_after_first_local_call", func(t *testing.T) {
+	t.Run("documented_usage_shape_preserves_remaining_web_budget", func(t *testing.T) {
 		local := &auditReferenceTools{}
 		requests := 0
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -163,10 +187,8 @@ func TestReliabilityAudit(t *testing.T) {
 				t.Error("invalid request")
 				return
 			}
-			for _, tool := range body["tools"].([]any) {
-				if tool.(map[string]any)["type"] != "function" {
-					t.Error("web still available; behavior changed")
-				}
+			if body["max_tool_calls"] != float64(4) || len(body["tools"].([]any)) != 3 {
+				t.Error("remaining web budget lost", body["max_tool_calls"])
 			}
 			fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{}"}}]}`)
 		}))
@@ -175,9 +197,9 @@ func TestReliabilityAudit(t *testing.T) {
 		if _, err := runner.Run(context.Background(), "fixture", "", nil, nil); err != nil {
 			t.Fatal(err)
 		}
-		t.Log("server_tool_use.web_search_requests=0 but absent tool_calls_executed => web tools withdrawn on continuation (conservative budget policy)")
+		t.Log("partial usage keeps a bounded web continuation without refunding uncertain spend")
 	})
-	t.Run("transport_timeouts_have_no_total_attempt_cap", func(t *testing.T) {
+	t.Run("transport_timeouts_stop_at_total_attempt_cap", func(t *testing.T) {
 		s, owner, p := auditQueued(t)
 		requests := 0
 		provider := NewProviders()
@@ -185,7 +207,7 @@ func TestReliabilityAudit(t *testing.T) {
 		worker := Worker{Store: s, Config: Config{OpenRouterKey: "fixture"}, Providers: provider}
 		for i := 0; i < 6; i++ {
 			auditDue(t, s, true)
-			if _, err := worker.Once(context.Background()); err != nil {
+			if _, err := worker.Once(context.Background()); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				t.Fatal(err)
 			}
 		}
@@ -193,10 +215,10 @@ func TestReliabilityAudit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if jobs[0].State != "waiting_provider" || requests != 6 {
+		if jobs[0].State != "failed" || requests != 4 {
 			t.Fatal(jobs, requests)
 		}
-		t.Log("6 transport timeouts => still waiting_provider; code caps backoff but not attempts/cumulative spend")
+		t.Log("4 transport timeouts => paused for explicit intervention; no fifth provider call")
 	})
 }
 

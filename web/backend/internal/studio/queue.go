@@ -20,10 +20,10 @@ func (s *Store) Claim(ctx context.Context) (Job, error) {
 	}
 	var j Job
 	var b []byte
-	e = tx.QueryRow(ctx, `SELECT j.id,j.project_id,j.owner_id,j.kind,j.source_version,j.generation,j.input,j.attempts,j.media_attempt FROM jobs j JOIN users u ON u.id=j.owner_id
+	e = tx.QueryRow(ctx, `SELECT j.id,j.project_id,j.owner_id,j.kind,j.source_version,j.generation,j.input,j.attempts,j.media_attempt,j.text_failures,j.text_epoch FROM jobs j JOIN users u ON u.id=j.owner_id
  WHERE ((j.state IN ('queued','waiting_provider') AND j.next_attempt_at<=now()) OR (j.state='running' AND j.lease_until<now()))
  AND NOT EXISTS(SELECT 1 FROM jobs a WHERE a.owner_id=j.owner_id AND a.state='running' AND a.lease_until>=now())
- ORDER BY u.last_served,j.updated_at,j.created_at LIMIT 1 FOR UPDATE OF j SKIP LOCKED`).Scan(&j.ID, &j.ProjectID, &j.Owner, &j.Kind, &j.SourceVersion, &j.Generation, &b, &j.Attempts, &j.MediaAttempt)
+ ORDER BY u.last_served,j.updated_at,j.created_at LIMIT 1 FOR UPDATE OF j SKIP LOCKED`).Scan(&j.ID, &j.ProjectID, &j.Owner, &j.Kind, &j.SourceVersion, &j.Generation, &b, &j.Attempts, &j.MediaAttempt, &j.TextFailures, &j.TextEpoch)
 	if e != nil {
 		return j, e
 	}
@@ -69,7 +69,7 @@ func (s *Store) Chunk(ctx context.Context, j Job, ordinal int, result any, model
 		if e != nil {
 			return e
 		}
-		_, e = tx.Exec(ctx, "UPDATE jobs SET state='queued',lease='',lease_until=NULL,progress=$2,attempts=0,next_attempt_at=now(),updated_at=now(),message='' WHERE id=$1", j.ID, progress)
+		_, e = tx.Exec(ctx, "UPDATE jobs SET state='queued',lease='',lease_until=NULL,progress=$2,attempts=0,text_failures=0,next_attempt_at=now(),updated_at=now(),message='' WHERE id=$1", j.ID, progress)
 		return e
 	})
 	return e
@@ -112,12 +112,19 @@ func (s *Store) Finish(ctx context.Context, j Job, apply func(*Project) error, n
 	})
 	return e
 }
-func (s *Store) Fail(ctx context.Context, j Job, err error) {
+func (s *Store) Fail(ctx context.Context, j Job, err error) error {
+	active, malformed := 1, 0
 	state, message := "failed", "Le traitement a échoué. Réessayez ou contactez l’administrateur."
 	delay := time.Duration(1<<min(j.Attempts, 8))*time.Second*10 + time.Duration(time.Now().UnixNano()%5000)*time.Millisecond
 	var p *ProviderError
 	if errors.As(err, &p) {
 		message = p.Public
+		if p.Passive {
+			active = 0
+		}
+		if p.Malformed {
+			malformed = 1
+		}
 		if p.Temporary {
 			state = "waiting_provider"
 			if p.After > 0 {
@@ -129,7 +136,8 @@ func (s *Store) Fail(ctx context.Context, j Job, err error) {
 		state = "cancelled"
 		message = "Le projet a changé ; le résultat précédent a été écarté."
 	}
-	_, _ = s.DB.Exec(ctx, "UPDATE jobs SET state=$3,lease='',lease_until=NULL,message=$4,next_attempt_at=now()+$5::interval,attempts=attempts+1,updated_at=now() WHERE id=$1 AND lease=$2 AND state='running'", j.ID, j.Lease, state, message, delay.String())
+	_, saveErr := s.DB.Exec(ctx, "UPDATE jobs SET state=$3,lease='',lease_until=NULL,message=$4,next_attempt_at=now()+$5::interval,attempts=attempts+$6,text_failures=text_failures+$7,updated_at=now() WHERE id=$1 AND lease=$2 AND state='running'", j.ID, j.Lease, state, message, delay.String(), active, malformed)
+	return saveErr
 }
 func (s *Store) Cooldown(ctx context.Context, scope string) (time.Duration, error) {
 	var until time.Time

@@ -49,6 +49,8 @@ type Job struct {
 	State         string  `json:"state"`
 	Lease         string  `json:"-"`
 	Progress      int     `json:"progress"`
+	TextFailures  int     `json:"-"`
+	TextEpoch     int     `json:"-"`
 	Attempts      int     `json:"-"`
 	MediaAttempt  int     `json:"-"`
 	Message       string  `json:"message"`
@@ -124,8 +126,8 @@ func VideoURL(raw string) (string, error) {
 // Dense inputs may stop earlier: keep room for JSON IDs and expanded French text
 // within the provider output budget. These are byte/count guards, not a tokenizer.
 const textChunkDurationMS = 10 * 60 * 1000
-const textChunkMaxSegments = 600
-const textChunkMaxBytes = 64000
+const textChunkMaxSegments = 300
+const textChunkMaxBytes = 32000
 
 // Chunk only at segment boundaries; never split an individual subtitle.
 func TextChunks(s []Segment) [][]Segment {

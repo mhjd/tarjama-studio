@@ -1,0 +1,350 @@
+sh web/scripts/llm-reliability-audit.sh
+ Network tarjama-isolated-test_test Creating 
+ Network tarjama-isolated-test_test Creating 
+ Network tarjama-isolated-test_test Created 
+ Network tarjama-isolated-test_test Created 
+ Container tarjama-isolated-test-db-1 Creating 
+ Container tarjama-isolated-test-db-1 Created 
+ Container tarjama-isolated-test-db-1 Starting 
+ Container tarjama-isolated-test-db-1 Started 
+ Container tarjama-isolated-test-db-1 Waiting 
+ Container tarjama-isolated-test-db-1 Healthy 
+ Container tarjama-isolated-test-checks-run-64eeb08c6855 Creating 
+ Container tarjama-isolated-test-checks-run-64eeb08c6855 Created 
+=== RUN   TestMalformedLocalArgumentsCanBeCorrectedWithoutResettingWebBudget
+--- PASS: TestMalformedLocalArgumentsCanBeCorrectedWithoutResettingWebBudget (0.01s)
+=== RUN   TestLocalToolContinuationAndAudit
+--- PASS: TestLocalToolContinuationAndAudit (0.00s)
+=== RUN   TestLocalLoopCannotRunForever
+--- PASS: TestLocalLoopCannotRunForever (0.01s)
+=== RUN   TestServerToolUsageFormats
+--- PASS: TestServerToolUsageFormats (0.00s)
+=== RUN   TestUsageAndIDSurviveHTTP200Error
+--- PASS: TestUsageAndIDSurviveHTTP200Error (0.00s)
+=== RUN   TestMissingOrPartialUsageNeverRenewsWebBudget
+=== RUN   TestMissingOrPartialUsageNeverRenewsWebBudget/null
+=== RUN   TestMissingOrPartialUsageNeverRenewsWebBudget/{"server_tool_use":{"web_search_requests":0}}
+--- PASS: TestMissingOrPartialUsageNeverRenewsWebBudget (0.03s)
+    --- PASS: TestMissingOrPartialUsageNeverRenewsWebBudget/null (0.01s)
+    --- PASS: TestMissingOrPartialUsageNeverRenewsWebBudget/{"server_tool_use":{"web_search_requests":0}} (0.01s)
+=== RUN   TestOpenRouterServerToolsSingleCredential
+=== RUN   TestOpenRouterServerToolsSingleCredential/deepseek/deepseek-v4.1-flash
+=== RUN   TestOpenRouterServerToolsSingleCredential/future/model-with-native-search
+--- PASS: TestOpenRouterServerToolsSingleCredential (0.00s)
+    --- PASS: TestOpenRouterServerToolsSingleCredential/deepseek/deepseek-v4.1-flash (0.00s)
+    --- PASS: TestOpenRouterServerToolsSingleCredential/future/model-with-native-search (0.00s)
+=== RUN   TestErrorsDoNotLeakOrRetry
+--- PASS: TestErrorsDoNotLeakOrRetry (0.01s)
+=== RUN   TestMissingKeyAndRetiredModelNeverCall
+--- PASS: TestMissingKeyAndRetiredModelNeverCall (0.00s)
+=== RUN   TestServerToolsFailClosed
+--- PASS: TestServerToolsFailClosed (0.02s)
+=== RUN   TestCancellation
+--- PASS: TestCancellation (0.10s)
+=== RUN   TestHTTP200ProviderErrorDoesNotBecomeCompletion
+--- PASS: TestHTTP200ProviderErrorDoesNotBecomeCompletion (0.01s)
+=== RUN   TestHTTP200UnknownErrorRemainsExplicit
+--- PASS: TestHTTP200UnknownErrorRemainsExplicit (0.01s)
+PASS
+ok  	tarjama/web/internal/research	1.226s
+=== RUN   TestArchivePreservesContentJobsAndDuplicateIdentity
+--- PASS: TestArchivePreservesContentJobsAndDuplicateIdentity (0.23s)
+=== RUN   TestASREmptySegmentRecoversBeforeValidation
+--- PASS: TestASREmptySegmentRecoversBeforeValidation (0.00s)
+=== RUN   TestASREmptySegmentRecoversWordText
+--- PASS: TestASREmptySegmentRecoversWordText (0.00s)
+=== RUN   TestASRUnrecoverableTextAndMalformedTimes
+--- PASS: TestASRUnrecoverableTextAndMalformedTimes (0.00s)
+=== RUN   TestOIDCFlowPKCEStateNonceAudienceAndReplay
+--- PASS: TestOIDCFlowPKCEStateNonceAudienceAndReplay (0.22s)
+=== RUN   TestDuplicateVideoConcurrentCreation
+--- PASS: TestDuplicateVideoConcurrentCreation (0.28s)
+=== RUN   TestDuplicateVideoPrivateAndReusableAfterDeletion
+--- PASS: TestDuplicateVideoPrivateAndReusableAfterDeletion (0.23s)
+=== RUN   TestDuplicateVideoAtLimitPrefersExistingMedia
+--- PASS: TestDuplicateVideoAtLimitPrefersExistingMedia (0.21s)
+=== RUN   TestSSOHeadersRemainBounded
+--- PASS: TestSSOHeadersRemainBounded (0.51s)
+=== RUN   TestIsolatedRestartDuringCreateUploadAndDownload
+=== RUN   TestIsolatedRestartDuringCreateUploadAndDownload/create
+2026/09/26 09:11:43 isolated operation refused method=POST status=503 reason=unspecified
+=== RUN   TestIsolatedRestartDuringCreateUploadAndDownload/upload
+2026/09/26 09:11:43 isolated operation refused method=PUT status=503 reason=unspecified
+=== RUN   TestIsolatedRestartDuringCreateUploadAndDownload/output
+--- PASS: TestIsolatedRestartDuringCreateUploadAndDownload (0.74s)
+    --- PASS: TestIsolatedRestartDuringCreateUploadAndDownload/create (0.26s)
+    --- PASS: TestIsolatedRestartDuringCreateUploadAndDownload/upload (0.24s)
+    --- PASS: TestIsolatedRestartDuringCreateUploadAndDownload/output (0.24s)
+=== RUN   TestIsolatedRejectsTamperingAndChangedInputs
+--- PASS: TestIsolatedRejectsTamperingAndChangedInputs (0.25s)
+=== RUN   TestIsolatedStaleResultCannotPublish
+--- PASS: TestIsolatedStaleResultCannotPublish (0.27s)
+=== RUN   TestIsolatedLeaseHandoverDoesNotCancelNewOwner
+--- PASS: TestIsolatedLeaseHandoverDoesNotCancelNewOwner (0.25s)
+=== RUN   TestIsolatedExpiredOutputNeedsExplicitRetry
+--- PASS: TestIsolatedExpiredOutputNeedsExplicitRetry (0.21s)
+=== RUN   TestIsolatedDeletionCancelsAndWaitsForTerminal
+--- PASS: TestIsolatedDeletionCancelsAndWaitsForTerminal (0.28s)
+=== RUN   TestIsolatedRetryUsesNewKeyAndCacheLossDoesNotRerun
+--- PASS: TestIsolatedRetryUsesNewKeyAndCacheLossDoesNotRerun (0.26s)
+=== RUN   TestIsolatedTLSAndRedirectRefusal
+2026/09/26 09:11:45 http: TLS handshake error from 127.0.0.1:56990: remote error: tls: bad certificate
+2026/09/26 09:11:45 isolated operation refused method=POST status=307 reason=unspecified
+--- PASS: TestIsolatedTLSAndRedirectRefusal (0.06s)
+=== RUN   TestIsolatedToolContracts
+--- PASS: TestIsolatedToolContracts (0.00s)
+=== RUN   TestMediaStageProgressIsDurableAndLeaseFenced
+--- PASS: TestMediaStageProgressIsDurableAndLeaseFenced (0.28s)
+=== RUN   TestIsolatedRealOfflinePipeline
+--- PASS: TestIsolatedRealOfflinePipeline (3.80s)
+=== RUN   TestBrokerRefusalKeepsPrivateDetailsOutOfLogs
+--- PASS: TestBrokerRefusalKeepsPrivateDetailsOutOfLogs (0.00s)
+=== RUN   TestIsolatedFailureDiagnosticIsBoundedAndPrivate
+--- PASS: TestIsolatedFailureDiagnosticIsBoundedAndPrivate (0.01s)
+=== RUN   TestDownloadDiagnosticRedactsURLsAndCredentials
+--- PASS: TestDownloadDiagnosticRedactsURLsAndCredentials (0.00s)
+=== RUN   TestProviderRateLimitDoesNotExposeResponse
+=== RUN   TestProviderRateLimitDoesNotExposeResponse/daily
+=== RUN   TestProviderRateLimitDoesNotExposeResponse/minute
+=== RUN   TestProviderRateLimitDoesNotExposeResponse/malformed
+--- PASS: TestProviderRateLimitDoesNotExposeResponse (0.00s)
+    --- PASS: TestProviderRateLimitDoesNotExposeResponse/daily (0.00s)
+    --- PASS: TestProviderRateLimitDoesNotExposeResponse/minute (0.00s)
+    --- PASS: TestProviderRateLimitDoesNotExposeResponse/malformed (0.00s)
+=== RUN   TestReliabilityAudit
+=== RUN   TestReliabilityAudit/local_tool_limits_reserve_a_final_answer
+=== RUN   TestReliabilityAudit/local_tool_limits_reserve_a_final_answer/1
+    reliability_audit_test.go:117: batch=1 HTTP=6 local_executed=5; validated chunk saved after final-answer turn
+=== RUN   TestReliabilityAudit/local_tool_limits_reserve_a_final_answer/9
+    reliability_audit_test.go:117: batch=9 HTTP=2 local_executed=8; validated chunk saved after final-answer turn
+=== RUN   TestReliabilityAudit/cooldown_waits_preserve_malformed_response_retry_allowance
+2026/09/26 09:11:49 job failed id=4913adef488072b6ac7ac81787207f61 kind=translate reason=quota_wait
+2026/09/26 09:11:49 job failed id=4913adef488072b6ac7ac81787207f61 kind=translate reason=quota_wait
+2026/09/26 09:11:49 invalid text response job=4913adef488072b6ac7ac81787207f61 kind=translate attempt=0 reason=text_incomplete
+2026/09/26 09:11:49 job failed id=4913adef488072b6ac7ac81787207f61 kind=translate reason=text_incomplete
+    reliability_audit_test.go:148: 2 passive cooldown waits + first malformed answer => automatic retry remains available
+=== RUN   TestReliabilityAudit/failed_attempt_retains_usage_and_reference_audit
+2026/09/26 09:11:50 model request failed status=502
+    reliability_audit_test.go:174: runner retains 1 reference and 1 usage; provider adapter preserves audit on failure
+=== RUN   TestReliabilityAudit/documented_usage_shape_preserves_remaining_web_budget
+    reliability_audit_test.go:200: partial usage keeps a bounded web continuation without refunding uncertain spend
+=== RUN   TestReliabilityAudit/transport_timeouts_stop_at_total_attempt_cap
+2026/09/26 09:11:50 job failed id=a51935a443174f1aba8f90e1a65079db kind=translate reason=transport
+2026/09/26 09:11:50 job failed id=a51935a443174f1aba8f90e1a65079db kind=translate reason=transport
+2026/09/26 09:11:50 job failed id=a51935a443174f1aba8f90e1a65079db kind=translate reason=transport
+2026/09/26 09:11:50 job failed id=a51935a443174f1aba8f90e1a65079db kind=translate reason=transport
+2026/09/26 09:11:50 job failed id=a51935a443174f1aba8f90e1a65079db kind=translate reason=text_attempt_budget
+    reliability_audit_test.go:221: 4 transport timeouts => paused for explicit intervention; no fifth provider call
+--- PASS: TestReliabilityAudit (0.87s)
+    --- PASS: TestReliabilityAudit/local_tool_limits_reserve_a_final_answer (0.40s)
+        --- PASS: TestReliabilityAudit/local_tool_limits_reserve_a_final_answer/1 (0.21s)
+        --- PASS: TestReliabilityAudit/local_tool_limits_reserve_a_final_answer/9 (0.19s)
+    --- PASS: TestReliabilityAudit/cooldown_waits_preserve_malformed_response_retry_allowance (0.21s)
+    --- PASS: TestReliabilityAudit/failed_attempt_retains_usage_and_reference_audit (0.01s)
+    --- PASS: TestReliabilityAudit/documented_usage_shape_preserves_remaining_web_budget (0.00s)
+    --- PASS: TestReliabilityAudit/transport_timeouts_stop_at_total_attempt_cap (0.24s)
+=== RUN   TestApplicationDeepLinksServeOnlyPublicShell
+--- PASS: TestApplicationDeepLinksServeOnlyPublicShell (0.19s)
+=== RUN   TestRoutesCannotBypassWorkflowGuards
+--- PASS: TestRoutesCannotBypassWorkflowGuards (0.24s)
+=== RUN   TestDatabaseStartupIsBoundedAndRedacted
+--- PASS: TestDatabaseStartupIsBoundedAndRedacted (0.10s)
+=== RUN   TestWorkerDoesNotRequireOIDCButAPIDoes
+--- PASS: TestWorkerDoesNotRequireOIDCButAPIDoes (0.00s)
+=== RUN   TestTimeAndChunks
+--- PASS: TestTimeAndChunks (0.00s)
+=== RUN   TestPrivateResourcesAndCSRF
+--- PASS: TestPrivateResourcesAndCSRF (0.21s)
+=== RUN   TestEditsVersioningAndIdempotentAdvance
+--- PASS: TestEditsVersioningAndIdempotentAdvance (0.18s)
+=== RUN   TestKeysAuthenticatedEncryption
+--- PASS: TestKeysAuthenticatedEncryption (0.18s)
+=== RUN   TestLeaseCrashFairnessAndLateResults
+--- PASS: TestLeaseCrashFairnessAndLateResults (0.18s)
+=== RUN   TestUploadRequiresCancellationAndRejectsLateDownload
+--- PASS: TestUploadRequiresCancellationAndRejectsLateDownload (0.20s)
+=== RUN   TestResponseValidation
+--- PASS: TestResponseValidation (0.00s)
+=== RUN   TestProviderStatusesAndSecretPlacement
+=== RUN   TestProviderStatusesAndSecretPlacement/401
+2026/09/26 09:11:51 model request failed status=401
+=== RUN   TestProviderStatusesAndSecretPlacement/403
+2026/09/26 09:11:51 model request failed status=403
+=== RUN   TestProviderStatusesAndSecretPlacement/404
+2026/09/26 09:11:51 model request failed status=404
+=== RUN   TestProviderStatusesAndSecretPlacement/429
+2026/09/26 09:11:51 model request failed status=429
+=== RUN   TestProviderStatusesAndSecretPlacement/503
+2026/09/26 09:11:51 model request failed status=503
+--- PASS: TestProviderStatusesAndSecretPlacement (0.01s)
+    --- PASS: TestProviderStatusesAndSecretPlacement/401 (0.00s)
+    --- PASS: TestProviderStatusesAndSecretPlacement/403 (0.00s)
+    --- PASS: TestProviderStatusesAndSecretPlacement/404 (0.00s)
+    --- PASS: TestProviderStatusesAndSecretPlacement/429 (0.00s)
+    --- PASS: TestProviderStatusesAndSecretPlacement/503 (0.00s)
+=== RUN   TestSSRFAndWARPFailClosed
+--- PASS: TestSSRFAndWARPFailClosed (0.00s)
+=== RUN   TestRealMediaAndExports
+--- PASS: TestRealMediaAndExports (2.87s)
+=== RUN   TestASRHourBoundary
+--- PASS: TestASRHourBoundary (0.00s)
+=== RUN   TestImportCurrentAndSeparateTranslation
+--- PASS: TestImportCurrentAndSeparateTranslation (0.00s)
+=== RUN   TestRotationAndLandscape
+--- PASS: TestRotationAndLandscape (1.19s)
+=== RUN   TestMediaRPCAndDesktopCopyImport
+{"digest":"eb7a43e02d1dd0c80858928ab6ce7d659ba21a39754af1421cb094d673f068e0","dry_run":true,"owner":"1e72bfd364ad852aa3d3bccd08e41b62","segments":1,"title":"Copie desktop","warnings":["Revalidation humaine requise ; confirmations desktop non transférées.","Snapshots et sorties desktop laissés intacts.","current.json prioritaire sur transcript.json"]}
+Importé : 48dd83d4917e0f35fb48b6b4eb285a35
+Déjà importé : 48dd83d4917e0f35fb48b6b4eb285a35
+--- PASS: TestMediaRPCAndDesktopCopyImport (1.27s)
+=== RUN   TestMigrationRepeatAndReadiness
+--- PASS: TestMigrationRepeatAndReadiness (0.18s)
+=== RUN   TestUploadChoicesAreExclusive
+=== RUN   TestUploadChoicesAreExclusive/queued
+=== RUN   TestUploadChoicesAreExclusive/waiting_provider
+=== RUN   TestUploadChoicesAreExclusive/failed
+=== RUN   TestUploadChoicesAreExclusive/cancelled
+--- PASS: TestUploadChoicesAreExclusive (0.90s)
+    --- PASS: TestUploadChoicesAreExclusive/queued (0.24s)
+    --- PASS: TestUploadChoicesAreExclusive/waiting_provider (0.23s)
+    --- PASS: TestUploadChoicesAreExclusive/failed (0.22s)
+    --- PASS: TestUploadChoicesAreExclusive/cancelled (0.20s)
+=== RUN   TestCompetingUploadDoesNotInvalidateFirst
+--- PASS: TestCompetingUploadDoesNotInvalidateFirst (0.27s)
+=== RUN   TestTextAttemptReservationSurvivesCrashAndManualRetry
+2026/09/26 09:11:58 job failed id=dcc3ceee2a4b0a8e9f5572c522307afd kind=translate reason=text_attempt_budget
+--- PASS: TestTextAttemptReservationSurvivesCrashAndManualRetry (0.23s)
+=== RUN   TestTextAttemptJournalIsPrivateAndBoundedMetadata
+--- PASS: TestTextAttemptJournalIsPrivateAndBoundedMetadata (0.17s)
+=== RUN   TestQuotaRefusalsDoNotExhaustActiveBudget
+2026/09/26 09:11:58 model request failed status=429
+2026/09/26 09:11:59 job failed id=83d6e52aaae0524256031f7c0a83e7e9 kind=translate reason=http_429
+2026/09/26 09:11:59 model request failed status=429
+2026/09/26 09:11:59 job failed id=83d6e52aaae0524256031f7c0a83e7e9 kind=translate reason=http_429
+2026/09/26 09:11:59 model request failed status=429
+2026/09/26 09:11:59 job failed id=83d6e52aaae0524256031f7c0a83e7e9 kind=translate reason=http_429
+2026/09/26 09:11:59 model request failed status=429
+2026/09/26 09:11:59 job failed id=83d6e52aaae0524256031f7c0a83e7e9 kind=translate reason=http_429
+2026/09/26 09:11:59 model request failed status=429
+2026/09/26 09:11:59 job failed id=83d6e52aaae0524256031f7c0a83e7e9 kind=translate reason=http_429
+2026/09/26 09:11:59 model request failed status=429
+2026/09/26 09:11:59 job failed id=83d6e52aaae0524256031f7c0a83e7e9 kind=translate reason=http_429
+--- PASS: TestQuotaRefusalsDoNotExhaustActiveBudget (0.23s)
+=== RUN   TestQuotaAfterResearchDoesConsumeActiveBudget
+2026/09/26 09:11:59 model request failed status=429
+2026/09/26 09:11:59 job failed id=b5b2fae3fc6fc562f1dc325186428d43 kind=translate reason=http_429
+--- PASS: TestQuotaAfterResearchDoesConsumeActiveBudget (0.20s)
+=== RUN   TestProviderTimeoutDoesNotBlockOtherUsers
+2026/09/26 09:11:59 job failed id=965adbc9b36dd3ee291ec5176d5af3be kind=translate reason=transport
+--- PASS: TestProviderTimeoutDoesNotBlockOtherUsers (0.19s)
+=== RUN   TestTextWholeJobBudgetCannotBeResetBySplitting
+--- PASS: TestTextWholeJobBudgetCannotBeResetBySplitting (0.18s)
+=== RUN   TestTextContractConstrainsSegmentIDsAndLength
+--- PASS: TestTextContractConstrainsSegmentIDsAndLength (0.00s)
+=== RUN   TestTextAttemptMigrationPreservesExistingProjectsAndJobs
+--- PASS: TestTextAttemptMigrationPreservesExistingProjectsAndJobs (0.19s)
+=== RUN   TestMalformedToolProtocolGetsBoundedSmallerRetry
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=tool_protocol
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=tool_protocol
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=tool_protocol
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=tool_call
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=tool_call
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=tool_call
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=tool_round_limit
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=tool_round_limit
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=tool_round_limit
+--- PASS: TestMalformedToolProtocolGetsBoundedSmallerRetry (0.00s)
+=== RUN   TestTenMinuteTextChunks
+--- PASS: TestTenMinuteTextChunks (0.00s)
+=== RUN   TestResumeOldTextBoundaries
+--- PASS: TestResumeOldTextBoundaries (0.01s)
+=== RUN   TestLunaMediumRequestBudget
+--- PASS: TestLunaMediumRequestBudget (0.01s)
+=== RUN   TestTextRetriesBoundedAndFailClosed
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=text_invalid_envelope
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=text_invalid_envelope
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=text_invalid_envelope
+2026/09/26 09:11:59 invalid text response job= kind= attempt=3 reason=text_invalid_envelope
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=text_empty
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=text_empty
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=text_empty
+2026/09/26 09:11:59 invalid text response job= kind= attempt=3 reason=text_empty
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=text_incomplete
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=text_incomplete
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=text_incomplete
+2026/09/26 09:11:59 invalid text response job= kind= attempt=3 reason=text_incomplete
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=text_misaligned
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=text_misaligned
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=text_misaligned
+2026/09/26 09:11:59 invalid text response job= kind= attempt=3 reason=text_misaligned
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=text_invalid_json
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=text_invalid_json
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=text_invalid_json
+2026/09/26 09:11:59 invalid text response job= kind= attempt=3 reason=text_invalid_json
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=text_truncated
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=text_truncated
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=text_truncated
+2026/09/26 09:11:59 invalid text response job= kind= attempt=3 reason=text_truncated
+2026/09/26 09:11:59 invalid text response job= kind= attempt=0 reason=text_invalid_marker
+2026/09/26 09:11:59 invalid text response job= kind= attempt=1 reason=text_invalid_marker
+2026/09/26 09:11:59 invalid text response job= kind= attempt=2 reason=text_invalid_marker
+2026/09/26 09:11:59 invalid text response job= kind= attempt=3 reason=text_invalid_marker
+--- PASS: TestTextRetriesBoundedAndFailClosed (0.00s)
+=== RUN   TestTextRetryPreservesSavedBoundaries
+--- PASS: TestTextRetryPreservesSavedBoundaries (0.00s)
+=== RUN   TestClaimClearsPreviousAttemptMessage
+--- PASS: TestClaimClearsPreviousAttemptMessage (0.17s)
+=== RUN   TestTextOutputLimitDiffersFromRefusal
+2026/09/26 09:12:00 invalid text response job= kind= attempt=0 reason=text_truncated
+--- PASS: TestTextOutputLimitDiffersFromRefusal (0.00s)
+=== RUN   TestRawTranscriptionCannotBeEdited
+--- PASS: TestRawTranscriptionCannotBeEdited (0.22s)
+=== RUN   TestMalformedTextQueueRecoveryAndAttemptLimit
+=== RUN   TestMalformedTextQueueRecoveryAndAttemptLimit/true
+2026/09/26 09:12:00 invalid text response job=9d05e1a26fabe3dca5e56b045fe82ad5 kind=cleanup attempt=0 reason=text_incomplete
+2026/09/26 09:12:00 job failed id=9d05e1a26fabe3dca5e56b045fe82ad5 kind=cleanup reason=text_incomplete
+=== RUN   TestMalformedTextQueueRecoveryAndAttemptLimit/false
+2026/09/26 09:12:00 invalid text response job=3e1d60b896c8c3a547c3816aee810134 kind=cleanup attempt=0 reason=text_incomplete
+2026/09/26 09:12:00 job failed id=3e1d60b896c8c3a547c3816aee810134 kind=cleanup reason=text_incomplete
+2026/09/26 09:12:00 invalid text response job=3e1d60b896c8c3a547c3816aee810134 kind=cleanup attempt=1 reason=text_incomplete
+2026/09/26 09:12:00 job failed id=3e1d60b896c8c3a547c3816aee810134 kind=cleanup reason=text_incomplete
+2026/09/26 09:12:00 invalid text response job=3e1d60b896c8c3a547c3816aee810134 kind=cleanup attempt=2 reason=text_incomplete
+2026/09/26 09:12:00 job failed id=3e1d60b896c8c3a547c3816aee810134 kind=cleanup reason=text_incomplete
+--- PASS: TestMalformedTextQueueRecoveryAndAttemptLimit (0.44s)
+    --- PASS: TestMalformedTextQueueRecoveryAndAttemptLimit/true (0.25s)
+    --- PASS: TestMalformedTextQueueRecoveryAndAttemptLimit/false (0.20s)
+=== RUN   TestHTTP200FailurePreservesCompletedTranslation
+=== RUN   TestHTTP200FailurePreservesCompletedTranslation/{"error":{"code":502,"message":"private_diagnostic"}}
+2026/09/26 09:12:00 model request failed status=502
+2026/09/26 09:12:00 job failed id=b32b3b5fc769f7b3865b121e5e467221 kind=translate reason=http_502
+=== RUN   TestHTTP200FailurePreservesCompletedTranslation/{"choices":[{"finish_reason":"stop","message":{"content":""}}]}
+2026/09/26 09:12:01 invalid text response job=80d9d06a95b881206744a8fbf8cffbc8 kind=translate attempt=0 reason=text_empty
+2026/09/26 09:12:01 job failed id=80d9d06a95b881206744a8fbf8cffbc8 kind=translate reason=text_empty
+--- PASS: TestHTTP200FailurePreservesCompletedTranslation (0.45s)
+    --- PASS: TestHTTP200FailurePreservesCompletedTranslation/{"error":{"code":502,"message":"private_diagnostic"}} (0.23s)
+    --- PASS: TestHTTP200FailurePreservesCompletedTranslation/{"choices":[{"finish_reason":"stop","message":{"content":""}}]} (0.22s)
+=== RUN   TestTranslationResearchAndProvenance
+--- PASS: TestTranslationResearchAndProvenance (0.01s)
+=== RUN   TestGeminiCredentialRemainsHistoricalOnly
+--- PASS: TestGeminiCredentialRemainsHistoricalOnly (0.20s)
+=== RUN   TestQuotaWaitPersonalKeyAndRestart
+2026/09/26 09:12:01 job failed id=904050d936e06f7f727c5f8dd92a1d63 kind=translate reason=provider
+--- PASS: TestQuotaWaitPersonalKeyAndRestart (0.29s)
+=== RUN   TestArabicEditInvalidatesAndLateTranslationCannotOverwrite
+--- PASS: TestArabicEditInvalidatesAndLateTranslationCannotOverwrite (0.22s)
+=== RUN   TestCancelledLeaseAndCooldownIsolation
+--- PASS: TestCancelledLeaseAndCooldownIsolation (0.21s)
+=== RUN   TestProviderStructuredWireValidation
+--- PASS: TestProviderStructuredWireValidation (0.02s)
+=== RUN   TestGroqMultipartContract
+--- PASS: TestGroqMultipartContract (0.00s)
+=== RUN   TestWorkerResumesLegacyTextChunkAfterUpgrade
+--- PASS: TestWorkerResumesLegacyTextChunkAfterUpgrade (0.50s)
+PASS
+ok  	tarjama/web/internal/studio	22.325s
+ Container tarjama-isolated-test-db-1 Stopping 
+ Container tarjama-isolated-test-db-1 Stopped 
+ Container tarjama-isolated-test-db-1 Removing 
+ Container tarjama-isolated-test-db-1 Removed 
+ Network tarjama-isolated-test_test Removing 
+ Network tarjama-isolated-test_test Removed 

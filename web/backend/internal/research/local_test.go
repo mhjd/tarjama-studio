@@ -35,13 +35,8 @@ func TestMalformedLocalArgumentsCanBeCorrectedWithoutResettingWebBudget(t *testi
 		}
 		var payload map[string]any
 		json.NewDecoder(r.Body).Decode(&payload)
-		if _, exists := payload["max_tool_calls"]; exists {
-			t.Error("missing usage counter granted a new web budget")
-		}
-		for _, tool := range payload["tools"].([]any) {
-			if tool.(map[string]any)["type"] != "function" {
-				t.Error("web tool still available without known remaining budget")
-			}
+		if payload["max_tool_calls"] != float64(4) || len(payload["tools"].([]any)) != 3 {
+			t.Error("continuation lost its bounded web allowance")
 		}
 		messages := payload["messages"].([]any)
 		if !strings.Contains(messages[3].(map[string]any)["content"].(string), "invalid_query") {
@@ -71,7 +66,7 @@ func TestLocalToolContinuationAndAudit(t *testing.T) {
 			fmt.Fprint(w, `{"id":"one","choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"reasoning_details":[{"type":"reasoning.text","text":"fixture"}],"tool_calls":[{"id":"c1","type":"function","function":{"name":"quran_fr","arguments":"{\"surah\":1,\"verse\":1}"}}]}}],"usage":{"server_tool_use_details":{"tool_calls_executed":2}}}`)
 			return
 		}
-		if p["max_tool_calls"] != float64(14) {
+		if p["max_tool_calls"] != float64(4) {
 			t.Error("web budget reset")
 		}
 		m := p["messages"].([]any)
@@ -97,7 +92,70 @@ func TestLocalLoopCannotRunForever(t *testing.T) {
 	defer server.Close()
 	r := Runner{Client: server.Client(), Endpoint: server.URL, Model: "allowed", LocalTools: local}
 	_, e := r.Run(context.Background(), "fixture", "", nil, nil)
-	if e == nil || calls != 5 || local.calls != 4 {
+	if e == nil || calls != 6 || local.calls != 5 {
 		t.Fatal(e, calls, local.calls)
+	}
+}
+
+func TestServerToolUsageFormats(t *testing.T) {
+	for _, sample := range []struct {
+		raw   string
+		calls int
+		known bool
+	}{
+		{`{"server_tool_use_details":{"tool_calls_executed":3}}`, 3, true},
+		{`{"server_tool_use":{"web_search_requests":2,"web_fetch_requests":1}}`, 3, true},
+		{`{"server_tool_use":{"web_search_requests":0}}`, 0, false},
+		{`{"server_tool_use":{"unknown_kind":2}}`, 0, false},
+		{`{"server_tool_use":{"web_search_requests":-1}}`, 0, false},
+		{`{"server_tool_use_details":{}}`, 0, false},
+		{`{}`, 0, false},
+		{`null`, 0, false},
+		{`{"server_tool_use":{"web_search_requests":null,"web_fetch_requests":null}}`, 0, false},
+		{`{"server_tool_use_details":{"tool_calls_executed":9223372036854775807}}`, 0, false},
+	} {
+		calls, known := serverToolCalls([]byte(sample.raw))
+		if calls != sample.calls || known != sample.known {
+			t.Fatal(sample.raw, calls, known)
+		}
+	}
+}
+
+func TestUsageAndIDSurviveHTTP200Error(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"id":"failed-id","usage":{"cost":0.001},"error":{"code":502,"message":"private"}}`)
+	}))
+	defer server.Close()
+	runner := Runner{Client: server.Client(), Endpoint: server.URL, Model: "allowed"}
+	out, err := runner.Run(context.Background(), "fixture", "", nil, nil)
+	if err == nil || out.Audit.RequestID != "failed-id" || len(out.Audit.RequestIDs) != 1 || len(out.Audit.ModelUsage) != 1 {
+		t.Fatal(out, err)
+	}
+}
+
+func TestMissingOrPartialUsageNeverRenewsWebBudget(t *testing.T) {
+	for _, usage := range []string{`null`, `{"server_tool_use":{"web_search_requests":0}}`} {
+		t.Run(usage, func(t *testing.T) {
+			reserved, calls := 0, 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				var body map[string]any
+				json.NewDecoder(r.Body).Decode(&body)
+				if grant, ok := body["max_tool_calls"].(float64); ok {
+					reserved += int(grant)
+				}
+				if body["tool_choice"] == "none" {
+					fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{}"}}]}`)
+					return
+				}
+				fmt.Fprintf(w, `{"usage":%s,"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","tool_calls":[{"id":"c","type":"function","function":{"name":"quran_fr","arguments":"{}"}}]}}]}`, usage)
+			}))
+			defer server.Close()
+			runner := Runner{Client: server.Client(), Endpoint: server.URL, Model: "allowed", LocalTools: &fixtureTools{}}
+			out, err := runner.Run(context.Background(), "fixture", "", nil, nil)
+			if err != nil || calls != 6 || reserved != 16 || !out.Audit.WebUsageUnknown {
+				t.Fatal(err, calls, reserved, out.Audit)
+			}
+		})
 	}
 }

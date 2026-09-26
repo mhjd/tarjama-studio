@@ -1,5 +1,10 @@
 # Audit de fiabilité des traitements LLM — 26 septembre 2026
 
+> Suite : les corrections et les nouveaux tests sont décrits dans
+> [LLM_RELIABILITY_FIXES_20260926.md](LLM_RELIABILITY_FIXES_20260926.md).
+> Le présent document décrit le comportement historique audité ; la cible de
+> test vérifie désormais les garanties corrigées, sans build tag obligatoire.
+
 ## Conclusion
 
 L'orchestration actuelle possède plusieurs défauts reproductibles qui peuvent

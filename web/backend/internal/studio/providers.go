@@ -27,9 +27,14 @@ const TextMaxOutputTokens = 32768
 const GroqModel = "whisper-large-v3"
 
 type ProviderError struct {
-	Public    string
-	Temporary bool
-	After     time.Duration
+	Public         string
+	Temporary      bool
+	After          time.Duration
+	Code           string
+	SharedCooldown bool
+	Passive        bool
+	QuotaRejected  bool
+	Malformed      bool
 }
 
 func (e *ProviderError) Error() string { return e.Public }
@@ -70,7 +75,7 @@ func NewProviders() *HTTPProviders {
 	return &HTTPProviders{Client: &http.Client{Timeout: 5 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, TextURL: "https://openrouter.ai/api/v1/chat/completions", GroqURL: "https://api.groq.com/openai/v1/audio/transcriptions"}
 }
 func providerError(r *http.Response) *ProviderError {
-	e := &ProviderError{Public: "Le fournisseur a refusé la requête. Vérifiez la configuration du service."}
+	e := &ProviderError{Code: fmt.Sprintf("http_%d", r.StatusCode), SharedCooldown: r.StatusCode == 429, QuotaRejected: r.StatusCode == 429, Public: "Le fournisseur a refusé la requête. Vérifiez la configuration du service."}
 	switch r.StatusCode {
 	case 401, 403:
 		e.Public = "Clé refusée : remplacez votre clé personnelle ou signalez la clé partagée à l’administrateur."
@@ -143,17 +148,39 @@ func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, 
 		contextText = append(contextText, item{x.ID, x.Arabic})
 	}
 	input := map[string]any{"segments": target, "context_only": contextText}
-	schema := map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"segments": map[string]any{"type": "array", "items": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"id": map[string]string{"type": "string"}, "text": map[string]string{"type": "string"}}, "required": []string{"id", "text"}}}}, "required": []string{"segments"}}
+	ids := []string{}
+	idBytes := 0
+	for _, segment := range s {
+		ids = append(ids, segment.ID)
+		idBytes += len(segment.ID)
+	}
+	idSchema := map[string]any{"type": "string"}
+	// Avoid excessively large enum schemas on imported, long identifiers.
+	// Exact IDs and order remain mandatory in ValidateText in every case.
+	if idBytes <= 12000 {
+		idSchema["enum"] = ids
+	}
+	schema := map[string]any{
+		"type": "object", "additionalProperties": false, "required": []string{"segments"},
+		"properties": map[string]any{"segments": map[string]any{
+			"type": "array", "minItems": len(s), "maxItems": len(s),
+			"items": map[string]any{
+				"type": "object", "additionalProperties": false, "required": []string{"id", "text"},
+				"properties": map[string]any{"id": idSchema, "text": map[string]string{"type": "string"}},
+			},
+		}},
+	}
 	runner := research.Runner{Client: p.Client, Endpoint: endpoint, Model: model, LocalTools: p.References}
 	if model == TextModel {
 		runner.ReasoningEffort = "medium"
 	}
 	output, err := runner.Run(ctx, key, string(prompt), input, schema)
+	result.Grounding, _ = json.Marshal(output.Audit)
 	if err != nil {
 		var modelError *research.ModelHTTPError
 		var connectionError *research.ConnectionError
 		if errors.As(err, &connectionError) {
-			return result, &ProviderError{Public: connectionError.Error() + " ; reprise automatique.", Temporary: true}
+			return result, &ProviderError{Public: connectionError.Error() + " ; reprise automatique.", Temporary: true, Code: "transport"}
 		}
 		if errors.As(err, &modelError) {
 			log.Printf("model request failed status=%d", modelError.Status)
@@ -176,7 +203,6 @@ func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, 
 	if d.Decode(&result.Segments) != nil {
 		return result, errors.New("Réponse IA invalide")
 	}
-	result.Grounding, _ = json.Marshal(output.Audit)
 	return result, ValidateText(result, s)
 }
 func (p *HTTPProviders) Audio(ctx context.Context, key, path string) (ASRResponse, json.RawMessage, error) {

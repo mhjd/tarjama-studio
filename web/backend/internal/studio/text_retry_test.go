@@ -15,7 +15,7 @@ func TestTextRetriesBoundedAndFailClosed(t *testing.T) {
 	for _, reason := range []string{"Réponse OpenRouter invalide", "Réponse modèle vide", "Réponse IA incomplète", "Réponse IA mal alignée", "Réponse IA invalide", "Réponse IA tronquée", "Marqueur technique interdit"} {
 		for attempt := 0; attempt < 4; attempt++ {
 			var p *ProviderError
-			if !errors.As(textResponseFailure(Job{Attempts: attempt}, errors.New(reason)), &p) || p.Temporary != (attempt < 2) {
+			if !errors.As(textResponseFailure(Job{TextFailures: attempt}, errors.New(reason)), &p) || p.Temporary != (attempt < 2) {
 				t.Fatal(reason, attempt)
 			}
 			if attempt < 2 && p.Public != "" {

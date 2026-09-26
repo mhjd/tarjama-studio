@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"io"
 	"io/fs"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -553,9 +554,9 @@ func (a *API) media(w http.ResponseWriter, r *http.Request) {
 		apiError(w, ErrMissing)
 		return
 	}
-	servePrivate(w, r, storagePath(a.Config.Storage, p.Media), false)
+	servePrivate(w, r, storagePath(a.Config.Storage, p.Media), "")
 }
-func servePrivate(w http.ResponseWriter, r *http.Request, path string, download bool) {
+func servePrivate(w http.ResponseWriter, r *http.Request, path, filename string) {
 	f, e := os.Open(path)
 	if e != nil {
 		apiError(w, ErrMissing)
@@ -568,19 +569,24 @@ func servePrivate(w http.ResponseWriter, r *http.Request, path string, download 
 		return
 	}
 	w.Header().Set("Content-Type", "video/mp4")
-	if download {
-		w.Header().Set("Content-Disposition", `attachment; filename="tarjama.mp4"`)
+	if filename != "" {
+		w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filename}))
 	}
 	http.ServeContent(w, r, "video.mp4", st.ModTime(), f)
 }
 func (a *API) downloadExport(w http.ResponseWriter, r *http.Request) {
+	p, e := a.Store.Get(r.Context(), who(r).User, r.PathValue("id"))
+	if e != nil {
+		apiError(w, e)
+		return
+	}
 	var state string
-	e := a.Store.DB.QueryRow(r.Context(), "SELECT state FROM jobs WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND kind LIKE 'export_%'", r.PathValue("job"), r.PathValue("id"), who(r).User).Scan(&state)
+	e = a.Store.DB.QueryRow(r.Context(), "SELECT state FROM jobs WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND kind LIKE 'export_%'", r.PathValue("job"), p.ID, who(r).User).Scan(&state)
 	if e != nil || state != "succeeded" {
 		apiError(w, ErrMissing)
 		return
 	}
-	servePrivate(w, r, storagePath(a.Config.Storage, r.PathValue("job")+".mp4"), true)
+	servePrivate(w, r, storagePath(a.Config.Storage, r.PathValue("job")+".mp4"), exportFilename(p.Title))
 }
 func (a *API) cancel(w http.ResponseWriter, r *http.Request) {
 	_, e := a.Store.Mutate(r.Context(), who(r).User, r.PathValue("id"), func(p *Project, tx pgx.Tx) error {

@@ -426,11 +426,11 @@ func textResponseFailure(j Job, err error) error {
 	switch jobFailureReason(err) {
 	case "text_incomplete", "text_misaligned", "text_invalid_json", "text_invalid_marker", "text_truncated", "text_invalid_envelope", "text_empty":
 		log.Printf("invalid text response job=%s kind=%s attempt=%d reason=%s", j.ID, j.Kind, j.Attempts, jobFailureReason(err))
-		message := "Le service a renvoyé une réponse incomplète ou mal structurée. Les morceaux terminés sont conservés. "
-		if j.Attempts < 2 {
-			message += "Nouvelle tentative automatique sur un morceau plus court."
-		} else {
-			message += "Les tentatives automatiques ont échoué ; vous pouvez réessayer."
+		// Automatic recovery is ordinary processing in the UI. Keep its reason
+		// in the diagnostic log above, and only ask for action when retries end.
+		message := ""
+		if j.Attempts >= 2 {
+			message = "Le traitement n’a pas pu se terminer. Votre progression est conservée. Vous pouvez réessayer."
 		}
 		return &ProviderError{
 			Public:    message,

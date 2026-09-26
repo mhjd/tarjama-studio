@@ -18,6 +18,12 @@ func TestTextRetriesBoundedAndFailClosed(t *testing.T) {
 			if !errors.As(textResponseFailure(Job{Attempts: attempt}, errors.New(reason)), &p) || p.Temporary != (attempt < 2) {
 				t.Fatal(reason, attempt)
 			}
+			if attempt < 2 && p.Public != "" {
+				t.Fatal("automatic recovery exposed a technical error", p.Public)
+			}
+			if attempt >= 2 && p.Public != "Le traitement n’a pas pu se terminer. Votre progression est conservée. Vous pouvez réessayer." {
+				t.Fatal("terminal failure must remain actionable", p.Public)
+			}
 		}
 	}
 	for _, original := range []error{errors.New("Réponse IA tronquée ou refusée"), errors.New("unknown"), &ProviderError{Public: "key refused"}} {
@@ -58,6 +64,38 @@ func TestTextRetryPreservesSavedBoundaries(t *testing.T) {
 	}
 	if got := smallerTextRetry([][]Segment{{source[0]}}, 0, 2); len(got) != 1 || len(got[0]) != 1 {
 		t.Fatal("single segment lost")
+	}
+}
+
+func TestClaimClearsPreviousAttemptMessage(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	owner, p := fixture(t, s)
+	_, err := s.Mutate(ctx, owner, p.ID, func(q *Project, tx pgx.Tx) error {
+		q.Stage = "cleaning"
+		return enqueue(ctx, tx, owner, *q, "cleanup")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	j, err := s.Claim(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Fail(ctx, j, &ProviderError{Public: "Previous attempt diagnostic", Temporary: true})
+	if _, err = s.DB.Exec(ctx, "UPDATE jobs SET next_attempt_at=now(),progress=42 WHERE id=$1", j.ID); err != nil {
+		t.Fatal(err)
+	}
+	resumed, err := s.Claim(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobs, err := s.Jobs(ctx, owner, p.ID)
+	if err != nil || len(jobs) != 1 {
+		t.Fatal(jobs, err)
+	}
+	if jobs[0].State != "running" || jobs[0].Message != "" || jobs[0].Progress != 42 || resumed.Attempts != 1 {
+		t.Fatal("retry must clear stale messaging but preserve progress and attempt bounds", jobs)
 	}
 }
 func TestTextOutputLimitDiffersFromRefusal(t *testing.T) {
@@ -114,7 +152,7 @@ func TestMalformedTextQueueRecoveryAndAttemptLimit(t *testing.T) {
 				t.Fatal(err)
 			}
 			jobs, _ := s.Jobs(ctx, owner, p.ID)
-			if jobs[0].State != "waiting_provider" {
+			if jobs[0].State != "waiting_provider" || jobs[0].Message != "" {
 				t.Fatal(jobs)
 			}
 			if worked, _ := worker.Once(ctx); worked {

@@ -1,5 +1,10 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **Correction préparée le 26 septembre, non déployée :** les reprises automatiques
+> d'une réponse IA invalide n'exposent plus de diagnostic technique à l'utilisateur.
+> Un échec définitif reste explicite et réessayable. Attendre le signal du propriétaire
+> avant redéploiement. [Décision et tests](AUTOMATIC_RECOVERY_UX_20260926.md).
+
 > **Livraison du 26 septembre : archives et sessions.** Archivage/restauration
 > sans supprimer les médias, liens déjà présents identifiés par le titre du projet,
 > boutons Haut/Bas du lecteur, arrêt des appels après expiration d'authentification

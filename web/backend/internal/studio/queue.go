@@ -31,7 +31,8 @@ func (s *Store) Claim(ctx context.Context) (Job, error) {
 		return j, e
 	}
 	j.Lease = id()
-	_, e = tx.Exec(ctx, "UPDATE jobs SET state='running',lease=$2,lease_until=now()+interval '2 minutes',updated_at=now() WHERE id=$1", j.ID, j.Lease)
+	// A previous wait/failure message no longer describes the current attempt.
+	_, e = tx.Exec(ctx, "UPDATE jobs SET state='running',message='',lease=$2,lease_until=now()+interval '2 minutes',updated_at=now() WHERE id=$1", j.ID, j.Lease)
 	if e == nil {
 		_, e = tx.Exec(ctx, "UPDATE users SET last_served=now() WHERE id=$1", j.Owner)
 	}

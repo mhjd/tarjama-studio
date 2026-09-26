@@ -62,7 +62,7 @@ CMD ["-test.v", "-test.run", "^TestReferenceDeployment$", "-test.timeout", "4m"]
 # Explicit private UI qualification only; not part of api/media release images.
 FROM backend AS ui-review-build
 RUN CGO_ENABLED=0 go build -trimpath -o /ui-review ./cmd/ui-review
-FROM api AS ui-review
+FROM worker AS ui-review
 COPY --from=ui-review-build /ui-review /usr/local/bin/ui-review
 ENTRYPOINT ["/usr/local/bin/ui-review"]
 CMD []

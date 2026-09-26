@@ -27,10 +27,13 @@ type reviewBody struct {
 	io.Closer
 }
 
-type reviewTransport struct{ base http.RoundTripper }
+type reviewTransport struct {
+	base   http.RoundTripper
+	budget *reviewBudget
+}
 
 func (t reviewTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	response, err := t.base.RoundTrip(r)
+	response, err := t.paid(r)
 	if r.URL.Hostname() == "openrouter.ai" || r.URL.Hostname() == "api.parallel.ai" || r.URL.Hostname() == "api.groq.com" {
 		if err != nil {
 			log.Printf("Provider %s transport error", r.URL.Hostname())
@@ -73,7 +76,6 @@ func run() error {
 	if os.Getenv("UI_REVIEW") != "atelier-20260923" {
 		return errors.New("explicit private review required")
 	}
-	http.DefaultTransport = reviewTransport{http.DefaultTransport}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Hour)
 	defer cancel()
 	key := make([]byte, 32)
@@ -100,6 +102,15 @@ func run() error {
 	if err = os.MkdirAll(filepath.Join(c.Storage, "artifacts"), 0700); err != nil {
 		return err
 	}
+	campaign := os.Getenv("UI_REVIEW_CAMPAIGN")
+	if !regexp.MustCompile(`^[a-z0-9_]{1,40}$`).MatchString(campaign) {
+		return errors.New("explicit bounded campaign required")
+	}
+	budget, err := openReviewBudget("/storage/ui-budget-" + campaign + ".json")
+	if err != nil {
+		return errors.New("qualification budget unavailable")
+	}
+	http.DefaultTransport = reviewTransport{base: http.DefaultTransport, budget: budget}
 	startup, stop := context.WithTimeout(ctx, time.Minute)
 	root, err := studio.OpenWhenReady(startup, c.DB)
 	stop()
@@ -173,6 +184,37 @@ func run() error {
 			return
 		}
 		http.ServeFile(w, r, filepath.Join(c.Storage, "artifacts", name))
+	})
+	mux.HandleFunc("GET /review-budget", func(w http.ResponseWriter, r *http.Request) {
+		budget.mu.Lock()
+		defer budget.mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(budget)
+	})
+	mux.HandleFunc("GET /review-diagnostics", func(w http.ResponseWriter, r *http.Request) {
+		rows, e := store.DB.Query(r.Context(), "SELECT j.kind,a.ordinal,a.code,a.diagnostics FROM text_attempts a JOIN jobs j ON j.id=a.job_id ORDER BY a.started_at")
+		if e != nil {
+			http.Error(w, "diagnostics unavailable", 503)
+			return
+		}
+		defer rows.Close()
+		result := []map[string]any{}
+		for rows.Next() {
+			var kind, code string
+			var ordinal int
+			var diagnostic json.RawMessage
+			if rows.Scan(&kind, &ordinal, &code, &diagnostic) != nil {
+				http.Error(w, "diagnostics unavailable", 503)
+				return
+			}
+			result = append(result, map[string]any{"kind": kind, "ordinal": ordinal, "code": code, "diagnostics": diagnostic})
+		}
+		if rows.Err() != nil {
+			http.Error(w, "diagnostics unavailable", 503)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(result)
 	})
 	mux.Handle("/", api)
 	server := studio.HTTPServer(c.Addr, mux)

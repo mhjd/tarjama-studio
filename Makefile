@@ -231,7 +231,7 @@ web-isolated-image-test:
 # Dedicated private UI qualification images; never deploy them as the public web service.
 .PHONY: web-review-images
 web-review-images: web-prompts-check
-	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target ui-review -t tarjama-ui-review:review web
+	$(MAKE) web-worker-image WORKER_IMAGE_TARGET=ui-review WORKER_IMAGE_TAG=tarjama-ui-review:review
 	docker build --platform linux/amd64 -f web/deploy/Dockerfile --target ui-recorder -t tarjama-ui-recorder:review web
 
 .PHONY: web-text-benchmark-image
@@ -241,7 +241,7 @@ web-text-benchmark-image: web-prompts-check
 # Explicit inputs prevent reapplying historical production digests by accident.
 .PHONY: web-review-prepare web-text-benchmark-prepare
 web-review-prepare:
-	python3 web/review/prepare.py --base "$(REVIEW_BASE)" --review-image "$(REVIEW_IMAGE)" --recorder-image "$(RECORDER_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)" --video "$(REVIEW_VIDEO)" $(if $(REVIEW_DEVICE),--device "$(REVIEW_DEVICE)") $(if $(filter 1,$(REVIEW_RESUME)),--resume,) $(if $(filter 1,$(REVIEW_RETRY_FAILED)),--retry-failed,) $(if $(REVIEW_ARTIFACT_PREFIX),--artifact-prefix "$(REVIEW_ARTIFACT_PREFIX)") $(if $(REVIEW_WAIT_MINUTES),--wait-minutes "$(REVIEW_WAIT_MINUTES)")
+	python3 web/review/prepare.py --campaign "$(REVIEW_CAMPAIGN)" --base "$(REVIEW_BASE)" --review-image "$(REVIEW_IMAGE)" --recorder-image "$(RECORDER_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)" --video "$(REVIEW_VIDEO)" $(if $(REVIEW_DEVICE),--device "$(REVIEW_DEVICE)") $(if $(filter 1,$(REVIEW_RESUME)),--resume,) $(if $(filter 1,$(REVIEW_RETRY_FAILED)),--retry-failed,) $(if $(REVIEW_ARTIFACT_PREFIX),--artifact-prefix "$(REVIEW_ARTIFACT_PREFIX)") $(if $(REVIEW_WAIT_MINUTES),--wait-minutes "$(REVIEW_WAIT_MINUTES)")
 web-text-benchmark-prepare:
 	python3 web/review/translation-lite/prepare.py --base "$(REVIEW_BASE)" --image "$(BENCHMARK_IMAGE)" --run "$(REVIEW_RUN)" --output "$(REVIEW_RECIPE)"
 

@@ -7,6 +7,7 @@ import yaml
 p=argparse.ArgumentParser()
 for key in ('base','review-image','recorder-image','run','output'):
     p.add_argument('--'+key,required=True)
+p.add_argument('--campaign', required=True)
 p.add_argument('--device', choices=['macbook-air15-m4','pixel6','iphone15'], default='macbook-air15-m4')
 p.add_argument('--video', required=True)
 p.add_argument('--resume', action='store_true')
@@ -22,6 +23,7 @@ if not re.fullmatch('[a-z0-9-]{0,30}',a.artifact_prefix) or (a.resume and not a.
     raise SystemExit('Resume requires a new artifact prefix (lowercase letters, digits, hyphens)')
 if a.retry_failed and not a.resume:
     raise SystemExit('Retry requires resume')
+if not re.fullmatch('[a-z0-9_]{1,40}',a.campaign): raise SystemExit('Invalid campaign')
 r=yaml.safe_load(Path(a.base).read_text())
 # Capability template from the initial authorized review; its production image
 # references are deliberately never copied into this run.
@@ -29,6 +31,8 @@ previous=yaml.safe_load(Path('web/deploy/preview/ui-review-20260923.yml').read_t
 review=previous['services']['review']
 review['image']=a.review_image
 review['env']['UI_REVIEW_RUN']=a.run
+review['env']['UI_REVIEW_CAMPAIGN']=a.campaign
+review['env']['REFERENCE_CORPUS_DIR']='/app/references'
 review['env'].pop('GEMINI_API_KEY_FILE',None)
 review['env']['OPENROUTER_API_KEY_FILE']='/run/openrouter/api_key'
 review['secrets']=[x for x in review['secrets'] if x['name']!='tarjama-gemini']

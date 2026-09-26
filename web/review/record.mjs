@@ -109,7 +109,7 @@ for(const device of selectedDevices){
  console.log('OUTCOME '+JSON.stringify(outcomes.at(-1)));
  if(outcomes.at(-1).status==='failed')break;
 }
-const manifest={sourceVideo,resumed:process.env.REVIEW_RESUME==='1',identity:'isolated test account; production MFA confirmed separately by owner',providers:'real OpenRouter/DeepSeek with Parallel and Groq',media:'administered isolated jobs, WARP for download',emulation:'CSS viewports, Chromium; not physical devices or Safari qualification',outcomes,artifacts};
+const manifest={sourceVideo,resumed:process.env.REVIEW_RESUME==='1',identity:'isolated test account; production MFA confirmed separately by owner',providers:'real OpenRouter/Luna medium with Parallel, local references and Groq',media:'administered isolated jobs, WARP for download',emulation:'CSS viewports, Chromium; not physical devices or Safari qualification',outcomes,artifacts};
 await fs.writeFile(root+'/manifest.json',JSON.stringify(manifest,null,2));await upload(root+'/manifest.json','manifest.json');
 console.log('RESULT '+JSON.stringify({outcomes,artifacts:artifacts.filter(x=>/\.(mp4|webm)$/.test(x.name))}));
 await browser.close();proxy.close();

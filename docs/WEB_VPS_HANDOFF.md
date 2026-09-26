@@ -1,5 +1,11 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **Correctif export du 26 septembre :** le bouton principal reprend désormais
+> les exports annulés/échoués et indique les créations actives ou déjà terminées.
+> Code `97989d7`, 19 tests UI réussis. Le diagnostic de « Sirat un nabi episode 4 »
+> a confirmé un export Low annulé de la version 6 ; ce n'était pas un refus du VPS.
+> Voir [le diagnostic et les tests](EXPORT_RETRY_20260926.md).
+
 > **Redéploiement du 26 septembre, 16:10 UTC :** les téléchargements MP4
 > prennent le titre actuel du projet. API `d42189b`, révision `34008606bc133fc5`,
 > quatre services prêts et qualification HTTP/OIDC/en-têtes/TLS réussie.

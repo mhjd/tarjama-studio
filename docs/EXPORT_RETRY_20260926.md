@@ -41,3 +41,19 @@ borné, sans exposer de secrets. La recette finale le retire. Preuves dans
 Résultat : build TypeScript/Vite réussi, **19 tests Playwright réussis**, dont
 les parcours complets aux formats MacBook Air 15, Pixel 6 et iPhone 15.
 La source vidéo et les réponses IA sont synthétiques, l'export local est réel.
+
+## Mise en ligne
+
+Correctif `97989d7`, déployé à la révision `b6abd8b1ab11a741` avec la recette
+`web/deploy/preview/active-export-retry-20260926.yml`. Seul le frontend change ;
+le binaire API qualifié du déploiement précédent est conservé par l'image de base.
+Les quatre services sont prêts. Qualification `pv-job-preview-check-e6c7f257`
+réussie : HTTP, démarrage OIDC, limites d'en-têtes, HTTPS/passerelle. L'authentification
+MFA et le clic authentifié sur le projet du propriétaire n'ont pas été rejoués.
+
+Sauvegarde préalable réussie `pv-job-backup-a27dc1ac`, dump
+`pre-reliability-20260926T203523Z.dump`, SHA256
+`40cb4aa706dc4ad8cc3ae5edae654a8557733db5872306c16b8af7cd9f8263cc`.
+La recette temporaire de diagnostic a été remplacée par la recette finale.
+Aucune migration. Retour arrière possible à `34008606bc133fc5` sans changement
+de schéma. Les optimisations média restent une intervention distincte.

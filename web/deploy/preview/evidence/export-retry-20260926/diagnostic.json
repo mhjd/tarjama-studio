@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-diagnose-export-bc9b56f5-rxdh4",
+      "log": "{\"stage\": \"ready\", \"title\": \"Sirat un nabi episode 4\", \"project\": \"2d15866edf3d955172ad22add35a7e91\", \"version\": 6, \"generation\": 1, \"confirmed_review\": 6}\n{\"job\": \"eb8c48dd3452a62fe0e69492d3fe6ba9\", \"kind\": \"export_fr_low\", \"state\": \"cancelled\", \"message\": \"Traitement annulé\", \"attempts\": 0, \"progress\": 33, \"created_at\": \"2026-09-26T16:07:46.04512+00:00\", \"generation\": 1, \"lease_until\": \"2026-09-26T16:09:46.600859+00:00\", \"source_version\": 6, \"next_attempt_at\": \"2026-09-26T16:07:46.04512+00:00\"}\n{\"job\": \"6a3764d7d8e6afcd30879c02a40ab422\", \"kind\": \"export_fr_low\", \"state\": \"succeeded\", \"message\": \"\", \"attempts\": 0, \"progress\": 100, \"created_at\": \"2026-09-26T15:00:10.791229+00:00\", \"generation\": 1, \"lease_until\": null, \"source_version\": 5, \"next_attempt_at\": \"2026-09-26T15:00:10.791229+00:00\"}\n"
+    }
+  ]
+}

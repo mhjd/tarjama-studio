@@ -77,7 +77,10 @@ func (b *reviewBudget) reserve(provider string, amount float64) (int, error) {
 			committed += call.Reserved
 		}
 	}
-	if time.Now().After(b.Deadline) || len(b.Calls) >= 60 || committed+amount > b.Limit {
+	// Two seven-chunk text passes can legitimately need 84 HTTP requests
+	// (six bounded research/finalization rounds each), plus ASR and the short run.
+	// The independent persistent dollar reservation remains the primary guard.
+	if time.Now().After(b.Deadline) || len(b.Calls) >= 120 || committed+amount > b.Limit {
 		return 0, errors.New("qualification budget exhausted")
 	}
 	index := len(b.Calls)

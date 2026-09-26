@@ -34,3 +34,18 @@ func TestBudgetSurvivesRestartAndUnknownCharges(t *testing.T) {
 		t.Fatal("expired campaign restarted")
 	}
 }
+
+func TestRequestCeilingAllowsFullTwoPassHourButRemainsBounded(t *testing.T) {
+	b, err := openReviewBudget(filepath.Join(t.TempDir(), "budget.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 120; i++ {
+		if _, err := b.reserve("fixture", .001); err != nil {
+			t.Fatalf("call %d: %v", i, err)
+		}
+	}
+	if _, err := b.reserve("fixture", .001); err == nil {
+		t.Fatal("request ceiling exceeded")
+	}
+}

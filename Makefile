@@ -149,6 +149,10 @@ web-gc:
 web-mobile-player-review:
 	sh web/scripts/mobile-player-review.sh
 
+.PHONY: web-llm-reliability-audit
+web-llm-reliability-audit:
+	sh web/scripts/llm-reliability-audit.sh
+
 web-api-image: web-prompts-check
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target api -t tarjama-web:review web
 

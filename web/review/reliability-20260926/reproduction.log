@@ -1,0 +1,56 @@
+sh web/scripts/llm-reliability-audit.sh
+ Network tarjama-isolated-test_test Creating 
+ Network tarjama-isolated-test_test Creating 
+ Network tarjama-isolated-test_test Created 
+ Network tarjama-isolated-test_test Created 
+ Container tarjama-isolated-test-db-1 Creating 
+ Container tarjama-isolated-test-db-1 Created 
+ Container tarjama-isolated-test-db-1 Starting 
+ Container tarjama-isolated-test-db-1 Started 
+ Container tarjama-isolated-test-db-1 Waiting 
+ Container tarjama-isolated-test-db-1 Healthy 
+ Container tarjama-isolated-test-checks-run-6a9452ea4c41 Creating 
+ Container tarjama-isolated-test-checks-run-6a9452ea4c41 Created 
+=== RUN   TestReliabilityAudit
+=== RUN   TestReliabilityAudit/local_tool_limits_become_unclassified_terminal_failures
+=== RUN   TestReliabilityAudit/local_tool_limits_become_unclassified_terminal_failures/1
+2026/09/26 08:35:10 job failed id=d597a9bb2e78094ea0a10553fb3d665e kind=translate reason=unclassified
+    reliability_audit_test.go:93: batch=1 HTTP=5 local_executed=4 state=failed reason=unclassified; no final-answer turn
+=== RUN   TestReliabilityAudit/local_tool_limits_become_unclassified_terminal_failures/9
+2026/09/26 08:35:10 job failed id=1799390c61d0f87edc17706cdc56442c kind=translate reason=unclassified
+    reliability_audit_test.go:93: batch=9 HTTP=1 local_executed=0 state=failed reason=unclassified; no final-answer turn
+=== RUN   TestReliabilityAudit/cooldown_waits_consume_malformed_response_retry_allowance
+2026/09/26 08:35:10 job failed id=8c754ce102670ffb69f5be106d4b6659 kind=translate reason=provider
+2026/09/26 08:35:10 job failed id=8c754ce102670ffb69f5be106d4b6659 kind=translate reason=provider
+2026/09/26 08:35:10 invalid text response job=8c754ce102670ffb69f5be106d4b6659 kind=translate attempt=2 reason=text_incomplete
+2026/09/26 08:35:10 job failed id=8c754ce102670ffb69f5be106d4b6659 kind=translate reason=provider
+    reliability_audit_test.go:124: 2 passive cooldown waits + first malformed answer => failed after only 1 provider call
+=== RUN   TestReliabilityAudit/failed_attempt_loses_usage_and_reference_audit
+2026/09/26 08:35:10 model request failed status=502
+    reliability_audit_test.go:150: runner retains 1 reference and 1 usage; provider adapter returns empty audit on failure
+=== RUN   TestReliabilityAudit/documented_usage_shape_disables_web_after_first_local_call
+    reliability_audit_test.go:178: server_tool_use.web_search_requests=0 but absent tool_calls_executed => web tools withdrawn on continuation (conservative budget policy)
+=== RUN   TestReliabilityAudit/transport_timeouts_have_no_total_attempt_cap
+2026/09/26 08:35:10 job failed id=9e5f390042ebf158cd8251a3b3b86c93 kind=translate reason=provider
+2026/09/26 08:35:10 job failed id=9e5f390042ebf158cd8251a3b3b86c93 kind=translate reason=provider
+2026/09/26 08:35:10 job failed id=9e5f390042ebf158cd8251a3b3b86c93 kind=translate reason=provider
+2026/09/26 08:35:10 job failed id=9e5f390042ebf158cd8251a3b3b86c93 kind=translate reason=provider
+2026/09/26 08:35:10 job failed id=9e5f390042ebf158cd8251a3b3b86c93 kind=translate reason=provider
+2026/09/26 08:35:10 job failed id=9e5f390042ebf158cd8251a3b3b86c93 kind=translate reason=provider
+    reliability_audit_test.go:199: 6 transport timeouts => still waiting_provider; code caps backoff but not attempts/cumulative spend
+--- PASS: TestReliabilityAudit (0.81s)
+    --- PASS: TestReliabilityAudit/local_tool_limits_become_unclassified_terminal_failures (0.39s)
+        --- PASS: TestReliabilityAudit/local_tool_limits_become_unclassified_terminal_failures/1 (0.22s)
+        --- PASS: TestReliabilityAudit/local_tool_limits_become_unclassified_terminal_failures/9 (0.17s)
+    --- PASS: TestReliabilityAudit/cooldown_waits_consume_malformed_response_retry_allowance (0.22s)
+    --- PASS: TestReliabilityAudit/failed_attempt_loses_usage_and_reference_audit (0.01s)
+    --- PASS: TestReliabilityAudit/documented_usage_shape_disables_web_after_first_local_call (0.01s)
+    --- PASS: TestReliabilityAudit/transport_timeouts_have_no_total_attempt_cap (0.18s)
+PASS
+ok  	tarjama/web/internal/studio	1.827s
+ Container tarjama-isolated-test-db-1 Stopping 
+ Container tarjama-isolated-test-db-1 Stopped 
+ Container tarjama-isolated-test-db-1 Removing 
+ Container tarjama-isolated-test-db-1 Removed 
+ Network tarjama-isolated-test_test Removing 
+ Network tarjama-isolated-test_test Removed 

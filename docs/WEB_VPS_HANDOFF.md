@@ -1,5 +1,12 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **Livraison du 26 septembre : archives et sessions.** Archivage/restauration
+> sans supprimer les médias, liens déjà présents identifiés par le titre du projet,
+> boutons Haut/Bas du lecteur, arrêt des appels après expiration d'authentification
+> et limite d'en-têtes portée à 64 Kio. Révision `504c3b05c5075793`.
+> La durée de session passerelle et son accumulation de cookies restent à vérifier
+> côté administrateur. [Diagnostic, décisions et tests](ARCHIVES_AND_SESSION_20260926.md).
+
 > **Décision et déploiement du 25 septembre 2026 : Luna medium.**
 > Ce choix remplace DeepSeek comme défaut pour correction/traduction. Les trois
 > outils locaux sont implémentés et activés dans le worker avec le corpus

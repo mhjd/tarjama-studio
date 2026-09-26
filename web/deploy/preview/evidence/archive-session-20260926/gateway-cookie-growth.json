@@ -1,0 +1,74 @@
+[
+  {
+    "request": 1,
+    "status": 302,
+    "cookies": 1,
+    "cookie_bytes": 385
+  },
+  {
+    "request": 2,
+    "status": 302,
+    "cookies": 2,
+    "cookie_bytes": 772
+  },
+  {
+    "request": 3,
+    "status": 302,
+    "cookies": 3,
+    "cookie_bytes": 1159
+  },
+  {
+    "request": 4,
+    "status": 302,
+    "cookies": 4,
+    "cookie_bytes": 1546
+  },
+  {
+    "request": 5,
+    "status": 302,
+    "cookies": 5,
+    "cookie_bytes": 1933
+  },
+  {
+    "request": 6,
+    "status": 302,
+    "cookies": 6,
+    "cookie_bytes": 2320
+  },
+  {
+    "request": 7,
+    "status": 302,
+    "cookies": 7,
+    "cookie_bytes": 2707
+  },
+  {
+    "request": 8,
+    "status": 302,
+    "cookies": 8,
+    "cookie_bytes": 3094
+  },
+  {
+    "request": 9,
+    "status": 302,
+    "cookies": 9,
+    "cookie_bytes": 3481
+  },
+  {
+    "request": 10,
+    "status": 302,
+    "cookies": 10,
+    "cookie_bytes": 3868
+  },
+  {
+    "request": 11,
+    "status": 302,
+    "cookies": 11,
+    "cookie_bytes": 4255
+  },
+  {
+    "request": 12,
+    "status": 302,
+    "cookies": 12,
+    "cookie_bytes": 4642
+  }
+]

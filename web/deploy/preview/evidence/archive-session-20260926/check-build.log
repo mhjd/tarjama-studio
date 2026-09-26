@@ -1,0 +1,120 @@
+python3 -B web/scripts/sync_translation_prompt.py --check
+python3 -B -m unittest discover -s web/scripts -p test_translation_prompt.py -v
+test_all_business_lines_are_preserved (test_translation_prompt.DesktopTranslationParity.test_all_business_lines_are_preserved) ... ok
+test_changed_format_requires_explicit_review (test_translation_prompt.DesktopTranslationParity.test_changed_format_requires_explicit_review) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.001s
+
+OK
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 4.81kB done
+#1 DONE 0.0s
+
+#2 [context reference-corpus] load .dockerignore
+#2 transferring reference-corpus: 2B done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/golang:1.27.1-bookworm
+#3 DONE 0.2s
+
+#4 [internal] load metadata for docker.io/library/node:22.23.2-bookworm-slim
+#4 DONE 0.2s
+
+#5 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#5 DONE 0.2s
+
+#6 [internal] load .dockerignore
+#6 transferring context: 575B done
+#6 DONE 0.0s
+
+#7 [api 1/4] FROM docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
+#7 resolve docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 0.0s done
+#7 DONE 0.0s
+
+#8 [backend 1/6] FROM docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+#8 resolve docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 0.0s done
+#8 DONE 0.0s
+
+#9 [frontend 1/6] FROM docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9
+#9 resolve docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9 0.0s done
+#9 DONE 0.0s
+
+#10 [internal] load build context
+#10 transferring context: 5.28kB 0.1s done
+#10 DONE 0.1s
+
+#11 [backend 2/6] WORKDIR /src/backend
+#11 CACHED
+
+#12 [backend 5/6] COPY backend/ ./
+#12 CACHED
+
+#13 [backend 3/6] COPY backend/go.mod backend/go.sum ./
+#13 CACHED
+
+#14 [backend 4/6] RUN go mod download
+#14 CACHED
+
+#15 [backend 6/6] RUN CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama
+#15 CACHED
+
+#16 [context reference-corpus] load from client
+#16 transferring reference-corpus: 25.17MB 0.3s done
+#16 DONE 0.3s
+
+#17 [frontend 6/6] RUN npm run build
+#17 CACHED
+
+#18 [frontend 5/6] COPY frontend/ ./
+#18 CACHED
+
+#19 [api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend
+#19 CACHED
+
+#20 [worker 1/3] COPY --from=reference-build /references /usr/local/bin/references
+#20 CACHED
+
+#21 [api 2/4] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir /storage && chown 10001:10001 /storage
+#21 CACHED
+
+#22 [frontend 4/6] RUN npm ci
+#22 CACHED
+
+#23 [reference-build 1/1] RUN CGO_ENABLED=0 go build -trimpath -o /references ./cmd/references
+#23 CACHED
+
+#24 [frontend 2/6] WORKDIR /src/frontend
+#24 CACHED
+
+#25 [frontend 3/6] COPY frontend/package*.json ./
+#25 CACHED
+
+#26 [worker 2/3] COPY --from=reference-corpus / /app/references/
+#26 CACHED
+
+#27 [api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama
+#27 CACHED
+
+#28 [worker 3/3] RUN /usr/local/bin/references --corpus /app/references --tools >/dev/null
+#28 CACHED
+
+#29 [preview-check-build 1/1] RUN CGO_ENABLED=0 go test -c -tags preview_live -o /preview-check ./internal/studio
+#29 DONE 18.2s
+
+#30 [reference-check 1/1] COPY --from=preview-check-build /preview-check /usr/local/bin/preview-check
+#30 DONE 0.0s
+
+#31 exporting to image
+#31 exporting layers
+#31 exporting layers 1.0s done
+#31 exporting manifest sha256:79290234315e9ff0ac75df0b27f251854db644b3fd9d724f1ccf35e778e3805d done
+#31 exporting config sha256:3c8a1f000a9b5f759c897497fa59ab00dc6d6079ea1b87c9e469b58429e4368d done
+#31 exporting attestation manifest sha256:8f6b2477044034d22da60d0fa9470751b838c64752783c636d2131654ff37354 done
+#31 exporting manifest list sha256:76f515106770ca254359ee3404f3e974422cbc9827697b7e55b689ea58391441 done
+#31 naming to docker.io/library/tarjama-reference-check:review done
+#31 unpacking to docker.io/library/tarjama-reference-check:review
+#31 unpacking to docker.io/library/tarjama-reference-check:review 0.2s done
+#31 DONE 1.3s

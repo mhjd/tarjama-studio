@@ -1,5 +1,8 @@
 # Archives, navigation du lecteur et erreur 431 — 26 septembre 2026
 
+Livré sur https://atelier.preview.runagen.com, révision `504c3b05c5075793`.
+Code applicatif `a76f19a`, qualification réseau `9cd991d` ; branche `web-vps`.
+
 ## Diagnostic
 
 La création du lien YouTube signalé est bloquée par un projet encore présent,
@@ -83,3 +86,31 @@ L'option est explicitement documentée pour éviter les 431 dans la
 Sa disponibilité dans la version installée et le réglage effectivement appliqué
 sont à vérifier. Aucune configuration SSO, aucun proxy ni protection du VPS n'a
 été modifié par l'application.
+
+## Vérification et livraison
+
+Les 45 tests Playwright ont réussi, dont archive/restauration persistante,
+redirections d'authentification et 401 arrêtant les requêtes tout en conservant
+les brouillons, sauts de page, centrage et contrôle du débordement mobile.
+Les parcours MacBook, Pixel et iPhone sur fixtures sont rejoués, avec export
+vidéo réel local ; les fournisseurs IA de ces parcours sont simulés.
+Tests Go avec détection des races, `go vet`, build TypeScript/Vite et contrôle
+des prompts réussis. Aucun nouveau benchmark ni appel IA payant lancé.
+
+Sauvegarde pré-déploiement `pv-job-backup-8783ef76`, réussie et relue par
+`pg_restore --list` : `/storage/backups/pre-luna-references-20260926T073323Z.dump`,
+SHA256 `5041973d10c650af63a461d09979003d6363ae339854d7a750186677664f897f`.
+Trois images privées construites localement puis importées ; aucun usage de
+GHCR/Actions. Aucun changement de schéma, migration ou suppression de données.
+Le job temporaire de diagnostic en lecture seule est retiré de la recette active.
+
+`validate` et `plan` ont réussi avant le déploiement. Quatre services prêts,
+corpus de référence toujours chargé et Luna conservé. Le job
+`pv-job-preview-check-367729db` valide HTTP/OIDC/PKCE, TLS et les en-têtes :
+24 Kio acceptés (204), 80 Kio toujours refusés (431). Il est terminé avec succès.
+La MFA et la durée de session réelle dans le navigateur du propriétaire ne sont
+pas qualifiées par ce test. La limitation des cookies de la passerelle reste le
+point administrateur décrit ci-dessus.
+
+[Recette déployée](../web/deploy/preview/active-archive-session-20260926.yml) ·
+[Tests, captures et preuves](../web/deploy/preview/evidence/archive-session-20260926/).

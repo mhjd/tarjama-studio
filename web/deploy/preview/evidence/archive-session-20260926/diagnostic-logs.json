@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-diagnose-project-5db998a5-xtd78",
+      "log": "{\"stage\": \"transcribing\", \"title\": \"test\", \"archived\": \"false\", \"has_media\": true}\nheader_bytes=4096\nConnecting to web:8080 (10.43.177.194:8080)\n  HTTP/1.1 204 No Content\n  Cache-Control: no-store\n  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'\n  Referrer-Policy: no-referrer\n  X-Content-Type-Options: nosniff\n  Date: Sat, 26 Sep 2026 07:26:01 GMT\n  Connection: close\n  \nsaving to '/dev/null'\n'/dev/null' saved\nheader_bytes=16384\nConnecting to web:8080 (10.43.177.194:8080)\n  HTTP/1.1 204 No Content\n  Cache-Control: no-store\n  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'\n  Referrer-Policy: no-referrer\n  X-Content-Type-Options: nosniff\n  Date: Sat, 26 Sep 2026 07:26:01 GMT\n  Connection: close\n  \nsaving to '/dev/null'\n'/dev/null' saved\nheader_bytes=24576\nConnecting to web:8080 (10.43.177.194:8080)\n  HTTP/1.1 431 Request Header Fields Too Large\nwget: server returned error: HTTP/1.1 431 Request Header Fields Too Large\n"
+    }
+  ]
+}

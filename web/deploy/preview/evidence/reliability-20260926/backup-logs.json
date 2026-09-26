@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-backup-79e78970-jrn8g",
+      "log": "e58d452e2f7268c3736d2611e197af2fe96ab4f583cad1822022d633e6985594  /storage/backups/pre-archive-session-20260926T081118Z.dump\nBackup complete; no media modified.\n"
+    },
+    {
+      "pod": "pv-job-backup-8783ef76-b5qlq",
+      "log": "5041973d10c650af63a461d09979003d6363ae339854d7a750186677664f897f  /storage/backups/pre-luna-references-20260926T073323Z.dump\nBackup complete; no media modified.\n"
+    },
+    {
+      "pod": "pv-job-backup-fefe770d-5j897",
+      "log": "2f8ca8371d5b3e8dd63c62dbfa1b7ac33cffb7707e233546b21628def7426925  /storage/backups/pre-automatic-recovery-20260926T093537Z.dump\nBackup complete; no media modified.\n"
+    }
+  ]
+}

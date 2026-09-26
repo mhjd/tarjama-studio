@@ -1,7 +1,9 @@
 # Fiabilité des traitements LLM : corrections du 26 septembre 2026
 
 Cette livraison corrige les défauts reproductibles de l’[audit](LLM_RELIABILITY_AUDIT_20260926.md).
-Elle est préparée sur `web-vps`, sans déploiement ni migration de la base active.
+Elle a été préparée sur `web-vps`, sans déploiement ni migration de la base active.
+Le déploiement autorisé ensuite et les essais fournisseurs réels sont consignés
+dans [le rapport de qualification](LLM_REAL_QUALIFICATION_20260926.md).
 L’incident historique de 08:26 reste de cause indéterminée : les nouveaux
 journaux ne permettent pas de reconstruire des informations perdues auparavant.
 
@@ -165,4 +167,5 @@ Après un signal séparé de déploiement :
 Un retour à l’ancienne image reste compatible avec les ajouts de schéma, mais
 perd les nouvelles protections de reprise ; il ne restaure ni données ni schéma.
 Les anciens workers doivent être arrêtés pendant la bascule pour ne pas continuer
-avec l’ancienne politique. Aucun de ces actes de déploiement n’a été exécuté ici.
+avec l’ancienne politique. Cette procédure était préparée lors du correctif ;
+son exécution autorisée ensuite figure dans le rapport de qualification lié en tête.

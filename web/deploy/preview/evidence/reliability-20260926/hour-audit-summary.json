@@ -1,0 +1,179 @@
+[
+  {
+    "manifest": "manifest.json",
+    "status": 404
+  },
+  {
+    "manifest": "playback-manifest-validation.json",
+    "status": 404
+  },
+  {
+    "artifact": "suite-review-budget-1790419641702.json",
+    "bytes": 4557,
+    "sha256": "5ccaa983c6cb0bf8f605811809e22448beefca153f259f9d1c8f63d30897bdf4"
+  },
+  {
+    "report": "review-budget",
+    "data": {
+      "deadline": "2026-09-26T11:12:39.378604492Z",
+      "limit_usd": 2,
+      "calls": 54,
+      "reported_usd": 0.08636084000000002,
+      "retained_reservations_usd": 0.24
+    }
+  },
+  {
+    "artifact": "suite-review-diagnostics-1790419642018.json",
+    "bytes": 10654,
+    "sha256": "df94ae3bbea18c389cea8f12d378db4098415a845b736a69a7499b73364ee732"
+  },
+  {
+    "report": "review-diagnostics",
+    "data": [
+      {
+        "kind": "cleanup",
+        "ordinal": 0,
+        "code": "ok",
+        "requests": 4,
+        "local": 7,
+        "ms": 32900,
+        "cost": 0.007279845
+      },
+      {
+        "kind": "cleanup",
+        "ordinal": 1,
+        "code": "ok",
+        "requests": 6,
+        "local": 5,
+        "ms": 36810,
+        "cost": 0.00620852
+      },
+      {
+        "kind": "cleanup",
+        "ordinal": 2,
+        "code": "text_incomplete",
+        "requests": 2,
+        "local": 2,
+        "ms": 36719,
+        "cost": 0.005167755
+      },
+      {
+        "kind": "cleanup",
+        "ordinal": 2,
+        "code": "ok",
+        "requests": 3,
+        "local": 2,
+        "ms": 21797,
+        "cost": 0.00289239
+      },
+      {
+        "kind": "cleanup",
+        "ordinal": 3,
+        "code": "ok",
+        "requests": 2,
+        "local": 2,
+        "ms": 33668,
+        "cost": 0.007605835
+      },
+      {
+        "kind": "cleanup",
+        "ordinal": 4,
+        "code": "ok",
+        "requests": 3,
+        "local": 2,
+        "ms": 38400,
+        "cost": 0.0052051649999999994
+      },
+      {
+        "kind": "cleanup",
+        "ordinal": 5,
+        "code": "ok",
+        "requests": 2,
+        "local": 3,
+        "ms": 32907,
+        "cost": 0.004618475
+      },
+      {
+        "kind": "cleanup",
+        "ordinal": 6,
+        "code": "ok",
+        "requests": 2,
+        "local": 1,
+        "ms": 30715,
+        "cost": 0.0033548650000000003
+      },
+      {
+        "kind": "translate",
+        "ordinal": 0,
+        "code": "ok",
+        "requests": 6,
+        "local": 5,
+        "ms": 38365,
+        "cost": 0.006755525
+      },
+      {
+        "kind": "translate",
+        "ordinal": 1,
+        "code": "ok",
+        "requests": 3,
+        "local": 4,
+        "ms": 32483,
+        "cost": 0.004597435
+      },
+      {
+        "kind": "translate",
+        "ordinal": 2,
+        "code": "ok",
+        "requests": 3,
+        "local": 3,
+        "ms": 35854,
+        "cost": 0.005453065
+      },
+      {
+        "kind": "translate",
+        "ordinal": 3,
+        "code": "ok",
+        "requests": 2,
+        "local": 2,
+        "ms": 39194,
+        "cost": 0.00973444
+      },
+      {
+        "kind": "translate",
+        "ordinal": 4,
+        "code": "text_incomplete",
+        "requests": 1,
+        "local": 0,
+        "ms": 29764,
+        "cost": 0.0045138
+      },
+      {
+        "kind": "translate",
+        "ordinal": 4,
+        "code": "ok",
+        "requests": 1,
+        "local": 0,
+        "ms": 20290,
+        "cost": 0.0025513
+      },
+      {
+        "kind": "translate",
+        "ordinal": 5,
+        "code": "ok",
+        "requests": 3,
+        "local": 2,
+        "ms": 37446,
+        "cost": 0.0049554
+      },
+      {
+        "kind": "translate",
+        "ordinal": 6,
+        "code": "ok",
+        "requests": 1,
+        "local": 0,
+        "ms": 24540,
+        "cost": 0.00296305
+      }
+    ]
+  }
+]

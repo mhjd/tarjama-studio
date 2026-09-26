@@ -40,12 +40,13 @@ export function projectPath(
   return `/projets/${encodeURIComponent(project.id)}/${step}`;
 }
 export function parseRoute(path: string): {
-  view: "projects" | "create" | "keys" | "project" | "missing";
+  view: "projects" | "archives" | "create" | "keys" | "project" | "missing";
   id?: string;
   step?: string;
 } {
   if (path === "/" || path === "/projets") return { view: "projects" };
   if (path === "/projets/nouveau") return { view: "create" };
+  if (path === "/projets/archives") return { view: "archives" };
   if (path === "/compte/cles") return { view: "keys" };
   const match = /^\/projets\/([a-zA-Z0-9_-]+)(?:\/([a-z-]+))?$/.exec(path);
   return match

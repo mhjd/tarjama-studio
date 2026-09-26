@@ -9,6 +9,7 @@ export type Segment = {
 export type Project = {
   id: string;
   title: string;
+  archived?: boolean;
   url?: string;
   stage: string;
   version: number;
@@ -29,8 +30,24 @@ export type Job = {
 };
 export type Field = "arabic" | "french";
 export let csrf = "";
+let sessionExpired = false;
 export function setCSRF(value: string) {
   csrf = value;
+  sessionExpired = false;
+}
+function expireSession(): never {
+  if (!sessionExpired) {
+    sessionExpired = true;
+    window.dispatchEvent(new Event("tarjama:session-expired"));
+  }
+  throw new APIError(
+    "Votre session a expiré. Reconnectez-vous pour continuer.",
+    401,
+  );
+}
+function checkSession(response: Response) {
+  if (response.type === "opaqueredirect" || response.status === 401)
+    expireSession();
 }
 export class APIError extends Error {
   constructor(
@@ -47,14 +64,21 @@ export async function request<T>(
   method = "GET",
   body?: unknown,
 ): Promise<T> {
+  if (
+    sessionExpired &&
+    !["/auth/development", "/api/session", "/api/config"].includes(path)
+  )
+    expireSession();
   const response = await fetch(path, {
     method,
+    redirect: "manual",
     headers: {
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(method !== "GET" ? { "X-CSRF-Token": csrf } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  checkSession(response);
   if (!response.ok) {
     const text = await response.text();
     let details: { message?: string; code?: string; project_id?: string } = {};
@@ -75,11 +99,14 @@ export async function request<T>(
   return response.status === 204 ? (undefined as T) : response.json();
 }
 export async function upload(project: string, file: File) {
+  if (sessionExpired) expireSession();
   const response = await fetch(`/api/projects/${project}/media`, {
     method: "PUT",
+    redirect: "manual",
     headers: { "X-CSRF-Token": csrf },
     body: file,
   });
+  checkSession(response);
   if (!response.ok) throw new Error(await response.text());
   return response.json() as Promise<Project>;
 }

@@ -120,6 +120,46 @@ a {
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 18px;
 }
+.library-tabs {
+  margin: 24px 0;
+}
+.project-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.project-card .project {
+  width: 100%;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.project-archive {
+  align-self: flex-end;
+  padding: 8px 16px;
+  min-height: 44px;
+}
+.delete-project {
+  margin-top: 24px;
+}
+.delete-project summary {
+  cursor: pointer;
+  padding: 12px 0;
+}
+.player-page-nav {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+.player-page-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  min-height: 44px;
+}
 .project {
   display: flex;
   flex-direction: column;
@@ -631,7 +671,9 @@ textarea.project-title {
 }
 @media (max-width: 640px) {
   .editor.has-media {
-    padding-bottom: calc(220px + env(safe-area-inset-bottom));
+    padding-bottom: calc(
+      var(--player-height, 280px) + 24px + env(safe-area-inset-bottom)
+    );
   }
   .player {
     position: fixed;
@@ -722,10 +764,14 @@ textarea.project-title {
 
 @media (max-width: 640px) {
   html:has(.editor.has-media) {
-    scroll-padding-bottom: calc(220px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(
+      var(--player-height, 280px) + 24px + env(safe-area-inset-bottom)
+    );
   }
   html:has(.player.expanded) {
-    scroll-padding-bottom: calc(460px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(
+      var(--player-height, 460px) + 24px + env(safe-area-inset-bottom)
+    );
   }
   .segment,
   .editor:has(.player.expanded) .segment {

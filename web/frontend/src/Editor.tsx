@@ -8,6 +8,8 @@ import {
   Copy,
   Check,
   ExternalLink,
+  ArrowUpToLine,
+  ArrowDownToLine,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -74,6 +76,23 @@ export function Editor({
     [deleteOpen, setDeleteOpen] = useState(false),
     [copyNotice, setCopyNotice] = useState("");
   const titleField = useRef<HTMLTextAreaElement>(null);
+  const player = useRef<HTMLElement>(null);
+  const pageJump = useRef(false);
+  useEffect(() => {
+    const element = player.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() =>
+      document.documentElement.style.setProperty(
+        "--player-height",
+        `${element.getBoundingClientRect().height}px`,
+      ),
+    );
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--player-height");
+    };
+  }, [p.media, step]);
   useEffect(() => {
     const el = titleField.current;
     if (!el) return;
@@ -193,6 +212,7 @@ export function Editor({
   useEffect(() => {
     if (
       follow &&
+      !pageJump.current &&
       !focused &&
       active &&
       (current > 0 || seekVersion > 0 || playing)
@@ -200,8 +220,9 @@ export function Editor({
       document
         .getElementById(`segment-${active}`)
         ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [active, follow, focused, seekVersion]);
+  }, [active, follow, focused, seekVersion, playing]);
   function seekTo(seconds: number) {
+    pageJump.current = false;
     const v = media.current;
     if (!v) return;
     const position = Math.max(
@@ -228,6 +249,17 @@ export function Editor({
     v.preservesPitch = true;
     v.playbackRate = Math.max(0.5, Math.min(2, rate));
     setPlaybackRate(v.playbackRate);
+  }
+  function scrollPage(end: "top" | "bottom") {
+    // An explicit page jump pauses playback so follow cannot immediately undo it.
+    // Keep the user's follow preference for the next playback/seek.
+    pageJump.current = true;
+    media.current?.pause();
+    setPlaying(false);
+    window.scrollTo({
+      top: end === "top" ? 0 : document.documentElement.scrollHeight,
+      behavior: "instant",
+    });
   }
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
@@ -435,6 +467,29 @@ export function Editor({
       <button className="back" onClick={() => void action(back)}>
         ← Mes projets
       </button>
+      {p.archived && (
+        <section className="notice" aria-label="Projet archivé">
+          <p>
+            Ce projet est archivé. Sa vidéo et ses sous-titres sont conservés.
+          </p>
+          <button
+            disabled={busy}
+            onClick={() =>
+              void action(async () => {
+                d.adopt(
+                  await request<Project>(
+                    `/api/projects/${p.id}/archive`,
+                    "PATCH",
+                    { archived: false },
+                  ),
+                );
+              })
+            }
+          >
+            Restaurer
+          </button>
+        </section>
+      )}
       <div className="page-title">
         <div>
           <p className="eyebrow">
@@ -749,6 +804,7 @@ export function Editor({
       )}
       {showPlayer && (
         <section
+          ref={player}
           className={`player ${expanded ? "expanded" : ""}`}
           aria-label="Lecteur vidéo"
         >
@@ -766,7 +822,10 @@ export function Editor({
               onRateChange={(e) =>
                 setPlaybackRate(e.currentTarget.playbackRate)
               }
-              onPlay={() => setPlaying(true)}
+              onPlay={() => {
+                pageJump.current = false;
+                setPlaying(true);
+              }}
               onPause={() => setPlaying(false)}
             />
           </div>
@@ -840,6 +899,24 @@ export function Editor({
               Maj + ↑ accélérer · Maj + ↓ ralentir
             </span>
           </div>
+          <nav className="player-page-nav" aria-label="Navigation dans la page">
+            <button
+              onClick={() => scrollPage("top")}
+              title="Aller en haut de la page"
+              aria-label="Aller en haut de la page"
+            >
+              <ArrowUpToLine size={19} aria-hidden="true" />
+              <span>Haut</span>
+            </button>
+            <button
+              onClick={() => scrollPage("bottom")}
+              title="Aller en bas de la page"
+              aria-label="Aller en bas de la page"
+            >
+              <ArrowDownToLine size={19} aria-hidden="true" />
+              <span>Bas</span>
+            </button>
+          </nav>
         </section>
       )}
       {["transcribing", "cleaning"].includes(p.stage) && (
@@ -959,31 +1036,57 @@ export function Editor({
         </div>
       )}
       <section className="danger">
-        {deleteOpen ? (
-          <>
-            <p>
-              Supprimer ce projet, sa vidéo et ses traitements de votre espace ?
-            </p>
-            <button
-              onClick={() =>
-                void action(async () => {
-                  await request(`/api/projects/${p.id}`, "DELETE");
-                  d.clear();
-                  await back();
-                })
-              }
-            >
-              Confirmer la suppression
+        <h2>{p.archived ? "Projet archivé" : "Ranger ce projet"}</h2>
+        <p>
+          L’archivage conserve la vidéo et les sous-titres. Les traitements en
+          cours continuent.
+        </p>
+        <button
+          disabled={busy || uploading}
+          onClick={() =>
+            void action(async () => {
+              d.adopt(
+                await request<Project>(
+                  `/api/projects/${p.id}/archive`,
+                  "PATCH",
+                  { archived: !p.archived },
+                ),
+              );
+              await back();
+            })
+          }
+        >
+          {p.archived ? "Restaurer le projet" : "Archiver le projet"}
+        </button>
+        <details className="delete-project">
+          <summary>Suppression définitive</summary>
+          {deleteOpen ? (
+            <>
+              <p>
+                Supprimer ce projet, sa vidéo et ses traitements de votre espace
+                ?
+              </p>
+              <button
+                onClick={() =>
+                  void action(async () => {
+                    await request(`/api/projects/${p.id}`, "DELETE");
+                    d.clear();
+                    await back();
+                  })
+                }
+              >
+                Confirmer la suppression
+              </button>
+              <button onClick={() => setDeleteOpen(false)}>
+                Garder le projet
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setDeleteOpen(true)}>
+              Supprimer le projet
             </button>
-            <button onClick={() => setDeleteOpen(false)}>
-              Garder le projet
-            </button>
-          </>
-        ) : (
-          <button onClick={() => setDeleteOpen(true)}>
-            Supprimer le projet
-          </button>
-        )}
+          )}
+        </details>
       </section>
     </div>
   );

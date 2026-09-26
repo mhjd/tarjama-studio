@@ -23,6 +23,7 @@ type Segment struct {
 type Project struct {
 	ID                string    `json:"id"`
 	Title             string    `json:"title"`
+	Archived          bool      `json:"archived,omitempty"`
 	URL               string    `json:"url,omitempty"`
 	Stage             string    `json:"stage"`
 	Version           int64     `json:"version"`

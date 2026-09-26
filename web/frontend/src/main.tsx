@@ -25,6 +25,32 @@ function App() {
     [error, setError] = useState("");
   const routeInfo = parseRoute(route);
   const view = routeInfo.view;
+  const userRef = useRef(user);
+  userRef.current = user;
+  const [archiving, setArchiving] = useState("");
+  const visibleProjects = projects.filter(
+    (p) => Boolean(p.archived) === (view === "archives"),
+  );
+
+  async function archiveProject(project: Project) {
+    if (archiving) return;
+    setArchiving(project.id);
+    setError("");
+    try {
+      const updated = await request<Project>(
+        `/api/projects/${project.id}/archive`,
+        "PATCH",
+        { archived: !project.archived },
+      );
+      setProjects((items) =>
+        items.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setArchiving("");
+    }
+  }
 
   function commitPath(next: string, mode: "push" | "replace") {
     if (window.location.pathname !== next || mode === "replace") {
@@ -126,6 +152,18 @@ function App() {
   const navigateRef = useRef(go);
   navigateRef.current = go;
   useEffect(() => {
+    const expired = () => {
+      navigation.current++;
+      changingRoute.current = false;
+      setRouteLoading(false);
+      if (userRef.current)
+        setError(
+          "Votre session a expiré. Reconnectez-vous pour continuer ; vos brouillons sont conservés sur cet appareil.",
+        );
+      setUser("");
+      setSelected(null);
+    };
+    window.addEventListener("tarjama:session-expired", expired);
     void request<{ development: boolean }>("/api/config")
       .then((c) => setDev(c.development))
       .catch(() => {});
@@ -135,7 +173,10 @@ function App() {
         void navigateRef.current(window.location.pathname, "replace");
     };
     window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("tarjama:session-expired", expired);
+    };
   }, []);
   function syncProject(project: Project) {
     if (changingRoute.current || parseRoute(path.current).id !== project.id)
@@ -315,12 +356,34 @@ function App() {
                 }}
               />
             )}
-            {projects.length === 0 ? (
+            <nav
+              className="tabs library-tabs"
+              aria-label="Classement des projets"
+            >
+              <button
+                aria-pressed={view !== "archives"}
+                onClick={() => void go("/projets")}
+              >
+                Projets actifs ({projects.filter((p) => !p.archived).length})
+              </button>
+              <button
+                aria-pressed={view === "archives"}
+                onClick={() => void go("/projets/archives")}
+              >
+                Archives ({projects.filter((p) => p.archived).length})
+              </button>
+            </nav>
+            {visibleProjects.length === 0 ? (
               <section className="empty">
-                <h2>Votre première vidéo commence ici</h2>
+                <h2>
+                  {view === "archives"
+                    ? "Aucun projet archivé"
+                    : "Votre première vidéo commence ici"}
+                </h2>
                 <p>
-                  Collez un lien YouTube ou importez une vidéo depuis votre
-                  appareil.
+                  {view === "archives"
+                    ? "Les projets archivés conservent leur vidéo et leurs sous-titres. Vous pouvez les restaurer à tout moment."
+                    : "Collez un lien YouTube ou importez une vidéo depuis votre appareil."}
                 </p>
                 <button onClick={() => void go("/projets/nouveau")}>
                   Nouvelle vidéo
@@ -328,18 +391,35 @@ function App() {
               </section>
             ) : (
               <div className="projects">
-                {projects.map((p) => (
-                  <button
-                    className="project"
+                {visibleProjects.map((p) => (
+                  <article
+                    className="project-card"
                     key={p.id}
-                    onClick={() =>
-                      void go(`/projets/${encodeURIComponent(p.id)}`)
-                    }
+                    aria-label={p.title}
                   >
-                    <span className="project-icon">▶</span>
-                    <strong>{p.title}</strong>
-                    <span>{stageNames[p.stage]}</span>
-                  </button>
+                    <button
+                      className="project"
+                      onClick={() =>
+                        void go(`/projets/${encodeURIComponent(p.id)}`)
+                      }
+                    >
+                      <span className="project-icon">▶</span>
+                      <strong>{p.title}</strong>
+                      <span>{stageNames[p.stage]}</span>
+                    </button>
+                    <button
+                      className="project-archive"
+                      disabled={Boolean(archiving)}
+                      onClick={() => void archiveProject(p)}
+                      aria-label={
+                        p.archived
+                          ? "Restaurer le projet"
+                          : "Archiver le projet"
+                      }
+                    >
+                      {p.archived ? "Restaurer" : "Archiver"}
+                    </button>
+                  </article>
                 ))}
               </div>
             )}

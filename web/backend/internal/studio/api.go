@@ -114,6 +114,7 @@ func (a *API) Routes() http.Handler {
 	})
 	protected.HandleFunc("PATCH /api/projects/{id}/segments/{segment}", a.edit)
 	protected.HandleFunc("PATCH /api/projects/{id}", a.rename)
+	protected.HandleFunc("PATCH /api/projects/{id}/archive", a.archive)
 	protected.HandleFunc("POST /api/projects/{id}/advance", a.advance)
 	protected.HandleFunc("POST /api/projects/{id}/exports", a.export)
 	protected.HandleFunc("PUT /api/projects/{id}/media", a.upload)
@@ -194,14 +195,18 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback(r.Context())
 	_, e = tx.Exec(r.Context(), "SELECT id FROM users WHERE id=$1 FOR UPDATE", owner)
 	if e == nil && b.URL != "" {
-		var existing string
-		e = tx.QueryRow(r.Context(), `SELECT id FROM projects
+		var existing, existingTitle, archived string
+		e = tx.QueryRow(r.Context(), `SELECT id, document->>'title', COALESCE(document->>'archived','false') FROM projects
 			WHERE owner_id=$1 AND document->>'url'=$2
-			ORDER BY (COALESCE(document->>'media','') <> '') DESC, created_at, id LIMIT 1`, owner, b.URL).Scan(&existing)
+			ORDER BY (COALESCE(document->>'archived','false') = 'true'), (COALESCE(document->>'media','') <> '') DESC, created_at, id LIMIT 1`, owner, b.URL).Scan(&existing, &existingTitle, &archived)
 		if e == nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
-			jsonOut(w, map[string]string{"code": "duplicate_video", "message": "Cette vidéo est déjà présente dans vos projets.", "project_id": existing})
+			message := fmt.Sprintf("Ce lien YouTube est déjà utilisé par le projet « %s ». Le titre peut être différent.", existingTitle)
+			if archived == "true" {
+				message = fmt.Sprintf("Ce lien YouTube est déjà utilisé par le projet archivé « %s ». Vous pouvez le restaurer sans retélécharger la vidéo.", existingTitle)
+			}
+			jsonOut(w, map[string]string{"code": "duplicate_video", "message": message, "project_id": existing, "project_title": existingTitle, "archived": archived})
 			return
 		}
 		if errors.Is(e, pgx.ErrNoRows) {
@@ -611,6 +616,29 @@ func (a *API) retry(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(204)
 }
+func (a *API) archive(w http.ResponseWriter, r *http.Request) {
+	var b struct {
+		Archived *bool `json:"archived"`
+	}
+	if e := decode(w, r, &b); e != nil {
+		apiError(w, e)
+		return
+	}
+	if b.Archived == nil {
+		apiError(w, errors.New("Choix d’archivage requis"))
+		return
+	}
+	p, e := a.Store.Mutate(r.Context(), who(r).User, r.PathValue("id"), func(p *Project, tx pgx.Tx) error {
+		// Organization only: preserve versions, in-flight jobs, media and edits.
+		p.Archived = *b.Archived
+		return nil
+	})
+	if e != nil {
+		apiError(w, e)
+		return
+	}
+	jsonOut(w, p)
+}
 func (a *API) delete(w http.ResponseWriter, r *http.Request) {
 	tag, e := a.Store.DB.Exec(r.Context(), "DELETE FROM projects WHERE id=$1 AND owner_id=$2", r.PathValue("id"), who(r).User)
 	if e != nil {
@@ -642,5 +670,6 @@ func (a *API) keyStatus(w http.ResponseWriter, r *http.Request) {
 
 // Server timeouts also bound slow uploads; provider jobs run outside HTTP requests.
 func HTTPServer(addr string, h http.Handler) *http.Server {
-	return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 10 * time.Minute, WriteTimeout: 10 * time.Minute, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384}
+	// Bound headers while allowing SSO session/CSRF cookies forwarded by the gateway.
+	return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 10 * time.Minute, WriteTimeout: 10 * time.Minute, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 64 * 1024}
 }

@@ -145,6 +145,10 @@ web-gc:
 	docker compose --env-file web/deploy/.env -f web/deploy/compose.yml run --rm api gc
 
 .PHONY: web-images web-api-image web-audit
+.PHONY: web-mobile-player-review
+web-mobile-player-review:
+	sh web/scripts/mobile-player-review.sh
+
 web-api-image: web-prompts-check
 	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/Dockerfile --target api -t tarjama-web:review web
 

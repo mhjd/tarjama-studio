@@ -122,6 +122,8 @@ qu'un rollback de l'image restituerait les vidéos supprimées.
 - Complément FFmpeg : création d'un MP4 réel, expiration simulée, récupération
   depuis un fichier fixture, rendu sous-titré et téléchargement HTTP privé réussis.
   Seul le téléchargement distant est simulé ; aucun appel YouTube/LLM réel.
+- Sauvegarde PostgreSQL après un parcours UI, puis restauration dans une base
+  isolée : réussies, projets et traitements terminés retrouvés.
 - Cache isolé d'un export expiré : acquittement et retrait vérifiés avec courtier
   synthétique. Les profils administrés ne changent pas.
 
@@ -142,3 +144,35 @@ Docker exacte absente aussi. La nouvelle recette utilise l'image API construite
 pour la commande `egress` (même exécutable, aucun changement de proxy/protection).
 Cette correction sera appliquée avec la recette, pas par une modification directe
 du runtime. Les autres services étaient prêts au contrôle.
+
+Code testé : `f9f589b`. Aucun déploiement ni migration de données réelles effectués.
+
+
+Recette : `web/deploy/preview/candidate-media-retention-20260927.yml`.
+`validate` et `plan` réussis, révision candidate `40f81dc19215d885`,
+`applied: false`. Images importées :
+
+- API / egress : `preview.local/atelier/web@sha256:5c837dace66297e0c8f141f960fff22d253bed30e454c830675e8e2df7d66727`.
+- Worker avec corpus : `preview.local/atelier/web@sha256:c73446f965560e0607c1f38fcb9d318ea32b34353f5c60f8afd8b08b2c93777c`.
+
+Preuves sans secrets dans `web/deploy/preview/evidence/media-retention-20260927/`.
+Une validation de recette ne prouve pas le fonctionnement après déploiement.
+L'import des images n'a démarré aucun service et aucun job.
+
+Commandes préparées pour la livraison autorisée séparément, depuis la racine :
+
+```sh
+make web-preview-status
+make web-preview-run PREVIEW_JOB=backup
+# Attendre et vérifier Succeeded pour cette nouvelle sauvegarde avant de poursuivre.
+make web-preview-deploy PREVIEW_FILE=web/deploy/preview/candidate-media-retention-20260927.yml
+make web-preview-status
+# Vérifier web, worker, db et egress prêts, puis :
+make web-preview-run PREVIEW_JOB=preview-check
+# Vérifier le résultat de cette nouvelle qualification.
+```
+
+Aucun besoin de modifier les secrets, la politique réseau ou les profils média.
+Aucun benchmark fournisseur facturé lancé pour cette livraison. Les tests de
+rétention utilisent une horloge simulée ; une attente réelle de sept jours et
+le retéléchargement YouTube en production restent des observations ultérieures.

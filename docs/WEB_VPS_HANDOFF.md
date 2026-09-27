@@ -1,5 +1,11 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **27 septembre — sessions applicatives de 24 h :** cookie et base alignés,
+> à partir de la prochaine connexion ; échéance absolue sans prolongation au polling.
+> Code `3029140`, révision `b8884e644b5593ec`, contrôles de connexion réussis.
+> Le propriétaire a déjà sollicité l’administrateur pour aligner le SSO.
+> [Contrat et preuves](SESSION_DAY_20260927.md).
+
 > **Correctif export du 26 septembre :** le bouton principal reprend désormais
 > les exports annulés/échoués et indique les créations actives ou déjà terminées.
 > Code `97989d7`, 19 tests UI réussis. Le diagnostic de « Sirat un nabi episode 4 »

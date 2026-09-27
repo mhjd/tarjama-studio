@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-preview-check-d6d00ed5-787sn",
+      "log": "=== RUN   TestPreviewLive\n=== RUN   TestPreviewLive/HTTPAndOIDCStart\n=== RUN   TestPreviewLive/SSOHeaders\n=== RUN   TestPreviewLive/GatewayTLS\n--- PASS: TestPreviewLive (1.26s)\n    --- PASS: TestPreviewLive/HTTPAndOIDCStart (1.01s)\n    --- PASS: TestPreviewLive/SSOHeaders (0.00s)\n    --- PASS: TestPreviewLive/GatewayTLS (0.25s)\nPASS\n"
+    },
+    {
+      "pod": "pv-job-preview-check-dc4381f1-mqxd4",
+      "log": "=== RUN   TestPreviewLive\n=== RUN   TestPreviewLive/HTTPAndOIDCStart\n=== RUN   TestPreviewLive/SSOHeaders\n=== RUN   TestPreviewLive/GatewayTLS\n--- PASS: TestPreviewLive (1.29s)\n    --- PASS: TestPreviewLive/HTTPAndOIDCStart (1.01s)\n    --- PASS: TestPreviewLive/SSOHeaders (0.00s)\n    --- PASS: TestPreviewLive/GatewayTLS (0.27s)\nPASS\n"
+    },
+    {
+      "pod": "pv-job-preview-check-e6c7f257-xk4wt",
+      "log": "=== RUN   TestPreviewLive\n=== RUN   TestPreviewLive/HTTPAndOIDCStart\n=== RUN   TestPreviewLive/SSOHeaders\n=== RUN   TestPreviewLive/GatewayTLS\n--- PASS: TestPreviewLive (1.18s)\n    --- PASS: TestPreviewLive/HTTPAndOIDCStart (1.01s)\n    --- PASS: TestPreviewLive/SSOHeaders (0.00s)\n    --- PASS: TestPreviewLive/GatewayTLS (0.16s)\nPASS\n"
+    }
+  ]
+}

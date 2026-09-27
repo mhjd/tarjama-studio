@@ -32,7 +32,9 @@ l'agent applicatif : « Ne pas retirer Authelia, rechercher ses secrets, ni modi
 les protections du VPS. » La recette ne donne aucun réglage de durée de la
 passerelle ou d'Authelia. Aucune modification de ces services n'est effectuée.
 
-Message à transmettre à l'administrateur :
+Le propriétaire confirme avoir déjà demandé à l’administrateur d’adapter la
+durée du SSO. Ne pas lui redemander de transmettre ce message. Le besoin
+technique de référence est conservé ci-dessous ; son application reste à confirmer :
 
 > Pour atelier / https://atelier.preview.runagen.com, le propriétaire souhaite
 > rester connecté 24 heures après une authentification, y compris après une
@@ -46,3 +48,19 @@ Message à transmettre à l'administrateur :
 > à 24 h ; conserver des jetons courts si leur renouvellement permet cette durée.
 > Ne transmettre aucune valeur de cookie ou de secret. Rapporter les durées
 > appliquées et les tests, en distinguant simulation et durée réellement observée.
+
+## Livraison
+
+Code `3029140`, image API construite/importée localement, recette
+`web/deploy/preview/active-session-day-20260927.yml`, révision
+`b8884e644b5593ec`. Les quatre services sont prêts ; seul le service web change
+d'image. Aucune migration, modification de sessions existantes ou du SSO.
+
+Tests ciblés d'authentification Go avec détecteur de races et PostgreSQL isolé
+réussis ; `go vet ./...` et build de l'image réussis. Qualification en production
+`pv-job-preview-check-d6d00ed5` réussie : HTTP/readiness, démarrage OIDC,
+en-têtes SSO, HTTPS. Ce contrôle ne mesure pas une durée réelle de 24 h.
+Sauvegarde `pv-job-backup-9ce26b3c` confirmée Succeeded par status avant déploiement
+(les logs bornés du composant ne contenaient pas ce dernier job).
+Preuves sous `web/deploy/preview/evidence/session-day-20260927/`.
+Rollback compatible avec `b6abd8b1ab11a741`, sans changement de schéma.

@@ -58,3 +58,17 @@ onglets, sauvegarde sur blur et navigation passent avec les champs adaptatifs.
 Livraison non déployée. L'image API doit être reconstruite avant activation ;
 conserver le worker et le digest egress `19994f1…` de la recette active de rétention.
 Les fichiers de déploiement existants restent ceux de la version déjà en ligne.
+
+
+## Vidéos remises à disposition
+
+Le test `mobile-density.spec.ts` enregistre désormais automatiquement son parcours
+(lecture des blocs courts, panneau Options, texte long, frappe et redimensionnement),
+avec pauses de lecture. Les deux cas sont repassés avec succès après cet ajout.
+Les trois enregistrements des parcours complets ont été conservés avant la nouvelle
+exécution. Cinq MP4 H.264 ont été préparés et contrôlés par ffprobe, sans piste audio.
+
+Livraison `tarjama-ui-mobile-compact` publiée dans l'espace privé vps-share,
+à récupérer avec `vps pull` sur le Mac. Le README distingue les fixtures locales
+et l'émulation de viewport d'une qualification réelle en production.
+Originaux durables côté projet : `web/.cache/mobile-compact-20260927/videos/`.

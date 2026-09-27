@@ -11,8 +11,13 @@ for (const viewport of [
       viewport,
       isMobile: true,
       hasTouch: true,
+      recordVideo: {
+        dir: "test-results/mobile-density-videos",
+        size: viewport,
+      },
     });
     const page = await context.newPage();
+    const recording = page.video()!;
     await page.goto("/");
     await page.getByRole("button", { name: "Compte test alice" }).click();
     await page.route("**/api/projects/fixture", async (route) => {
@@ -61,6 +66,14 @@ for (const viewport of [
     await page.screenshot({
       path: `test-results/density-${viewport.width}.png`,
     });
+    // Short reading pauses make the reusable UI recording reviewable.
+    await page.waitForTimeout(2000);
+    await page.getByRole("button", { name: /Options ·/ }).click();
+    await page.getByRole("combobox", { name: "Vitesse" }).selectOption("1.25");
+    await page.waitForTimeout(1500);
+    await page.getByRole("button", { name: /Options ·/ }).click();
+    await cards.nth(3).evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await page.waitForTimeout(2000);
     for (const lang of ["ar", "fr"]) {
       const field = cards.nth(3).locator(`textarea[lang="${lang}"]`);
       await expect
@@ -90,5 +103,8 @@ for (const viewport of [
       .poll(() => french.evaluate((el) => el.scrollHeight - el.clientHeight))
       .toBeLessThanOrEqual(1);
     await context.close();
+    await recording.saveAs(
+      `test-results/mobile-density-${viewport.width}.webm`,
+    );
   });
 }

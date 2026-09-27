@@ -1,4 +1,4 @@
-import { request, type Project, type Field } from "./api";
+import { request, type Project, type Segment, type Field } from "./api";
 type Draft = {
   id: string;
   field: Field;
@@ -34,12 +34,8 @@ export class Drafts {
       /* Storage may be unavailable on a private browser. */
     }
   }
-  value(id: string, field: Field) {
-    return (
-      this.drafts.get(`${id}:${field}`)?.text ??
-      this.project.segments.find((s) => s.id === id)?.[field] ??
-      ""
-    );
+  value(segment: Segment, field: Field) {
+    return this.drafts.get(`${segment.id}:${field}`)?.text ?? segment[field];
   }
   edit(id: string, field: Field, text: string) {
     const key = `${id}:${field}`;

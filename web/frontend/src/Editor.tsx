@@ -448,7 +448,7 @@ export function Editor({
             if (el) fields.current.set(key, el);
             else fields.current.delete(key);
           }}
-          value={d.value(s.id, f)}
+          value={d.value(s, f)}
           disabled={!editable || busy || uploading}
           onFocus={() => setFocused(true)}
           onChange={(e) => d.edit(s.id, f, e.target.value)}

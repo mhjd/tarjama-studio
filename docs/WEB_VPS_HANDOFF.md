@@ -1,5 +1,11 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **27 septembre — accélération des longues transcriptions préparée, non déployée :**
+> mesures de hauteur regroupées pour éviter un recalcul de toute la page par champ,
+> lecture directe du segment déjà connu. Test synthétique d'une heure sur viewport
+> mobile : environ 19,2 s → 2,8 s ; la vidéo supportait déjà les requêtes Range.
+> [Mesures et limites](LONG_TRANSCRIPT_RENDERING_20260927.md).
+
 > **27 septembre — correctif Haut/Bas mobile déployé :** révision
 > `f60c1123e19079a2`, code `fc2b468`, sauvegarde et qualification HTTP/OIDC/TLS
 > réussies, quatre services prêts. Fermeture

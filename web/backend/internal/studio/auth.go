@@ -15,6 +15,10 @@ import (
 
 type identity struct{ User, CSRF string }
 type identityKey struct{}
+
+// Absolute lifetime from sign-in, shared by the database and browser cookie.
+const sessionLifetime = 24 * time.Hour
+
 type Auth struct {
 	Store    *Store
 	Config   Config
@@ -41,9 +45,10 @@ func (a *Auth) cookie(w http.ResponseWriter, name, value string, age int) {
 }
 func (a *Auth) session(w http.ResponseWriter, r *http.Request, user string) error {
 	token, csrf := id()+id(), id()
-	_, e := a.Store.DB.Exec(r.Context(), "INSERT INTO sessions(token_hash,user_id,csrf,expires_at) VALUES($1,$2,$3,now()+interval '12 hours')", hash(token), user, csrf)
+	age := int(sessionLifetime / time.Second)
+	_, e := a.Store.DB.Exec(r.Context(), "INSERT INTO sessions(token_hash,user_id,csrf,expires_at) VALUES($1,$2,$3,now()+$4::int * interval '1 second')", hash(token), user, csrf, age)
 	if e == nil {
-		a.cookie(w, "tarjama_session", token, 43200)
+		a.cookie(w, "tarjama_session", token, age)
 	}
 	return e
 }

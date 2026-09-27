@@ -135,3 +135,57 @@ func TestOIDCFlowPKCEStateNonceAudienceAndReplay(t *testing.T) {
 		}
 	}
 }
+
+func TestSessionLastsOneDayAndStillExpires(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	user, err := s.User(ctx, "session-test", "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &Auth{Store: s, Config: Config{Mode: "production"}}
+	recorder := httptest.NewRecorder()
+	if err := a.session(recorder, httptest.NewRequest("GET", "/", nil), user); err != nil {
+		t.Fatal(err)
+	}
+	cookies := recorder.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatal("expected one session cookie")
+	}
+	c := cookies[0]
+	if c.Name != "tarjama_session" || c.MaxAge != 86400 || !c.Secure || !c.HttpOnly || c.SameSite != http.SameSiteLaxMode {
+		t.Fatal("session lifetime or cookie protections incorrect")
+	}
+	var seconds float64
+	if err := s.DB.QueryRow(ctx, "SELECT extract(epoch FROM expires_at-now())::float8 FROM sessions WHERE token_hash=$1", hash(c.Value)).Scan(&seconds); err != nil {
+		t.Fatal(err)
+	}
+	if seconds < 86390 || seconds > 86400 {
+		t.Fatalf("server lifetime = %.2fs", seconds)
+	}
+	handler := a.Protect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if who(r).User != user {
+			t.Error("wrong user")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	// Advance the persisted expiry to simulate 23 hours and just past 24 hours.
+	for _, tc := range []struct {
+		remaining int
+		status    int
+	}{{3600, 204}, {-1, 401}} {
+		if _, err := s.DB.Exec(ctx, "UPDATE sessions SET expires_at=now()+$2::int * interval '1 second' WHERE token_hash=$1", hash(c.Value), tc.remaining); err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest("GET", "/private", nil)
+		req.AddCookie(c)
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != tc.status {
+			t.Fatalf("remaining=%ds: status=%d", tc.remaining, res.Code)
+		}
+		if len(res.Result().Cookies()) != 0 {
+			t.Fatal("requests must not silently extend the absolute lifetime")
+		}
+	}
+}

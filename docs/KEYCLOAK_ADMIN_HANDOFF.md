@@ -1,6 +1,6 @@
 # Retour administrateur — domaine unique sans SMTP
 
-Cette passation remplace celle du commit `9d1f6a9`. Elle répond à :
+Cette passation remplace celles des commits `9d1f6a9` et `2ee17b7`. Elle répond à :
 `/home/codex/.keycloak-admin-handoff-20260927-QC1dot/ADMIN_HANDOFF.md`.
 Lire [le contrat actuel](KEYCLOAK_SINGLE_DOMAIN_20260927.md) pour les preuves,
 limitations, commandes et règles exactes de routage.
@@ -11,17 +11,20 @@ Les adaptations applicatives au choix du propriétaire sont préparées sur
 `web-vps`, dépôt `/home/codex/projects/tarjama-studio` :
 
 - domaine unique `https://tarjama.runagen.com` ;
-- base Keycloak `https://tarjama.runagen.com/identity`, issuer exact
-  `https://tarjama.runagen.com/identity/realms/tarjama` ;
-- préfixe `/identity` **conservé** par le proxy, configuré au build et au runtime ;
+- base Keycloak `https://tarjama.runagen.com`, issuer exact
+  `https://tarjama.runagen.com/realms/tarjama` ;
+- entrées utilisateur `/sign-in` et `/sign-up` vers Tarjama ;
+- **abandon du préfixe `/identity`** demandé par le propriétaire : ne pas
+  l’installer. Keycloak utilise la racine `/`, au build et au runtime, et ses
+  chemins natifs `/realms/tarjama/...` et `/resources/...` sont conservés ;
 - aucun SMTP, vérification email ou récupération automatique ; les quatre secrets
   déjà créés sont réutilisés, sans rotation ou lecture de leurs valeurs ;
 - callback acceptant les claims email absents/faux, avec tous les contrôles OIDC
   et l'isolation `(issuer, subject)` conservés ;
-- administration privée proposée à `https://localhost:9443/identity` via tunnel
+- administration privée proposée à `https://localhost:9443` via tunnel
   SSH/TLS, adresse à confirmer et parcours complet à qualifier.
 
-Le test local avec Keycloak réel, préfixe conservé et proxy loopback passe :
+Le test local avec Keycloak réel, chemins natifs et proxy loopback passe :
 inscription, login/logout, assets, cookies, isolation, révocation back-channel,
 readiness et restauration SQL. Il utilise une copie runtime temporaire en RAM,
 **sans construire ou importer d'image**. Il ne qualifie ni votre routage ni une
@@ -44,7 +47,8 @@ Merci de :
    obsolète et refusé par le générateur.
 3. Confirmer l'URL privée admin/tunnel/TLS. Préparer le routage public filtré selon
    `docs/KEYCLOAK_SINGLE_DOMAIN_20260927.md`, sans exposer admin, master, health,
-   metrics ou console de compte, et sans détourner les `/auth/*` de Tarjama.
+   metrics ou console de compte, et sans détourner `/sign-in`, `/sign-up` ou les `/auth/*` de Tarjama.
+   Réserver les racines techniques et refuser les anciennes routes `/identity`.
    Qualifier aussi le login de la console admin via le tunnel ; ne pas ouvrir
    master sur le domaine public pour contourner un échec de ce parcours.
 4. Remplacer les `REQUIRED_*_IMAGE` du brouillon en régénérant avec les références

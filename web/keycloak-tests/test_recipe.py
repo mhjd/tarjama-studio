@@ -13,8 +13,8 @@ SCRIPT = ROOT / 'web/scripts/keycloak-recipe.py'
 class RecipeTest(unittest.TestCase):
     def render(self, **changes):
         flags = {'app-origin':'https://tarjama.runagen.com',
-                 'identity-base-url':'https://tarjama.runagen.com/identity',
-                 'admin-base-url':'https://localhost:9443/identity'}
+                 'identity-base-url':'https://tarjama.runagen.com',
+                 'admin-base-url':'https://localhost:9443'}
         flags.update(changes)
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp)/'candidate.yml'
@@ -32,9 +32,9 @@ class RecipeTest(unittest.TestCase):
         self.assertEqual(r['services']['db'], dict(base['services']['db'], enabled=False))
         for name, v in base['volumes'].items(): self.assertEqual(r['volumes'][name], v)
         web, kc = r['services']['web'], r['services']['keycloak']
-        self.assertEqual(web['env']['OIDC_ISSUER'], 'https://tarjama.runagen.com/identity/realms/tarjama')
-        self.assertEqual(kc['env']['KC_HTTP_RELATIVE_PATH'], '/identity')
-        self.assertEqual(kc['health']['path'], '/identity/health/ready')
+        self.assertEqual(web['env']['OIDC_ISSUER'], 'https://tarjama.runagen.com/realms/tarjama')
+        self.assertEqual(kc['env']['KC_HTTP_RELATIVE_PATH'], '/')
+        self.assertEqual(kc['health']['path'], '/health/ready')
         self.assertEqual(kc['env']['TARJAMA_BACKCHANNEL_URL'], 'http://web:8080/auth/backchannel-logout')
         self.assertEqual(kc['egress'], [])
         self.assertNotIn('keycloak-mail', json.dumps(r))
@@ -57,15 +57,15 @@ class RecipeTest(unittest.TestCase):
             ('app-origin','https://tarjama.runagen.com?'),
             ('app-origin','https://TARJAMA.runagen.com'),
             ('app-origin','https://tarjama.runagen.com:443'),
-            ('identity-base-url','https://other.runagen.com/identity'),
+            ('identity-base-url','https://other.runagen.com'),
             ('identity-base-url','https://tarjama.runagen.com/auth'),
             ('identity-base-url','https://tarjama.runagen.com/identity/'),
             ('identity-base-url','https://tarjama.runagen.com/%69dentity'),
             ('identity-base-url','https://tarjama.runagen.com/identity/../auth'),
             ('identity-base-url','https://tarjama.runagen.com/identity#evil'),
-            ('admin-base-url','https://tarjama.runagen.com/identity'),
-            ('admin-base-url','https://localhost:0/identity'),
-            ('admin-base-url','https://localhost:65536/identity'),
+            ('admin-base-url','https://tarjama.runagen.com'),
+            ('admin-base-url','https://localhost:0'),
+            ('admin-base-url','https://localhost:65536'),
             ('admin-base-url','https://localhost:9443/identity\n'),
         ]:
             with self.subTest(key=key, value=value):
@@ -77,8 +77,8 @@ class RecipeTest(unittest.TestCase):
             command = ['python3', str(SCRIPT), '--base', str(BASE),
                        '--images', str(ROOT/'web/deploy/keycloak/images-20260927.json'),
                        '--app-origin','https://tarjama.runagen.com',
-                       '--identity-base-url','https://tarjama.runagen.com/identity',
-                       '--admin-base-url','https://localhost:9443/identity',
+                       '--identity-base-url','https://tarjama.runagen.com',
+                       '--admin-base-url','https://localhost:9443',
                        '--output',str(Path(tmp)/'candidate.yml')]
             result = subprocess.run(command, text=True, capture_output=True)
             self.assertNotEqual(result.returncode, 0)

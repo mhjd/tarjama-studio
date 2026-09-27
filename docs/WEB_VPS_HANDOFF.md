@@ -1,7 +1,8 @@
 # Passation complète — Tarjama Studio web sur VPS
 
 > **27 septembre, décision actualisée — domaine unique, sans email :**
-> `tarjama.runagen.com`, identité sous `/identity`, sans SMTP, validation email
+> `tarjama.runagen.com`, entrées `/sign-in` et `/sign-up`, sans préfixe `/identity`,
+> sans SMTP, validation email
 > ou récupération automatique. Claims email non vérifiés acceptés ; identité
 > et droits restent `(issuer, subject)`, contrôles OIDC conservés. Candidate
 > arrêtée avec images à reconstruire/réimporter après coordination disque ;

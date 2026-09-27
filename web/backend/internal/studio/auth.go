@@ -83,14 +83,16 @@ func (a *Auth) Routes(m *http.ServeMux) {
 		}
 		a.cookie(w, "tarjama_login", state, 600)
 		oauth := a.OAuth
-		if r.URL.Path == "/auth/register" {
+		if r.URL.Path == "/auth/register" || r.URL.Path == "/sign-up" {
 			oauth.Endpoint.AuthURL = strings.TrimSuffix(oauth.Endpoint.AuthURL, "/auth") + "/registrations"
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		http.Redirect(w, r, oauth.AuthCodeURL(state, oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier)), 302)
 	}
+	m.HandleFunc("GET /sign-in", login)
 	m.HandleFunc("GET /auth/login", login)
 	if a.Config.IdentityProvider == "keycloak" {
+		m.HandleFunc("GET /sign-up", login)
 		m.HandleFunc("GET /auth/register", login)
 		m.HandleFunc("POST /auth/backchannel-logout", a.backchannelLogout)
 	}

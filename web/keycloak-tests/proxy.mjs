@@ -1,14 +1,15 @@
 // Isolated reference router, not a production proxy or an infrastructure change.
-// Keep /identity intact. Only OIDC/login pages and assets go to Keycloak.
+// Preserve native paths. Only the Tarjama realm login endpoints and assets go to Keycloak.
 import http from 'node:http';
-const identity = /^\/identity\/(?:realms\/tarjama\/(?:protocol\/openid-connect\/|login-actions\/|\.well-known\/)|resources\/)/;
+const identity = /^\/(?:realms\/tarjama\/(?:protocol\/openid-connect\/|login-actions\/|\.well-known\/)|resources\/)/;
 http.createServer((req, res) => {
   const path = req.url.split('?')[0];
   if (/[%;\\]/.test(path) || path.includes('//') || path.split('/').some(p => p === '.' || p === '..')) {
     res.writeHead(400).end(); return;
   }
-  const isIdentity = path === '/identity' || path.startsWith('/identity/');
-  if (isIdentity && !identity.test(path)) { res.writeHead(404).end(); return; }
+  const isIdentity = identity.test(path);
+  const reserved = /^\/(?:realms|resources|admin|health|metrics|identity)(?:\/|$)/.test(path);
+  if (reserved && !isIdentity) { res.writeHead(404).end(); return; }
   const headers = {...req.headers};
   for (const key of Object.keys(headers)) {
     if (key === 'forwarded' || key.startsWith('x-forwarded-')) delete headers[key];

@@ -238,7 +238,7 @@ function App() {
         </p>
         <a
           className="primary button"
-          href="/auth/login"
+          href="/sign-in"
           onClick={() => {
             try {
               sessionStorage.setItem(
@@ -253,7 +253,7 @@ function App() {
           Se connecter
         </a>
         {registration && <>
-          <a className="button" href="/auth/register">Créer mon compte</a>
+          <a className="button" href="/sign-up">Créer mon compte</a>
           <p>Pas de validation ni de récupération par email. En cas de perte d’accès, contactez le propriétaire du service.</p>
         </>}
         {dev && (

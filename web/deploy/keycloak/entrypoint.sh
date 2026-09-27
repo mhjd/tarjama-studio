@@ -3,8 +3,8 @@ set -eu
 # No secret in image, arguments, generated recipe or logs.
 : "${KC_HOSTNAME:?public identity URL required}"
 : "${KC_DB_URL:?dedicated identity database required}"
-if [ "${KC_HTTP_RELATIVE_PATH:-}" != /identity ]; then
-  printf 'Keycloak requires the qualified /identity prefix.\n' >&2
+if [ "${KC_HTTP_RELATIVE_PATH:-}" != / ]; then
+  printf 'Keycloak requires the root relative path /.\n' >&2
   exit 1
 fi
 : "${TARJAMA_PUBLIC_ORIGIN:?application origin required}"

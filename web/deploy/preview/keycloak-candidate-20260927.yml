@@ -14,7 +14,7 @@ services:
       APP_MODE: production
       LISTEN_ADDR: 0.0.0.0:8090
       PUBLIC_ORIGIN: https://tarjama.runagen.com
-      OIDC_ISSUER: https://tarjama.runagen.com/identity/realms/tarjama
+      OIDC_ISSUER: https://tarjama.runagen.com/realms/tarjama
       OIDC_CLIENT_ID: tarjama-web
       OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
       DATABASE_URL_FILE: /run/db/database_url
@@ -185,9 +185,9 @@ services:
     gid: 1000
     port: 8080
     env:
-      KC_HOSTNAME: https://tarjama.runagen.com/identity
-      KC_HOSTNAME_ADMIN: https://localhost:9443/identity
-      KC_HTTP_RELATIVE_PATH: /identity
+      KC_HOSTNAME: https://tarjama.runagen.com
+      KC_HOSTNAME_ADMIN: https://localhost:9443
+      KC_HTTP_RELATIVE_PATH: /
       KC_HTTP_ENABLED: 'true'
       KC_HTTP_MANAGEMENT_HEALTH_ENABLED: 'false'
       KC_PROXY_HEADERS: xforwarded
@@ -214,7 +214,7 @@ services:
       memory: 1536Mi
     tmp: 256Mi
     health:
-      path: /identity/health/ready
+      path: /health/ready
 jobs:
   migrate:
     image: REQUIRED_WEB_IMAGE

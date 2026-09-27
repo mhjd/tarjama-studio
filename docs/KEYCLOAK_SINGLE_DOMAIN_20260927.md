@@ -1,15 +1,19 @@
 # Keycloak : domaine unique, sans email automatique — 27 septembre 2026
 
 Ce document remplace le contrat à trois origines publiques/privées et SMTP du
-commit `9d1f6a9`. Décision transmise par le propriétaire et la passation
+commit `9d1f6a9` et le préfixe `/identity` proposé dans `2ee17b7`. Il intègre
+la dernière correction du propriétaire après la passation
 `/home/codex/.keycloak-admin-handoff-20260927-QC1dot/ADMIN_HANDOFF.md`.
 Aucune bascule, ouverture publique ou migration de données n'est autorisée ici.
 
 ## Politique retenue
 
-Application : `https://tarjama.runagen.com`. Connexion et inscription par
-redirection OIDC vers **la même origine**, sous `/identity`. Aucun mot de passe
-n'est collecté par Tarjama. Le realm conserve email comme nom de connexion,
+Application : `https://tarjama.runagen.com`. Connexion et inscription via
+les entrées applicatives **`/sign-in` et `/sign-up`**, puis redirection OIDC vers
+**la même origine**. Le préfixe `/identity` est abandonné, à la demande du
+propriétaire. Pendant les formulaires, les URL natives `/realms/tarjama/...`
+peuvent apparaître : les deux chemins courts sont des points d'entrée, pas un
+masquage des pages Keycloak. Aucun mot de passe n'est collecté par Tarjama. Le realm conserve email comme nom de connexion,
 mais cette adresse déclarée n'est **pas vérifiée** et ne prouve aucune identité.
 
 `verifyEmail=false`, `resetPasswordAllowed=false`, aucun `smtpServer`, aucune
@@ -41,46 +45,48 @@ mot de passe ; le realm master et son MFA ne sont pas modifiés.
 | Élément | Valeur |
 | --- | --- |
 | Origine applicative | `https://tarjama.runagen.com` |
-| Base publique Keycloak / `KC_HOSTNAME` | `https://tarjama.runagen.com/identity` |
-| Issuer exact | `https://tarjama.runagen.com/identity/realms/tarjama` |
+| Base publique Keycloak / `KC_HOSTNAME` | `https://tarjama.runagen.com` |
+| Issuer exact | `https://tarjama.runagen.com/realms/tarjama` |
 | Callback exact | `https://tarjama.runagen.com/auth/callback` |
 | Redirect après logout | `https://tarjama.runagen.com/` |
 | Back-channel interne | `http://web:8080/auth/backchannel-logout` |
-| Préfixe Keycloak / `KC_HTTP_RELATIVE_PATH` | `/identity` |
-| Readiness interne | `http://pv-keycloak:8080/identity/health/ready` |
-| Base privée admin proposée | `https://localhost:9443/identity` **non qualifiée** |
+| Racine Keycloak / `KC_HTTP_RELATIVE_PATH` | `/` |
+| Readiness interne | `http://pv-keycloak:8080/health/ready` |
+| Base privée admin proposée | `https://localhost:9443` **non qualifiée** |
 
-Le préfixe est conservé de bout en bout : `/identity/...` reçu par le proxy
-reste `/identity/...` sur `pv-keycloak:8080`. **Aucune suppression, duplication
-ou réécriture du préfixe**, aucun ajout de `X-Forwarded-Prefix`. Ce paramètre est
-fixé **au build** dans le Dockerfile : changer seulement une variable d'une
-ancienne image optimisée ne suffit pas et provoque un refus de démarrage.
+Les chemins natifs sont conservés de bout en bout : `/realms/...` et
+`/resources/...` reçus par le proxy restent identiques sur `pv-keycloak:8080`.
+Aucune réécriture du préfixe ni `X-Forwarded-Prefix`. La racine `/` est fixée
+au build et au runtime. Une image optimisée pour `/identity` ne conviendrait pas ; il faut
+reconstruire et tester l'image finale issue des sources actuelles.
 
 Sur le domaine public, seuls ces sous-arbres Keycloak sont nécessaires :
 
-- `/identity/realms/tarjama/.well-known/` pour discovery ;
-- `/identity/realms/tarjama/protocol/openid-connect/` pour OIDC ;
-- `/identity/realms/tarjama/login-actions/` pour les formulaires ;
-- `/identity/resources/` pour les assets.
+- `/realms/tarjama/.well-known/` pour discovery ;
+- `/realms/tarjama/protocol/openid-connect/` pour OIDC ;
+- `/realms/tarjama/login-actions/` pour les formulaires ;
+- `/resources/` pour les assets.
 
-Refuser tout autre chemin sous `/identity`, dont `admin`, `realms/master`,
-`health`, `metrics`, `realms/tarjama/account` et les autres realms. Filtrer des
-chemins normalisés ; ne pas laisser un encodage, double slash, `..` ou point-virgule
+Réserver les racines `/realms`, `/resources`, `/admin`, `/health`, `/metrics`
+et l’ancien `/identity`. En dehors de la liste autorisée ci-dessus, refuser
+ces chemins, notamment `/realms/master`, `/realms/tarjama/account` et les autres
+realms. Filtrer des chemins normalisés ; ne pas laisser un encodage, double slash, `..` ou point-virgule
 contourner la règle. Ne pas renvoyer les refus vers le fallback React.
 
-Les routes `/auth/login`, `/auth/register`, `/auth/callback` et
+Les entrées `/sign-in` et `/sign-up`, les alias de compatibilité `/auth/login`,
+`/auth/register`, ainsi que `/auth/callback` et
 `/auth/backchannel-logout` continuent d'aller à **Tarjama**, ainsi que `/api/`,
-les médias, les assets applicatifs et les routes de projets. Ne jamais router
-l'ensemble de `/auth` vers Keycloak. Ne pas mettre de filtre Authelia personnel
+les médias, les assets applicatifs sous `/assets/` et les routes de projets.
+Ne jamais router l'ensemble de `/auth` vers Keycloak. Ne pas mettre de filtre Authelia personnel
 devant la future origine publique ; maintenir celui des autres services et de
 l'aperçu privé actuel.
 
 Le proxy doit écraser `Forwarded`/`X-Forwarded-*`, terminer TLS et garder les
 services inaccessibles directement. Les cookies Keycloak doivent rester sous
-`/identity/…` ; le cookie Tarjama reste à `/`, HttpOnly/Secure en production.
+`/realms/tarjama/…` ; le cookie Tarjama reste à `/`, HttpOnly/Secure en production.
 Le back-channel interne vérifie un JWT signé avant toute révocation.
 
-`KC_HOSTNAME_ADMIN=https://localhost:9443/identity` est une proposition pour le
+`KC_HOSTNAME_ADMIN=https://localhost:9443` est une proposition pour le
 navigateur de l'administrateur via tunnel SSH/TLS, **pas une nouvelle adresse
 publique**. Certificat, écoute privée, console admin et flux du realm master
 restent à qualifier : le seul paramètre hostname-admin ne protège aucune route.
@@ -92,8 +98,8 @@ ouvrir master/admin sur le proxy public pour corriger un problème de redirectio
 Le générateur accepte désormais `--app-origin`, `--identity-base-url` et
 `--admin-base-url`. HTTPS, ports, identifiants d'hôte et chemins sont validés ;
 query, fragment, credentials, encodages et chemins ambigus sont refusés. La base
-publique d'identité doit partager l'origine applicative et utiliser exactement
-`/identity`. La base admin exige le même préfixe mais un endpoint privé distinct.
+publique d'identité doit être exactement l'origine applicative, sans suffixe.
+La base admin exige également une origine sans chemin, sur un endpoint privé distinct.
 
 Les quatre références annoncées par l'administrateur sont présentes au catalogue,
 sans lecture de leurs valeurs :
@@ -122,7 +128,7 @@ cache Kubernetes. Le manifeste historique `images-20260927.json` est marqué
 obsolète et le générateur refuse de le réutiliser pour cette configuration.
 
 ```sh
-make web-keycloak-recipe ARGS='--base web/deploy/preview/active-long-transcript-20260927.yml --draft --app-origin https://tarjama.runagen.com --identity-base-url https://tarjama.runagen.com/identity --admin-base-url https://localhost:9443/identity --output web/deploy/preview/keycloak-candidate-20260927.yml'
+make web-keycloak-recipe ARGS='--base web/deploy/preview/active-long-transcript-20260927.yml --draft --app-origin https://tarjama.runagen.com --identity-base-url https://tarjama.runagen.com --admin-base-url https://localhost:9443 --output web/deploy/preview/keycloak-candidate-20260927.yml'
 ```
 
 `validate` et `plan` ont été tentés sur ce brouillon : refus **« Image avec
@@ -150,8 +156,12 @@ make web-keycloak-source-test
 make web-test
 ```
 
+Exécuter ces cibles **séquentiellement** : les deux suites de navigateur
+partagent le répertoire de build frontend. Une reconstruction concurrente peut
+vider momentanément les assets servis par l’autre suite.
+
 Le test source utilise le runtime déjà en cache Docker, une copie Keycloak
-**éphémère en tmpfs borné**, réaugmentée avec `/identity`, et l'entrypoint du
+**éphémère en tmpfs borné**, réaugmentée avec la racine `/`, et l'entrypoint du
 dépôt (seul le chemin du binaire est adapté au répertoire temporaire). Il ne
 construit pas d'image et ne prouve aucun futur digest de déploiement. PostgreSQL
 et Keycloak restent non-root, racines en lecture seule, sans capabilities ;
@@ -177,12 +187,18 @@ Références : [hostname Keycloak](https://www.keycloak.org/server/hostname),
 
 - `make web-keycloak-recipe-test` : **3 tests réussis**, incluant les variantes
   d'URL refusées, les ressources préservées et le rejet du manifeste obsolète.
-- `make web-keycloak-source-test` : **parcours réel Keycloak réussi** (9,8 s de
-  navigateur), y compris refus des actions de changement de profil/email, puis
+- `make web-keycloak-source-test` : **parcours réel Keycloak réussi**, y compris
+  les nouvelles entrées, le refus des actions de changement de profil/email, puis
   dump/restauration de la base dédiée et vérification du rôle SQL non privilégié.
-- `make web-test` : tests Go avec détection de courses, `go vet`, build frontend,
-  **59 tests UI réussis** (5,1 minutes), restauration de la base applicative.
-- Journaux locaux : `web/.cache/keycloak-single-domain-{recipe-tests,test,regression}.log`.
+- `make web-test` : tests Go avec détection de courses, `go vet` et build frontend
+  réussis. Premier passage UI : 58 réussites et un échec de capture desktop
+  pendant la reconstruction concurrente du frontend par la suite Keycloak
+  (le serveur servait alors un listing temporaire contenant `fonts.css`).
+  Relance isolée de ce scénario après les deux suites : **réussie (7,1 s)**.
+  Les 59 scénarios ont donc été validés, dont un après cette relance.
+  La restauration applicative de cette commande a été sautée après cet échec ;
+  celle de la base Keycloak est validée dans la suite dédiée.
+- Journaux locaux : `web/.cache/keycloak-routes-{recipe-tests,test,regression,ui-recheck}.log`.
 - `validate`/`plan` : refus attendu des champs d'image non résolus. Le dernier
   état actif contrôlé reste `39aef9dd3599278d`, web/worker/db/egress prêts.
 

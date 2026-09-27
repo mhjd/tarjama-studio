@@ -43,8 +43,8 @@ def checked_url(value, path):
     return (u.scheme, host, port or 443)
 
 app_origin = checked_url(a.app_origin, '')
-identity_origin = checked_url(a.identity_base_url, '/identity')
-admin_origin = checked_url(a.admin_base_url, '/identity')
+identity_origin = checked_url(a.identity_base_url, '')
+admin_origin = checked_url(a.admin_base_url, '')
 if app_origin != identity_origin:
     p.error('the public identity URL must share the application origin')
 if admin_origin == app_origin:
@@ -86,14 +86,14 @@ services['authdb'] = {
 }
 services['keycloak'] = {
  'enabled':False,'image':images['keycloak'],'uid':1000,'gid':1000,'port':8080,
- 'env':{'KC_HOSTNAME':a.identity_base_url,'KC_HOSTNAME_ADMIN':a.admin_base_url,'KC_HTTP_RELATIVE_PATH':'/identity','KC_HTTP_ENABLED':'true','KC_HTTP_MANAGEMENT_HEALTH_ENABLED':'false','KC_PROXY_HEADERS':'xforwarded',
+ 'env':{'KC_HOSTNAME':a.identity_base_url,'KC_HOSTNAME_ADMIN':a.admin_base_url,'KC_HTTP_RELATIVE_PATH':'/','KC_HTTP_ENABLED':'true','KC_HTTP_MANAGEMENT_HEALTH_ENABLED':'false','KC_PROXY_HEADERS':'xforwarded',
         'KC_DB_URL':'jdbc:postgresql://pv-authdb:5432/keycloak','KC_DB_USERNAME':'keycloak',
         'TARJAMA_PUBLIC_ORIGIN':a.app_origin,'TARJAMA_BACKCHANNEL_URL':'http://web:8080/auth/backchannel-logout'},
  'secrets':[{'name':'tarjama-keycloak-'+name,'path':'/run/keycloak-'+name} for name in ['db','client','bootstrap']],
  'configs':[{'name':'keycloak-realm','path':'/configuration'}],
  'connect':['authdb','web'],'egress':[],
  'resources':{'cpu':'1000m','memory':'1536Mi'},'tmp':'256Mi',
- 'health':{'path':'/identity/health/ready'}
+ 'health':{'path':'/health/ready'}
 }
 recipe['volumes']['identity-database'] = {'size':'2Gi'}
 recipe['volumes']['identity-backups'] = {'size':'1Gi'}

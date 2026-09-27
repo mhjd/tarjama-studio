@@ -55,9 +55,9 @@ services:
       - ../../.cache/keycloak-test/secrets/client:/run/keycloak-client:ro
       - ../../.cache/keycloak-test/secrets/bootstrap:/run/keycloak-bootstrap:ro
     environment:
-      KC_HOSTNAME: http://localhost:8091/identity
-      KC_HOSTNAME_ADMIN: http://localhost:8080/identity
-      KC_HTTP_RELATIVE_PATH: /identity
+      KC_HOSTNAME: http://localhost:8091
+      KC_HOSTNAME_ADMIN: http://localhost:8080
+      KC_HTTP_RELATIVE_PATH: /
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: 'true'
       KC_HTTP_MANAGEMENT_HEALTH_ENABLED: 'false'
@@ -84,7 +84,7 @@ services:
       DATABASE_URL: postgres://test:synthetic-only@appdb:5432/tarjama?sslmode=disable
       ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       OIDC_PROVIDER: keycloak
-      OIDC_ISSUER: http://localhost:8091/identity/realms/tarjama
+      OIDC_ISSUER: http://localhost:8091/realms/tarjama
       OIDC_CLIENT_ID: tarjama-web
       OIDC_CLIENT_SECRET: synthetic-only
       STORAGE_DIR: /tmp/storage

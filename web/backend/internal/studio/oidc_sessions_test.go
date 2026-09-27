@@ -120,9 +120,14 @@ func TestKeycloakBackchannelLogout(t *testing.T) {
 	}
 	mux := http.NewServeMux()
 	a.Routes(mux)
-	res = httptest.NewRecorder()
-	mux.ServeHTTP(res, httptest.NewRequest("GET", "/auth/register", nil))
-	if res.Code != 302 || !strings.Contains(res.Header().Get("Location"), "/registrations?") {
-		t.Fatal("registration route")
+	for path, endpoint := range map[string]string{
+		"/sign-up": "/registrations?", "/auth/register": "/registrations?",
+		"/sign-in": "/auth?", "/auth/login": "/auth?",
+	} {
+		res = httptest.NewRecorder()
+		mux.ServeHTTP(res, httptest.NewRequest("GET", path, nil))
+		if res.Code != 302 || !strings.Contains(res.Header().Get("Location"), endpoint) {
+			t.Fatalf("identity entrypoint %s: %d", path, res.Code)
+		}
 	}
 }

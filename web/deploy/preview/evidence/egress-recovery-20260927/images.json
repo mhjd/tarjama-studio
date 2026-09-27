@@ -1,0 +1,37 @@
+[
+  {
+    "image": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "docker_id": "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "platform": "linux/amd64",
+    "registered": false,
+    "availability": "Exact Docker copy present; PostgreSQL running/ready; external registry reference"
+  },
+  {
+    "image": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a",
+    "docker_id": "sha256:2180bb74c035188718640efd6847e1570b3cf861dbc79d6d525ed9ed3103fb30",
+    "platform": "linux/amd64",
+    "registered": true,
+    "reimport_verified": true
+  },
+  {
+    "image": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd",
+    "docker_id": "sha256:5b2d0d6effa353ff2ce9850e39dbb7174afbd77f9457102f67a410a3f0520f4f",
+    "platform": "linux/amd64",
+    "registered": true,
+    "reimport_verified": true
+  },
+  {
+    "image": "preview.local/atelier/web@sha256:5c837dace66297e0c8f141f960fff22d253bed30e454c830675e8e2df7d66727",
+    "docker_id": "sha256:48a44dd1814b69c94ef8e4e98bfe4a22cc8bc921b80ff946e218fe9ebd55a7a9",
+    "platform": "linux/amd64",
+    "registered": true,
+    "reimport_verified": true
+  },
+  {
+    "image": "preview.local/atelier/web@sha256:c73446f965560e0607c1f38fcb9d318ea32b34353f5c60f8afd8b08b2c93777c",
+    "docker_id": "sha256:13ba63cfb80d4426591f73eefd52e3c67e6f1c076599a775575c64bbfcfa4ddf",
+    "platform": "linux/amd64",
+    "registered": true,
+    "reimport_verified": true
+  }
+]

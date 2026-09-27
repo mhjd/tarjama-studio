@@ -140,19 +140,22 @@ premier démarrage du nouveau worker.
 
 Le contrôle préalable a observé `ErrImageNeverPull` sur l'egress de la révision
 existante `b8884e644b5593ec` : image enregistrée mais absente du runtime, et copie
-Docker exacte absente aussi. La nouvelle recette utilise l'image API construite
-pour la commande `egress` (même exécutable, aucun changement de proxy/protection).
-Cette correction sera appliquée avec la recette, pas par une modification directe
-du runtime. Les autres services étaient prêts au contrôle.
+Docker exacte absente aussi. L'administrateur a depuis rétabli egress avec l'image `19994f1…` du web déjà
+déployé, révision `2f85cb521de77367`. Le contrôle après intervention confirme
+les quatre services prêts. La recette candidate reprend uniquement ce digest
+pour egress et conserve les nouvelles images API/worker/migration. Les essais
+HTTPS via WARP et refus de destinations sont rapportés par l'administrateur ;
+aucun parcours vidéo complet n'a été rejoué pendant cette synchronisation.
 
 Code testé : `f9f589b`. Aucun déploiement ni migration de données réelles effectués.
 
 
 Recette : `web/deploy/preview/candidate-media-retention-20260927.yml`.
-`validate` et `plan` réussis, révision candidate `40f81dc19215d885`,
+`validate` et `plan` initiaux réussis, révision candidate initiale `40f81dc19215d885`,
 `applied: false`. Images importées :
 
-- API / egress : `preview.local/atelier/web@sha256:5c837dace66297e0c8f141f960fff22d253bed30e454c830675e8e2df7d66727`.
+- API / migration : `preview.local/atelier/web@sha256:5c837dace66297e0c8f141f960fff22d253bed30e454c830675e8e2df7d66727`.
+- Egress rétabli : `preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a`.
 - Worker avec corpus : `preview.local/atelier/web@sha256:c73446f965560e0607c1f38fcb9d318ea32b34353f5c60f8afd8b08b2c93777c`.
 
 Preuves sans secrets dans `web/deploy/preview/evidence/media-retention-20260927/`.
@@ -176,3 +179,25 @@ Aucun besoin de modifier les secrets, la politique réseau ou les profils média
 Aucun benchmark fournisseur facturé lancé pour cette livraison. Les tests de
 rétention utilisent une horloge simulée ; une attente réelle de sept jours et
 le retéléchargement YouTube en production restent des observations ultérieures.
+
+
+### Synchronisation après restauration administrateur
+
+La comparaison sémantique de la recette effective et de la candidate a identifié
+uniquement quatre différences d'images : web, worker, migrate et egress. Seule
+`services.egress.image` a été alignée sur la recette effective ; les trois autres
+écarts sont les changements applicatifs préparés et sont conservés. Aucun changement
+de paramètres, secrets, volumes, ressources ou réseau.
+
+Les quatre images locales distinctes de la candidate ont été vérifiées par ID
+Docker immuable puis réimportées via `vps-preview image-import`, avec vérification
+du digest retourné. Cela couvre aussi l'image des jobs de qualification. PostgreSQL
+est prêt avec la référence externe prévue, dont une copie Docker exacte est
+également présente. Les imports ne démarrent aucun service. Cette disponibilité
+est ponctuelle et reste à recontrôler si le cache est nettoyé avant déploiement.
+
+Passation, recette effective, statut, contrôles d'images et validation actualisée :
+`web/deploy/preview/evidence/egress-recovery-20260927/`.
+
+Nouvelle révision candidate après alignement egress : `4c5e196fff39edbb` ;
+`validate` et `plan` réussis, `applied: false`.

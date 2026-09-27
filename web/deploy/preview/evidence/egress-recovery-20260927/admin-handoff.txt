@@ -1,0 +1,9 @@
+Restauration administrateur du 27 septembre 2026 UTC.
+
+Seule image du proxy egress remplacée par celle du web déployé :
+preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a
+Révision administrée : 2f85cb521de77367.
+
+Proxy prêt ; HTTPS YouTube via proxy/WARP 200, IP privée et domaine non autorisé refusés 403. Permissions, NetworkPolicies et autres Deployment.spec inchangés. Aucun dépôt projet modifié.
+
+La recette du dépôt diffère de la recette active : ne pas écraser les travaux en cours avec cette copie. Reporter consciemment le digest egress dans la prochaine recette après comparaison ; vérifier la disponibilité de toutes les images avant déploiement. Aucun test vidéo complet ni migration lancé.

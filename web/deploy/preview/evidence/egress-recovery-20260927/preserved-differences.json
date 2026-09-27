@@ -1,0 +1,17 @@
+[
+  {
+    "path": ".jobs.migrate.image",
+    "candidate": "preview.local/atelier/web@sha256:5c837dace66297e0c8f141f960fff22d253bed30e454c830675e8e2df7d66727",
+    "deployed": "preview.local/atelier/web@sha256:6e4bc5fd94876c568ff58c5275830a9b9aa3ff35ef1aa54eac776db667af7efb"
+  },
+  {
+    "path": ".services.web.image",
+    "candidate": "preview.local/atelier/web@sha256:5c837dace66297e0c8f141f960fff22d253bed30e454c830675e8e2df7d66727",
+    "deployed": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a"
+  },
+  {
+    "path": ".services.worker.image",
+    "candidate": "preview.local/atelier/web@sha256:c73446f965560e0607c1f38fcb9d318ea32b34353f5c60f8afd8b08b2c93777c",
+    "deployed": "preview.local/atelier/web@sha256:f1cb5868136b5ba4947481ec008eb43246010b183b9ac0d17861a0a6a2be9f9e"
+  }
+]

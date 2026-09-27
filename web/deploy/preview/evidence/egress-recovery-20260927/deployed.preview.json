@@ -1,0 +1,340 @@
+{
+  "configs": {
+    "deploy-backup": {
+      "backup.sh": "#!/bin/sh\nset -eu\numask 077\nexport PGHOST=pv-db PGPORT=5432 PGDATABASE=tarjama PGUSER=tarjama PGCONNECT_TIMEOUT=3\nexport PGPASSWORD=\"$(cat /run/db/app_db_password)\"\nfor attempt in $(seq 1 30); do\n  if psql -X -w -Atqc 'SELECT 1' >/dev/null 2>/tmp/db-ready.err; then break; fi\n  sleep 2\ndone\npsql -X -w -Atqc 'SELECT 1' >/dev/null\nmkdir -p /storage/backups\nout=/storage/backups/pre-reliability-$(date -u +%Y%m%dT%H%M%SZ).dump\nset -C\n: > \"$out\"\nset +C\npg_dump -w -Fc > \"$out\"\npg_restore --list \"$out\" >/dev/null\nsha256sum \"$out\"\nprintf 'Backup complete; no media modified.\\n'\n"
+    },
+    "postgres-client": {
+      "pg_service.conf": "[preview-init]\nhost=/tmp\n"
+    }
+  },
+  "jobs": {
+    "backup": {
+      "args": [
+        "/configuration/backup.sh"
+      ],
+      "command": [
+        "/bin/sh"
+      ],
+      "configs": [
+        {
+          "name": "deploy-backup",
+          "path": "/configuration"
+        }
+      ],
+      "connect": [
+        "db"
+      ],
+      "gid": 10001,
+      "image": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "resources": {
+        "cpu": "250m",
+        "memory": "256Mi"
+      },
+      "secrets": [
+        {
+          "name": "tarjama-db-app",
+          "path": "/run/db"
+        }
+      ],
+      "timeout": 240,
+      "tmp": "32Mi",
+      "uid": 10001,
+      "volumes": [
+        {
+          "name": "library",
+          "path": "/storage"
+        }
+      ]
+    },
+    "migrate": {
+      "args": [
+        "migrate"
+      ],
+      "connect": [
+        "db"
+      ],
+      "env": {
+        "DATABASE_URL_FILE": "/run/db/database_url"
+      },
+      "gid": 10001,
+      "image": "preview.local/atelier/web@sha256:6e4bc5fd94876c568ff58c5275830a9b9aa3ff35ef1aa54eac776db667af7efb",
+      "resources": {
+        "cpu": "250m",
+        "memory": "256Mi"
+      },
+      "secrets": [
+        {
+          "name": "tarjama-db-app",
+          "path": "/run/db"
+        }
+      ],
+      "timeout": 300,
+      "uid": 10001
+    },
+    "preview-check": {
+      "args": [
+        "-test.v",
+        "-test.run",
+        "^TestPreviewLive$/(HTTPAndOIDCStart|SSOHeaders|GatewayTLS)$",
+        "-test.timeout",
+        "4m"
+      ],
+      "connect": [
+        "web"
+      ],
+      "egress": [
+        "public-web",
+        "oidc"
+      ],
+      "env": {
+        "GOMAXPROCS": "1",
+        "PREVIEW_LIVE": "atelier"
+      },
+      "gid": 10001,
+      "image": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd",
+      "resources": {
+        "cpu": "500m",
+        "memory": "256Mi"
+      },
+      "secrets": [],
+      "timeout": 300,
+      "tmp": "32Mi",
+      "uid": 10001
+    },
+    "reference-check": {
+      "args": [
+        "-test.v",
+        "-test.run",
+        "^TestReferenceDeployment$",
+        "-test.timeout",
+        "4m"
+      ],
+      "egress": [
+        "public-web"
+      ],
+      "env": {
+        "GOMAXPROCS": "1",
+        "OPENROUTER_API_KEY_FILE": "/run/openrouter/api_key",
+        "PREVIEW_LIVE": "atelier",
+        "REFERENCE_CORPUS_DIR": "/app/references"
+      },
+      "gid": 10001,
+      "image": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd",
+      "resources": {
+        "cpu": "500m",
+        "memory": "384Mi"
+      },
+      "secrets": [
+        {
+          "name": "openrouter",
+          "path": "/run/openrouter"
+        }
+      ],
+      "timeout": 300,
+      "tmp": "32Mi",
+      "uid": 10001
+    }
+  },
+  "services": {
+    "db": {
+      "args": [
+        "postgres",
+        "-c",
+        "unix_socket_directories=/tmp",
+        "-c",
+        "max_connections=40",
+        "-c",
+        "shared_buffers=128MB"
+      ],
+      "configs": [
+        {
+          "name": "postgres-client",
+          "path": "/configuration"
+        }
+      ],
+      "enabled": true,
+      "env": {
+        "PGDATA": "/data/pgdata",
+        "PGSERVICE": "preview-init",
+        "PGSERVICEFILE": "/configuration/pg_service.conf",
+        "POSTGRES_DB": "tarjama",
+        "POSTGRES_INITDB_ARGS": "--auth-host=scram-sha-256 --auth-local=peer",
+        "POSTGRES_PASSWORD_FILE": "/run/db-admin/postgres_password",
+        "POSTGRES_USER": "postgres"
+      },
+      "gid": 70,
+      "image": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "port": 5432,
+      "resources": {
+        "cpu": "750m",
+        "memory": "768Mi"
+      },
+      "secrets": [
+        {
+          "name": "tarjama-db-admin",
+          "path": "/run/db-admin"
+        }
+      ],
+      "tmp": "64Mi",
+      "uid": 70,
+      "volumes": [
+        {
+          "name": "database",
+          "path": "/data"
+        }
+      ]
+    },
+    "egress": {
+      "args": [
+        "egress"
+      ],
+      "egress": [
+        "warp-downloads"
+      ],
+      "enabled": true,
+      "env": {
+        "GOMAXPROCS": "1",
+        "LISTEN_ADDR": "0.0.0.0:8092",
+        "WARP_HTTP_PROXY": "172.31.250.2:40001"
+      },
+      "gid": 10003,
+      "image": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a",
+      "port": 8092,
+      "resources": {
+        "cpu": "250m",
+        "memory": "128Mi"
+      },
+      "tmp": "16Mi",
+      "uid": 10003
+    },
+    "web": {
+      "args": [
+        "api"
+      ],
+      "connect": [
+        "db"
+      ],
+      "egress": [
+        "oidc"
+      ],
+      "enabled": true,
+      "env": {
+        "APP_MODE": "production",
+        "DATABASE_URL_FILE": "/run/db/database_url",
+        "ENCRYPTION_KEY_FILE": "/run/encryption/encryption_key",
+        "GOMAXPROCS": "1",
+        "LISTEN_ADDR": "0.0.0.0:8090",
+        "OIDC_CLIENT_ID": "preview-atelier-tarjama",
+        "OIDC_CLIENT_SECRET_FILE": "/run/oidc/client_secret",
+        "OIDC_ISSUER": "https://auth.runagen.com",
+        "PUBLIC_ORIGIN": "https://atelier.preview.runagen.com",
+        "STORAGE_DIR": "/storage"
+      },
+      "gid": 10001,
+      "health": {
+        "path": "/readyz"
+      },
+      "image": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a",
+      "port": 8090,
+      "resources": {
+        "cpu": "500m",
+        "memory": "512Mi"
+      },
+      "secrets": [
+        {
+          "name": "tarjama-db-app",
+          "path": "/run/db"
+        },
+        {
+          "name": "tarjama-encryption",
+          "path": "/run/encryption"
+        },
+        {
+          "name": "tarjama-oidc",
+          "path": "/run/oidc"
+        }
+      ],
+      "tmp": "64Mi",
+      "uid": 10001,
+      "volumes": [
+        {
+          "name": "library",
+          "path": "/storage"
+        }
+      ]
+    },
+    "worker": {
+      "args": [
+        "worker"
+      ],
+      "connect": [
+        "db"
+      ],
+      "egress": [
+        "public-web",
+        "isolated-jobs"
+      ],
+      "enabled": true,
+      "env": {
+        "APP_MODE": "production",
+        "DATABASE_URL_FILE": "/run/db/database_url",
+        "ENCRYPTION_KEY_FILE": "/run/encryption/encryption_key",
+        "GOMAXPROCS": "1",
+        "GROQ_API_KEY_FILE": "/run/groq/api_key",
+        "MEDIA_ENGINE": "isolated-jobs",
+        "OPENROUTER_API_KEY_FILE": "/run/openrouter/api_key",
+        "PUBLIC_ORIGIN": "https://atelier.preview.runagen.com",
+        "REFERENCE_CORPUS_DIR": "/app/references",
+        "STORAGE_DIR": "/storage",
+        "VPS_JOBS_CA_FILE": "/run/isolated-jobs/ca.crt",
+        "VPS_JOBS_TOKEN_FILE": "/run/isolated-jobs/token",
+        "VPS_JOBS_URL": "https://172.31.250.1:40002"
+      },
+      "gid": 10001,
+      "image": "preview.local/atelier/web@sha256:f1cb5868136b5ba4947481ec008eb43246010b183b9ac0d17861a0a6a2be9f9e",
+      "resources": {
+        "cpu": "750m",
+        "memory": "768Mi"
+      },
+      "secrets": [
+        {
+          "name": "tarjama-db-app",
+          "path": "/run/db"
+        },
+        {
+          "name": "tarjama-encryption",
+          "path": "/run/encryption"
+        },
+        {
+          "name": "tarjama-groq",
+          "path": "/run/groq"
+        },
+        {
+          "name": "isolated-jobs",
+          "path": "/run/isolated-jobs"
+        },
+        {
+          "name": "openrouter",
+          "path": "/run/openrouter"
+        }
+      ],
+      "tmp": "64Mi",
+      "uid": 10001,
+      "volumes": [
+        {
+          "name": "library",
+          "path": "/storage"
+        }
+      ]
+    }
+  },
+  "version": 1,
+  "volumes": {
+    "database": {
+      "size": "2Gi"
+    },
+    "library": {
+      "size": "14Gi"
+    }
+  }
+}

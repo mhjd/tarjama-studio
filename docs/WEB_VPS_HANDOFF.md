@@ -1,6 +1,8 @@
 # Passation complète — Tarjama Studio web sur VPS
 
-> **27 septembre — correctif Haut/Bas mobile préparé, non déployé :** fermeture
+> **27 septembre — correctif Haut/Bas mobile déployé :** révision
+> `f60c1123e19079a2`, code `fc2b468`, sauvegarde et qualification HTTP/OIDC/TLS
+> réussies, quatre services prêts. Fermeture
 > du panneau avant le saut, focus conservé, lecteur maintenu dans le viewport
 > visible lorsque les barres du navigateur le réduisent. Signalé sur Firefox
 > Pixel ; le scénario de géométrie simulé ne remplace pas un essai matériel.

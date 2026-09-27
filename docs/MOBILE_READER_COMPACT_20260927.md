@@ -1,6 +1,7 @@
 # Lecteur et sous-titres compacts sur téléphone — 27 septembre 2026
 
-> Déployé le 2026-09-27 13:34 UTC, révision `035f4cac81045995`.
+> Dernier correctif déployé : `fc2b468`, révision `f60c1123e19079a2`.
+> Première version compacte déployée le 2026-09-27 13:34 UTC, révision `035f4cac81045995`.
 > Sauvegarde, disponibilité des quatre services et qualification HTTP/OIDC/TLS réussies.
 > Les mentions de préparation/non-déploiement plus bas sont historiques.
 
@@ -151,3 +152,25 @@ Références techniques :
 et [signalement Mozilla sur les éléments fixes pendant une transition de barre](https://bugzilla.mozilla.org/show_bug.cgi?id=1796228).
 Elles justifient de tester la surface visible ; elles ne prouvent pas la cause
 du problème de Tarjama.
+
+
+## Déploiement du correctif Haut/Bas — 2026-09-27 13:52 UTC
+
+Autorisé par le propriétaire après les tests. Code `fc2b468` ; révision
+`f60c1123e19079a2`. La section « préparé » ci-dessus décrit l'état historique.
+Recette : `web/deploy/preview/active-player-jump-20260927.yml`.
+Seule `services.web.image` change, avec la référence importée :
+`preview.local/atelier/web@sha256:1acdd773ccb1f040c9c944979301cb71a074e07a8e19d7e411910393dee826cd`.
+Les images conservées ont été réimportées à leurs digests exacts, y compris
+le proxy administrateur `19994f1…` et l'image précédente pour un retour arrière.
+
+- `validate` et `plan` réussis.
+- Sauvegarde `pv-job-backup-c2fc20fe` réussie avant activation.
+- Quatre services prêts, `partial: false`.
+- Qualification `pv-job-preview-check-0c7c7360` réussie :
+  HTTPAndOIDCStart, SSOHeaders et GatewayTLS.
+- Aucune migration SQL, aucun appel fournisseur facturé.
+
+Preuves : `web/deploy/preview/evidence/deploy-player-jump-20260927/`.
+Les limites du test Firefox documentées plus haut restent applicables :
+ce déploiement ne constitue pas une validation sur le Pixel physique.

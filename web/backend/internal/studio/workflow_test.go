@@ -91,7 +91,7 @@ func TestQuotaWaitPersonalKeyAndRestart(t *testing.T) {
 		t.Fatal(updated, e, provider.calls)
 	}
 }
-func TestArabicEditInvalidatesAndLateTranslationCannotOverwrite(t *testing.T) {
+func TestArabicEditPreservesTranslationAndLateTranslationCannotOverwrite(t *testing.T) {
 	s := testStore(t)
 	ctx := context.Background()
 	owner, p := fixture(t, s)
@@ -116,16 +116,29 @@ func TestArabicEditInvalidatesAndLateTranslationCannotOverwrite(t *testing.T) {
 		t.Fatal(status)
 	}
 	updated, _ := s.Get(ctx, owner, p.ID)
-	if updated.Stage != "arabic" || updated.ConfirmedReview != 0 || updated.ConfirmedArabic != 0 || updated.Segments[0].French != "Retouche humaine" {
+	if updated.Stage != "review" || updated.ConfirmedReview != 0 || updated.ConfirmedArabic != 0 || updated.Segments[0].French != "Retouche humaine" {
 		t.Fatal(updated)
 	}
 	if e = s.Finish(ctx, j, func(q *Project) error { q.Segments[0].French = "Late overwrite"; return nil }, ""); !errors.Is(e, ErrConflict) {
 		t.Fatal(e)
 	}
-	status, _ = call(t, server, token, csrf, "POST", "/api/projects/"+p.ID+"/advance", map[string]any{"version": updated.Version, "stage": "arabic"})
+	status, _ = call(t, server, token, csrf, "POST", "/api/projects/"+p.ID+"/advance", map[string]any{"version": updated.Version, "stage": "retranslate"})
 	if status != 400 {
 		t.Fatal("replacement lacked consent", status)
 	}
+	status, _ = call(t, server, token, csrf, "POST", "/api/projects/"+p.ID+"/advance", map[string]any{"version": updated.Version, "stage": "review"})
+	if status != 200 {
+		t.Fatal("manual review requires unwanted retranslation", status)
+	}
+	jobs, _ := s.Jobs(ctx, owner, p.ID)
+	if len(jobs) != 1 {
+		t.Fatal("edit or review started translation")
+	}
+	status, _ = call(t, server, token, csrf, "POST", "/api/projects/"+p.ID+"/advance", map[string]any{"version": updated.Version, "stage": "retranslate", "replace_translation": true})
+	if status != 200 {
+		t.Fatal("explicit retranslation rejected", status)
+	}
+
 }
 func TestCancelledLeaseAndCooldownIsolation(t *testing.T) {
 	s := testStore(t)
@@ -260,5 +273,42 @@ func TestWorkerResumesLegacyTextChunkAfterUpgrade(t *testing.T) {
 	saved, err := s.Chunks(ctx, oldJob)
 	if err != nil || len(saved) != 3 {
 		t.Fatal("old completed chunk lost", err)
+	}
+}
+
+func TestVoluntaryRetranslationCanKeepPreviousTextAndRestart(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	owner, p := fixture(t, s)
+	_, server := testAPI(t, s)
+	token, csrf := sessionFor(t, s, owner)
+	s.Mutate(ctx, owner, p.ID, func(q *Project, _ pgx.Tx) error {
+		q.Stage = "review"
+		q.TranslationSource = q.ArabicVersion
+		for i := range q.Segments {
+			q.Segments[i].French = "Correction humaine"
+		}
+		return nil
+	})
+	path := "/api/projects/" + p.ID + "/advance"
+	for i := 0; i < 2; i++ {
+		current, _ := s.Get(ctx, owner, p.ID)
+		code, _ := call(t, server, token, csrf, "POST", path, map[string]any{"version": current.Version, "stage": "retranslate", "replace_translation": true})
+		if code != 200 {
+			t.Fatal(code)
+		}
+		started, _ := s.Get(ctx, owner, p.ID)
+		code, _ = call(t, server, token, csrf, "POST", path, map[string]any{"version": started.Version, "stage": "keep_translation"})
+		if code != 200 {
+			t.Fatal(code)
+		}
+		restored, _ := s.Get(ctx, owner, p.ID)
+		if restored.Stage != "review" || restored.Segments[0].French != "Correction humaine" {
+			t.Fatal(restored)
+		}
+	}
+	jobs, _ := s.Jobs(ctx, owner, p.ID)
+	if len(jobs) != 2 || jobs[0].State != "cancelled" || jobs[1].State != "cancelled" {
+		t.Fatal("new request reused an old cancelled pass", jobs)
 	}
 }

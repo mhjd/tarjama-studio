@@ -2,6 +2,8 @@ package studio
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -118,7 +120,10 @@ func (a *API) Routes() http.Handler {
 	protected.HandleFunc("PATCH /api/projects/{id}/archive", a.archive)
 	protected.HandleFunc("POST /api/projects/{id}/advance", a.advance)
 	protected.HandleFunc("POST /api/projects/{id}/exports", a.export)
+	protected.HandleFunc("GET /api/projects/{id}/subtitles/{track}", a.subtitles)
 	protected.HandleFunc("PUT /api/projects/{id}/media", a.upload)
+	protected.HandleFunc("PUT /api/projects/{id}/media/reimport", a.upload)
+	protected.HandleFunc("POST /api/projects/{id}/media/restore", a.restoreMedia)
 	protected.HandleFunc("GET /api/projects/{id}/media", a.media)
 	protected.HandleFunc("GET /api/projects/{id}/exports/{job}", a.downloadExport)
 	protected.HandleFunc("POST /api/projects/{id}/jobs/{job}/cancel", a.cancel)
@@ -287,6 +292,9 @@ func (a *API) edit(w http.ResponseWriter, r *http.Request) {
 				p.ArabicVersion++
 				p.ConfirmedArabic = 0
 				p.Stage = "arabic"
+				if p.TranslationSource > 0 {
+					p.Stage = "review"
+				}
 			} else {
 				s.French = b.Text
 				if p.Stage == "ready" {
@@ -340,6 +348,37 @@ func (a *API) advance(w http.ResponseWriter, r *http.Request) {
 			return e
 		}
 		switch b.Stage {
+		case "keep_translation":
+			if p.Stage != "translating" || p.TranslationSource == 0 {
+				return ErrConflict
+			}
+			for _, segment := range p.Segments {
+				if strings.TrimSpace(segment.French) == "" {
+					return errors.New("Traduction précédente incomplète")
+				}
+			}
+			if _, err := tx.Exec(r.Context(), "UPDATE jobs SET state='cancelled',lease='',lease_until=NULL,message='Traduction précédente conservée' WHERE project_id=$1 AND generation=$2 AND kind='translate' AND state IN ('queued','running','waiting_provider','failed')", p.ID, p.Generation); err != nil {
+				return err
+			}
+			p.Version++
+			p.Stage = "review"
+			p.ConfirmedReview = 0
+			return nil
+		case "retranslate":
+			if !b.Replace {
+				return errors.New("Confirmez le remplacement de la traduction française")
+			}
+			if p.Stage == "translating" && p.ConfirmedArabic == p.ArabicVersion {
+				return nil
+			}
+			if (p.Stage != "review" && p.Stage != "ready") || p.TranslationSource == 0 {
+				return ErrConflict
+			}
+			p.Version++ // A deliberate new pass must not reuse a previous cancelled job.
+			p.ConfirmedArabic = p.ArabicVersion
+			p.ConfirmedReview = 0
+			p.Stage = "translating"
+			return enqueue(r.Context(), tx, who(r).User, *p, "translate")
 		case "arabic":
 			if p.Stage == "translating" && p.ConfirmedArabic == p.ArabicVersion {
 				return nil
@@ -347,7 +386,7 @@ func (a *API) advance(w http.ResponseWriter, r *http.Request) {
 			if p.Stage != "arabic" {
 				return ErrConflict
 			}
-			if p.TranslationSource == p.ArabicVersion {
+			if p.TranslationSource > 0 && !b.Replace {
 				complete := true
 				for _, segment := range p.Segments {
 					if strings.TrimSpace(segment.French) == "" {
@@ -370,7 +409,7 @@ func (a *API) advance(w http.ResponseWriter, r *http.Request) {
 			if p.Stage == "ready" && p.ConfirmedReview == p.Version {
 				return nil
 			}
-			if p.Stage != "review" || p.TranslationSource != p.ArabicVersion {
+			if p.Stage != "review" || p.TranslationSource == 0 {
 				return ErrConflict
 			}
 			for _, s := range p.Segments {
@@ -409,10 +448,21 @@ func (a *API) export(w http.ResponseWriter, r *http.Request) {
 		if p.Version != b.Version {
 			return ErrConflict
 		}
-		if p.Stage != "ready" || p.ConfirmedReview != p.Version || p.Media == "" {
+		if p.Stage != "ready" || p.ConfirmedReview != p.Version {
 			return errors.New("Terminez la relecture avant l’export")
 		}
-		return enqueue(r.Context(), tx, who(r).User, *p, "export_"+b.Track+"_"+b.Quality)
+		if p.Media == "" && (p.URL == "" || p.MediaUploaded) {
+			return errors.New("Réimportez la vidéo originale pour créer une vidéo sous-titrée. Les exports SRT restent disponibles.")
+		}
+		kind := "export_" + b.Track + "_" + b.Quality
+		input, err := json.Marshal(p)
+		if err != nil {
+			return err
+		}
+		if _, err = tx.Exec(r.Context(), `UPDATE jobs SET state='queued',progress=0,message='',attempts=0,media_attempt=media_attempt+1,input=$5,next_attempt_at=now(),updated_at=now() WHERE project_id=$1 AND kind=$2 AND source_version=$3 AND generation=$4 AND state='expired'`, p.ID, kind, p.Version, p.Generation, input); err != nil {
+			return err
+		}
+		return enqueue(r.Context(), tx, who(r).User, *p, kind)
 	})
 	if e != nil {
 		apiError(w, e)
@@ -422,6 +472,7 @@ func (a *API) export(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 	owner, pid := who(r).User, r.PathValue("id")
+	restoring := strings.HasSuffix(r.URL.Path, "/reimport")
 	// Reserve disk budget across upload processes; lock is released even on interrupted uploads.
 	conn, e := a.Store.DB.Acquire(r.Context())
 	if e != nil {
@@ -445,6 +496,21 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 	}()
 	var generation int64
 	_, e = a.Store.Mutate(r.Context(), owner, pid, func(p *Project, tx pgx.Tx) error {
+		if restoring {
+			if !p.MediaExpired || p.Media != "" || len(p.Segments) == 0 || (p.Stage != "ready" && p.Stage != "review" && p.Stage != "arabic") {
+				return ErrConflict
+			}
+			var active bool
+			if err := tx.QueryRow(r.Context(), "SELECT EXISTS(SELECT 1 FROM jobs WHERE project_id=$1 AND state IN ('queued','running','waiting_provider'))", pid).Scan(&active); err != nil {
+				return err
+			}
+			if active {
+				return errors.New("Attendez la fin du traitement avant de réimporter la vidéo")
+			}
+			p.Generation++
+			generation = p.Generation
+			return nil
+		}
 		if p.Media != "" || len(p.Segments) > 0 {
 			return errors.New("Ce projet possède déjà une vidéo")
 		}
@@ -488,7 +554,8 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 			os.Remove(path)
 		}
 	}()
-	n, e := io.Copy(f, http.MaxBytesReader(w, r.Body, MaxMediaBytes))
+	digest := sha256.New()
+	n, e := io.Copy(io.MultiWriter(f, digest), http.MaxBytesReader(w, r.Body, MaxMediaBytes))
 	if e != nil || n < 16 {
 		apiError(w, errors.New("Import incomplet ou supérieur à 1 Go. Réessayez avec une vidéo plus petite."))
 		return
@@ -502,10 +569,23 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 		if p.Generation != generation {
 			return ErrConflict
 		}
-		p.Stage = "preparing"
+		checksum := hex.EncodeToString(digest.Sum(nil))
+		if restoring && p.SourceSHA256 != "" && p.SourceSHA256 != checksum {
+			return errors.New("Ce fichier ne correspond pas à la vidéo importée initialement. Réimportez le fichier original ; vos textes sont conservés.")
+		}
+		if !restoring {
+			p.SourceSHA256 = checksum
+		}
+		kind := "prepare"
+		if restoring {
+			kind = "restore_prepare"
+		} else {
+			p.Stage = "preparing"
+		}
 		input := *p
 		input.Media = name
-		return enqueue(r.Context(), tx, owner, input, "prepare")
+		input.SourceSHA256 = checksum
+		return enqueue(r.Context(), tx, owner, input, kind)
 	})
 	if e != nil {
 		apiError(w, e)
@@ -607,7 +687,7 @@ func (a *API) cancel(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) retry(w http.ResponseWriter, r *http.Request) {
 	_, e := a.Store.Mutate(r.Context(), who(r).User, r.PathValue("id"), func(p *Project, tx pgx.Tx) error {
-		tag, e := tx.Exec(r.Context(), "UPDATE jobs SET progress=CASE WHEN state IN ('failed','cancelled') AND (kind IN ('prepare','download') OR kind LIKE 'export_%') THEN 0 ELSE progress END,media_attempt=media_attempt+CASE WHEN state IN ('failed','cancelled') THEN 1 ELSE 0 END,state='queued',next_attempt_at=now(),attempts=0,text_failures=0,text_epoch=text_epoch+1,message='' WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND state IN ('failed','cancelled','waiting_provider') AND generation=$4 AND (kind LIKE 'export_%' OR source_version=$5)", r.PathValue("job"), p.ID, who(r).User, p.Generation, p.Version)
+		tag, e := tx.Exec(r.Context(), "UPDATE jobs SET progress=CASE WHEN state IN ('failed','cancelled') AND (kind IN ('prepare','download') OR kind LIKE 'export_%' OR kind LIKE 'restore_%') THEN 0 ELSE progress END,media_attempt=media_attempt+CASE WHEN state IN ('failed','cancelled') THEN 1 ELSE 0 END,state='queued',next_attempt_at=now(),attempts=0,text_failures=0,text_epoch=text_epoch+1,message='' WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND state IN ('failed','cancelled','waiting_provider') AND generation=$4 AND (kind LIKE 'export_%' OR kind LIKE 'restore_%' OR source_version=$5)", r.PathValue("job"), p.ID, who(r).User, p.Generation, p.Version)
 		if e != nil {
 			return e
 		}
@@ -678,4 +758,29 @@ func (a *API) keyStatus(w http.ResponseWriter, r *http.Request) {
 func HTTPServer(addr string, h http.Handler) *http.Server {
 	// Bound headers while allowing SSO session/CSRF cookies forwarded by the gateway.
 	return &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 10 * time.Minute, WriteTimeout: 10 * time.Minute, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 64 * 1024}
+}
+
+func (a *API) restoreMedia(w http.ResponseWriter, r *http.Request) {
+	p, err := a.Store.Mutate(r.Context(), who(r).User, r.PathValue("id"), func(p *Project, tx pgx.Tx) error {
+		if p.Media != "" {
+			return nil
+		}
+		if !p.MediaExpired || p.URL == "" || p.MediaUploaded || len(p.Segments) == 0 {
+			return ErrConflict
+		}
+		var active bool
+		if err := tx.QueryRow(r.Context(), "SELECT EXISTS(SELECT 1 FROM jobs WHERE project_id=$1 AND state IN ('queued','running','waiting_provider'))", p.ID).Scan(&active); err != nil {
+			return err
+		}
+		if active {
+			return errors.New("La récupération de la vidéo attend la fin du traitement en cours")
+		}
+		p.Generation++
+		return enqueue(r.Context(), tx, who(r).User, *p, "restore_download")
+	})
+	if err != nil {
+		apiError(w, err)
+		return
+	}
+	jsonOut(w, p)
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -21,7 +20,7 @@ type mediaOperation struct {
 }
 
 func mediaLease(ctx context.Context, tx pgx.Tx, p *Project, j Job) error {
-	if p.Generation != j.Generation || (!strings.HasPrefix(j.Kind, "export_") && p.Version != j.SourceVersion) {
+	if p.Generation != j.Generation || (!independentMediaJob(j.Kind) && p.Version != j.SourceVersion) {
 		return ErrConflict
 	}
 	if e := checkLease(ctx, tx, j); e != nil {
@@ -120,9 +119,9 @@ func lockOperation(ctx context.Context, dir string, wait bool) (*os.File, error)
 // A worker shutdown or lease handover alone never cancels a valid remote job.
 func (m *IsolatedMedia) Reconcile(ctx context.Context) error {
 	rows, e := m.Store.DB.Query(ctx, `SELECT o.key,o.remote_id,o.definition,
- (j.id IS NULL OR j.media_attempt<>o.attempt OR j.state IN ('succeeded','failed','cancelled')
+ (j.id IS NULL OR j.media_attempt<>o.attempt OR j.state IN ('succeeded','failed','cancelled','expired')
  OR (p.document->>'generation')::bigint<>j.generation
- OR (j.kind NOT LIKE 'export_%' AND (p.document->>'version')::bigint<>j.source_version)
+ OR (j.kind NOT LIKE 'export_%' AND j.kind NOT LIKE 'restore_%' AND (p.document->>'version')::bigint<>j.source_version)
  OR EXISTS(SELECT 1 FROM job_chunks c WHERE c.job_id=o.job_id AND c.ordinal=o.unit)) obsolete
  FROM media_operations o LEFT JOIN jobs j ON j.id=o.job_id LEFT JOIN projects p ON p.id=j.project_id
  WHERE NOT o.retired ORDER BY o.updated_at LIMIT 32`)

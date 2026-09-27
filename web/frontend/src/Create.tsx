@@ -113,6 +113,14 @@ export function Create({
           </small>
         </label>
       )}
+      {mode === "file" && (
+        <p className="notice">
+          Attention : la vidéo sera supprimée des serveurs après une semaine.
+          Après cela, vous devrez la réimporter si vous souhaitez effectuer un
+          export vidéo. Votre transcription et votre traduction corrigées
+          resteront conservées.
+        </p>
+      )}
       {error && <p role="alert">{error}</p>}
       {existingProject ? (
         <button className="primary" onClick={() => onOpen(existingProject)}>

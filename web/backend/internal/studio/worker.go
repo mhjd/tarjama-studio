@@ -171,6 +171,25 @@ func RunWorker(ctx context.Context, s *Store, c Config) error {
 		}()
 		defer func() { stop(); <-done }()
 	}
+	retentionCtx, stopRetention := context.WithCancel(ctx)
+	retentionDone := make(chan struct{})
+	go func() {
+		defer close(retentionDone)
+		for retentionCtx.Err() == nil {
+			bounded, cancel := context.WithTimeout(retentionCtx, 30*time.Second)
+			if err := s.ExpireVideos(bounded, c.Storage, time.Now()); err != nil && retentionCtx.Err() == nil {
+				log.Printf("Video retention sweep failed; will retry")
+			}
+			cancel()
+			select {
+			case <-retentionCtx.Done():
+				return
+			case <-time.After(5 * time.Minute):
+			}
+		}
+	}()
+	defer func() { stopRetention(); <-retentionDone }()
+
 	for ctx.Err() == nil {
 		worked, e := w.Once(ctx)
 		if e != nil && !errors.Is(e, pgx.ErrNoRows) {
@@ -330,33 +349,50 @@ func (w *Worker) process(ctx context.Context, j Job) error {
 	if e != nil {
 		return e
 	}
-	if p.Generation != j.Generation || (!strings.HasPrefix(j.Kind, "export_") && p.Version != j.SourceVersion) {
+	if p.Generation != j.Generation || (!independentMediaJob(j.Kind) && p.Version != j.SourceVersion) {
 		return ErrConflict
 	}
 	switch j.Kind {
-	case "prepare", "download":
+	case "prepare", "download", "restore_prepare", "restore_download":
 		if e = storageRoom(w.Config.Storage, MaxMediaBytes); e != nil {
 			return e
 		}
 		name := id() + ".mp4"
 		output := storagePath(w.Config.Storage, name)
 		input := ""
-		if j.Kind == "prepare" {
+		if j.Kind == "prepare" || j.Kind == "restore_prepare" {
 			input = storagePath(w.Config.Storage, j.Input.Media)
 		}
-		info, e := w.media(j, -1).Process(ctx, MediaRequest{Operation: j.Kind, URL: j.Input.URL}, input, output)
+		info, e := w.media(j, -1).Process(ctx, MediaRequest{Operation: strings.TrimPrefix(j.Kind, "restore_"), URL: j.Input.URL}, input, output)
 		if e != nil {
 			return e
 		}
+		restoring := strings.HasPrefix(j.Kind, "restore_")
+		if restoring && (math.Abs(float64(info.Duration-p.Duration)) > 1000 || (len(p.Segments) > 0 && info.Duration < p.Segments[len(p.Segments)-1].End)) {
+			os.Remove(output)
+			return &ProviderError{Public: "La durée de cette vidéo ne correspond pas aux sous-titres. Réimportez la vidéo originale."}
+		}
+		next := "transcribe"
+		if restoring {
+			next = ""
+		}
 		e = w.Store.Finish(ctx, j, func(p *Project) error {
 			p.Media = name
+			p.MediaExpired = false
+			p.MediaUploaded = j.Kind == "prepare" || j.Kind == "restore_prepare"
+			if p.MediaUploaded {
+				p.SourceSHA256 = j.Input.SourceSHA256
+			}
+			renewMediaExpiry(p, time.Now())
 			p.Duration = info.Duration
 			p.Width = info.Width
 			p.Height = info.Height
-			p.Stage = "transcribing"
-			p.Version++
+			if !restoring {
+				p.Stage = "transcribing"
+				p.Version++
+			}
 			return nil
-		}, "transcribe")
+		}, next)
 		if e != nil {
 			os.Remove(output)
 		}
@@ -376,9 +412,13 @@ func (w *Worker) process(ctx context.Context, j Job) error {
 		if e = storageRoom(w.Config.Storage, MaxMediaBytes); e != nil {
 			return e
 		}
+		source, err := w.exportSource(ctx, j, p)
+		if err != nil {
+			return err
+		}
 		temp := storagePath(w.Config.Storage, id())
 		defer os.Remove(temp)
-		_, e = w.media(j, -1).Process(ctx, MediaRequest{Operation: "export", Track: parts[1], Quality: parts[2], Segments: j.Input.Segments}, storagePath(w.Config.Storage, j.Input.Media), temp)
+		_, e = w.media(j, -1).Process(ctx, MediaRequest{Operation: "export", Track: parts[1], Quality: parts[2], Segments: j.Input.Segments}, source, temp)
 		if e != nil {
 			return e
 		}
@@ -386,6 +426,9 @@ func (w *Worker) process(ctx context.Context, j Job) error {
 		return w.Store.Finish(ctx, j, func(p *Project) error {
 			if e := os.Rename(temp, storagePath(w.Config.Storage, j.ID+".mp4")); e != nil {
 				return e
+			}
+			if p.Media != "" {
+				renewMediaExpiry(p, time.Now())
 			}
 			return syncDirectory(w.Config.Storage)
 		}, "")
@@ -509,6 +552,9 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 				p.Stage = "review"
 				p.ConfirmedReview = 0
 			}
+			if p.Media != "" {
+				renewMediaExpiry(p, time.Now())
+			}
 			return nil
 		}, "")
 	}
@@ -597,4 +643,43 @@ func smallerTextRetry(chunks [][]Segment, next, attempts int) [][]Segment {
 		source = source[n:]
 	}
 	return append(out, chunks[next+1:]...)
+}
+
+// Restoring a source never calls transcription/translation or replaces text.
+func (w *Worker) exportSource(ctx context.Context, j Job, p Project) (string, error) {
+	if p.Media != "" {
+		path := storagePath(w.Config.Storage, p.Media)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
+	}
+	if p.URL == "" || p.MediaUploaded {
+		return "", &ProviderError{Public: "Réimportez la vidéo originale avant de créer une vidéo sous-titrée. Vos textes sont conservés."}
+	}
+	name := id() + ".mp4"
+	path := storagePath(w.Config.Storage, name)
+	info, err := w.media(j, -2).Process(ctx, MediaRequest{Operation: "download", URL: p.URL}, "", path)
+	if err != nil {
+		return "", err
+	}
+	if math.Abs(float64(info.Duration-p.Duration)) > 1000 || (len(p.Segments) > 0 && info.Duration < p.Segments[len(p.Segments)-1].End) {
+		os.Remove(path)
+		return "", &ProviderError{Public: "La vidéo disponible ne correspond plus à la durée des sous-titres. Vos textes sont conservés."}
+	}
+	_, err = w.Store.Mutate(ctx, j.Owner, j.ProjectID, func(q *Project, tx pgx.Tx) error {
+		if err := mediaLease(ctx, tx, q, j); err != nil {
+			return err
+		}
+		q.Media = name
+		q.MediaExpired = false
+		renewMediaExpiry(q, time.Now())
+		return nil
+	})
+	if err != nil {
+		os.Remove(path)
+		return "", err
+	}
+	return path, nil
 }

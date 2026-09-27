@@ -48,7 +48,7 @@ async function workflow(page: Page, initialStage = "arabic") {
     if (body.field === "arabic") {
       segment.arabic = body.text;
       project.arabic_version++;
-      project.stage = "arabic";
+      project.stage = project.translation_source > 0 ? "review" : "arabic";
     } else {
       segment.french = body.text;
       if (project.stage === "ready") project.stage = "review";
@@ -176,18 +176,22 @@ for (const [name, viewport] of Object.entries({
     await expect(step(page, 4)).toBeDisabled();
     await page.goto("/projets/fixture/exporter");
     await expect(page).toHaveURL(/\/traduire$/);
-    // Editing Arabic revokes BOTH later stages, even if old French text exists.
+    // Editing Arabic keeps the existing French accessible; only export needs review again.
     await step(page, 2).click();
     await arabic(page).first().fill("تصحيح جديد بعد الترجمة");
     await arabic(page).first().blur();
-    await expect(step(page, 3)).toBeDisabled();
+    await expect(step(page, 3)).toBeEnabled();
     await expect(step(page, 4)).toBeDisabled();
     await expect(french(page)).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Valider et traduire", exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
     await page.goto("/projets/fixture/traduire");
-    await expect(page).toHaveURL(/\/corriger$/);
+    await expect(page).toHaveURL(/\/traduire$/);
+    await expect(french(page)).toHaveCount(18);
+    await expect(french(page).first()).toHaveValue(
+      state.project.segments[0].french,
+    );
     await page.goBack();
     await expect(page).toHaveURL(/\/corriger$/);
     expect(state.writes.filter((w) => w.startsWith("advance:"))).toEqual([

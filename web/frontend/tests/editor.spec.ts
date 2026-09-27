@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
 async function login(page: Page, user = "alice") {
   await page.goto("/");
@@ -233,6 +234,18 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
     .getByRole("textbox", { name: "Français one", exact: true })
     .fill("Bonjour à toutes et à tous.");
   await page
+    .getByText("Exporter les sous-titres seuls (SRT)", { exact: true })
+    .click();
+  const subtitleDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Télécharger le français · SRT", exact: true })
+    .click();
+  const srt = await subtitleDownload;
+  expect(srt.suggestedFilename()).toMatch(/_fr\.srt$/);
+  const srtText = await readFile((await srt.path())!, "utf8");
+  expect(srtText).toContain("Bonjour à toutes et à tous.");
+  expect(srtText).toContain("00:00:00,000 --> 00:00:02,000");
+  await page
     .getByRole("button", { name: "Valider et exporter", exact: true })
     .last()
     .click();
@@ -279,8 +292,16 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   await revisedArabic.fill("السلام عليكم ورحمة الله وبركاته");
   await revisedArabic.blur();
   await expect(
-    page.getByRole("heading", { name: "Correction arabe", exact: true }),
+    page.getByRole("heading", {
+      name: "Relire arabe et français",
+      exact: true,
+    }),
   ).toBeVisible();
+  await expect(page).toHaveURL(/\/traduire$/);
+  await expect(
+    page.getByRole("textbox", { name: "Français one", exact: true }),
+  ).toHaveValue("Bonjour, voici la traduction corrigée après export.");
+  await page.getByText("Retraduire avec l’IA", { exact: true }).click();
   const confirmation = page.getByRole("checkbox", {
     name: "Je confirme le remplacement de la traduction française.",
   });
@@ -633,6 +654,7 @@ for (const state of ["cancelled", "failed"]) {
     await login(page);
     const job = {
       id: "existing-low-export",
+      generation: 0,
       kind: "export_fr_low",
       state,
       progress: 33,
@@ -644,6 +666,7 @@ for (const state of ["cancelled", "failed"]) {
       const data = await response.json();
       data.project.stage = "ready";
       job.source_version = data.project.version;
+      job.generation = data.project.generation;
       data.jobs = [job];
       await route.fulfill({ response, json: data });
     });
@@ -706,5 +729,75 @@ for (const state of ["cancelled", "failed"]) {
     ).toBeDisabled();
     expect(retries).toBe(1);
     expect(creates).toBe(0);
+  });
+}
+
+for (const uploaded of [true, false]) {
+  test(`expired ${uploaded ? "uploaded" : "YouTube"} video keeps subtitles and offers the correct recovery`, async ({
+    page,
+  }) => {
+    await login(page);
+    await page.route("**/api/projects/fixture", async (route) => {
+      const response = await route.fetch();
+      const data = await response.json();
+      data.project.stage = "ready";
+      data.project.media = "";
+      data.project.media_expired = true;
+      data.project.media_uploaded = uploaded;
+      data.project.url = uploaded
+        ? ""
+        : "https://www.youtube.com/watch?v=b1MKJ5gHig0";
+      data.project.translation_source = data.project.arabic_version;
+      data.project.segments.forEach((s: { french: string }) => {
+        s.french = "Ma traduction conservée";
+      });
+      data.jobs = [
+        {
+          id: "expired",
+          kind: "export_fr_low",
+          source_version: data.project.version,
+          generation: data.project.generation,
+          state: "expired",
+          progress: 100,
+          message: "",
+        },
+      ];
+      await route.fulfill({ response, json: data });
+    });
+    await page.goto("/projets/fixture/exporter");
+    await expect(
+      page.getByRole("textbox", { name: "Français one", exact: true }),
+    ).toHaveValue("Ma traduction conservée");
+    await expect(page.locator("video")).toHaveCount(0);
+    await expect(page.locator(".job")).toHaveCount(0);
+    if (uploaded) {
+      await expect(
+        page.getByLabel("Réimporter la vidéo originale"),
+      ).toBeEnabled();
+      await expect(
+        page.getByRole("button", { name: "Créer la vidéo", exact: true }),
+      ).toBeDisabled();
+      await expect(page.getByLabel("Récupérer la vidéo")).toContainText(
+        "une semaine",
+      );
+    } else {
+      await expect(
+        page.getByRole("button", { name: "Créer la vidéo", exact: true }),
+      ).toBeEnabled();
+      await expect(
+        page.getByRole("button", {
+          name: "Récupérer la vidéo pour la lecture",
+        }),
+      ).toBeEnabled();
+      await expect(page.getByLabel("Récupérer la vidéo")).toContainText(
+        "automatiquement",
+      );
+    }
+    await page
+      .getByText("Exporter les sous-titres seuls (SRT)", { exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Télécharger le français · SRT" }),
+    ).toBeEnabled();
   });
 }

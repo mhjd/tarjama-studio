@@ -12,9 +12,11 @@ export function isAutomaticTextRecovery(job: Job) {
 
 export function JobProgress({ job }: { job: Job }) {
   const total =
-    job.kind === "download"
+    job.kind === "download" || job.kind === "restore_download"
       ? 6
-      : job.kind === "prepare" || job.kind.startsWith("export_")
+      : job.kind === "prepare" ||
+          job.kind === "restore_prepare" ||
+          job.kind.startsWith("export_")
         ? 3
         : 0;
   const recovering = isAutomaticTextRecovery(job);

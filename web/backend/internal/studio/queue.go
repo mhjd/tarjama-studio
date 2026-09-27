@@ -95,7 +95,7 @@ func (s *Store) Finish(ctx context.Context, j Job, apply func(*Project) error, n
 		if p.Generation != j.Generation {
 			return ErrConflict
 		}
-		if j.Kind[:min(len(j.Kind), 7)] != "export_" && p.Version != j.SourceVersion {
+		if !independentMediaJob(j.Kind) && p.Version != j.SourceVersion {
 			return ErrConflict
 		}
 		if e := checkLease(ctx, tx, j); e != nil {

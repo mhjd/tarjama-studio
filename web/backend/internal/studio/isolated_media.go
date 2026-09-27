@@ -40,13 +40,20 @@ func (m *IsolatedMedia) operationDir(key string) string {
 // Count completed durable stages, never estimated download bytes or elapsed time.
 // Keep these updates behind the same ownership/version/lease fence as results.
 func (m *IsolatedMedia) reportProgress(ctx context.Context, step string, complete bool) error {
+	if strings.HasPrefix(m.Job.Kind, "export_") && m.Unit == -2 {
+		return m.mutate(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, "UPDATE jobs SET message='Récupération de la vidéo originale avant création…',updated_at=now() WHERE id=$1", m.Job.ID)
+			return err
+		})
+	}
+
 	type phase struct{ key, label string }
 	steps := []phase{}
-	if m.Job.Kind == "download" {
+	if m.Job.Kind == "download" || m.Job.Kind == "restore_download" {
 		steps = append(steps, phase{"download-video", "Téléchargement de la vidéo…"},
 			phase{"download-audio", "Téléchargement de l’audio…"},
 			phase{"mux", "Assemblage de la vidéo et de l’audio…"})
-	} else if m.Job.Kind != "prepare" && !strings.HasPrefix(m.Job.Kind, "export_") {
+	} else if m.Job.Kind != "prepare" && m.Job.Kind != "restore_prepare" && !strings.HasPrefix(m.Job.Kind, "export_") {
 		return nil // Transcription/text jobs already report completed chunks.
 	}
 	render := "Préparation de la vidéo pour la lecture…"

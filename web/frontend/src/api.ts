@@ -17,9 +17,14 @@ export type Project = {
   translation_source: number;
   duration_ms: number;
   media?: string;
+  generation?: number;
+  media_uploaded?: boolean;
+  media_expired?: boolean;
+  media_expires_at?: string;
   segments: Segment[];
 };
 export type Job = {
+  generation?: number;
   id: string;
   kind: string;
   state: string;
@@ -98,14 +103,40 @@ export async function request<T>(
   }
   return response.status === 204 ? (undefined as T) : response.json();
 }
-export async function upload(project: string, file: File) {
+export async function downloadSubtitles(project: Project, track: "ar" | "fr") {
   if (sessionExpired) expireSession();
-  const response = await fetch(`/api/projects/${project}/media`, {
-    method: "PUT",
-    redirect: "manual",
-    headers: { "X-CSRF-Token": csrf },
-    body: file,
-  });
+  const response = await fetch(
+    `/api/projects/${project.id}/subtitles/${track}.srt?version=${project.version}`,
+    { redirect: "manual" },
+  );
+  checkSession(response);
+  if (!response.ok) throw new Error(await response.text());
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  const plain = disposition.match(/filename="?([^";]+)"?/i);
+  const filename = encoded
+    ? decodeURIComponent(encoded[1])
+    : plain?.[1] || `sous-titres_${track}.srt`;
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export async function upload(project: string, file: File, restore = false) {
+  if (sessionExpired) expireSession();
+  const response = await fetch(
+    `/api/projects/${project}/media${restore ? "/reimport" : ""}`,
+    {
+      method: "PUT",
+      redirect: "manual",
+      headers: { "X-CSRF-Token": csrf },
+      body: file,
+    },
+  );
   checkSession(response);
   if (!response.ok) throw new Error(await response.text());
   return response.json() as Promise<Project>;

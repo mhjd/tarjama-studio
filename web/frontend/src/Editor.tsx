@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   request,
   upload,
+  downloadSubtitles,
   stageNames,
   time,
   type Project,
@@ -190,7 +191,7 @@ export function Editor({
       setBusy(false);
     }
   }
-  async function sendFile(file: File) {
+  async function sendFile(file: File, restore = false) {
     if (file.size > 1024 * 1024 * 1024) {
       setError("La vidéo dépasse 1 Go.");
       return;
@@ -198,7 +199,8 @@ export function Editor({
     setUploading(true);
     setError("");
     try {
-      d.adopt(await upload(p.id, file));
+      if (restore) await flush();
+      d.adopt(await upload(p.id, file, restore));
       await refresh();
     } catch (e) {
       setError(String(e));
@@ -320,15 +322,25 @@ export function Editor({
   const validating =
     (step === "corriger" && p.stage === "arabic") ||
     (step === "traduire" && p.stage === "review");
-  const selectedExport = jobs.find(
-    (job) =>
-      job.kind === `export_fr_${quality}` && job.source_version === p.version,
-  );
+  const selectedExport = [...jobs]
+    .reverse()
+    .find(
+      (job) =>
+        job.kind === `export_fr_${quality}` &&
+        job.source_version === p.version &&
+        job.generation === p.generation,
+    );
   const exportActive =
     selectedExport &&
     ["queued", "running", "waiting_provider"].includes(selectedExport.state);
   const exportReady = selectedExport?.state === "succeeded";
+  const recoveryActive = jobs.some(
+    (j) =>
+      (j.kind.startsWith("restore_") || j.kind.startsWith("export_")) &&
+      ["queued", "running", "waiting_provider"].includes(j.state),
+  );
   function visibleJob(job: Job) {
+    if (job.kind.startsWith("restore_")) return job.generation === p.generation;
     if (job.kind === "translate")
       return step === "traduire" && translationPending;
     if (job.kind.startsWith("export_"))
@@ -350,7 +362,7 @@ export function Editor({
             else fields.current.delete(key);
           }}
           value={d.value(s.id, f)}
-          disabled={!editable || busy}
+          disabled={!editable || busy || uploading}
           onFocus={() => setFocused(true)}
           onChange={(e) => d.edit(s.id, f, e.target.value)}
           onCompositionStart={() => composing.current.add(key)}
@@ -399,25 +411,9 @@ export function Editor({
             tabIndex={-1}
             aria-label="Validation des sous-titres"
           >
-            {p.translation_source > 0 &&
-              p.translation_source !== p.arabic_version && (
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={replace}
-                    onChange={(e) => setReplace(e.target.checked)}
-                  />{" "}
-                  Je confirme le remplacement de la traduction française.
-                </label>
-              )}
             <button
               className="primary"
-              disabled={
-                busy ||
-                (p.translation_source > 0 &&
-                  p.translation_source !== p.arabic_version &&
-                  !replace)
-              }
+              disabled={busy}
               onClick={() =>
                 void action(async () => {
                   d.adopt(
@@ -427,14 +423,14 @@ export function Editor({
                       {
                         version: d.project.version,
                         stage: "arabic",
-                        replace_translation: replace,
+                        replace_translation: false,
                       },
                     ),
                   );
                 })
               }
             >
-              {p.translation_source === p.arabic_version
+              {p.translation_source > 0
                 ? "Valider et relire la traduction"
                 : "Valider et traduire"}
             </button>
@@ -623,12 +619,14 @@ export function Editor({
       )}
       {jobs
         .filter(visibleJob)
-        .filter((j) => !["succeeded", "cancelled"].includes(j.state))
+        .filter((j) => !["succeeded", "cancelled", "expired"].includes(j.state))
         .map((j) => (
           <section className="job" key={j.id}>
             <h2>
               {{
                 download: "Téléchargement vidéo",
+                restore_download: "Récupération de la vidéo",
+                restore_prepare: "Vérification de la vidéo réimportée",
                 prepare: "Vérification de la vidéo",
                 transcribe: "Transcription",
                 cleanup: "Correction automatique de l’arabe",
@@ -696,6 +694,11 @@ export function Editor({
               ? "Après l’échec ou l’annulation du téléchargement, vous pouvez choisir une vidéo de votre appareil."
               : "Choisissez une vidéo depuis votre appareil."}
           </p>
+          <p>
+            Attention : la vidéo sera supprimée des serveurs après une semaine.
+            Après cela, vous devrez la réimporter pour effectuer un export
+            vidéo. Vos textes corrigés restent conservés.
+          </p>
           <label className="button">
             Importer la vidéo depuis mon appareil
             <input
@@ -755,6 +758,80 @@ export function Editor({
           </a>
         </div>
       )}
+      {translationPending && p.translation_source > 0 && (
+        <section className="panel">
+          <p>
+            Votre traduction précédente reste conservée pendant cette nouvelle
+            traduction.
+          </p>
+          <button
+            disabled={busy}
+            onClick={() =>
+              void action(async () => {
+                d.adopt(
+                  await request<Project>(
+                    `/api/projects/${p.id}/advance`,
+                    "POST",
+                    { version: d.project.version, stage: "keep_translation" },
+                  ),
+                );
+              })
+            }
+          >
+            Arrêter et conserver la traduction précédente
+          </button>
+        </section>
+      )}
+      {p.media_expired && !p.media && (
+        <section className="panel" aria-label="Récupérer la vidéo">
+          <h2>Vos textes sont conservés</h2>
+          {p.url && !p.media_uploaded ? (
+            <>
+              <p>
+                La vidéo a été supprimée après 24 heures. Elle sera
+                retéléchargée automatiquement lors du prochain export vidéo. Les
+                fichiers SRT restent disponibles.
+              </p>
+              <button
+                disabled={busy || uploading || recoveryActive}
+                onClick={() =>
+                  void action(async () => {
+                    d.adopt(
+                      await request<Project>(
+                        `/api/projects/${p.id}/media/restore`,
+                        "POST",
+                      ),
+                    );
+                  })
+                }
+              >
+                Récupérer la vidéo pour la lecture
+              </button>
+            </>
+          ) : (
+            <>
+              <p>
+                La vidéo a été supprimée après une semaine. Réimportez la même
+                vidéo originale pour l’écouter ou créer un nouvel export vidéo.
+                La transcription et la traduction corrigées sont conservées ;
+                les fichiers SRT restent disponibles.
+              </p>
+              <label>
+                Réimporter la vidéo originale
+                <input
+                  type="file"
+                  accept="video/*"
+                  disabled={busy || uploading || recoveryActive}
+                  onChange={(e) => {
+                    if (e.target.files?.[0])
+                      void sendFile(e.target.files[0], true);
+                  }}
+                />
+              </label>
+            </>
+          )}
+        </section>
+      )}
       {step === "exporter" && p.stage === "ready" && (
         <section className="panel export-panel">
           <h2>Votre vidéo sous-titrée</h2>
@@ -776,12 +853,22 @@ export function Editor({
             </label>
           </div>
           <p>
+            Les vidéos exportées sont conservées 24 heures. Les sous-titres
+            restent disponibles sans limite de durée.
+          </p>
+          <p>
             Low produit un fichier plus léger. La taille finale dépend de la
             durée.
           </p>
           <button
             className="primary"
-            disabled={busy || Boolean(exportActive) || exportReady}
+            disabled={
+              busy ||
+              uploading ||
+              Boolean(exportActive) ||
+              exportReady ||
+              (!p.media && (!p.url || p.media_uploaded))
+            }
             onClick={() =>
               void action(async () => {
                 if (
@@ -1008,14 +1095,80 @@ export function Editor({
               avant publication.
             </p>
           </details>
-          {p.stage === "arabic" &&
-            p.translation_source > 0 &&
+          {p.translation_source > 0 &&
             p.translation_source !== p.arabic_version && (
               <p className="notice">
-                L’arabe a changé. La traduction précédente est conservée ; une
-                nouvelle traduction remplacera les retouches françaises après
-                votre confirmation.
+                L’arabe a été modifié. Votre traduction française est conservée
+                et reste modifiable ; aucune retraduction automatique n’est
+                lancée.
               </p>
+            )}
+          {editable && (
+            <details className="translation-help">
+              <summary>Exporter les sous-titres seuls (SRT)</summary>
+              <p>
+                Fichiers texte avec les horodatages, sans le style de Tarjama,
+                pour votre logiciel de montage.
+              </p>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void action(() => downloadSubtitles(d.project, "ar"))
+                }
+              >
+                Télécharger l’arabe · SRT
+              </button>
+              {p.translation_source > 0 && (
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    void action(() => downloadSubtitles(d.project, "fr"))
+                  }
+                >
+                  Télécharger le français · SRT
+                </button>
+              )}
+            </details>
+          )}
+          {p.translation_source > 0 &&
+            (p.stage === "review" || p.stage === "ready") && (
+              <details className="translation-help">
+                <summary>Retraduire avec l’IA</summary>
+                <p>
+                  Cette action remplacera toute la traduction française, y
+                  compris vos corrections. Vous pouvez aussi la modifier
+                  vous-même.
+                </p>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={replace}
+                    onChange={(e) => setReplace(e.target.checked)}
+                  />{" "}
+                  Je confirme le remplacement de la traduction française.
+                </label>
+                <button
+                  disabled={busy || !replace}
+                  onClick={() =>
+                    void action(async () => {
+                      d.adopt(
+                        await request<Project>(
+                          `/api/projects/${p.id}/advance`,
+                          "POST",
+                          {
+                            version: d.project.version,
+                            stage: "retranslate",
+                            replace_translation: true,
+                          },
+                        ),
+                      );
+                      setReplace(false);
+                    })
+                  }
+                >
+                  Relancer la traduction
+                </button>
+              </details>
             )}
           <div className="segments">
             {p.segments.map((s) => (
@@ -1067,8 +1220,8 @@ export function Editor({
       <section className="danger">
         <h2>{p.archived ? "Projet archivé" : "Ranger ce projet"}</h2>
         <p>
-          L’archivage conserve la vidéo et les sous-titres. Les traitements en
-          cours continuent.
+          L’archivage conserve les textes. Les vidéos restent soumises à leur
+          délai de conservation ; les traitements en cours continuent.
         </p>
         <button
           disabled={busy || uploading}

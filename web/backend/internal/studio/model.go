@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Segment struct {
@@ -21,22 +22,26 @@ type Segment struct {
 	Version int64  `json:"version"`
 }
 type Project struct {
-	ID                string    `json:"id"`
-	Title             string    `json:"title"`
-	Archived          bool      `json:"archived,omitempty"`
-	URL               string    `json:"url,omitempty"`
-	Stage             string    `json:"stage"`
-	Version           int64     `json:"version"`
-	ArabicVersion     int64     `json:"arabic_version"`
-	ConfirmedArabic   int64     `json:"confirmed_arabic"`
-	TranslationSource int64     `json:"translation_source"`
-	ConfirmedReview   int64     `json:"confirmed_review"`
-	Generation        int64     `json:"generation"`
-	Media             string    `json:"media,omitempty"`
-	Duration          int64     `json:"duration_ms"`
-	Width             int       `json:"width"`
-	Height            int       `json:"height"`
-	Segments          []Segment `json:"segments"`
+	ID                string     `json:"id"`
+	Title             string     `json:"title"`
+	Archived          bool       `json:"archived,omitempty"`
+	URL               string     `json:"url,omitempty"`
+	Stage             string     `json:"stage"`
+	Version           int64      `json:"version"`
+	ArabicVersion     int64      `json:"arabic_version"`
+	ConfirmedArabic   int64      `json:"confirmed_arabic"`
+	TranslationSource int64      `json:"translation_source"`
+	ConfirmedReview   int64      `json:"confirmed_review"`
+	Generation        int64      `json:"generation"`
+	Media             string     `json:"media,omitempty"`
+	SourceSHA256      string     `json:"source_sha256,omitempty"`
+	MediaUploaded     bool       `json:"media_uploaded,omitempty"`
+	MediaExpired      bool       `json:"media_expired,omitempty"`
+	MediaExpiresAt    *time.Time `json:"media_expires_at,omitempty"`
+	Duration          int64      `json:"duration_ms"`
+	Width             int        `json:"width"`
+	Height            int        `json:"height"`
+	Segments          []Segment  `json:"segments"`
 }
 type Job struct {
 	ID            string  `json:"id"`

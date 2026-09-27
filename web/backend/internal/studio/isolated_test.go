@@ -341,6 +341,32 @@ func TestIsolatedLeaseHandoverDoesNotCancelNewOwner(t *testing.T) {
 	}
 }
 
+func TestIsolatedExpiredExportRetiresCachedResult(t *testing.T) {
+	b := newTestBroker(t)
+	m := isolatedFixture(t, b)
+	ctx := context.Background()
+	if _, err := operate(m, ctx, testInput(t, m)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.Store.DB.Exec(ctx, "UPDATE jobs SET kind='export_fr_low',state='expired' WHERE id=$1", m.Job.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Reconcile(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var retired bool
+	if err := m.Store.DB.QueryRow(ctx, "SELECT retired FROM media_operations").Scan(&retired); err != nil || !retired {
+		t.Fatal("expired export cache retained", err)
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	for _, op := range b.jobs {
+		if op.acks != 1 {
+			t.Fatal("expired export result was not acknowledged", op.acks)
+		}
+	}
+}
+
 func TestIsolatedExpiredOutputNeedsExplicitRetry(t *testing.T) {
 	b := newTestBroker(t)
 	m := isolatedFixture(t, b)

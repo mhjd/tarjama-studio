@@ -189,3 +189,33 @@ func TestSessionLastsOneDayAndStillExpires(t *testing.T) {
 		}
 	}
 }
+
+func TestOIDCWorkspaceIdentityIsStableAndIssuerScoped(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	first, err := s.User(ctx, "https://identity.example", "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := Project{ID: id(), Title: "Private", Version: 1}
+	if err := s.Create(ctx, first, p); err != nil {
+		t.Fatal(err)
+	}
+	again, err := s.User(ctx, "https://identity.example", "alice")
+	if err != nil || again != first {
+		t.Fatal("login must recover existing workspace", err)
+	}
+	for _, identity := range [][2]string{{"https://identity.example", "bob"}, {"https://another.example", "alice"}} {
+		other, err := s.User(ctx, identity[0], identity[1])
+		if err != nil || other == first {
+			t.Fatal("distinct OIDC identity", err)
+		}
+		projects, err := s.List(ctx, other)
+		if err != nil || len(projects) != 0 {
+			t.Fatal("new account must start empty", err)
+		}
+		if _, err := s.Get(ctx, other, p.ID); err != ErrMissing {
+			t.Fatal("private workspace accessible", err)
+		}
+	}
+}

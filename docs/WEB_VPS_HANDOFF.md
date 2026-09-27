@@ -1,10 +1,19 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **27 septembre — regroupement vidéo et audit des comptes, non déployés :**
+> portage du regroupement automatique desktop vers l'ASS web, uniquement sur
+> les cues de rendu ; segments éditables et SRT conservés. Le prochain déploiement
+> devra reconstruire web et worker. OIDC et espaces privés existent ; inscription
+> autonome, cible publique et cycle de vie des comptes demandent encore des choix
+> et actions coordonnés avec l'administrateur. Aucun changement SSO/infrastructure.
+> [Regroupement et tests](EXPORT_DOWNLOAD_AND_GROUPING_20260927.md),
+> [décisions et actions pour les comptes](PUBLIC_ACCOUNTS_AUDIT_20260927.md).
+
 > **27 septembre — action de téléchargement préparée, non déployée :** le rendu
 > prêt utilise directement l'action principale « Télécharger la vidéo », pour la
 > qualité choisie. Sauvegarde des retouches avant le clic effectif, sans charger
-> le MP4 en mémoire JavaScript. L'audit confirme aussi que le regroupement des
-> cues courtes du desktop n'a pas été porté dans le générateur ASS web.
+> le MP4 en mémoire JavaScript. L'écart de regroupement constaté dans ce commit
+> est traité par le portage décrit ci-dessus.
 > [Comportement et écart desktop](EXPORT_DOWNLOAD_AND_GROUPING_20260927.md).
 
 > **27 septembre — accélération des longues transcriptions déployée :**

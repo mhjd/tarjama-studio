@@ -258,12 +258,8 @@ func ASS(s []Segment, w, h int, track string) string {
 	size := max(18, int(float64(min(w, h))*factor))
 	margin := max(12, w/20)
 	out := fmt.Sprintf("[Script Info]\nScriptType: v4.00+\nPlayResX: %d\nPlayResY: %d\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,%s,%d,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,2,0,2,%d,%d,%d,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n", w, h, font, size, margin, margin, max(16, h/20))
-	for _, x := range s {
-		text := x.Arabic
-		if track == "fr" {
-			text = x.French
-		}
-		out += fmt.Sprintf("Dialogue: 0,%s,%s,Default,,0,0,0,,%s\n", assTime(x.Start), assTime(x.End), assText(text))
+	for _, x := range automaticExportCues(s, track) {
+		out += fmt.Sprintf("Dialogue: 0,%s,%s,Default,,0,0,0,,%s\n", assTime(x.Start), assTime(x.End), assText(x.Text))
 	}
 	return out
 }

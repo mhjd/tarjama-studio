@@ -137,8 +137,28 @@ func TestPrivateResourcesAndCSRF(t *testing.T) {
 			t.Fatalf("%s %s: %d %s", x.method, x.path, status, b)
 		}
 	}
+	// Routes added since the initial isolation test must have the same boundary.
+	for _, x := range []struct {
+		method, suffix string
+		body           any
+	}{
+		{"PATCH", "", map[string]any{"title": "Intrusion"}},
+		{"PATCH", "/archive", map[string]any{"archived": true}},
+		{"POST", "/advance", map[string]any{"version": 1, "stage": "arabic"}},
+		{"PUT", "/media/reimport", nil}, {"POST", "/media/restore", map[string]any{"version": 1}},
+		{"GET", "/subtitles/ar.srt?version=1", nil}, {"GET", "/subtitles/fr.srt?version=1", nil},
+	} {
+		status, body := call(t, server, token, csrf, x.method, "/api/projects/"+p.ID+x.suffix, x.body)
+		if status != 404 {
+			t.Fatalf("cross-user %s %s: %d %s", x.method, x.suffix, status, body)
+		}
+	}
+	status, list := call(t, server, token, csrf, "GET", "/api/projects", nil)
+	if status != 200 || strings.Contains(string(list), p.ID) {
+		t.Fatal("project listing leaks another workspace", status, string(list))
+	}
 	token, csrf = sessionFor(t, s, owner)
-	status, _ := call(t, server, token, "bad", "DELETE", "/api/projects/"+p.ID, nil)
+	status, _ = call(t, server, token, "bad", "DELETE", "/api/projects/"+p.ID, nil)
 	if status != 403 {
 		t.Fatal("CSRF")
 	}

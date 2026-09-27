@@ -19,7 +19,7 @@ Les scénarios Playwright et le script de capture réel `web/review/record-expor
 utilisent désormais cette action unique. Le scénario d'édition vérifie également
 le clic natif et la récupération du MP4, en plus de l'accès HTTP au rendu.
 
-## Écart de regroupement constaté — non modifié ici
+## Écart constaté dans df7a347, puis corrigé à la demande du propriétaire
 
 Le regroupement desktop se trouve dans `ui/electron/export-options.ts`, fonction
 `groupExportCues`, appelée par `ui/electron/library.ts` juste avant l'export vidéo.
@@ -35,22 +35,29 @@ Le mode par défaut est `automatic` dans le desktop :
 - Les segments enregistrés ne sont pas modifiés. Les modes desktop supplémentaires
   `source` et `minimum-words` ne sont pas des options de l'interface web.
 
-Dans la version web, `ASS` dans `web/backend/internal/studio/media.go` émet
-actuellement une ligne Dialogue par segment, y compris pour le moteur isolé qui
-appelle cette fonction depuis `isolated_media.go`. `SRT` dans `subtitles.go`
-conserve lui aussi les segments et leurs horodatages. **La parité de regroupement
-desktop n'est donc pas présente.** Ce constat répond à la question du propriétaire ;
-aucune règle de regroupement, aucun texte et aucun rendu existant n'ont été
-modifiés dans ce correctif d'interface.
+Dans le commit d'interface `df7a347`, `ASS` émettait encore une ligne Dialogue
+par segment. Le propriétaire a ensuite explicitement demandé le portage :
+`export_cues.go` applique maintenant les règles ci-dessus sur une copie des cues,
+avant la génération ASS partagée par les moteurs local et isolé. Les seuils de
+temps utilisent les millisecondes entières du web ; le comptage de caractères
+utilise Unicode/NFC via la dépendance Go `x/text` déjà présente, sans normaliser
+ni réécrire le texte lui-même. Pas de nouvelle option d'interface.
 
-Pour une reprise ultérieure, porter les règles automatiques et leurs tests de
-frontière sur une copie des cues d'export ; ne jamais fusionner les segments de
-travail ni changer leurs identifiants. Distinguer cette évolution du téléchargement
-SRT fidèle aux segments, et conserver l'absence de réglages supplémentaires décidée
-dans `WEB_VPS_HANDOFF.md`.
+Les segments de travail, identifiants, corrections et horodatages stockés ne
+changent pas. Les exports **SRT conservent les cues originales** pour le montage
+externe. Seuls les nouveaux rendus vidéo bénéficient de la fusion ; les MP4
+existants ne sont ni remplacés ni invalidés automatiquement. Une fusion peut
+afficher ensemble les mots de deux segments sur leur durée commune : c'est le
+compromis de lisibilité déjà retenu sur desktop.
+
+Le prochain déploiement doit reconstruire **web et worker**, le worker préparant
+l'ASS remis au service média isolé. Aucun changement de migration, profil média
+administrateur, secrets ou protection réseau n'est nécessaire. Conserver le
+digest egress rétabli par l'administrateur et suivre la procédure normale de
+sauvegarde/qualification. Rien n'a été déployé dans ce travail.
 
 
-## Vérification
+## Vérification du bouton (df7a347)
 
 Build TypeScript/Vite et 21 tests UI réussis, dont les parcours complets avec
 export FFmpeg réel et téléchargement par la nouvelle action en Low et High.
@@ -65,3 +72,25 @@ retouche, sauvegarde sur blur, IME et conflits entre onglets également réussis
 Journal : `web/.cache/export-download-action.log`.
 Captures, enregistrements UI et exports de test conservés dans
 `web/.cache/export-download-20260927/`. Rien publié ni redéployé.
+
+## Vérification du regroupement
+
+Tests des exemples desktop, fusion suivante/précédente/en chaîne, pauses,
+chevauchement, limites 5/6 s et 7 s, 84 caractères, 17 caractères/s, Unicode/NFC,
+offset au-delà d'une heure, absence de mutation, conservation SRT et échappement
+ASS. Un rendu FFmpeg réel de deux segments fusionnables est comparé pixel par
+pixel à une référence explicitement jointe à la seconde 1. Artefact local :
+`web/.cache/media/grouped-fr-high.mp4`.
+
+Vérifications backend complètes avec `go test -race -count=1 ./...`, `go vet`,
+build Go et frontend, puis 21 tests UI réussis, dont les parcours synthétiques avec exports et téléchargements
+réels (ordinateur, Pixel 6, iPhone 15 sous Chromium). Les premiers essais ont
+détecté deux fixtures invalides dans les nouveaux tests (segments sans identité/
+arabe et corps de renommage incorrect), corrigées sans changer les contrôles
+applicatifs. Journal final : `web/.cache/grouping-auth-20260927-rerun.log`.
+
+Les tests des comptes privés et les décisions/actions pour l'inscription publique
+sont détaillés dans [l'audit des comptes](PUBLIC_ACCOUNTS_AUDIT_20260927.md).
+Reproduction complète avec les cibles existantes : `make web-test`, puis
+`make web-build`. La capture du rendu regroupé à 1 s a aussi été inspectée :
+« En effet cette explication reste nécessaire. » apparaît en entier.

@@ -24,6 +24,7 @@ import {
   type Field,
 } from "./api";
 import { Drafts } from "./drafts";
+import { SubtitleInput } from "./SubtitleInput";
 import { JobProgress, isAutomaticTextRecovery } from "./JobProgress";
 import { canVisitStep, currentStep, steps, type ProjectStep } from "./routes";
 const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -68,6 +69,7 @@ export function Editor({
     [seekVersion, setSeekVersion] = useState(0),
     [playing, setPlaying] = useState(false),
     [playbackRate, setPlaybackRate] = useState(1),
+    [optionsOpen, setOptionsOpen] = useState(false),
     [follow, setFollow] = useState(true),
     [focused, setFocused] = useState(false),
     [expanded, setExpanded] = useState(false),
@@ -78,6 +80,31 @@ export function Editor({
     [copyNotice, setCopyNotice] = useState("");
   const titleField = useRef<HTMLTextAreaElement>(null);
   const player = useRef<HTMLElement>(null);
+  const optionsPanel = useRef<HTMLDivElement>(null);
+  const optionsToggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!optionsOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !optionsPanel.current?.contains(event.target) &&
+        !optionsToggle.current?.contains(event.target)
+      )
+        setOptionsOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOptionsOpen(false);
+        optionsToggle.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [optionsOpen]);
   const pageJump = useRef(false);
   useEffect(() => {
     const element = player.current;
@@ -352,12 +379,12 @@ export function Editor({
     return (
       <label key={key} className={f}>
         <span>{f === "arabic" ? "Arabe" : "Français"}</span>
-        <textarea
+        <SubtitleInput
           aria-label={`${f === "arabic" ? "Arabe" : "Français"} ${s.id}`}
           lang={f === "arabic" ? "ar" : "fr"}
           dir={f === "arabic" ? "rtl" : "ltr"}
           rows={3}
-          ref={(el) => {
+          inputRef={(el) => {
             if (el) fields.current.set(key, el);
             else fields.current.delete(key);
           }}
@@ -981,58 +1008,86 @@ export function Editor({
               <Maximize2 size={20} aria-hidden="true" />
             )}
           </button>
-          <input
-            aria-label="Position de lecture"
-            type="range"
-            min={0}
-            max={p.duration_ms / 1000 || 1}
-            step={0.1}
-            value={current}
-            onChange={(e) => {
-              seekTo(Number(e.target.value));
-            }}
-          />
-          <div className="playback-speed">
-            <label htmlFor="playback-speed">Vitesse</label>
-            <select
-              id="playback-speed"
-              value={playbackRate}
-              onChange={(e) => changeSpeed(Number(e.target.value))}
-              aria-describedby="speed-shortcuts"
-              aria-keyshortcuts="Shift+ArrowUp Shift+ArrowDown"
+          <div className="player-timeline">
+            <input
+              aria-label="Position de lecture"
+              type="range"
+              min={0}
+              max={p.duration_ms / 1000 || 1}
+              step={0.1}
+              value={current}
+              onChange={(e) => {
+                seekTo(Number(e.target.value));
+              }}
+            />
+            <button
+              ref={optionsToggle}
+              className="player-options-toggle"
+              aria-expanded={optionsOpen}
+              aria-controls="player-options"
+              onClick={() => setOptionsOpen(!optionsOpen)}
             >
-              {!playbackSpeeds.includes(playbackRate) && (
-                <option value={playbackRate}>{speedLabel(playbackRate)}</option>
-              )}
-              {playbackSpeeds.map((rate) => (
-                <option key={rate} value={rate}>
-                  {speedLabel(rate)}
-                  {rate === 1 ? " · normale" : ""}
-                </option>
-              ))}
-            </select>
-            <span id="speed-shortcuts" className="speed-shortcuts">
-              Maj + ↑ accélérer · Maj + ↓ ralentir
-            </span>
+              Options · {speedLabel(playbackRate)}
+            </button>
           </div>
-          <nav className="player-page-nav" aria-label="Navigation dans la page">
-            <button
-              onClick={() => scrollPage("top")}
-              title="Aller en haut de la page"
-              aria-label="Aller en haut de la page"
+          <div
+            id="player-options"
+            ref={optionsPanel}
+            className="player-secondary"
+            data-open={optionsOpen}
+          >
+            <div className="playback-speed">
+              <label htmlFor="playback-speed">Vitesse</label>
+              <select
+                id="playback-speed"
+                value={playbackRate}
+                onChange={(e) => changeSpeed(Number(e.target.value))}
+                aria-describedby="speed-shortcuts"
+                aria-keyshortcuts="Shift+ArrowUp Shift+ArrowDown"
+              >
+                {!playbackSpeeds.includes(playbackRate) && (
+                  <option value={playbackRate}>
+                    {speedLabel(playbackRate)}
+                  </option>
+                )}
+                {playbackSpeeds.map((rate) => (
+                  <option key={rate} value={rate}>
+                    {speedLabel(rate)}
+                  </option>
+                ))}
+              </select>
+              <span id="speed-shortcuts" className="speed-shortcuts">
+                Maj + ↑ accélérer · Maj + ↓ ralentir
+              </span>
+            </div>
+            <nav
+              className="player-page-nav"
+              aria-label="Navigation dans la page"
             >
-              <ArrowUpToLine size={19} aria-hidden="true" />
-              <span>Haut</span>
-            </button>
-            <button
-              onClick={() => scrollPage("bottom")}
-              title="Aller en bas de la page"
-              aria-label="Aller en bas de la page"
-            >
-              <ArrowDownToLine size={19} aria-hidden="true" />
-              <span>Bas</span>
-            </button>
-          </nav>
+              <button
+                onClick={() => {
+                  scrollPage("top");
+                  setOptionsOpen(false);
+                }}
+                title="Aller en haut de la page"
+                aria-label="Aller en haut de la page"
+              >
+                <ArrowUpToLine size={19} aria-hidden="true" />
+                <span>Haut</span>
+              </button>
+              <button
+                onClick={() => {
+                  scrollPage("bottom");
+                  setOptionsOpen(false);
+                }}
+                title="Aller en bas de la page"
+                aria-label="Aller en bas de la page"
+              >
+                <ArrowDownToLine size={19} aria-hidden="true" />
+                <span>Bas</span>
+              </button>
+            </nav>
+          </div>
         </section>
       )}
       {["transcribing", "cleaning"].includes(p.stage) && (

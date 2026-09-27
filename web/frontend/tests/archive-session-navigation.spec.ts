@@ -87,6 +87,8 @@ for (const width of [393, 1440]) {
     const play = page.getByRole("button", { name: "Lecture", exact: true });
     await expect(play).toBeVisible();
     await play.click();
+    if (width <= 640)
+      await page.getByRole("button", { name: /Options ·/ }).click();
     await page
       .getByRole("button", { name: "Aller en bas de la page", exact: true })
       .click();
@@ -98,6 +100,8 @@ for (const width of [393, 1440]) {
         ),
       )
       .toBeLessThan(3);
+    if (width <= 640)
+      await page.getByRole("button", { name: /Options ·/ }).click();
     await page
       .getByRole("button", { name: "Aller en haut de la page", exact: true })
       .click();

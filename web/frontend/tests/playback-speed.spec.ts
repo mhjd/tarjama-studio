@@ -16,6 +16,27 @@ for (const width of [320, 393, 412, 1440]) {
     const speed = page.getByRole("combobox", { name: "Vitesse" });
     const play = page.getByRole("button", { name: "Lecture", exact: true });
     await expect(video).toHaveJSProperty("readyState", 4);
+    const options = page.getByRole("button", { name: /Options ·/ });
+    if (width <= 640) {
+      await expect(speed).toBeHidden();
+      const compact = await player.boundingBox();
+      expect(compact!.height).toBeLessThan(165);
+      await page.screenshot({
+        path: `test-results/mobile-reader-${width}.png`,
+      });
+      const transport = await play.boundingBox();
+      await options.click();
+      await expect(speed).toBeVisible();
+      expect((await play.boundingBox())!.y).toBe(transport!.y);
+      const top = await page
+        .getByRole("button", { name: "Aller en haut de la page", exact: true })
+        .boundingBox();
+      const rate = await speed.boundingBox();
+      expect(Math.abs(top!.y - rate!.y)).toBeLessThan(2);
+      await page.screenshot({
+        path: `test-results/mobile-options-${width}.png`,
+      });
+    }
     await expect(speed).toHaveValue("1");
     const before = await play.boundingBox();
     for (const value of ["0.5", "1.25", "2", "1"]) {
@@ -27,8 +48,10 @@ for (const width of [320, 393, 412, 1440]) {
       expect(Math.abs(after!.y - before!.y)).toBeLessThan(1);
     }
     for (const expanded of [false, true]) {
-      if (expanded)
+      if (expanded) {
         await page.getByRole("button", { name: "Agrandir la vidéo" }).click();
+        if (width <= 640) await options.click();
+      }
       const bounds = await player.boundingBox();
       const control = await play.boundingBox();
       expect(
@@ -48,6 +71,12 @@ for (const width of [320, 393, 412, 1440]) {
       await player.screenshot({
         path: `test-results/speed-${width}-${expanded ? "expanded" : "compact"}.png`,
       });
+    }
+    if (width <= 640) {
+      await page.keyboard.press("Escape");
+      await expect(speed).toBeHidden();
+      await expect(options).toBeFocused();
+      await options.click();
     }
     // Keyboard shortcuts use the media's current rate, not a stale React closure.
     await speed.evaluate((element) => element.blur());

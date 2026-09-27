@@ -743,7 +743,7 @@ textarea.project-title {
     scroll-behavior: auto;
   }
 }
-.player > input[type="range"] {
+.player-timeline input[type="range"] {
   grid-column: 1 / -1;
   width: 100%;
   margin: 0;
@@ -940,5 +940,131 @@ textarea.project-title {
   }
   .speed-shortcuts {
     display: none;
+  }
+}
+
+/* Secondary mobile actions require an intentional opening, away from transport. */
+.player-timeline {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.player-timeline input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+.player-options-toggle {
+  display: none;
+}
+.player-secondary {
+  display: contents;
+}
+@media (max-width: 640px) {
+  .player-options-toggle {
+    display: block;
+    flex: none;
+    min-height: 44px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #aebdb6;
+    background: transparent;
+    border-color: transparent;
+  }
+  .player-secondary {
+    display: none;
+  }
+  .player-secondary[data-open="true"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    padding: 10px;
+    background: #1b2726;
+    border: 1px solid #425650;
+    border-radius: 14px;
+    box-shadow: 0 -4px 20px #080d0e66;
+  }
+  .player-secondary .playback-speed {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .player-secondary .playback-speed select {
+    width: 80px;
+    padding: 6px;
+  }
+  .player-secondary .player-page-nav {
+    gap: 6px;
+  }
+  .player-secondary .player-page-nav button {
+    padding: 6px 8px;
+    gap: 4px;
+    font-size: 12px;
+  }
+  .player-secondary .player-page-nav svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .editor .page-title {
+    margin-bottom: 8px;
+    gap: 6px;
+  }
+  .editor textarea.project-title {
+    font-size: 22px !important;
+  }
+  .editor .steps {
+    margin: 14px 0 18px;
+  }
+  .editor-toolbar {
+    margin-top: 16px;
+  }
+  .editor .translation-help {
+    margin: 4px 0 8px;
+  }
+  .editor .translation-help summary {
+    padding: 8px 0;
+  }
+  .segment {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+  }
+  .segment .timestamp {
+    min-height: 36px;
+    font-size: 12px;
+  }
+  .segment label {
+    margin: 4px 0 0;
+  }
+  .segment label > span {
+    font-size: 12px;
+    color: #aebdb6;
+  }
+  .segment .fields.bilingual {
+    gap: 8px;
+  }
+  .segment textarea {
+    min-height: 44px;
+    padding: 6px 8px;
+    margin: 4px 0 0;
+    overflow-y: hidden;
+    resize: none;
+  }
+  .segment .arabic textarea,
+  .segment .readonly-arabic {
+    font-size: 22px;
+    line-height: 1.55;
+  }
+  .segment .french textarea {
+    font-size: 16px;
+    line-height: 1.45;
   }
 }

@@ -137,3 +137,52 @@ IA payant, aucun compte réel et aucune donnée utilisateur ne sont nécessaires
 - [OIDC Back-Channel Logout](https://openid.net/specs/openid-connect-backchannel-1_0.html)
 
 La passation et les prérequis précis sont dans [KEYCLOAK_ADMIN_HANDOFF.md](KEYCLOAK_ADMIN_HANDOFF.md).
+
+## Images et recette préparées
+
+Code applicatif des images : `375ce90` sur `web-vps`. Les images web, worker
+(incluant le regroupement ASS desktop) et Keycloak ont été construites localement
+puis importées par `vps-preview image-import`, sans activation. Références
+exactes dans `web/deploy/keycloak/images-20260927.json` :
+
+| Composant | Digest importé (`preview.local/atelier/web@sha256:…`) |
+| --- | --- |
+| web | `df855f6b215d597546c8576f2d7a70ce38b4d50d81e2c00579647c908445113f` |
+| worker | `f6c6614fae606562f71739641bf1ceb0cd01b5a00d117352e9595df8045cc28b` |
+| Keycloak | `2b952e5325c7420046d7b94f46186535f4ef2ac439bb892f950374991544265e` |
+
+`web/deploy/preview/keycloak-candidate-20260927.yml` est une recette **arrêtée**,
+avec des domaines `.invalid` délibérés : aucun domaine public n'a été choisi ni
+créé. Elle préserve les volumes existants et l'egress réparé. Ne pas l'appliquer
+sur l'atelier actif. Les anciens jobs `preview-check`/`reference-check` sont
+conservés, mais **ne qualifient pas la nouvelle authentification publique**.
+
+Reproduction de cette recette d'examen (remplacer ensuite les origines et les
+métadonnées SMTP par les valeurs validées par l'administrateur) :
+
+```sh
+make web-keycloak-recipe ARGS='--base web/deploy/preview/active-long-transcript-20260927.yml --images web/deploy/keycloak/images-20260927.json --app-origin https://tarjama.invalid --identity-origin https://identity.tarjama.invalid --admin-origin https://admin.identity.tarjama.invalid --smtp-host smtp.invalid --smtp-user tarjama --smtp-from noreply@tarjama.invalid --output web/deploy/preview/keycloak-candidate-20260927.yml'
+vps-preview validate atelier --file web/deploy/preview/keycloak-candidate-20260927.yml
+vps-preview plan atelier --file web/deploy/preview/keycloak-candidate-20260927.yml
+```
+
+Les deux commandes ont été exécutées : refus **« Budget de stockage dépassé »**
+(19 GiB contre 16 GiB autorisés). Ce n'est donc pas une recette validée pour
+activation. Les cinq références de secrets et les deux nouvelles capacités
+réseau sont également absentes du catalogue ; le moteur s'arrête sur la première
+contrainte et ne les a pas encore toutes évaluées. Aucune limite contournée,
+aucun PVC existant redimensionné ou supprimé.
+
+La recette privée active reste validée, révision `39aef9dd3599278d`, quatre
+services prêts lors du contrôle final. La validation de la nouvelle recette et
+la qualification HTTPS/SMTP/réseau restent à reprendre après la passation.
+
+## Non-régression finale
+
+`make web-test` réussi sur le même code : suite Go avec détection de courses,
+`go vet`, compilation TypeScript/Vite, **59 tests Playwright** (5 minutes), puis
+sauvegarde/restauration PostgreSQL applicative. Journal local :
+`web/.cache/keycloak-regression-final.log`. Le parcours Keycloak réel décrit
+plus haut est un test supplémentaire séparé. Les parcours vidéo de la suite
+utilisent des fixtures ; ils ne constituent pas de nouveaux essais IA payants
+ou une qualification du futur domaine public.

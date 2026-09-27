@@ -125,3 +125,19 @@ comme résolus par l'installation de Keycloak.
 
 Merci de retourner les opérations réalisées, les capacités restant bloquées,
 les origines et références retenues, et les diagnostics utiles sans secrets.
+
+## Livrables exacts et état de validation
+
+- Code applicatif préparé : commit `375ce90` ; images web/worker construites sur
+  ce commit. Références importées : `web/deploy/keycloak/images-20260927.json`.
+- Recette à examiner : `web/deploy/preview/keycloak-candidate-20260927.yml`.
+  Origines `.invalid` à remplacer avant toute qualification réelle ; six
+  services tous `enabled: false`, quatre volumes, quatre jobs.
+- `validate` **et** `plan` ont été tentés : `Budget de stockage dépassé`.
+  La limite des 16 GiB bloque les 19 GiB demandés. Les secrets/capacités manquants
+  restent à enregistrer ; ne pas conclure que le reste a déjà été validé.
+- Recette active préservée : `active-long-transcript-20260927.yml`, révision
+  `39aef9dd3599278d`, quatre composants prêts lors du dernier contrôle.
+- Le regroupement automatique des cues ASS desktop et le bouton principal de
+  téléchargement font déjà partie des images préparées, sans altérer les textes
+  éditables ni les exports SRT. Ils attendent aussi le prochain déploiement.

@@ -1,0 +1,12 @@
+# Explicitly test changed sources against an already cached runtime, without
+# rebuilding/importing. This does not qualify a future production image digest.
+services:
+  keycloak:
+    entrypoint: [/bin/bash, /qualification/source-runtime.sh]
+    tmpfs: ["/tmp:size=1024m,mode=1777"]
+    mem_limit: 2g
+    environment:
+      JAVA_OPTS_KC_HEAP: -Xms128m -Xmx512m
+    volumes:
+      - ../../keycloak-tests/source-runtime.sh:/qualification/source-runtime.sh:ro
+      - ./entrypoint.sh:/qualification/entrypoint.sh:ro

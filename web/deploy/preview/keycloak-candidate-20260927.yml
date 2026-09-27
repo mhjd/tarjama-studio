@@ -1,9 +1,10 @@
-# STOPPED CANDIDATE. New secrets/network/storage/public routing required; see docs/KEYCLOAK_ADMIN_HANDOFF.md.
+# DRAFT: current image digests pending coordinated build/import. NOT DEPLOYABLE.
+# STOPPED CANDIDATE. Check image provenance, private administration and public routing; see docs/KEYCLOAK_SINGLE_DOMAIN_20260927.md.
 version: 1
 services:
   web:
     enabled: false
-    image: preview.local/atelier/web@sha256:df855f6b215d597546c8576f2d7a70ce38b4d50d81e2c00579647c908445113f
+    image: REQUIRED_WEB_IMAGE
     args:
     - api
     uid: 10001
@@ -12,8 +13,8 @@ services:
     env:
       APP_MODE: production
       LISTEN_ADDR: 0.0.0.0:8090
-      PUBLIC_ORIGIN: https://tarjama.invalid
-      OIDC_ISSUER: https://identity.tarjama.invalid/realms/tarjama
+      PUBLIC_ORIGIN: https://tarjama.runagen.com
+      OIDC_ISSUER: https://tarjama.runagen.com/identity/realms/tarjama
       OIDC_CLIENT_ID: tarjama-web
       OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
       DATABASE_URL_FILE: /run/db/database_url
@@ -43,14 +44,14 @@ services:
       path: /readyz
   worker:
     enabled: false
-    image: preview.local/atelier/web@sha256:f6c6614fae606562f71739641bf1ceb0cd01b5a00d117352e9595df8045cc28b
+    image: REQUIRED_WORKER_IMAGE
     args:
     - worker
     uid: 10001
     gid: 10001
     env:
       APP_MODE: production
-      PUBLIC_ORIGIN: https://tarjama.invalid
+      PUBLIC_ORIGIN: https://tarjama.runagen.com
       DATABASE_URL_FILE: /run/db/database_url
       ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
       GROQ_API_KEY_FILE: /run/groq/api_key
@@ -179,31 +180,26 @@ services:
     tmp: 64Mi
   keycloak:
     enabled: false
-    image: preview.local/atelier/web@sha256:2b952e5325c7420046d7b94f46186535f4ef2ac439bb892f950374991544265e
+    image: REQUIRED_KEYCLOAK_IMAGE
     uid: 1000
     gid: 1000
     port: 8080
     env:
-      KC_HOSTNAME: https://identity.tarjama.invalid
-      KC_HOSTNAME_ADMIN: https://admin.identity.tarjama.invalid
+      KC_HOSTNAME: https://tarjama.runagen.com/identity
+      KC_HOSTNAME_ADMIN: https://localhost:9443/identity
+      KC_HTTP_RELATIVE_PATH: /identity
       KC_HTTP_ENABLED: 'true'
       KC_HTTP_MANAGEMENT_HEALTH_ENABLED: 'false'
       KC_PROXY_HEADERS: xforwarded
       KC_DB_URL: jdbc:postgresql://pv-authdb:5432/keycloak
       KC_DB_USERNAME: keycloak
-      TARJAMA_PUBLIC_ORIGIN: https://tarjama.invalid
+      TARJAMA_PUBLIC_ORIGIN: https://tarjama.runagen.com
       TARJAMA_BACKCHANNEL_URL: http://web:8080/auth/backchannel-logout
-      TARJAMA_SMTP_HOST: smtp.invalid
-      TARJAMA_SMTP_PORT: '587'
-      TARJAMA_SMTP_USER: tarjama
-      TARJAMA_SMTP_FROM: noreply@tarjama.invalid
     secrets:
     - name: tarjama-keycloak-db
       path: /run/keycloak-db
     - name: tarjama-keycloak-client
       path: /run/keycloak-client
-    - name: tarjama-keycloak-mail
-      path: /run/keycloak-mail
     - name: tarjama-keycloak-bootstrap
       path: /run/keycloak-bootstrap
     configs:
@@ -212,17 +208,16 @@ services:
     connect:
     - authdb
     - web
-    egress:
-    - keycloak-smtp
+    egress: []
     resources:
       cpu: 1000m
       memory: 1536Mi
     tmp: 256Mi
     health:
-      path: /health/ready
+      path: /identity/health/ready
 jobs:
   migrate:
-    image: preview.local/atelier/web@sha256:df855f6b215d597546c8576f2d7a70ce38b4d50d81e2c00579647c908445113f
+    image: REQUIRED_WEB_IMAGE
     uid: 10001
     gid: 10001
     args:
@@ -357,34 +352,41 @@ configs:
     tarjama-realm.json: "{\n  \"realm\": \"tarjama\",\n  \"displayName\": \"Tarjama\"\
       ,\n  \"enabled\": true,\n  \"sslRequired\": \"all\",\n  \"registrationAllowed\"\
       : true,\n  \"registrationEmailAsUsername\": true,\n  \"loginWithEmailAllowed\"\
-      : true,\n  \"duplicateEmailsAllowed\": false,\n  \"verifyEmail\": true,\n  \"\
-      resetPasswordAllowed\": true,\n  \"editUsernameAllowed\": false,\n  \"rememberMe\"\
-      : false,\n  \"bruteForceProtected\": true,\n  \"permanentLockout\": false,\n\
-      \  \"failureFactor\": 5,\n  \"waitIncrementSeconds\": 60,\n  \"maxFailureWaitSeconds\"\
+      : true,\n  \"duplicateEmailsAllowed\": false,\n  \"verifyEmail\": false,\n \
+      \ \"resetPasswordAllowed\": false,\n  \"editUsernameAllowed\": false,\n  \"\
+      rememberMe\": false,\n  \"bruteForceProtected\": true,\n  \"permanentLockout\"\
+      : false,\n  \"failureFactor\": 5,\n  \"waitIncrementSeconds\": 60,\n  \"maxFailureWaitSeconds\"\
       : 900,\n  \"ssoSessionIdleTimeout\": 86400,\n  \"ssoSessionMaxLifespan\": 86400,\n\
       \  \"accessTokenLifespan\": 300,\n  \"accessCodeLifespan\": 60,\n  \"accessCodeLifespanUserAction\"\
       : 600,\n  \"passwordPolicy\": \"length(12) and notUsername(undefined) and notEmail(undefined)\"\
       ,\n  \"internationalizationEnabled\": true,\n  \"supportedLocales\": [\n   \
-      \ \"fr\",\n    \"en\"\n  ],\n  \"defaultLocale\": \"fr\",\n  \"smtpServer\"\
-      : {\n    \"host\": \"${TARJAMA_SMTP_HOST}\",\n    \"port\": \"${TARJAMA_SMTP_PORT}\"\
-      ,\n    \"from\": \"${TARJAMA_SMTP_FROM}\",\n    \"fromDisplayName\": \"Tarjama\"\
-      ,\n    \"auth\": \"true\",\n    \"user\": \"${TARJAMA_SMTP_USER}\",\n    \"\
-      password\": \"${TARJAMA_SMTP_PASSWORD}\",\n    \"starttls\": \"true\",\n   \
-      \ \"ssl\": \"false\"\n  },\n  \"clients\": [\n    {\n      \"clientId\": \"\
-      tarjama-web\",\n      \"name\": \"Tarjama\",\n      \"enabled\": true,\n   \
-      \   \"protocol\": \"openid-connect\",\n      \"publicClient\": false,\n    \
-      \  \"clientAuthenticatorType\": \"client-secret\",\n      \"secret\": \"${TARJAMA_OIDC_SECRET}\"\
-      ,\n      \"standardFlowEnabled\": true,\n      \"implicitFlowEnabled\": false,\n\
-      \      \"directAccessGrantsEnabled\": false,\n      \"serviceAccountsEnabled\"\
-      : false,\n      \"fullScopeAllowed\": false,\n      \"redirectUris\": [\n  \
-      \      \"${TARJAMA_PUBLIC_ORIGIN}/auth/callback\"\n      ],\n      \"webOrigins\"\
-      : [\n        \"${TARJAMA_PUBLIC_ORIGIN}\"\n      ],\n      \"defaultClientScopes\"\
-      : [\n        \"profile\",\n        \"email\"\n      ],\n      \"attributes\"\
-      : {\n        \"pkce.code.challenge.method\": \"S256\",\n        \"post.logout.redirect.uris\"\
-      : \"${TARJAMA_PUBLIC_ORIGIN}/\",\n        \"backchannel.logout.url\": \"${TARJAMA_BACKCHANNEL_URL}\"\
-      ,\n        \"backchannel.logout.session.required\": \"true\",\n        \"backchannel.logout.revoke.offline.tokens\"\
+      \ \"fr\",\n    \"en\"\n  ],\n  \"defaultLocale\": \"fr\",\n  \"clients\": [\n\
+      \    {\n      \"clientId\": \"tarjama-web\",\n      \"name\": \"Tarjama\",\n\
+      \      \"enabled\": true,\n      \"protocol\": \"openid-connect\",\n      \"\
+      publicClient\": false,\n      \"clientAuthenticatorType\": \"client-secret\"\
+      ,\n      \"secret\": \"${TARJAMA_OIDC_SECRET}\",\n      \"standardFlowEnabled\"\
+      : true,\n      \"implicitFlowEnabled\": false,\n      \"directAccessGrantsEnabled\"\
+      : false,\n      \"serviceAccountsEnabled\": false,\n      \"fullScopeAllowed\"\
+      : false,\n      \"redirectUris\": [\n        \"${TARJAMA_PUBLIC_ORIGIN}/auth/callback\"\
+      \n      ],\n      \"webOrigins\": [\n        \"${TARJAMA_PUBLIC_ORIGIN}\"\n\
+      \      ],\n      \"defaultClientScopes\": [\n        \"profile\",\n        \"\
+      email\"\n      ],\n      \"attributes\": {\n        \"pkce.code.challenge.method\"\
+      : \"S256\",\n        \"post.logout.redirect.uris\": \"${TARJAMA_PUBLIC_ORIGIN}/\"\
+      ,\n        \"backchannel.logout.url\": \"${TARJAMA_BACKCHANNEL_URL}\",\n   \
+      \     \"backchannel.logout.session.required\": \"true\",\n        \"backchannel.logout.revoke.offline.tokens\"\
       : \"true\"\n      }\n    }\n  ],\n  \"requiredCredentials\": [\n    \"password\"\
-      \n  ]\n}\n"
+      \n  ],\n  \"requiredActions\": [\n    {\n      \"alias\": \"UPDATE_PASSWORD\"\
+      ,\n      \"name\": \"UPDATE_PASSWORD\",\n      \"providerId\": \"UPDATE_PASSWORD\"\
+      ,\n      \"enabled\": true,\n      \"defaultAction\": false,\n      \"priority\"\
+      : 0\n    },\n    {\n      \"alias\": \"UPDATE_PROFILE\",\n      \"name\": \"\
+      UPDATE_PROFILE\",\n      \"providerId\": \"UPDATE_PROFILE\",\n      \"enabled\"\
+      : false,\n      \"defaultAction\": false,\n      \"priority\": 1\n    },\n \
+      \   {\n      \"alias\": \"VERIFY_PROFILE\",\n      \"name\": \"VERIFY_PROFILE\"\
+      ,\n      \"providerId\": \"VERIFY_PROFILE\",\n      \"enabled\": false,\n  \
+      \    \"defaultAction\": false,\n      \"priority\": 2\n    },\n    {\n     \
+      \ \"alias\": \"VERIFY_EMAIL\",\n      \"name\": \"VERIFY_EMAIL\",\n      \"\
+      providerId\": \"VERIFY_EMAIL\",\n      \"enabled\": false,\n      \"defaultAction\"\
+      : false,\n      \"priority\": 3\n    }\n  ]\n}\n"
   keycloak-db-client:
     pg_service.conf: '[keycloak-init]
 

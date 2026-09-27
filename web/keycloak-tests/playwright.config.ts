@@ -6,10 +6,10 @@ export default defineConfig({
   workers: 1,
   timeout: 90000,
   use: {
-    baseURL: "http://localhost:8090",
+    baseURL: "http://localhost:8091",
     actionTimeout: 15000,
     launchOptions: { executablePath: "/usr/bin/chromium", args: ["--no-sandbox"] },
-    // Email tokens are deliberately not recorded in traces/videos.
+    // Credentials and OIDC codes are deliberately not recorded in traces/videos.
     trace: "off",
   },
   webServer: {

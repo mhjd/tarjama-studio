@@ -1,5 +1,7 @@
 {
   "web": "preview.local/atelier/web@sha256:df855f6b215d597546c8576f2d7a70ce38b4d50d81e2c00579647c908445113f",
   "worker": "preview.local/atelier/web@sha256:f6c6614fae606562f71739641bf1ceb0cd01b5a00d117352e9595df8045cc28b",
-  "keycloak": "preview.local/atelier/web@sha256:2b952e5325c7420046d7b94f46186535f4ef2ac439bb892f950374991544265e"
+  "keycloak": "preview.local/atelier/web@sha256:2b952e5325c7420046d7b94f46186535f4ef2ac439bb892f950374991544265e",
+  "status": "superseded-before-single-domain",
+  "source_commit": "375ce90"
 }

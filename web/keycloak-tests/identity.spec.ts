@@ -1,64 +1,67 @@
 import { test, expect, type Page } from "../frontend/node_modules/@playwright/test/index.js";
 
-const origin = "http://localhost:8090";
-const issuer = "http://localhost:8080/realms/tarjama";
+const origin = "http://localhost:8091";
+const issuer = origin + "/identity/realms/tarjama";
+const privateIdentity = "http://localhost:8080/identity";
 const password = "Synthetic-Passphrase-123!";
-async function emailLink(page: Page, email: string, after: number) {
-  let link = "";
-  await expect.poll(async () => {
-    const messages = await (await page.request.get("http://localhost:8025")).json();
-    for (const m of messages.slice(after).reverse()) {
-      if (m.recipients.includes(email)) {
-        const match = m.text.match(/http:\/\/localhost:8080\/realms\/tarjama\/login-actions\/action-token\?[^\s"<>]+/);
-        if (match) { link = match[0].replaceAll("&amp;", "&"); return true; }
-      }
-    }
-    return false;
-  }, { timeout: 15000 }).toBeTruthy();
-  return link;
-}
 async function login(page: Page, email: string, pass = password) {
   await page.goto(origin);
   await page.getByRole("link", { name: "Se connecter", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(origin + "/identity/"));
+  await expect(page.locator('a[href*="reset-credentials"]')).toHaveCount(0);
   await page.locator("#username").fill(email);
   await page.locator("#password").fill(pass);
   await page.locator("#kc-login").click();
   await expect(page.getByRole("heading", { name: "Mes projets" })).toBeVisible();
 }
 async function register(page: Page, email: string) {
-  const count = (await (await page.request.get("http://localhost:8025")).json()).length;
   await page.goto(origin);
+  await expect(page.getByText("Pas de validation ni de récupération par email.", {exact:false})).toBeVisible();
   await page.getByRole("link", { name: "Créer mon compte" }).click();
+  await expect(page).toHaveURL(new RegExp(origin + "/identity/"));
   await page.locator("#email").fill(email);
   for (const id of ["firstName", "lastName"]) {
     if (await page.locator(`#${id}`).count()) await page.locator(`#${id}`).fill("Test");
   }
-  await page.locator('input[type="submit"],button[type="submit"]').click();
-  // No application session before the user proves ownership of the email.
-  expect((await page.request.get(`${origin}/api/session`)).status()).toBe(401);
-  await page.goto(await emailLink(page, email, count));
-  // Keycloak 26.7 sets the password only AFTER email ownership is proved.
-  await page.locator("#password-new").fill(password);
+  await page.locator("#password").fill(password);
   await page.locator("#password-confirm").fill(password);
+  expect((await page.request.get(`${origin}/api/session`)).status()).toBe(401);
   await page.locator('input[type="submit"],button[type="submit"]').click();
-  if (!page.url().startsWith(origin)) {
-    const back = page.locator('a[href^="http://localhost:8090"]');
-    if (await back.count()) await back.first().click();
-  }
   await expect(page.getByRole("heading", { name: "Mes projets" })).toBeVisible();
 }
 
-test("real Keycloak registration, verified email, private accounts, recovery, logout and revocation", async ({ browser }) => {
+test("one-origin prefixed Keycloak, no email workflow, private accounts and revocation", async ({ browser }) => {
   test.setTimeout(180000);
   const aliceContext = await browser.newContext();
   const bobContext = await browser.newContext();
   const alice = await aliceContext.newPage();
   const bob = await bobContext.newPage();
+  const assets: {url:string; status:number}[] = [];
+  alice.on('response', r => { if (r.url().includes('/identity/resources/')) assets.push({url:r.url(),status:r.status()}); });
   try {
-    const health = await alice.request.get("http://localhost:8080/health/ready");
+    const health = await alice.request.get(`${privateIdentity}/health/ready`);
     expect(health.status()).toBe(200);
     expect((await health.json()).status).toBe("UP");
+    const discovery = await (await alice.request.get(`${issuer}/.well-known/openid-configuration`)).json();
+    expect(discovery.issuer).toBe(issuer);
+    for (const key of ['authorization_endpoint','token_endpoint','jwks_uri','end_session_endpoint']) {
+      expect(discovery[key]).toMatch(new RegExp('^'+issuer+'/protocol/openid-connect/'));
+    }
+    // This is the reference proxy's filtering, not proof of the VPS proxy rules.
+    for (const path of ['/identity/admin/', '/identity/realms/master/', '/identity/health/ready', '/identity/metrics', '/identity/realms/tarjama/account/']) {
+      expect((await alice.request.get(origin+path)).status()).toBe(404);
+    }
+    expect((await alice.request.get(origin+'/auth/callback')).status()).toBe(400);
+    expect((await alice.request.post(origin+'/auth/backchannel-logout', {form:{logout_token:'unsigned'}})).status()).toBe(400);
     await register(alice, "alice@example.test");
+    const cookies = await aliceContext.cookies();
+    const identityCookies = cookies.filter(c => c.name.startsWith('KEYCLOAK') || c.name.startsWith('AUTH_SESSION'));
+    expect(identityCookies.length).toBeGreaterThan(0);
+    expect(identityCookies.every(c => c.path.startsWith('/identity/'))).toBeTruthy();
+    expect(cookies.find(c => c.name==='tarjama_session')?.path).toBe('/');
+    expect(assets.length).toBeGreaterThan(0);
+    expect(assets.every(a => a.url.startsWith(origin+'/identity/resources/') && a.status===200)).toBeTruthy();
+
     const session = await (await alice.request.get(`${origin}/api/session`)).json();
     const create = await alice.request.post(`${origin}/api/projects`, { headers: {Origin: origin, "X-CSRF-Token": session.csrf}, data: {title: "Projet privé Alice", url: ""} });
     expect(create.status()).toBe(200);
@@ -72,38 +75,47 @@ test("real Keycloak registration, verified email, private accounts, recovery, lo
 
     await alice.goto(origin);
     await alice.getByRole("button", {name: "Déconnexion"}).click();
-    await expect(alice).toHaveURL(/protocol\/openid-connect\/logout/);
-    // Without storing an ID token, Keycloak confirms the SSO logout.
+    await expect(alice).toHaveURL(new RegExp(issuer+'/protocol/openid-connect/logout'));
     await alice.locator('input[type="submit"],button[type="submit"]').click();
     await expect(alice.getByRole("link", {name: "Se connecter", exact: true})).toBeVisible();
     expect((await alice.request.get(`${origin}/api/session`)).status()).toBe(401);
     await login(alice, "alice@example.test");
     expect((await (await alice.request.get(`${origin}/api/session`)).json()).id).toBe(session.id);
 
-    // Admin credentials exist only in this disposable qualification network.
-    // The application never receives a Keycloak admin token.
-    const adminResponse = await alice.request.post("http://localhost:8080/realms/master/protocol/openid-connect/token", {form: {grant_type: "password", client_id: "admin-cli", username: "bootstrap-tarjama", password: "synthetic-only"}});
+    // Synthetic admin calls use only the private test endpoint, never the public router.
+    const adminResponse = await alice.request.post(`${privateIdentity}/realms/master/protocol/openid-connect/token`, {form: {grant_type: "password", client_id: "admin-cli", username: "bootstrap-tarjama", password: "synthetic-only"}});
     expect(adminResponse.ok()).toBeTruthy();
     const admin = (await adminResponse.json()).access_token;
     const headers = {Authorization: `Bearer ${admin}`};
-    const users = await (await alice.request.get("http://localhost:8080/admin/realms/tarjama/users?email=alice%40example.test&exact=true", {headers})).json();
+    const realm = await (await alice.request.get(`${privateIdentity}/admin/realms/tarjama`, {headers})).json();
+    expect(realm.verifyEmail).toBe(false);
+    expect(realm.resetPasswordAllowed).toBe(false);
+    expect(Object.keys(realm.smtpServer || {})).toHaveLength(0);
+    const users = await (await alice.request.get(`${privateIdentity}/admin/realms/tarjama/users?email=alice%40example.test&exact=true`, {headers})).json();
     expect(users).toHaveLength(1);
-    const revoke = await alice.request.post(`http://localhost:8080/admin/realms/tarjama/users/${users[0].id}/logout`, {headers});
-    expect(revoke.status()).toBe(204);
+    expect(users[0].emailVerified).toBe(false);
+    expect(users[0].requiredActions).not.toContain('VERIFY_EMAIL');
+    const actions = await (await alice.request.get(`${privateIdentity}/admin/realms/tarjama/authentication/required-actions`, {headers})).json();
+    for (const name of ['UPDATE_PROFILE','VERIFY_PROFILE','VERIFY_EMAIL','UPDATE_EMAIL']) {
+      expect(actions.some((a: any) => a.alias===name && a.enabled)).toBe(false);
+    }
+    // Public application-initiated actions must not allow changing an email.
+    for (const action of ['UPDATE_PROFILE','VERIFY_PROFILE','UPDATE_EMAIL']) {
+      const start = await alice.request.get(origin+'/auth/login', {maxRedirects:0});
+      const actionURL = new URL(start.headers().location);
+      actionURL.searchParams.set('kc_action', action);
+      await alice.goto(actionURL.href);
+      await expect(alice.locator('input[name="email"]')).toHaveCount(0);
+      expect(alice.url()).not.toContain('/login-actions/required-action');
+    }
+    const userURL = `${privateIdentity}/admin/realms/tarjama/users/${users[0].id}`;
+    expect((await alice.request.post(userURL+'/logout', {headers})).status()).toBe(204);
     await expect.poll(async () => (await alice.request.get(`${origin}/api/session`)).status()).toBe(401);
     expect((await bob.request.get(`${origin}/api/session`)).status()).toBe(200);
 
-    // Real recovery email and password change through the hosted login page.
-    await aliceContext.clearCookies();
-    const count = (await (await alice.request.get("http://localhost:8025")).json()).length;
-    await alice.goto(`${origin}/auth/login`);
-    await alice.locator('a[href*="reset-credentials"]').click();
-    await alice.locator("#username").fill("alice@example.test");
-    await alice.locator('input[type="submit"],button[type="submit"]').click();
-    await alice.goto(await emailLink(alice, "alice@example.test", count));
-    await alice.locator("#password-new").fill("Changed-Synthetic-Passphrase-123!");
-    await alice.locator("#password-confirm").fill("Changed-Synthetic-Passphrase-123!");
-    await alice.locator('input[type="submit"],button[type="submit"]').click();
+    // Operator-assisted recovery: independent identity proof is an operational
+    // prerequisite, not an email-ownership claim made by this synthetic test.
+    expect((await alice.request.put(userURL+'/reset-password', {headers, data:{type:'password', value:'Changed-Synthetic-Passphrase-123!', temporary:false}})).status()).toBe(204);
     await aliceContext.clearCookies();
     await login(alice, "alice@example.test", "Changed-Synthetic-Passphrase-123!");
     expect((await (await alice.request.get(`${origin}/api/session`)).json()).id).toBe(session.id);

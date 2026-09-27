@@ -1,5 +1,14 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **27 septembre, décision actualisée — domaine unique, sans email :**
+> `tarjama.runagen.com`, identité sous `/identity`, sans SMTP, validation email
+> ou récupération automatique. Claims email non vérifiés acceptés ; identité
+> et droits restent `(issuer, subject)`, contrôles OIDC conservés. Candidate
+> arrêtée avec images à reconstruire/réimporter après coordination disque ;
+> aucun déploiement ni bascule. Ce choix remplace la préparation précédente.
+> [Contrat actuel et qualification](KEYCLOAK_SINGLE_DOMAIN_20260927.md),
+> [passation administrateur](KEYCLOAK_ADMIN_HANDOFF.md).
+
 > **27 septembre — Keycloak dédié préparé, non déployé :** choix utilisateur
 > confirmé : séparer les comptes publics Tarjama de l’Authelia personnel.
 > Inscription avec email vérifié, récupération, logout/révocation, association

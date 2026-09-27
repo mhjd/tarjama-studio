@@ -53,20 +53,18 @@ services:
       - ../../.cache/keycloak-test/tarjama-realm.json:/configuration/tarjama-realm.json:ro
       - ../../.cache/keycloak-test/secrets/db:/run/keycloak-db:ro
       - ../../.cache/keycloak-test/secrets/client:/run/keycloak-client:ro
-      - ../../.cache/keycloak-test/secrets/mail:/run/keycloak-mail:ro
       - ../../.cache/keycloak-test/secrets/bootstrap:/run/keycloak-bootstrap:ro
     environment:
-      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME: http://localhost:8091/identity
+      KC_HOSTNAME_ADMIN: http://localhost:8080/identity
+      KC_HTTP_RELATIVE_PATH: /identity
+      KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: 'true'
       KC_HTTP_MANAGEMENT_HEALTH_ENABLED: 'false'
       KC_DB_URL: jdbc:postgresql://authdb:5432/keycloak
       KC_DB_USERNAME: keycloak
-      TARJAMA_PUBLIC_ORIGIN: http://localhost:8090
+      TARJAMA_PUBLIC_ORIGIN: http://localhost:8091
       TARJAMA_BACKCHANNEL_URL: http://localhost:8090/auth/backchannel-logout
-      TARJAMA_SMTP_HOST: localhost
-      TARJAMA_SMTP_PORT: '1025'
-      TARJAMA_SMTP_FROM: noreply@example.test
-      TARJAMA_SMTP_USER: synthetic
     depends_on:
       authdb: {condition: service_healthy}
     networks: [isolated]
@@ -81,12 +79,12 @@ services:
     working_dir: /work/web/backend
     environment:
       APP_MODE: test
-      PUBLIC_ORIGIN: http://localhost:8090
+      PUBLIC_ORIGIN: http://localhost:8091
       LISTEN_ADDR: 127.0.0.1:8090
       DATABASE_URL: postgres://test:synthetic-only@appdb:5432/tarjama?sslmode=disable
       ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       OIDC_PROVIDER: keycloak
-      OIDC_ISSUER: http://localhost:8080/realms/tarjama
+      OIDC_ISSUER: http://localhost:8091/identity/realms/tarjama
       OIDC_CLIENT_ID: tarjama-web
       OIDC_CLIENT_SECRET: synthetic-only
       STORAGE_DIR: /tmp/storage

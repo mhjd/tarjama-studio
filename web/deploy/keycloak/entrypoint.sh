@@ -3,12 +3,15 @@ set -eu
 # No secret in image, arguments, generated recipe or logs.
 : "${KC_HOSTNAME:?public identity URL required}"
 : "${KC_DB_URL:?dedicated identity database required}"
+if [ "${KC_HTTP_RELATIVE_PATH:-}" != /identity ]; then
+  printf 'Keycloak requires the qualified /identity prefix.\n' >&2
+  exit 1
+fi
 : "${TARJAMA_PUBLIC_ORIGIN:?application origin required}"
 : "${TARJAMA_BACKCHANNEL_URL:?application logout endpoint required}"
 KC_DB_PASSWORD="$(cat /run/keycloak-db/password)"
 TARJAMA_OIDC_SECRET="$(cat /run/keycloak-client/client_secret)"
-TARJAMA_SMTP_PASSWORD="$(cat /run/keycloak-mail/password)"
-export KC_DB_PASSWORD TARJAMA_OIDC_SECRET TARJAMA_SMTP_PASSWORD
+export KC_DB_PASSWORD TARJAMA_OIDC_SECRET
 : "${KC_DB_PASSWORD:?database password required}"
 : "${TARJAMA_OIDC_SECRET:?OIDC client secret required}"
 # Bootstrap administrator is temporary. Remove this mount after creating the

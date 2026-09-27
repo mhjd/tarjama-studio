@@ -328,3 +328,10 @@ web-keycloak-recipe:
 # Dry run by default. Explicit --apply is required in ARGS for an authorized mapping.
 web-identity-link:
 	web/.cache/tarjama identity-link $(ARGS)
+
+.PHONY: web-keycloak-source-test web-keycloak-recipe-test
+# No build/import: current entrypoint mounted into the previously cached runtime.
+web-keycloak-source-test:
+	KEYCLOAK_SOURCE_TEST=1 sh web/scripts/keycloak-test.sh
+web-keycloak-recipe-test:
+	python3 -m unittest discover -s web/keycloak-tests -p 'test_*.py'

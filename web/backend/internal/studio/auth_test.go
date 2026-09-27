@@ -53,9 +53,9 @@ func TestOIDCFlowPKCEStateNonceAudienceAndReplay(t *testing.T) {
 			case "expired":
 				exp = time.Now().Add(-time.Hour).Unix()
 			}
-			claims := map[string]any{"iss": iss, "sub": subject, "aud": aud, "nonce": n, "exp": exp, "iat": time.Now().Unix(), "email_verified": true, "sid": "identity-session"}
-			if bad == "email" {
-				claims["email_verified"] = false
+			claims := map[string]any{"iss": iss, "sub": subject, "aud": aud, "nonce": n, "exp": exp, "iat": time.Now().Unix(), "email_verified": false, "email": "unverified@example.test", "sid": "identity-session"}
+			if bad == "email-absent" {
+				delete(claims, "email_verified")
 			}
 			if bad == "sid" {
 				delete(claims, "sid")
@@ -134,7 +134,26 @@ func TestOIDCFlowPKCEStateNonceAudienceAndReplay(t *testing.T) {
 	if r = callback(state, cookie); r.StatusCode != 400 {
 		t.Fatal("callback replay accepted")
 	}
-	for _, v := range []string{"nonce", "audience", "issuer", "expired", "email", "sid"} {
+	// Neither an absent nor false email_verified claim changes identity ownership.
+	bad = "email-absent"
+	state, cookie = start()
+	if r = callback(state, cookie); r.StatusCode != 303 {
+		t.Fatal("unverified email policy", r.StatusCode)
+	}
+	firstUser, err := s.User(context.Background(), issuer.URL, subject)
+	if err != nil {
+		t.Fatal(err)
+	}
+	subject = "person-2"
+	state, cookie = start()
+	if r = callback(state, cookie); r.StatusCode != 303 {
+		t.Fatal("second subject rejected")
+	}
+	otherUser, err := s.User(context.Background(), issuer.URL, subject)
+	if err != nil || otherUser == firstUser {
+		t.Fatal("shared unverified email merged identities", err)
+	}
+	for _, v := range []string{"nonce", "audience", "issuer", "expired", "sid"} {
 		bad = v
 		state, cookie = start()
 		if r = callback(state, cookie); r.StatusCode != 400 {

@@ -1,5 +1,10 @@
 # Identités propres à Tarjama — préparation du 27 septembre 2026
 
+> **Historique remplacé** : le propriétaire a retenu un seul domaine public et
+> aucun email automatique. Le contrat, les tests et les commandes actuels sont
+> dans [KEYCLOAK_SINGLE_DOMAIN_20260927.md](KEYCLOAK_SINGLE_DOMAIN_20260927.md).
+> Ne pas utiliser les anciennes commandes SMTP/à trois origines ci-dessous.
+
 ## Décision
 
 Keycloak est un composant de Tarjama, avec une base PostgreSQL et un realm

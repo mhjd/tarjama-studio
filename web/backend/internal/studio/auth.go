@@ -125,10 +125,11 @@ func (a *Auth) Routes(m *http.ServeMux) {
 			return
 		}
 		var claims struct {
-			EmailVerified bool   `json:"email_verified"`
-			SID           string `json:"sid"`
+			SID string `json:"sid"`
 		}
-		if a.Config.IdentityProvider == "keycloak" && (verified.Claims(&claims) != nil || !claims.EmailVerified || claims.SID == "") {
+		// No email verification is required by product policy. Email is never an
+		// identity key: only the cryptographically verified issuer/subject is used.
+		if a.Config.IdentityProvider == "keycloak" && (verified.Claims(&claims) != nil || claims.SID == "") {
 			fail()
 			return
 		}

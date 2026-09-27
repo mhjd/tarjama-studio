@@ -9,12 +9,11 @@ from pathlib import Path
 out=Path('web/.cache/keycloak-test')
 out.mkdir(parents=True, exist_ok=True)
 realm=json.loads(Path('web/deploy/keycloak/tarjama-realm.json').read_text())
-# Only the test copy allows loopback HTTP and a non-authenticated local mailbox.
+# Only the test copy allows loopback HTTP. No SMTP exists in this test.
 realm['sslRequired']='external'
-realm['smtpServer'].update(auth='false', starttls='false')
 (out/'tarjama-realm.json').write_text(json.dumps(realm))
 (out/'tarjama-realm.json').chmod(0o644)
-for directory,key in [('db','password'),('client','client_secret'),('mail','password'),('bootstrap','password')]:
+for directory,key in [('db','password'),('client','client_secret'),('bootstrap','password')]:
     dest=out/'secrets'/directory
     dest.mkdir(parents=True, exist_ok=True)
     (dest/key).write_text('synthetic-only')
@@ -22,17 +21,24 @@ for directory,key in [('db','password'),('client','client_secret'),('mail','pass
     dest.chmod(0o755)
     (dest/key).chmod(0o644)
 PY
+compose() {
+  if [ "${KEYCLOAK_SOURCE_TEST:-0}" = 1 ]; then
+    docker compose -f web/deploy/keycloak/compose.test.yml -f web/deploy/keycloak/compose.source-test.yml "$@"
+  else
+    docker compose -f web/deploy/keycloak/compose.test.yml "$@"
+  fi
+}
 cleanup() {
-  docker compose -f web/deploy/keycloak/compose.test.yml logs keycloak authdb > web/.cache/keycloak-test/services.log 2>&1 || true
-  docker compose -f web/deploy/keycloak/compose.test.yml down
+  compose logs keycloak authdb > web/.cache/keycloak-test/services.log 2>&1 || true
+  compose down
 }
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 # No published ports; this project only contains disposable synthetic databases.
-docker compose -f web/deploy/keycloak/compose.test.yml run --rm checks
+compose run --rm checks
 # The identity database uses the same non-superuser initializer as the candidate.
 # Verify an actual dump/restore, not just a realm JSON export.
-docker compose -f web/deploy/keycloak/compose.test.yml exec -T authdb sh -s <<'CHECK'
+compose exec -T authdb sh -s <<'CHECK'
 set -eu
 unset PGSERVICE PGSERVICEFILE
 export PGHOST=127.0.0.1 PGPASSWORD=synthetic-only

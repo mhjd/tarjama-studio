@@ -7,8 +7,8 @@
   "registrationEmailAsUsername": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
-  "verifyEmail": true,
-  "resetPasswordAllowed": true,
+  "verifyEmail": false,
+  "resetPasswordAllowed": false,
   "editUsernameAllowed": false,
   "rememberMe": false,
   "bruteForceProtected": true,
@@ -28,17 +28,6 @@
     "en"
   ],
   "defaultLocale": "fr",
-  "smtpServer": {
-    "host": "${TARJAMA_SMTP_HOST}",
-    "port": "${TARJAMA_SMTP_PORT}",
-    "from": "${TARJAMA_SMTP_FROM}",
-    "fromDisplayName": "Tarjama",
-    "auth": "true",
-    "user": "${TARJAMA_SMTP_USER}",
-    "password": "${TARJAMA_SMTP_PASSWORD}",
-    "starttls": "true",
-    "ssl": "false"
-  },
   "clients": [
     {
       "clientId": "tarjama-web",
@@ -74,5 +63,39 @@
   ],
   "requiredCredentials": [
     "password"
+  ],
+  "requiredActions": [
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "UPDATE_PASSWORD",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 0
+    },
+    {
+      "alias": "UPDATE_PROFILE",
+      "name": "UPDATE_PROFILE",
+      "providerId": "UPDATE_PROFILE",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 1
+    },
+    {
+      "alias": "VERIFY_PROFILE",
+      "name": "VERIFY_PROFILE",
+      "providerId": "VERIFY_PROFILE",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 2
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "VERIFY_EMAIL",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 3
+    }
   ]
 }

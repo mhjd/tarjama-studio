@@ -278,6 +278,25 @@ export function Editor({
       setBusy(false);
     }
   }
+  function downloadVideo(job: Job) {
+    // action() has flushed edits. Never download a stale render after that save.
+    if (
+      job.source_version !== d.project.version ||
+      job.generation !== d.project.generation ||
+      d.project.stage !== "ready"
+    )
+      throw new Error(
+        "Les textes ont changé. Validez-les à nouveau pour créer une vidéo à jour.",
+      );
+    // Native download keeps large videos out of JavaScript memory and preserves
+    // the project filename supplied by Content-Disposition.
+    const link = document.createElement("a");
+    link.href = `/api/projects/${p.id}/exports/${job.id}`;
+    link.download = "";
+    document.body.append(link);
+    link.click();
+    link.remove();
+  }
   async function sendFile(file: File, restore = false) {
     if (file.size > 1024 * 1024 * 1024) {
       setError("La vidéo dépasse 1 Go.");
@@ -947,39 +966,50 @@ export function Editor({
             Low produit un fichier plus léger. La taille finale dépend de la
             durée.
           </p>
-          <button
-            className="primary"
-            disabled={
-              busy ||
-              uploading ||
-              Boolean(exportActive) ||
-              exportReady ||
-              (!p.media && (!p.url || p.media_uploaded))
-            }
-            onClick={() =>
-              void action(async () => {
-                if (
-                  selectedExport?.source_version === d.project.version &&
-                  ["cancelled", "failed"].includes(selectedExport.state)
-                ) {
-                  await request(
-                    `/api/projects/${p.id}/jobs/${selectedExport.id}/retry`,
-                    "POST",
-                  );
-                  return;
-                }
-                await request(`/api/projects/${p.id}/exports`, "POST", {
-                  version: d.project.version,
-                  track: "fr",
-                  quality,
-                });
-              })
-            }
-          >
-            {busy
-              ? "Envoi de la demande…"
-              : exportReady
-                ? "Vidéo prête à télécharger"
+          {exportReady && selectedExport ? (
+            <a
+              className="button primary export-download"
+              href={`/api/projects/${p.id}/exports/${selectedExport.id}`}
+              download
+              aria-disabled={busy || uploading || undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                void action(async () => downloadVideo(selectedExport));
+              }}
+            >
+              Télécharger la vidéo
+            </a>
+          ) : (
+            <button
+              className="primary"
+              disabled={
+                busy ||
+                uploading ||
+                Boolean(exportActive) ||
+                (!p.media && (!p.url || p.media_uploaded))
+              }
+              onClick={() =>
+                void action(async () => {
+                  if (
+                    selectedExport?.source_version === d.project.version &&
+                    ["cancelled", "failed"].includes(selectedExport.state)
+                  ) {
+                    await request(
+                      `/api/projects/${p.id}/jobs/${selectedExport.id}/retry`,
+                      "POST",
+                    );
+                    return;
+                  }
+                  await request(`/api/projects/${p.id}/exports`, "POST", {
+                    version: d.project.version,
+                    track: "fr",
+                    quality,
+                  });
+                })
+              }
+            >
+              {busy
+                ? "Envoi de la demande…"
                 : exportActive
                   ? "Création en cours…"
                   : selectedExport?.state === "cancelled"
@@ -987,22 +1017,8 @@ export function Editor({
                     : selectedExport?.state === "failed"
                       ? "Réessayer la création"
                       : "Créer la vidéo"}
-          </button>
-          {jobs
-            .filter(
-              (j) =>
-                j.kind.startsWith("export_") &&
-                j.state === "succeeded" &&
-                j.source_version === p.version,
-            )
-            .map((j) => (
-              <p key={j.id}>
-                <a href={`/api/projects/${p.id}/exports/${j.id}`} download>
-                  Télécharger · {j.kind.endsWith("low") ? "Low" : "High"} ·{" "}
-                  {j.kind.includes("_ar_") ? "arabe" : "français"}
-                </a>
-              </p>
-            ))}
+            </button>
+          )}
         </section>
       )}
       {showPlayer && (

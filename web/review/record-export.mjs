@@ -13,11 +13,11 @@ export async function exportAndInspect(page,mark,waitReady,videoID,name){
   await upload(root+'/'+transcriptName,transcriptName);
   const indexes=[0,1,Math.floor(project.segments.length/2),project.segments.length-2,project.segments.length-1];
   console.log('TRANSLATION_SAMPLE '+JSON.stringify({duration_ms:project.duration_ms,segments:indexes.map(i=>project.segments[i])}));
-  for(const [track,label] of [['fr','français']]) {
+  for(const track of ['fr']) {
    await mark('export-'+track);
    const existing=jobs.some(j=>j.kind==='export_fr_high'&&j.source_version===project.version&&['queued','running','waiting_provider','succeeded'].includes(j.state));
    if(!existing)await page.getByRole('button',{name:'Créer la vidéo',exact:true}).click();
-   const link=page.getByRole('link',{name:`Télécharger · High · ${label}`,exact:true});
+   const link=page.getByRole('link',{name:'Télécharger la vidéo',exact:true});
    await waitReady(link);
    const pending=page.waitForEvent('download',{timeout:60000});await link.click();const download=await pending;
    const filename=`tarjama-${videoID}-${name}-${track}-high.mp4`;

@@ -116,7 +116,7 @@ for (const device of [
       await mark("07-export-high");
       await page.getByRole("button", { name: "Créer la vidéo" }).click();
       const link = page.getByRole("link", {
-        name: "Télécharger · High · français",
+        name: "Télécharger la vidéo",
         exact: true,
       });
       await expect(link).toBeVisible({ timeout: 30000 });

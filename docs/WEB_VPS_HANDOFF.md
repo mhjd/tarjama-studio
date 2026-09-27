@@ -1,5 +1,12 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **27 septembre — action de téléchargement préparée, non déployée :** le rendu
+> prêt utilise directement l'action principale « Télécharger la vidéo », pour la
+> qualité choisie. Sauvegarde des retouches avant le clic effectif, sans charger
+> le MP4 en mémoire JavaScript. L'audit confirme aussi que le regroupement des
+> cues courtes du desktop n'a pas été porté dans le générateur ASS web.
+> [Comportement et écart desktop](EXPORT_DOWNLOAD_AND_GROUPING_20260927.md).
+
 > **27 septembre — accélération des longues transcriptions déployée :**
 > code `78a5fe2`, révision `39aef9dd3599278d`, sauvegarde et qualification réussies,
 > quatre services prêts.

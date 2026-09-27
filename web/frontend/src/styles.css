@@ -53,6 +53,14 @@ button.primary,
   border-color: #b2d89d;
   font-weight: 650;
 }
+.export-download {
+  display: inline-flex;
+  align-items: center;
+}
+.export-download[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: wait;
+}
 header {
   display: flex;
   justify-content: space-between;

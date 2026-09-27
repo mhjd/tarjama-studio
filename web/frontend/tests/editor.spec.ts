@@ -254,9 +254,15 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   ).toBeVisible();
   await page.getByRole("button", { name: "Créer la vidéo" }).click();
   await expect(
-    page.getByRole("link", { name: /Télécharger · Low/ }),
+    page.getByRole("link", { name: "Télécharger la vidéo" }),
   ).toBeVisible({ timeout: 30000 });
-  const link = page.getByRole("link", { name: /Télécharger · Low/ });
+  const link = page.getByRole("link", { name: "Télécharger la vidéo" });
+  const downloaded = page.waitForEvent("download");
+  await link.click();
+  const file = await downloaded;
+  expect(await file.failure()).toBeNull();
+  expect(file.suggestedFilename()).toMatch(/\.mp4$/);
+  expect((await readFile((await file.path())!)).length).toBeGreaterThan(1000);
   const download = await page.request.get((await link.getAttribute("href"))!);
   expect(download.status()).toBe(200);
   expect(download.headers()["content-type"]).toContain("video/mp4");
@@ -275,7 +281,7 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
     page.getByRole("button", { name: "Valider et exporter" }).last(),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /Télécharger · Low/ }),
+    page.getByRole("link", { name: "Télécharger la vidéo" }),
   ).toHaveCount(0);
   expect((await page.request.get(originalExport!)).status()).toBe(200);
   await page
@@ -714,10 +720,10 @@ for (const state of ["cancelled", "failed"]) {
     }
     job.state = "succeeded";
     await expect(
-      panel.getByRole("button", { name: "Vidéo prête à télécharger" }),
-    ).toBeDisabled();
+      panel.getByRole("link", { name: "Télécharger la vidéo" }),
+    ).toBeEnabled();
     await expect(
-      panel.getByRole("link", { name: "Télécharger · Low · français" }),
+      panel.getByRole("link", { name: "Télécharger la vidéo" }),
     ).toBeVisible();
     await panel.getByLabel("Qualité").selectOption("high");
     await expect(
@@ -725,8 +731,8 @@ for (const state of ["cancelled", "failed"]) {
     ).toBeEnabled();
     await panel.getByLabel("Qualité").selectOption("low");
     await expect(
-      panel.getByRole("button", { name: "Vidéo prête à télécharger" }),
-    ).toBeDisabled();
+      panel.getByRole("link", { name: "Télécharger la vidéo" }),
+    ).toBeEnabled();
     expect(retries).toBe(1);
     expect(creates).toBe(0);
   });

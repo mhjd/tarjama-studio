@@ -1,9 +1,9 @@
 # Passation complète — Tarjama Studio web sur VPS
 
-> **27 septembre — lecteur mobile compact, en préparation :** vitesse et Haut/Bas
+> **27 septembre — lecteur mobile compact, déployé :** vitesse et Haut/Bas
 > regroupés derrière « Options », champs de sous-titres adaptatifs, marges réduites
-> sur téléphone. Aucun changement backend. Cette amélioration n'est pas encore
-> déployée ; reconstruire l'image API avant la prochaine livraison.
+> sur téléphone. Aucun changement backend. Révision `035f4cac81045995`,
+> sauvegarde et qualification HTTP/OIDC/TLS réussies ; quatre services prêts.
 > [Comportement et vérifications](MOBILE_READER_COMPACT_20260927.md).
 
 > **27 septembre — conservation des vidéos et exports texte, déployé :**

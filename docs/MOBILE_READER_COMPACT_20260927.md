@@ -1,5 +1,9 @@
 # Lecteur et sous-titres compacts sur téléphone — 27 septembre 2026
 
+> Déployé le 2026-09-27 13:34 UTC, révision `035f4cac81045995`.
+> Sauvegarde, disponibilité des quatre services et qualification HTTP/OIDC/TLS réussies.
+> Les mentions de préparation/non-déploiement plus bas sont historiques.
+
 ## Décision et comportement
 
 Le propriétaire signale deux problèmes : la vitesse et la navigation haut/bas
@@ -72,3 +76,28 @@ Livraison `tarjama-ui-mobile-compact` publiée dans l'espace privé vps-share,
 à récupérer avec `vps pull` sur le Mac. Le README distingue les fixtures locales
 et l'émulation de viewport d'une qualification réelle en production.
 Originaux durables côté projet : `web/.cache/mobile-compact-20260927/videos/`.
+
+
+## Déploiement autorisé — 2026-09-27 13:34 UTC
+
+Interface `1907710`, image construite depuis `e537f93`.
+Révision active : `035f4cac81045995`.
+URL : https://atelier.preview.runagen.com.
+Recette : `web/deploy/preview/active-mobile-compact-20260927.yml`.
+
+Seule l'image `services.web.image` change dans la recette :
+`preview.local/atelier/web@sha256:1cc2eabd8cc24839fdc2200e45a762019e0e3490afa774f6755561535ed1023e`.
+Worker, egress rétabli par l'administrateur, base, tâches et configuration conservés.
+Toutes les références locales nécessaires réimportées au digest exact avant
+activation. Aucune migration SQL ni appel LLM réel.
+
+Sauvegarde `pv-job-backup-24bd7e45` : nouvelle exécution `Succeeded` avant déploiement.
+Quatre services prêts, `partial: false`.
+Qualification `pv-job-preview-check-7d68235f` : nouvelle exécution `Succeeded` après déploiement,
+contrôles `HTTPAndOIDCStart`, `SSOHeaders`, `GatewayTLS`.
+Les journaux bornés ont listé des exécutions plus anciennes : la preuve retenue
+est le statut terminal du nouveau pod, pas leurs journaux. Les parcours UI
+complets sont les tests locaux documentés plus haut ; aucun parcours MFA/vidéo
+complet relancé sur des données utilisateur en production.
+
+Preuves : `web/deploy/preview/evidence/deploy-mobile-compact-20260927/`.

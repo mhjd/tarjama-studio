@@ -252,6 +252,6 @@ func GarbageCollect(ctx context.Context, s *Store, c Config) error {
 			return e
 		}
 	}
-	_, e = s.DB.Exec(ctx, "DELETE FROM sessions WHERE expires_at<now(); DELETE FROM login_flows WHERE expires_at<now()")
+	_, e = s.DB.Exec(ctx, "DELETE FROM sessions WHERE expires_at<now(); DELETE FROM login_flows WHERE expires_at<now(); DELETE FROM oidc_logout_events WHERE expires_at<now()")
 	return e
 }

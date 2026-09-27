@@ -28,6 +28,7 @@ function App() {
   const userRef = useRef(user);
   userRef.current = user;
   const [archiving, setArchiving] = useState("");
+  const [registration, setRegistration] = useState(false);
   const visibleProjects = projects.filter(
     (p) => Boolean(p.archived) === (view === "archives"),
   );
@@ -164,8 +165,8 @@ function App() {
       setSelected(null);
     };
     window.addEventListener("tarjama:session-expired", expired);
-    void request<{ development: boolean }>("/api/config")
-      .then((c) => setDev(c.development))
+    void request<{ development: boolean; registration?: boolean }>("/api/config")
+      .then((c) => { setDev(c.development); setRegistration(Boolean(c.registration)); })
       .catch(() => {});
     void session();
     const onPop = () => {
@@ -200,7 +201,7 @@ function App() {
   async function logout() {
     try {
       await flush.current?.();
-      await request("/api/logout", "POST");
+      const result = await request<{logout_url?: string} | undefined>("/api/logout", "POST");
       navigation.current++;
       purgeDrafts();
       pendingFile.current = null;
@@ -212,6 +213,7 @@ function App() {
       setRouteLoading(false);
       changingRoute.current = false;
       commitPath("/projets", "replace");
+      if (result?.logout_url) window.location.assign(result.logout_url);
     } catch (e) {
       setError(String(e));
     }
@@ -250,6 +252,7 @@ function App() {
         >
           Se connecter
         </a>
+        {registration && <a className="button" href="/auth/register">Créer mon compte</a>}
         {dev && (
           <section>
             <p>Environnement de développement local</p>

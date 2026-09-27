@@ -10,6 +10,8 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -20,10 +22,12 @@ type identityKey struct{}
 const sessionLifetime = 24 * time.Hour
 
 type Auth struct {
-	Store    *Store
-	Config   Config
-	OAuth    oauth2.Config
-	Verifier *oidc.IDTokenVerifier
+	Store          *Store
+	Config         Config
+	OAuth          oauth2.Config
+	Verifier       *oidc.IDTokenVerifier
+	LogoutVerifier *oidc.IDTokenVerifier
+	LogoutEndpoint string
 }
 
 func NewAuth(ctx context.Context, s *Store, c Config) (*Auth, error) {
@@ -36,6 +40,19 @@ func NewAuth(ctx context.Context, s *Store, c Config) (*Auth, error) {
 		}
 		a.OAuth = oauth2.Config{ClientID: c.ClientID, ClientSecret: c.ClientSecret, RedirectURL: c.Origin + "/auth/callback", Endpoint: p.Endpoint(), Scopes: []string{oidc.ScopeOpenID, "profile"}}
 		a.Verifier = p.Verifier(&oidc.Config{ClientID: c.ClientID})
+		if c.IdentityProvider == "keycloak" {
+			a.OAuth.Scopes = append(a.OAuth.Scopes, "email")
+			// Logout tokens have different required claims from ID tokens.
+			// Signature/issuer/audience stay verified; freshness is checked below.
+			a.LogoutVerifier = p.Verifier(&oidc.Config{ClientID: c.ClientID, SkipExpiryCheck: true})
+			var metadata struct {
+				Logout string `json:"end_session_endpoint"`
+			}
+			if p.Claims(&metadata) != nil || metadata.Logout != strings.TrimRight(c.Issuer, "/")+"/protocol/openid-connect/logout" || a.OAuth.Endpoint.AuthURL != strings.TrimRight(c.Issuer, "/")+"/protocol/openid-connect/auth" {
+				return nil, errors.New("Métadonnées Keycloak invalides")
+			}
+			a.LogoutEndpoint = metadata.Logout
+		}
 	}
 	return a, nil
 }
@@ -53,7 +70,7 @@ func (a *Auth) session(w http.ResponseWriter, r *http.Request, user string) erro
 	return e
 }
 func (a *Auth) Routes(m *http.ServeMux) {
-	m.HandleFunc("GET /auth/login", func(w http.ResponseWriter, r *http.Request) {
+	login := func(w http.ResponseWriter, r *http.Request) {
 		if a.Verifier == nil {
 			http.Error(w, "OIDC non configuré", 503)
 			return
@@ -65,8 +82,18 @@ func (a *Auth) Routes(m *http.ServeMux) {
 			return
 		}
 		a.cookie(w, "tarjama_login", state, 600)
-		http.Redirect(w, r, a.OAuth.AuthCodeURL(state, oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier)), 302)
-	})
+		oauth := a.OAuth
+		if r.URL.Path == "/auth/register" {
+			oauth.Endpoint.AuthURL = strings.TrimSuffix(oauth.Endpoint.AuthURL, "/auth") + "/registrations"
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		http.Redirect(w, r, oauth.AuthCodeURL(state, oidc.Nonce(nonce), oauth2.S256ChallengeOption(verifier)), 302)
+	}
+	m.HandleFunc("GET /auth/login", login)
+	if a.Config.IdentityProvider == "keycloak" {
+		m.HandleFunc("GET /auth/register", login)
+		m.HandleFunc("POST /auth/backchannel-logout", a.backchannelLogout)
+	}
 	m.HandleFunc("GET /auth/callback", func(w http.ResponseWriter, r *http.Request) {
 		fail := func() { http.Error(w, "Connexion refusée. Recommencez la connexion.", 400) }
 		cookie, e := r.Cookie("tarjama_login")
@@ -97,12 +124,20 @@ func (a *Auth) Routes(m *http.ServeMux) {
 			fail()
 			return
 		}
+		var claims struct {
+			EmailVerified bool   `json:"email_verified"`
+			SID           string `json:"sid"`
+		}
+		if a.Config.IdentityProvider == "keycloak" && (verified.Claims(&claims) != nil || !claims.EmailVerified || claims.SID == "") {
+			fail()
+			return
+		}
 		uid, e := a.Store.User(r.Context(), verified.Issuer, verified.Subject)
 		if e != nil {
 			fail()
 			return
 		}
-		if a.session(w, r, uid) != nil {
+		if a.loginSession(w, r, uid, claims.SID, verified) != nil {
 			fail()
 			return
 		}
@@ -129,6 +164,15 @@ func (a *Auth) Routes(m *http.ServeMux) {
 			w.WriteHeader(204)
 		})
 	}
+}
+
+// client_id + an exact registered redirect URI avoids retaining ID/access/refresh
+// tokens in the application. Keycloak can ask for logout confirmation.
+func (a *Auth) LogoutURL() string {
+	if a.LogoutEndpoint == "" {
+		return ""
+	}
+	return a.LogoutEndpoint + "?" + url.Values{"client_id": {a.Config.ClientID}, "post_logout_redirect_uri": {a.Config.Origin + "/"}}.Encode()
 }
 func (a *Auth) Protect(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

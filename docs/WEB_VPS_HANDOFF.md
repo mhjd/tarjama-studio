@@ -1,5 +1,13 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **27 septembre — Keycloak dédié préparé, non déployé :** choix utilisateur
+> confirmé : séparer les comptes publics Tarjama de l’Authelia personnel.
+> Inscription avec email vérifié, récupération, logout/révocation, association
+> explicite des identités existantes et base dédiée. Recette arrêtée uniquement ;
+> exposition publique, SMTP, secrets et capacité restent à fournir par l’admin.
+> [Implémentation et tests](KEYCLOAK_INTEGRATION_20260927.md),
+> [prompt et contrat administrateur](KEYCLOAK_ADMIN_HANDOFF.md).
+
 > **27 septembre — regroupement vidéo et audit des comptes, non déployés :**
 > portage du regroupement automatique desktop vers l'ASS web, uniquement sur
 > les cues de rendu ; segments éditables et SRT conservés. Le prochain déploiement

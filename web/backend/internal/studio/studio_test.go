@@ -76,7 +76,7 @@ func testAPI(t *testing.T, s *Store) (*API, *httptest.Server) {
 func sessionFor(t *testing.T, s *Store, user string) (string, string) {
 	t.Helper()
 	token, csrf := id(), id()
-	_, e := s.DB.Exec(context.Background(), "INSERT INTO sessions VALUES($1,$2,$3,now()+interval '1 hour')", hash(token), user, csrf)
+	_, e := s.DB.Exec(context.Background(), "INSERT INTO sessions(token_hash,user_id,csrf,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')", hash(token), user, csrf)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -604,7 +604,7 @@ func TestMigrationRepeatAndReadiness(t *testing.T) {
 	}
 	var count int
 	s.DB.QueryRow(ctx, "SELECT count(*) FROM schema_migrations").Scan(&count)
-	if count != 4 {
+	if count != 5 {
 		t.Fatal(count)
 	}
 }

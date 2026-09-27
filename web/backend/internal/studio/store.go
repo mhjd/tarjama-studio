@@ -92,7 +92,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 }
 func (s *Store) Ready(ctx context.Context) error {
 	var applied bool
-	e := s.DB.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE name='004_text_attempts.sql')").Scan(&applied)
+	e := s.DB.QueryRow(ctx, "SELECT count(*)=2 FROM schema_migrations WHERE name IN ('004_text_attempts.sql','005_oidc_sessions.sql')").Scan(&applied)
 	if e != nil {
 		return e
 	}

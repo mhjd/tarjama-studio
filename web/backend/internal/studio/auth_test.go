@@ -28,7 +28,7 @@ func TestOIDCFlowPKCEStateNonceAudienceAndReplay(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/.well-known/openid-configuration":
-			json.NewEncoder(w).Encode(map[string]any{"issuer": issuer.URL, "authorization_endpoint": issuer.URL + "/authorize", "token_endpoint": issuer.URL + "/token", "jwks_uri": issuer.URL + "/keys", "response_types_supported": []string{"code"}, "subject_types_supported": []string{"public"}, "id_token_signing_alg_values_supported": []string{"RS256"}})
+			json.NewEncoder(w).Encode(map[string]any{"issuer": issuer.URL, "authorization_endpoint": issuer.URL + "/protocol/openid-connect/auth", "token_endpoint": issuer.URL + "/token", "jwks_uri": issuer.URL + "/keys", "end_session_endpoint": issuer.URL + "/protocol/openid-connect/logout", "response_types_supported": []string{"code"}, "subject_types_supported": []string{"public"}, "id_token_signing_alg_values_supported": []string{"RS256"}})
 		case "/keys":
 			json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{Key: &key.PublicKey, KeyID: "fixture", Algorithm: "RS256", Use: "sig"}}})
 		case "/token":
@@ -53,7 +53,14 @@ func TestOIDCFlowPKCEStateNonceAudienceAndReplay(t *testing.T) {
 			case "expired":
 				exp = time.Now().Add(-time.Hour).Unix()
 			}
-			payload, _ := json.Marshal(map[string]any{"iss": iss, "sub": subject, "aud": aud, "nonce": n, "exp": exp, "iat": time.Now().Unix()})
+			claims := map[string]any{"iss": iss, "sub": subject, "aud": aud, "nonce": n, "exp": exp, "iat": time.Now().Unix(), "email_verified": true, "sid": "identity-session"}
+			if bad == "email" {
+				claims["email_verified"] = false
+			}
+			if bad == "sid" {
+				delete(claims, "sid")
+			}
+			payload, _ := json.Marshal(claims)
 			signer, e := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: jose.JSONWebKey{Key: key, KeyID: "fixture"}}, nil)
 			if e != nil {
 				t.Fatal(e)
@@ -66,7 +73,7 @@ func TestOIDCFlowPKCEStateNonceAudienceAndReplay(t *testing.T) {
 		}
 	}))
 	defer issuer.Close()
-	c := Config{Mode: "production", Origin: "https://tarjama.invalid", Issuer: issuer.URL, ClientID: "tarjama", ClientSecret: "fixture"}
+	c := Config{IdentityProvider: "keycloak", Mode: "production", Origin: "https://tarjama.invalid", Issuer: issuer.URL, ClientID: "tarjama", ClientSecret: "fixture"}
 	auth, e := NewAuth(context.Background(), s, c)
 	if e != nil {
 		t.Fatal(e)
@@ -127,7 +134,7 @@ func TestOIDCFlowPKCEStateNonceAudienceAndReplay(t *testing.T) {
 	if r = callback(state, cookie); r.StatusCode != 400 {
 		t.Fatal("callback replay accepted")
 	}
-	for _, v := range []string{"nonce", "audience", "issuer", "expired"} {
+	for _, v := range []string{"nonce", "audience", "issuer", "expired", "email", "sid"} {
 		bad = v
 		state, cookie = start()
 		if r = callback(state, cookie); r.StatusCode != 400 {

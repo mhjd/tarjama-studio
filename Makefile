@@ -317,3 +317,14 @@ web-lite-vs-luna: web-prompts-check
 # Offline, bounded FFmpeg measurements; optional authorized local MP4 sample.
 web-media-performance:
 	python3 web/scripts/media-performance.py $(if $(MEDIA_BENCH_SOURCE),--source "$(MEDIA_BENCH_SOURCE)")
+
+.PHONY: web-keycloak-image web-keycloak-test web-keycloak-recipe web-identity-link
+web-keycloak-image:
+	docker build --platform linux/amd64 -f web/deploy/keycloak/Dockerfile -t tarjama-keycloak:review web/deploy/keycloak
+web-keycloak-test: web-keycloak-image
+	sh web/scripts/keycloak-test.sh
+web-keycloak-recipe:
+	python3 web/scripts/keycloak-recipe.py $(ARGS)
+# Dry run by default. Explicit --apply is required in ARGS for an authorized mapping.
+web-identity-link:
+	web/.cache/tarjama identity-link $(ARGS)

@@ -48,7 +48,7 @@ func run() error {
 	if command == "isolated-tool" {
 		return studio.RunIsolatedTool(ctx, os.Args[2:])
 	}
-	if command == "migrate" {
+	if command == "migrate" || command == "identity-link" {
 		dsn, e := studio.LoadDatabaseURL()
 		if e != nil {
 			return e
@@ -62,6 +62,9 @@ func run() error {
 			return e
 		}
 		defer s.DB.Close()
+		if command == "identity-link" {
+			return studio.IdentityLinkCommand(migration, s, os.Args[2:])
+		}
 		return s.Migrate(migration)
 	}
 	loadConfig := studio.LoadConfig

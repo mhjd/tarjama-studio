@@ -1,5 +1,10 @@
 # Comptes privés, inscription et ouverture de Tarjama — 27 septembre 2026
 
+> Mise à jour : le choix Keycloak et son intégration sont désormais préparés dans
+> [KEYCLOAK_INTEGRATION_20260927.md](KEYCLOAK_INTEGRATION_20260927.md).
+> Les constats ci-dessous décrivent l’état **avant** cette intégration ;
+> les exigences d’exposition publique, de capacité et de budget restent pertinentes.
+
 ## Conclusion et périmètre
 
 Il n'y a pas de blocage technique pour des espaces privés : ils existent déjà.

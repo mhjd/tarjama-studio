@@ -1,0 +1,78 @@
+{
+  "realm": "tarjama",
+  "displayName": "Tarjama",
+  "enabled": true,
+  "sslRequired": "all",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "ssoSessionIdleTimeout": 86400,
+  "ssoSessionMaxLifespan": 86400,
+  "accessTokenLifespan": 300,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 600,
+  "passwordPolicy": "length(12) and notUsername(undefined) and notEmail(undefined)",
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "fr",
+    "en"
+  ],
+  "defaultLocale": "fr",
+  "smtpServer": {
+    "host": "${TARJAMA_SMTP_HOST}",
+    "port": "${TARJAMA_SMTP_PORT}",
+    "from": "${TARJAMA_SMTP_FROM}",
+    "fromDisplayName": "Tarjama",
+    "auth": "true",
+    "user": "${TARJAMA_SMTP_USER}",
+    "password": "${TARJAMA_SMTP_PASSWORD}",
+    "starttls": "true",
+    "ssl": "false"
+  },
+  "clients": [
+    {
+      "clientId": "tarjama-web",
+      "name": "Tarjama",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${TARJAMA_OIDC_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": [
+        "${TARJAMA_PUBLIC_ORIGIN}/auth/callback"
+      ],
+      "webOrigins": [
+        "${TARJAMA_PUBLIC_ORIGIN}"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${TARJAMA_PUBLIC_ORIGIN}/",
+        "backchannel.logout.url": "${TARJAMA_BACKCHANNEL_URL}",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "true"
+      }
+    }
+  ],
+  "requiredCredentials": [
+    "password"
+  ]
+}

@@ -78,7 +78,7 @@ func (a *API) Routes() http.Handler {
 		w.WriteHeader(204)
 	})
 	m.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) {
-		jsonOut(w, map[string]any{"development": a.Config.Mode != "production"})
+		jsonOut(w, map[string]any{"development": a.Config.Mode != "production", "registration": a.Config.IdentityProvider == "keycloak"})
 	})
 	protected.HandleFunc("GET /api/session", func(w http.ResponseWriter, r *http.Request) {
 		jsonOut(w, map[string]string{"id": who(r).User, "csrf": who(r).CSRF})
@@ -91,7 +91,11 @@ func (a *API) Routes() http.Handler {
 			return
 		}
 		a.Auth.cookie(w, "tarjama_session", "", -1)
-		w.WriteHeader(204)
+		if logout := a.Auth.LogoutURL(); logout != "" {
+			jsonOut(w, map[string]string{"logout_url": logout})
+		} else {
+			w.WriteHeader(204)
+		}
 	})
 	protected.HandleFunc("GET /api/projects", func(w http.ResponseWriter, r *http.Request) {
 		p, e := a.Store.List(r.Context(), who(r).User)

@@ -1,10 +1,11 @@
 # Passation complète — Tarjama Studio web sur VPS
 
-> **27 septembre — conservation des vidéos et exports texte, préparé non déployé :**
+> **27 septembre — conservation des vidéos et exports texte, déployé :**
 > sources YouTube 24 h avec récupération avant export, imports une semaine avec
 > avertissement et réimportation de l'original, rendus vidéo 24 h. Textes conservés,
 > exports SRT arabe/français et retouches arabes sans retraduction automatique.
 > Cette décision remplace les anciennes règles d'invalidation de traduction.
+> Révision `4c5e196fff39edbb`, sauvegarde et qualification réussies ; quatre services prêts.
 > [Contrat, tests et limites](MEDIA_RETENTION_AND_SUBTITLES_20260927.md).
 
 > **27 septembre — sessions applicatives de 24 h :** cookie et base alignés,

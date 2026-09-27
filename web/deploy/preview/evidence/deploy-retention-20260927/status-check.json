@@ -1,0 +1,266 @@
+{
+  "ok": true,
+  "url": "https://atelier.preview.runagen.com",
+  "revision": "4c5e196fff39edbb",
+  "partial": false,
+  "services": {
+    "pv-db": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-egress": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-review": {
+      "replicas": 0,
+      "ready": 0
+    },
+    "pv-worker": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "web": {
+      "replicas": 1,
+      "ready": 1
+    }
+  },
+  "pods": [
+    {
+      "pod": "pv-db-645fd4cd7-mpbrk",
+      "component": "db",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-db-6f7bb4588b-rg8l8",
+      "component": "db",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "pv-egress-55f856994f-pcm4c",
+      "component": "egress",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "pv-egress-57564bbfd5-h86rg",
+      "component": "egress",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-76861d04-pxkkn",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-9ce26b3c-nq455",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-a27dc1ac-7mjjt",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-backup-ff87fec6-4sbxv",
+      "component": "backup",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-diagnose-export-bc9b56f5-rxdh4",
+      "component": "diagnose-export",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-651d0c95-8xssr",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-88dba1eb-hbg2r",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-d6d00ed5-787sn",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-dc4381f1-mqxd4",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-preview-check-e6c7f257-xk4wt",
+      "component": "preview-check",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-results-reliable-hour1-7372ef10-gmbgv",
+      "component": "results-reliable-hour1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-results-reliable-hour1-8b706aa1-b9c5s",
+      "component": "results-reliable-hour1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-results-reliable-hour1-bf2ee511-rmkvt",
+      "component": "results-reliable-hour1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-results-reliable-hour1-d99d74f1-rghkg",
+      "component": "results-reliable-hour1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-results-reliable-hour1-dc8afcff-js95s",
+      "component": "results-reliable-hour1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-reliable-hour1-68b000d4-xvmh6",
+      "component": "ui-reliable-hour1",
+      "phase": "Failed",
+      "reasons": []
+    },
+    {
+      "pod": "pv-job-ui-reliable-hour1-ee97bc92-gx68s",
+      "component": "ui-reliable-hour1",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-worker-5b6d9f666f-mbtw4",
+      "component": "worker",
+      "phase": "Succeeded",
+      "reasons": []
+    },
+    {
+      "pod": "pv-worker-67947bb75b-grdb8",
+      "component": "worker",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "web-658f9c47d-c2s9w",
+      "component": "web",
+      "phase": "Running",
+      "reasons": []
+    },
+    {
+      "pod": "web-6f498ff855-jt572",
+      "component": "web",
+      "phase": "Failed",
+      "reasons": []
+    }
+  ],
+  "jobs": [
+    {
+      "name": "pv-job-preview-check-651d0c95",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-88dba1eb",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-d6d00ed5",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-dc4381f1",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-preview-check-e6c7f257",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-results-reliable-hour1-7372ef10",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-results-reliable-hour1-8b706aa1",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-results-reliable-hour1-bf2ee511",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-results-reliable-hour1-d99d74f1",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-results-reliable-hour1-dc8afcff",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-reliable-hour1-68b000d4",
+      "active": 0,
+      "succeeded": 0,
+      "failed": 1,
+      "suspended": false
+    },
+    {
+      "name": "pv-job-ui-reliable-hour1-ee97bc92",
+      "active": 0,
+      "succeeded": 1,
+      "failed": 0,
+      "suspended": false
+    }
+  ]
+}

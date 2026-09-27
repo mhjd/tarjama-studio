@@ -1,5 +1,11 @@
 # Vidéos temporaires, SRT et corrections indépendantes — 27 septembre 2026
 
+> **Déployé le 27 septembre 2026, vers 10:03 UTC**, sur autorisation du propriétaire.
+> Révision `4c5e196fff39edbb`, code applicatif testé `f9f589b`, recette `4ed68d8`.
+> Sauvegarde préalable et qualification après déploiement réussies, quatre services
+> prêts. Les sections « préparation » ci-dessous retracent l'état avant activation.
+> Recette effective versionnée : `web/deploy/preview/active-media-retention-20260927.yml`.
+
 ## Décisions utilisateur
 
 - Les textes corrigés restent conservés dans le projet, même lorsque les vidéos
@@ -201,3 +207,27 @@ Passation, recette effective, statut, contrôles d'images et validation actualis
 
 Nouvelle révision candidate après alignement egress : `4c5e196fff39edbb` ;
 `validate` et `plan` réussis, `applied: false`.
+
+
+### Exécution du déploiement autorisé
+
+- URL : https://atelier.preview.runagen.com.
+- Sauvegarde nouvelle `pv-job-backup-76861d04` : pod `Succeeded` avant activation.
+- Recette validée puis appliquée : `4c5e196fff39edbb`, `partial: false`.
+- Web, worker, egress et PostgreSQL : un replica prêt chacun.
+- Qualification nouvelle `pv-job-preview-check-651d0c95` : pod `Succeeded`.
+  Commande limitée aux contrôles `HTTPAndOIDCStart`, `SSOHeaders`, `GatewayTLS`.
+- Nouveau worker : corpus local chargé (trois outils), modèle `openai/gpt-6-luna`.
+  Aucun message d'échec du passage de rétention dans le journal consulté.
+- Egress reste sur le digest `19994f1…` rétabli par l'administrateur.
+- Aucune migration SQL nécessaire ni exécutée ; aucun appel fournisseur facturé.
+
+Les journaux bornés `logs --component` ont renvoyé d'anciens pods pour backup et
+preview-check. La preuve retenue est donc le statut `Succeeded` du pod correspondant
+à chaque nouvel identifiant de job, pas le journal d'une exécution antérieure.
+Aucun hash de sauvegarde non observé n'est annoncé. Le parcours complet vidéo/MFA
+n'a pas été rejoué en production ; les tests UI et de fichiers sont ceux décrits
+plus haut. La rétention est désormais active, avec grâce d'une durée entière pour
+les sources historiques sans échéance et protection des traitements actifs.
+
+Preuves : `web/deploy/preview/evidence/deploy-retention-20260927/`.

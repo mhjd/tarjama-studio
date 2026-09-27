@@ -1,5 +1,11 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **27 septembre — correctif Haut/Bas mobile préparé, non déployé :** fermeture
+> du panneau avant le saut, focus conservé, lecteur maintenu dans le viewport
+> visible lorsque les barres du navigateur le réduisent. Signalé sur Firefox
+> Pixel ; le scénario de géométrie simulé ne remplace pas un essai matériel.
+> [Détails et limites](MOBILE_READER_COMPACT_20260927.md#correctif-hautbas--préparé-pas-encore-déployé).
+
 > **27 septembre — lecteur mobile compact, déployé :** vitesse et Haut/Bas
 > regroupés derrière « Options », champs de sous-titres adaptatifs, marges réduites
 > sur téléphone. Aucun changement backend. Révision `035f4cac81045995`,

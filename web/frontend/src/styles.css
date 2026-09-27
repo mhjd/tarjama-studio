@@ -678,7 +678,9 @@ textarea.project-title {
   .player {
     position: fixed;
     inset: auto 8px 8px;
-    bottom: max(8px, env(safe-area-inset-bottom));
+    bottom: calc(
+      max(8px, env(safe-area-inset-bottom)) + var(--player-bottom-inset, 0px)
+    );
     z-index: 10;
     grid-template-columns: 76px minmax(0, 1fr) 44px;
     gap: 8px;

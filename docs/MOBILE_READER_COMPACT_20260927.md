@@ -101,3 +101,53 @@ complets sont les tests locaux documentés plus haut ; aucun parcours MFA/vidéo
 complet relancé sur des données utilisateur en production.
 
 Preuves : `web/deploy/preview/evidence/deploy-mobile-compact-20260927/`.
+
+## Correctif Haut/Bas — préparé, pas encore déployé
+
+Signalement sur Pixel avec Firefox : après « Bas », la ligne contenant le curseur
+et Options disparaît, puis revient au défilement manuel. La cause exacte sur cet
+appareil n'est pas démontrée. Les tests précédents utilisaient un viewport fixe
+et ne vérifiaient pas cette ligne immédiatement après le saut.
+
+Deux corrections :
+
+- Rendre le focus à Options sans faire défiler, fermer le panneau, puis seulement
+  effectuer le saut après la mise à jour DOM. La destination est bornée à la fin
+  du document. La pause et la préférence de suivi sont conservées.
+- Sur téléphone, contrôler la position réelle du lecteur par rapport à
+  `visualViewport` après les événements de défilement et de redimensionnement.
+  Compenser uniquement le débordement inférieur, y compris lorsque les barres
+  du navigateur changent la surface visible. Retirer la compensation lorsque
+  cette surface revient à la normale. La mesure tient compte de la compensation
+  précédente et du placement natif pour éviter un double décalage. Aucun
+  déplacement correctif pendant un zoom tactile ; comportement desktop conservé.
+
+Le test `player-page-jump.spec.ts` vérifie Haut/Bas répétés, fermeture du panneau,
+focus, pause, visibilité et ciblage du curseur et d'Options. Il inspecte les
+rectangles et `elementFromPoint` sans clic automatique susceptible de remettre le
+contrôle à l'écran. Un scénario distinct simule explicitement une réduction de
+80 px du viewport visuel : échec avant correctif, les deux contrôles étant hors
+de la zone visible (`web/.cache/player-jump-before.log`). Ce scénario est une
+simulation contrôlée, pas une reproduction du navigateur Android ni la preuve
+que sa cause est identique au signalement.
+
+La configuration Playwright accepte `PLAYWRIGHT_BROWSER=firefox` pour exécuter
+ces mêmes tests avec Gecko. Il s'agit du Firefox desktop fourni par Playwright,
+avec dimensions/tactile de téléphone, sans les barres natives de Firefox Android.
+La qualification sur le Pixel réel reste donc à confirmer après mise en ligne.
+
+Résultat local : build TypeScript/Vite réussi et 19 tests Chromium réussis
+(navigation, vitesse, disposition, densité et quatre nouveaux cas Haut/Bas).
+Journal : `web/.cache/player-jump-after.log`. L'essai Firefox est interrompu
+avant tout résultat applicatif : son lancement headless ne se termine pas dans
+le conteneur de test. Un second lancement isolé, borné à 20 secondes, expire
+également ; journaux de démarrage dans
+`web/.cache/firefox-launch-diagnostic.log` (avertissements namespaces/graphisme,
+cause du blocage non établie). Aucun profil de sécurité modifié. Ne pas compter
+ces quatre cas Firefox comme réussis, ni comme échecs de l'application.
+
+Références techniques :
+[VisualViewport](https://developer.mozilla.org/en-US/docs/Web/API/VisualViewport)
+et [signalement Mozilla sur les éléments fixes pendant une transition de barre](https://bugzilla.mozilla.org/show_bug.cgi?id=1796228).
+Elles justifient de tester la surface visible ; elles ne prouvent pas la cause
+du problème de Tarjama.

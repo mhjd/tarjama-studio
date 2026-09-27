@@ -8,12 +8,17 @@ export default defineConfig({
   workers: 1,
   timeout: 45000,
   use: {
+    browserName:
+      process.env.PLAYWRIGHT_BROWSER === "firefox" ? "firefox" : "chromium",
     baseURL: "http://127.0.0.1:8090",
     viewport: { width: 390, height: 844 },
-    launchOptions: {
-      executablePath: "/usr/bin/chromium",
-      args: ["--no-sandbox"],
-    },
+    launchOptions:
+      process.env.PLAYWRIGHT_BROWSER === "firefox"
+        ? {}
+        : {
+            executablePath: "/usr/bin/chromium",
+            args: ["--no-sandbox"],
+          },
     trace: "retain-on-failure",
   },
   webServer: {

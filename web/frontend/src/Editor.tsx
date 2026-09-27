@@ -11,7 +11,7 @@ import {
   ArrowUpToLine,
   ArrowDownToLine,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   request,
   upload,
@@ -70,6 +70,9 @@ export function Editor({
     [playing, setPlaying] = useState(false),
     [playbackRate, setPlaybackRate] = useState(1),
     [optionsOpen, setOptionsOpen] = useState(false),
+    [pageDestination, setPageDestination] = useState<"top" | "bottom" | null>(
+      null,
+    ),
     [follow, setFollow] = useState(true),
     [focused, setFocused] = useState(false),
     [expanded, setExpanded] = useState(false),
@@ -95,7 +98,7 @@ export function Editor({
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOptionsOpen(false);
-        optionsToggle.current?.focus();
+        optionsToggle.current?.focus({ preventScroll: true });
       }
     };
     document.addEventListener("pointerdown", dismiss);
@@ -121,6 +124,63 @@ export function Editor({
       document.documentElement.style.removeProperty("--player-height");
     };
   }, [p.media, step]);
+  useEffect(() => {
+    const element = player.current;
+    const viewport = window.visualViewport;
+    if (!element || !viewport) return;
+    const mobile = window.matchMedia("(max-width: 640px)");
+    let frame = 0;
+    let inset = 0;
+    const align = () => {
+      frame = 0;
+      let next = 0;
+      if (mobile.matches && Math.abs(viewport.scale - 1) < 0.01) {
+        // Mobile browser chrome can shrink the visible area independently of
+        // the fixed-position viewport. Measure the actual box: some engines
+        // already compensate, so subtracting viewport heights would lift twice.
+        const bottom = element.getBoundingClientRect().bottom + inset;
+        const gap = parseFloat(getComputedStyle(element).bottom) - inset;
+        next = Math.max(
+          0,
+          Math.ceil(bottom + gap - viewport.offsetTop - viewport.height),
+        );
+      }
+      inset = next;
+      element.style.setProperty("--player-bottom-inset", `${inset}px`);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(align);
+    };
+    align();
+    viewport.addEventListener("resize", schedule);
+    viewport.addEventListener("scroll", schedule);
+    window.addEventListener("resize", schedule);
+    window.addEventListener("scroll", schedule, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener("resize", schedule);
+      viewport.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("scroll", schedule);
+      element.style.removeProperty("--player-bottom-inset");
+    };
+  }, [p.media, step]);
+  useLayoutEffect(() => {
+    if (pageDestination === null) return;
+    // Scroll after React closes Options, without leaving focus in a hidden
+    // panel. Clamp the destination rather than requesting an overscroll.
+    window.scrollTo({
+      top:
+        pageDestination === "top"
+          ? 0
+          : Math.max(
+              0,
+              document.documentElement.scrollHeight - window.innerHeight,
+            ),
+      behavior: "instant",
+    });
+    setPageDestination(null);
+  }, [pageDestination]);
   useEffect(() => {
     const el = titleField.current;
     if (!el) return;
@@ -285,10 +345,10 @@ export function Editor({
     pageJump.current = true;
     media.current?.pause();
     setPlaying(false);
-    window.scrollTo({
-      top: end === "top" ? 0 : document.documentElement.scrollHeight,
-      behavior: "instant",
-    });
+    if (optionsToggle.current?.getClientRects().length)
+      optionsToggle.current.focus({ preventScroll: true });
+    setOptionsOpen(false);
+    setPageDestination(end);
   }
   useEffect(() => {
     function keydown(event: KeyboardEvent) {
@@ -1065,10 +1125,7 @@ export function Editor({
               aria-label="Navigation dans la page"
             >
               <button
-                onClick={() => {
-                  scrollPage("top");
-                  setOptionsOpen(false);
-                }}
+                onClick={() => scrollPage("top")}
                 title="Aller en haut de la page"
                 aria-label="Aller en haut de la page"
               >
@@ -1076,10 +1133,7 @@ export function Editor({
                 <span>Haut</span>
               </button>
               <button
-                onClick={() => {
-                  scrollPage("bottom");
-                  setOptionsOpen(false);
-                }}
+                onClick={() => scrollPage("bottom")}
                 title="Aller en bas de la page"
                 aria-label="Aller en bas de la page"
               >

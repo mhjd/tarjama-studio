@@ -1,8 +1,8 @@
 # Ouverture des longues transcriptions — 27 septembre 2026
 
 Le propriétaire signale une ouverture lente de « Sirat un nabi » et se demande
-si la vidéo doit être entièrement chargée. Optimisation préparée sur `web-vps` ;
-pas encore déployée.
+si la vidéo doit être entièrement chargée. Optimisation déployée depuis `web-vps` : code `78a5fe2`,
+révision `39aef9dd3599278d`.
 
 ## Diagnostic et périmètre
 
@@ -81,4 +81,26 @@ Le benchmark garde désormais un seuil de 100 recalculs de mise en page pour
 détecter le retour du problème sans imposer un temps dépendant de la machine.
 Les champs longs restent entiers et modifiables ; la réponse média Range est
 vérifiée dans les deux dimensions. Pas de nouvelle validation sur téléphone
-physique ou avec Firefox Android. Aucun déploiement effectué pour ce changement.
+physique ou avec Firefox Android. Le déploiement ultérieur autorisé est consigné ci-dessous.
+
+
+## Déploiement autorisé — 2026-09-27 14:10 UTC
+
+URL : https://atelier.preview.runagen.com.
+Révision : `39aef9dd3599278d`. Code et image construits depuis `78a5fe2`.
+Recette : `web/deploy/preview/active-long-transcript-20260927.yml`.
+Seule `services.web.image` est modifiée :
+`preview.local/atelier/web@sha256:b9d25a6f0fd9c03ee1e6ce0b68f8f4cbafda5e43cbac212f24c9022a5ba021ef`.
+Le bundle construit correspond au build testé (`index-T0dkHtVp.js`).
+
+- Images conservées réimportées aux digests exacts, dont l'ancien web pour rollback
+  et le proxy administrateur `19994f1…`. Aucun changement worker, données ou schéma.
+- `validate` et `plan` réussis.
+- Nouvelle sauvegarde `pv-job-backup-f1fa61d2` réussie avant activation.
+- Quatre services prêts ; `partial: false`.
+- Qualification `pv-job-preview-check-2282c95d` réussie : HTTPAndOIDCStart,
+  SSOHeaders, GatewayTLS. Aucun appel fournisseur facturé.
+
+Preuves : `web/deploy/preview/evidence/deploy-long-transcript-20260927/`.
+Ces contrôles ne mesurent pas la vitesse sur le Pixel physique : les gains chiffrés
+restent ceux du benchmark local décrit plus haut.

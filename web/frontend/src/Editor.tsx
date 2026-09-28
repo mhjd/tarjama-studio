@@ -123,7 +123,7 @@ export function Editor({
       observer.disconnect();
       document.documentElement.style.removeProperty("--player-height");
     };
-  }, [p.media, step]);
+  }, [p.media, p.media_expired, p.stage, step]);
   useEffect(() => {
     const element = player.current;
     const viewport = window.visualViewport;
@@ -164,7 +164,7 @@ export function Editor({
       window.removeEventListener("scroll", schedule);
       element.style.removeProperty("--player-bottom-inset");
     };
-  }, [p.media, step]);
+  }, [p.media, p.media_expired, p.stage, step]);
   useLayoutEffect(() => {
     if (pageDestination === null) return;
     // Scroll after React closes Options, without leaving focus in a hidden
@@ -425,6 +425,8 @@ export function Editor({
     ((step === "traduire" || step === "exporter") && !translationPending);
   const showPlayer =
     Boolean(p.media) && !(step === "traduire" && translationPending);
+  const showMissingPlayer =
+    !p.media && p.media_expired && showSegments && canVisitStep(p, "corriger");
   const validating =
     (step === "corriger" && p.stage === "arabic") ||
     (step === "traduire" && p.stage === "review");
@@ -445,6 +447,20 @@ export function Editor({
       (j.kind.startsWith("restore_") || j.kind.startsWith("export_")) &&
       ["queued", "running", "waiting_provider"].includes(j.state),
   );
+  function restorePlayback() {
+    return action(async () => {
+      d.adopt(
+        await request<Project>(`/api/projects/${p.id}/media/restore`, "POST"),
+      );
+    });
+  }
+  function showReimport() {
+    const input = document.querySelector<HTMLInputElement>(
+      "#media-recovery input",
+    );
+    input?.scrollIntoView({ block: "center" });
+    input?.focus({ preventScroll: true });
+  }
   function visibleJob(job: Job) {
     if (job.kind.startsWith("restore_")) return job.generation === p.generation;
     if (job.kind === "translate")
@@ -573,7 +589,11 @@ export function Editor({
     );
   }
   return (
-    <div className={showPlayer ? "editor has-media" : "editor"}>
+    <div
+      className={
+        showPlayer || showMissingPlayer ? "editor has-media" : "editor"
+      }
+    >
       <button className="back" onClick={() => void action(back)}>
         ← Mes projets
       </button>
@@ -889,7 +909,11 @@ export function Editor({
         </section>
       )}
       {p.media_expired && !p.media && (
-        <section className="panel" aria-label="Récupérer la vidéo">
+        <section
+          id="media-recovery"
+          className="panel"
+          aria-label="Récupérer la vidéo"
+        >
           <h2>Vos textes sont conservés</h2>
           {p.url && !p.media_uploaded ? (
             <>
@@ -900,16 +924,7 @@ export function Editor({
               </p>
               <button
                 disabled={busy || uploading || recoveryActive}
-                onClick={() =>
-                  void action(async () => {
-                    d.adopt(
-                      await request<Project>(
-                        `/api/projects/${p.id}/media/restore`,
-                        "POST",
-                      ),
-                    );
-                  })
-                }
+                onClick={() => void restorePlayback()}
               >
                 Récupérer la vidéo pour la lecture
               </button>
@@ -1019,6 +1034,34 @@ export function Editor({
                       : "Créer la vidéo"}
             </button>
           )}
+        </section>
+      )}
+      {showMissingPlayer && (
+        <section
+          ref={player}
+          className="player player-unavailable"
+          aria-label="Lecteur indisponible"
+        >
+          <div role="status">
+            <strong>
+              {recoveryActive || uploading
+                ? "Récupération de la vidéo…"
+                : "Vidéo expirée"}
+            </strong>
+            <p>Vos sous-titres sont conservés.</p>
+          </div>
+          <button
+            disabled={busy || uploading || recoveryActive}
+            onClick={() =>
+              p.url && !p.media_uploaded
+                ? void restorePlayback()
+                : showReimport()
+            }
+          >
+            {p.url && !p.media_uploaded
+              ? "Récupérer la vidéo"
+              : "Réimporter la vidéo"}
+          </button>
         </section>
       )}
       {showPlayer && (

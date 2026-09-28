@@ -11,10 +11,6 @@ function scheduleFit(input: HTMLTextAreaElement) {
     frame = 0;
     const inputs = [...pending].filter((element) => element.isConnected);
     pending.clear();
-    if (!window.matchMedia("(max-width: 640px)").matches) {
-      for (const element of inputs) element.style.removeProperty("height");
-      return;
-    }
     // Keep the document tall while measuring. Otherwise collapsing all fields
     // can clamp scrollY and lose the reader's place near the end of a long page.
     const minHeight = document.body.style.minHeight;
@@ -29,7 +25,7 @@ function scheduleFit(input: HTMLTextAreaElement) {
   });
 }
 
-// Expand mobile text instead of leaving empty rows or hiding long subtitles.
+// Fit the text on every screen instead of leaving empty rows or hiding subtitles.
 export function SubtitleInput({
   inputRef,
   ...props
@@ -53,14 +49,11 @@ export function SubtitleInput({
       }
     });
     observer.observe(input);
-    const query = window.matchMedia("(max-width: 640px)");
-    query.addEventListener("change", fit);
     document.fonts.ready.then(() => {
       if (element.current) fit();
     });
     return () => {
       observer.disconnect();
-      query.removeEventListener("change", fit);
       pending.delete(input);
       if (!pending.size && frame) {
         cancelAnimationFrame(frame);

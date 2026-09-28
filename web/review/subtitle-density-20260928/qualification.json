@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-28",
+  "scope": "Isolated synthetic UI; no production changes or provider calls",
+  "regression": {
+    "playwright_passed": 36,
+    "go_race": "6 targeted suites passed",
+    "typescript_build": "passed"
+  },
+  "final_layout": {
+    "playwright_passed": 16,
+    "go_race": "6 targeted suites passed",
+    "typescript_build": "passed"
+  },
+  "browser": "Chromium",
+  "viewport_sizes": [
+    "1440x932",
+    "393x852",
+    "412x915"
+  ],
+  "recovery_viewport_sizes": [
+    "1440x915",
+    "393x915",
+    "412x915"
+  ],
+  "limitations": [
+    "Browser viewport emulation, not physical iPhone/Pixel",
+    "Media recovery endpoint and completion mocked; no real download",
+    "No authenticated live project inspected"
+  ],
+  "source_sha256": {
+    "web/frontend/src/Editor.tsx": "3260b62fae9358817d72f8cc2b4e4bd69959cd78305db248d31357484b58ef11",
+    "web/frontend/src/SubtitleInput.tsx": "4bc68c45932bb05df0d546ed7d728a5f6dd4f83eb65c18b2f1a426a113d23400",
+    "web/frontend/src/styles.css": "1f47ff4818c472fb762a418ccbcc4220bb9a50aeb4f6bc070aef348f9e282549",
+    "web/frontend/tests/subtitle-density.spec.ts": "dcd80033074f00f47fd42c98fe27d52610972bbc42a5e1c5e27612434736d938",
+    "web/frontend/tests/long-transcript.spec.ts": "2a7eaa592a110315324615827c18f444757ce550266b763155f4be5ac22a0bd7"
+  }
+}

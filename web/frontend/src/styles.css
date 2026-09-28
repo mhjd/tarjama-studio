@@ -838,8 +838,34 @@ textarea.project-title {
   .player.expanded .player-controls {
     grid-column: 2;
   }
+  .player .player-secondary {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
   .segment {
-    scroll-margin-top: 280px;
+    scroll-margin-top: calc(var(--player-height, 280px) + 24px);
+    padding: 12px 18px;
+    margin-bottom: 10px;
+  }
+  .segment label {
+    margin: 4px 0 0;
+  }
+  .segment label > span {
+    margin-bottom: 4px;
+  }
+  .segment .fields.bilingual {
+    gap: 10px;
+  }
+  .segment textarea {
+    min-height: 44px;
+    padding: 6px 10px;
+    margin-top: 4px;
+    overflow-y: hidden;
+    resize: none;
   }
 }
 
@@ -1043,20 +1069,37 @@ textarea.project-title {
     padding: 8px 0;
   }
   .segment {
-    padding: 10px 12px;
-    margin-bottom: 8px;
+    position: relative;
+    padding: 24px 12px 10px;
+    margin-bottom: 24px;
+    scroll-margin-top: 28px;
     border-radius: 10px;
   }
+  .segments {
+    padding-top: 22px;
+  }
   .segment .timestamp {
-    min-height: 36px;
+    position: absolute;
+    top: -22px;
+    left: 12px;
+    min-height: 44px;
+    padding: 0 8px;
+    background: #1a2420;
     font-size: 12px;
   }
   .segment label {
     margin: 4px 0 0;
   }
   .segment label > span {
-    font-size: 12px;
-    color: #aebdb6;
+    /* Keep the labels available to assistive technology. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .segment .fields.bilingual {
     gap: 8px;
@@ -1073,8 +1116,35 @@ textarea.project-title {
     font-size: 22px;
     line-height: 1.55;
   }
+  .segment .arabic textarea {
+    border-color: #64794f;
+  }
   .segment .french textarea {
+    border-color: #516e85;
     font-size: 16px;
     line-height: 1.45;
+  }
+}
+
+/* Keep the reason and recovery action where playback normally lives. */
+.player.player-unavailable {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.player-unavailable p {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+.player-unavailable button {
+  font-size: 13px;
+  max-width: 150px;
+}
+@media (max-width: 640px) {
+  .player-unavailable strong {
+    font-size: 13px;
+  }
+  .player-unavailable button {
+    padding: 8px;
+    max-width: 125px;
   }
 }

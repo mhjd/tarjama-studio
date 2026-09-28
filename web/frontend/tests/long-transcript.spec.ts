@@ -68,17 +68,16 @@ for (const width of [412, 1440]) {
       body: JSON.stringify(result, null, 2),
       contentType: "application/json",
     });
-    // The final, long caption remains editable and fully readable on mobile.
+    // The final, long caption remains editable and fully readable on every screen.
     const last = page.getByRole("textbox", {
       name: "Français long-1199",
       exact: true,
     });
     await last.scrollIntoViewIfNeeded();
     await expect(last).toBeEditable();
-    if (width <= 640)
-      expect(
-        await last.evaluate((el) => el.scrollHeight - el.clientHeight),
-      ).toBeLessThanOrEqual(1);
+    expect(
+      await last.evaluate((el) => el.scrollHeight - el.clientHeight),
+    ).toBeLessThanOrEqual(1);
     if (width <= 640) {
       await page.setViewportSize({ width: width - 12, height: 915 });
       await page.evaluate(

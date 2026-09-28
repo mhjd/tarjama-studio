@@ -149,6 +149,10 @@ web-gc:
 web-mobile-player-review:
 	sh web/scripts/mobile-player-review.sh
 
+.PHONY: web-preopening-check
+web-preopening-check:
+	sh web/scripts/preopening-check.sh $(ARGS)
+
 .PHONY: web-llm-reliability-audit
 web-llm-reliability-audit:
 	sh web/scripts/llm-reliability-audit.sh

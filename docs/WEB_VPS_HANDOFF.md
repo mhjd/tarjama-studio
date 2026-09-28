@@ -1,5 +1,16 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **28 septembre — transition Keycloak terminée, application toujours privée :**
+> phase 06 `00305da3b4b44e06`, propriétaire reconnecté à ses données, isolation et
+> révocation réelles vérifiées, parcours court import/correction/traduction/export
+> High réussi depuis le Mac administré. Recettes réconciliées avec l’admin privé
+> `https://tarjama.runagen.com:9443` ; aucune ancienne phase à rejouer.
+> Les annonces de transition en attente ci-dessous sont historiques.
+> [Qualification et coût](KEYCLOAK_BUSINESS_QUALIFICATION_20260928.md),
+> [préparation finale](PREOPENING_20260928.md),
+> [instructions administrateur pour une ouverture autorisée](KEYCLOAK_ADMIN_HANDOFF.md).
+
+
 > **28 septembre — répétition administrateur terminée, aucune transition autorisée :**
 > restauration/migration/association/inversion sur copies PASS, CA durable et
 > chemin SSH/TLS/K3s testés ; exécuteur root borné installé. Plans actualisés :

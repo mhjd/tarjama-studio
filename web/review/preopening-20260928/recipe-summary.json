@@ -1,0 +1,83 @@
+{
+  "utc": "2026-09-28T16:34:43.015814+00:00",
+  "results": {
+    "web/deploy/preview/active-keycloak-private-20260928.yml": {
+      "revision": "00305da3b4b44e06",
+      "applied": false,
+      "services_to_stop": [],
+      "may_recreate_services": true,
+      "sha256": "21adaf94200c77b698af1de43c56b861a5dbc9ed70ea0d3894a718065ec60aee"
+    },
+    "web/deploy/preview/keycloak-candidate-20260927.yml": {
+      "revision": "3745801808c62c9c",
+      "applied": false,
+      "services_to_stop": [
+        "authdb",
+        "db",
+        "egress",
+        "keycloak",
+        "web",
+        "worker"
+      ],
+      "may_recreate_services": true,
+      "sha256": "e7be1c3df030d81bd2c053df4bde93235fb9dd7e91253f0c6764fc4510ba8baf"
+    },
+    "web/deploy/preview/keycloak-transition-20260928/01-authdb.yml": {
+      "revision": "9a11c1b8696ff106",
+      "applied": false,
+      "services_to_stop": [
+        "keycloak"
+      ],
+      "may_recreate_services": true,
+      "sha256": "9e47c2b71d9de762fc8673c0144e90bea534b65d6620a3d78dea8bc6b8d3d553"
+    },
+    "web/deploy/preview/keycloak-transition-20260928/02-private-bootstrap.yml": {
+      "revision": "82496ef375aab103",
+      "applied": false,
+      "services_to_stop": [],
+      "may_recreate_services": true,
+      "sha256": "166f4b0274d121ad2063e5c7e5a2184671329e846c47733cbc264c9e8b9e058b"
+    },
+    "web/deploy/preview/keycloak-transition-20260928/03-private-identity-ready.yml": {
+      "revision": "9728bb90691b81ae",
+      "applied": false,
+      "services_to_stop": [],
+      "may_recreate_services": true,
+      "sha256": "522ba49aadbabf84e032caf9ce436079a5a83e75884abae23c11a4adb528ef69"
+    },
+    "web/deploy/preview/keycloak-transition-20260928/04-maintenance.yml": {
+      "revision": "963fecfca49d6b54",
+      "applied": false,
+      "services_to_stop": [
+        "web",
+        "worker"
+      ],
+      "may_recreate_services": true,
+      "sha256": "f243041ad16b3d4c26c188f8f2578879dbcfdbf53c51d828c2e4a097508f1862"
+    },
+    "web/deploy/preview/keycloak-transition-20260928/05-private-web.yml": {
+      "revision": "beae8d968f3e233e",
+      "applied": false,
+      "services_to_stop": [
+        "worker"
+      ],
+      "may_recreate_services": true,
+      "sha256": "603b4dc961deaa9c0263a123e2ae9ebf7f3edc507ab306b7b780eee79fbfc760"
+    },
+    "web/deploy/preview/keycloak-transition-20260928/06-private-worker.yml": {
+      "revision": "00305da3b4b44e06",
+      "applied": false,
+      "services_to_stop": [],
+      "may_recreate_services": true,
+      "sha256": "d412bb117a886a12210a6ef0591d5c783a0cd18dbfed57e92df31810509d3c0b"
+    },
+    "web/deploy/preview/keycloak-transition-20260928/07-return-authelia.yml": {
+      "revision": "9728bb90691b81ae",
+      "applied": false,
+      "services_to_stop": [],
+      "may_recreate_services": true,
+      "sha256": "522ba49aadbabf84e032caf9ce436079a5a83e75884abae23c11a4adb528ef69"
+    }
+  },
+  "all_phases_match_administrative_overlays": true
+}

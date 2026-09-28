@@ -1,5 +1,16 @@
 # Transition Tarjama vers Keycloak — proposition du 28 septembre 2026
 
+> **État actualisé après transition :** la phase 06 est déployée, révision
+> `00305da3b4b44e06`. Le bootstrap a été supprimé, le propriétaire associé et
+> le parcours métier privé a réussi. Ne pas rejouer cette procédure historique.
+> Les recettes sont maintenant alignées sur l’admin privé ACME
+> `https://tarjama.runagen.com:9443` ; l’ancienne origine localhost et la demande
+> de confiance globale Mac ci-dessous sont supersédées par `LIVE_HANDOFF.md`.
+> Pour la suite : [passation actuelle](KEYCLOAK_ADMIN_HANDOFF.md) et
+> [qualification métier](KEYCLOAK_BUSINESS_QUALIFICATION_20260928.md).
+> L’ouverture publique reste à autoriser séparément.
+
+
 **Préparation uniquement. Aucun accord de migration, déploiement, interruption ou
 ouverture publique n'est donné par ce document.** Ne jamais déployer directement
 `keycloak-candidate-20260927.yml` sur l’atelier actif : ses six services sont arrêtés.

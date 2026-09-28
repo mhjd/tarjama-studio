@@ -83,3 +83,10 @@ class RecipeTest(unittest.TestCase):
             result = subprocess.run(command, text=True, capture_output=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('historical images', result.stderr)
+
+    def test_qualified_private_admin_origin_is_preserved(self):
+        code, recipe = self.render(**{'admin-base-url':'https://tarjama.runagen.com:9443'})
+        self.assertEqual(code, 0)
+        self.assertEqual(recipe['services']['keycloak']['env']['KC_HOSTNAME_ADMIN'], 'https://tarjama.runagen.com:9443')
+        self.assertEqual(recipe['services']['web']['env']['OIDC_ISSUER'], 'https://tarjama.runagen.com/realms/tarjama')
+        self.assertTrue(all(not s['enabled'] for s in recipe['services'].values()))

@@ -1,0 +1,214 @@
+sh web/scripts/preopening-check.sh
+ Network tarjama-preopening-check_test Creating 
+ Network tarjama-preopening-check_test Creating 
+ Network tarjama-preopening-check_test Created 
+ Network tarjama-preopening-check_test Created 
+ Container tarjama-preopening-check-db-1 Creating 
+ Container tarjama-preopening-check-db-1 Created 
+ Container tarjama-preopening-check-db-1 Starting 
+ Container tarjama-preopening-check-db-1 Started 
+ Container tarjama-preopening-check-db-1 Waiting 
+ Container tarjama-preopening-check-db-1 Healthy 
+ Container tarjama-preopening-check-checks-run-bbd189f32831 Creating 
+ Container tarjama-preopening-check-checks-run-bbd189f32831 Created 
+=== RUN   TestAutomaticExportCuesDesktopExamples
+=== RUN   TestAutomaticExportCuesDesktopExamples/flash
+=== RUN   TestAutomaticExportCuesDesktopExamples/pause
+=== RUN   TestAutomaticExportCuesDesktopExamples/too_fast
+=== RUN   TestAutomaticExportCuesDesktopExamples/backward
+=== RUN   TestAutomaticExportCuesDesktopExamples/chain
+=== RUN   TestAutomaticExportCuesDesktopExamples/hour_offset_and_empty
+--- PASS: TestAutomaticExportCuesDesktopExamples (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/flash (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/pause (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/too_fast (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/backward (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/chain (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/hour_offset_and_empty (0.00s)
+=== RUN   TestExportCueReadingBoundaries
+=== RUN   TestExportCueReadingBoundaries/gap_500ms
+=== RUN   TestExportCueReadingBoundaries/gap_501ms
+=== RUN   TestExportCueReadingBoundaries/overlap_10ms
+=== RUN   TestExportCueReadingBoundaries/overlap_11ms
+=== RUN   TestExportCueReadingBoundaries/duration_7s
+=== RUN   TestExportCueReadingBoundaries/duration_beyond_7s
+=== RUN   TestExportCueReadingBoundaries/84_characters
+=== RUN   TestExportCueReadingBoundaries/85_characters
+=== RUN   TestExportCueReadingBoundaries/NFC_count
+=== RUN   TestExportCueReadingBoundaries/17_characters_per_second
+=== RUN   TestExportCueReadingBoundaries/18_characters_per_second
+--- PASS: TestExportCueReadingBoundaries (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/gap_500ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/gap_501ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/overlap_10ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/overlap_11ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/duration_7s (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/duration_beyond_7s (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/84_characters (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/85_characters (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/NFC_count (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/17_characters_per_second (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/18_characters_per_second (0.00s)
+=== RUN   TestGroupedASSKeepsEditingSegmentsAndSRT
+--- PASS: TestGroupedASSKeepsEditingSegmentsAndSRT (0.00s)
+=== RUN   TestRoutesCannotBypassWorkflowGuards
+--- PASS: TestRoutesCannotBypassWorkflowGuards (0.27s)
+=== RUN   TestSubtitlesWithoutMediaAndAfterArabicEdit
+--- PASS: TestSubtitlesWithoutMediaAndAfterArabicEdit (0.22s)
+=== RUN   TestRawTranscriptionCannotBeEdited
+--- PASS: TestRawTranscriptionCannotBeEdited (0.20s)
+PASS
+ok  	tarjama/web/internal/studio	1.722s
+
+> tarjama-web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1898 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.52 kB │ gzip:  0.32 kB
+dist/assets/index-azkMHHhD.css   14.73 kB │ gzip:  3.94 kB
+dist/assets/index-CoxadpW2.js   242.55 kB │ gzip: 75.79 kB
+✓ built in 3.04s
+
+Running 14 tests using 1 worker
+
+  ✘   1 tests/correction-lock.spec.ts:11:3 › desktop: correction locks raw text through waits, failures and reloads (6.9s)
+  ✘   2 tests/correction-lock.spec.ts:11:3 › pixel6: correction locks raw text through waits, failures and reloads (6.6s)
+  ✘   3 tests/correction-lock.spec.ts:11:3 › iphone15: correction locks raw text through waits, failures and reloads (6.7s)
+  ✓   4 tests/routes.spec.ts:18:1 › project deep links reload, preserve login destination, and support back/forward (2.2s)
+  ✓   5 tests/routes.spec.ts:51:1 › URL edits cannot skip preparation, correction or review; polling updates canonical route (10.2s)
+  ✓   6 tests/routes.spec.ts:83:1 › browser back refuses to lose an unsaved draft (1.4s)
+  ✓   7 tests/routes.spec.ts:96:1 › foreign and missing project routes do not reveal a project (2.2s)
+  ✓   8 tests/routes.spec.ts:117:1 › browser back saves a title even without a blur (1.5s)
+  ✓   9 tests/workflow-navigation.spec.ts:115:3 › macbook-air-15: validation, previous pages and invalidation respect the workflow (6.9s)
+  ✓  10 tests/workflow-navigation.spec.ts:115:3 › pixel-6: validation, previous pages and invalidation respect the workflow (7.0s)
+  ✓  11 tests/workflow-navigation.spec.ts:115:3 › iphone-15: validation, previous pages and invalidation respect the workflow (5.8s)
+  ✓  12 tests/workflow-navigation.spec.ts:209:1 › translation waiting, failure, cancellation and retry never expose partial fields or export (5.5s)
+  ✓  13 tests/workflow-navigation.spec.ts:236:1 › step navigation flushes drafts and refuses to leave after a failed save (1.6s)
+  ✓  14 tests/workflow-navigation.spec.ts:263:1 › every premature direct URL is guarded without starting work (5.9s)
+
+
+  1) tests/correction-lock.spec.ts:11:3 › desktop: correction locks raw text through waits, failures and reloads 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('textarea')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('textarea')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      42 |       await expect(page).toHaveURL(/\/preparer$/);
+      43 |       await expect(page.getByText(/Vous pourrez relire et modifier l’arabe/)).toBeVisible();
+    > 44 |       await expect(page.locator("textarea")).toHaveCount(0);
+         |                                              ^
+      45 |       await expect(page.getByText("نص خام لا تعدله", { exact: true })).toHaveCount(0);
+      46 |       await expect(page.getByText("تصحيح جزئي لا تعدله", { exact: true })).toHaveCount(0);
+      47 |       for (const n of [1, 2, 3]) await expect(page.locator(".steps button").nth(n)).toBeDisabled();
+        at locked (/work/web/frontend/tests/correction-lock.spec.ts:44:46)
+        at /work/web/frontend/tests/correction-lock.spec.ts:51:5
+
+    Error Context: ../.cache/preopening-check/playwright/correction-lock-desktop-co-566b6--waits-failures-and-reloads/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/preopening-check/playwright/correction-lock-desktop-co-566b6--waits-failures-and-reloads/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/preopening-check/playwright/correction-lock-desktop-co-566b6--waits-failures-and-reloads/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/correction-lock.spec.ts:11:3 › pixel6: correction locks raw text through waits, failures and reloads 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('textarea')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('textarea')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      42 |       await expect(page).toHaveURL(/\/preparer$/);
+      43 |       await expect(page.getByText(/Vous pourrez relire et modifier l’arabe/)).toBeVisible();
+    > 44 |       await expect(page.locator("textarea")).toHaveCount(0);
+         |                                              ^
+      45 |       await expect(page.getByText("نص خام لا تعدله", { exact: true })).toHaveCount(0);
+      46 |       await expect(page.getByText("تصحيح جزئي لا تعدله", { exact: true })).toHaveCount(0);
+      47 |       for (const n of [1, 2, 3]) await expect(page.locator(".steps button").nth(n)).toBeDisabled();
+        at locked (/work/web/frontend/tests/correction-lock.spec.ts:44:46)
+        at /work/web/frontend/tests/correction-lock.spec.ts:51:5
+
+    Error Context: ../.cache/preopening-check/playwright/correction-lock-pixel6-cor-4983b--waits-failures-and-reloads/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/preopening-check/playwright/correction-lock-pixel6-cor-4983b--waits-failures-and-reloads/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/preopening-check/playwright/correction-lock-pixel6-cor-4983b--waits-failures-and-reloads/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) tests/correction-lock.spec.ts:11:3 › iphone15: correction locks raw text through waits, failures and reloads 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('textarea')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('textarea')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      42 |       await expect(page).toHaveURL(/\/preparer$/);
+      43 |       await expect(page.getByText(/Vous pourrez relire et modifier l’arabe/)).toBeVisible();
+    > 44 |       await expect(page.locator("textarea")).toHaveCount(0);
+         |                                              ^
+      45 |       await expect(page.getByText("نص خام لا تعدله", { exact: true })).toHaveCount(0);
+      46 |       await expect(page.getByText("تصحيح جزئي لا تعدله", { exact: true })).toHaveCount(0);
+      47 |       for (const n of [1, 2, 3]) await expect(page.locator(".steps button").nth(n)).toBeDisabled();
+        at locked (/work/web/frontend/tests/correction-lock.spec.ts:44:46)
+        at /work/web/frontend/tests/correction-lock.spec.ts:51:5
+
+    Error Context: ../.cache/preopening-check/playwright/correction-lock-iphone15-c-66e54--waits-failures-and-reloads/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/preopening-check/playwright/correction-lock-iphone15-c-66e54--waits-failures-and-reloads/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/preopening-check/playwright/correction-lock-iphone15-c-66e54--waits-failures-and-reloads/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    tests/correction-lock.spec.ts:11:3 › desktop: correction locks raw text through waits, failures and reloads 
+    tests/correction-lock.spec.ts:11:3 › pixel6: correction locks raw text through waits, failures and reloads 
+    tests/correction-lock.spec.ts:11:3 › iphone15: correction locks raw text through waits, failures and reloads 
+  11 passed (1.3m)
+
+ Container tarjama-preopening-check-db-1 Stopping 
+ Container tarjama-preopening-check-db-1 Stopped 
+ Container tarjama-preopening-check-db-1 Removing 
+ Container tarjama-preopening-check-db-1 Removed 
+ Network tarjama-preopening-check_test Removing 
+ Network tarjama-preopening-check_test Removed 
+make: *** [Makefile:154: web-preopening-check] Error 1

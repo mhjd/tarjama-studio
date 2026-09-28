@@ -1,5 +1,12 @@
 # Qualification métier privée après Keycloak — 28 septembre 2026
 
+> **Complément de fin de qualification :** le verrouillage non enregistré par le
+> runner Mac a ensuite été vérifié par des tests navigateur déterministes aux
+> tailles ordinateur/Pixel/iPhone et des tests API sur PostgreSQL isolé, avec le
+> même code métier que les images déployées. Aucun appel IA ou traitement live
+> supplémentaire. [Résultats et portée exacte](PREOPENING_20260928.md).
+
+
 ## Résultat actualisé : parcours réel réussi depuis le banc Mac
 
 Cette section remplace le statut bloqué ci-dessous pour le **résultat métier**.

@@ -25,7 +25,7 @@ if any(candidate['volumes'].get(k) != v for k, v in active['volumes'].items()):
     p.error('existing storage must remain unchanged')
 if any('REQUIRED_' in str(s['image']) or '@sha256:' not in s['image'] for s in candidate['services'].values()):
     p.error('qualified image digests required')
-if candidate['services']['keycloak']['env']['KC_HOSTNAME_ADMIN'] != 'https://localhost:9443':
+if candidate['services']['keycloak']['env']['KC_HOSTNAME_ADMIN'] != 'https://tarjama.runagen.com:9443':
     p.error('private master contract must be reviewed for a different admin origin')
 
 # Start with candidate-only identity/configuration, restore every live service

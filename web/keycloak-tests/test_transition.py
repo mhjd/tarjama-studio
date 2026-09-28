@@ -68,3 +68,17 @@ class TransitionTest(unittest.TestCase):
         self.assertEqual(contract['required_attributes']['frontendUrl'],candidate['services']['keycloak']['env']['KC_HOSTNAME_ADMIN'])
         self.assertEqual(contract['tarjama_issuer_unchanged'],candidate['services']['web']['env']['OIDC_ISSUER'])
         self.assertEqual(contract['public_master_and_admin_routes'],'denied')
+        self.assertEqual(contract['required_attributes']['frontendUrl'],'https://tarjama.runagen.com:9443')
+
+    def test_live_recipe_is_phase_six_and_old_admin_origin_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)/'phases'
+            subprocess.run(self.command(out), capture_output=True, check=True)
+            live = yaml.safe_load((ROOT/'web/deploy/preview/active-keycloak-private-20260928.yml').read_text())
+            self.assertEqual(live, yaml.safe_load((out/'06-private-worker.yml').read_text()))
+            candidate = yaml.safe_load(CANDIDATE.read_text())
+            candidate['services']['keycloak']['env']['KC_HOSTNAME_ADMIN'] = 'https://localhost:9443'
+            path = Path(tmp)/'old-admin.yml'
+            path.write_text(yaml.safe_dump(candidate))
+            result = subprocess.run(self.command(Path(tmp)/'refused', path), capture_output=True)
+            self.assertNotEqual(result.returncode, 0)

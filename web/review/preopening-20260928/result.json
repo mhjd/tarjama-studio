@@ -1,0 +1,78 @@
+{
+  "utc": "2026-09-28T16:38:52.000895+00:00",
+  "result": "PASS_FOR_LIMITED_OPENING_PREPARATION",
+  "live_revision": "00305da3b4b44e06",
+  "services_ready": 6,
+  "runtime_source_commit": "aebc87f190ac78167573d9821cf23177403a2518",
+  "runtime_source_unchanged": true,
+  "checks": {
+    "api_and_subtitle_tests": 6,
+    "api_test_database": "isolated synthetic PostgreSQL",
+    "go_race": true,
+    "frontend_build": "PASS",
+    "existing_navigation_browser_tests": 11,
+    "new_correction_lock_browser_tests": 3,
+    "recipe_contract_tests": 8,
+    "validated_and_planned_recipes": 9,
+    "phases_equal_admin_overlays": 7
+  },
+  "initial_test_issue": "Subtitle input selector incorrectly included the editable title; corrected. Initial failed run preserved.",
+  "browser": "Chromium, emulated desktop/Pixel6/iPhone15 viewport sizes",
+  "provider_calls": 0,
+  "additional_ai_cost_usd": 0,
+  "deployment_performed": false,
+  "public_access_enabled": false,
+  "production_data_modified": false,
+  "proof_kind": "Isolated deterministic lock tests complete earlier live end-to-end evidence; no new live processing claim.",
+  "nonblocking_limits": [
+    "SRT retains original cue boundaries, including split amount in reviewed sample.",
+    "Burned subtitles may overlap original bottom-screen graphics.",
+    "No claim of physical iOS/Android browser validation or arbitrary-load capacity."
+  ],
+  "evidence": {
+    "correction-lock-pixel6-completed.png": {
+      "bytes": 72277,
+      "sha256": "0bf06e2e7463ce9e612f5cee01da752691a1ed53c826f0ea29f89208c5860776"
+    },
+    "correction-lock-desktop-running.png": {
+      "bytes": 93662,
+      "sha256": "c11a587903ad081d6812262271d9fc26a8436d31207e28573b0043cfdb2764fb"
+    },
+    "checks.log": {
+      "bytes": 4618,
+      "sha256": "12f3dce0066077ae493440a6831cbebfabe083e3f0ae38e2c2004c148647b257"
+    },
+    "status-after.json": {
+      "bytes": 1929,
+      "sha256": "c9f9e2057a3e1fc0c70cd7c00dcec08dea55d5d72736a879ec8a5b2dd52cbf02"
+    },
+    "recipe-tests.log": {
+      "bytes": 1232,
+      "sha256": "3bba042abd32ee01506698f8120d86ab9a28477b4a2e54b523c5af42b579e09e"
+    },
+    "correction-lock-desktop-completed.png": {
+      "bytes": 105989,
+      "sha256": "9d0ce2b63e9b81509f1cb120a308dc0049faa219e47889e2b776478a8949ed57"
+    },
+    "checks-initial.log": {
+      "bytes": 13130,
+      "sha256": "56f0081daaabce6200a24f17651ebba555071dcc646732f1287238f4fe09488c"
+    },
+    "correction-lock-iphone15-completed.png": {
+      "bytes": 72742,
+      "sha256": "c54e7153281a199e1ac64704e66f943d5d0b233fcdf3d171a3c86cd00f094dce"
+    },
+    "recipe-summary.json": {
+      "bytes": 2964,
+      "sha256": "a5c5c63d37108b8c4e518a4d2c4a70927df59de83c177015b84b75142351b791"
+    },
+    "correction-lock-pixel6-running.png": {
+      "bytes": 71794,
+      "sha256": "e4eb10540120c7d963cb66c876af102a7523830b9c534721e6ad46354f8ed146"
+    },
+    "correction-lock-iphone15-running.png": {
+      "bytes": 66902,
+      "sha256": "f4ad69db8a8f0d44d8478bc9918f9750d0c53229de793d3c5be12aaa3bc605e4"
+    }
+  }
+}

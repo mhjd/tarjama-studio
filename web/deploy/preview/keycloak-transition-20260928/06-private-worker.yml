@@ -186,7 +186,7 @@ services:
     port: 8080
     env:
       KC_HOSTNAME: https://tarjama.runagen.com
-      KC_HOSTNAME_ADMIN: https://localhost:9443
+      KC_HOSTNAME_ADMIN: https://tarjama.runagen.com:9443
       KC_HTTP_RELATIVE_PATH: /
       KC_HTTP_ENABLED: 'true'
       KC_HTTP_MANAGEMENT_HEALTH_ENABLED: 'false'

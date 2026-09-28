@@ -1,0 +1,13 @@
+test_ambiguous_urls_and_public_administration_are_refused (test_recipe.RecipeTest.test_ambiguous_urls_and_public_administration_are_refused) ... ok
+test_historical_images_are_not_reused (test_recipe.RecipeTest.test_historical_images_are_not_reused) ... ok
+test_qualified_private_admin_origin_is_preserved (test_recipe.RecipeTest.test_qualified_private_admin_origin_is_preserved) ... ok
+test_single_origin_no_mail_stopped_and_preserved_resources (test_recipe.RecipeTest.test_single_origin_no_mail_stopped_and_preserved_resources) ... ok
+test_continuity_maintenance_and_return_preserve_data (test_transition.TransitionTest.test_continuity_maintenance_and_return_preserve_data) ... ok
+test_live_recipe_is_phase_six_and_old_admin_origin_is_refused (test_transition.TransitionTest.test_live_recipe_is_phase_six_and_old_admin_origin_is_refused) ... ok
+test_private_master_contract_matches_qualified_origin (test_transition.TransitionTest.test_private_master_contract_matches_qualified_origin) ... ok
+test_refuses_changed_egress_storage_and_overwrite (test_transition.TransitionTest.test_refuses_changed_egress_storage_and_overwrite) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 2.895s
+
+OK

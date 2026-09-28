@@ -27,6 +27,20 @@ Keycloak n’est nécessaire. Pas de migration applicative à lancer pour ce th�
 
 ## Candidate et preuves
 
+- Commit source testé : `b2b4f082266507a5294ff8107442c7c273487cce`.
+- Tag Docker : `tarjama-keycloak:theme-v1-b2b4f08`.
+- Image importée : `preview.local/atelier/web@sha256:dea98c02a8a575f8ebf3be9a1702d6e1ff5be4e082b0143baf7d436ba820158a`.
+- Plan validé : `e70128bdfb709a8f`, non appliqué.
+- Résultats : 4 scénarios navigateur PASS (connexion/inscription/erreurs/
+  déconnexion aux trois formats, MFA TOTP sur ordinateur, isolation/révocation),
+  11 contrats PASS, dump/restauration Keycloak PASS. 17 captures produites ;
+  vues principales examinées visuellement.
+- Après import : environ 17.2 Go disponibles,
+  marge de 15 % vérifiée avec estimation prudente du pic avant import.
+  Seul le cache d’objets Go `web/.cache/build` a été supprimé (reconstructible).
+- Statut public et identifiants de pods inchangés avant/après préparation.
+
+
 Les références définitives et résultats sont inscrits dans `candidate.json`
 du dossier `web/review/keycloak-theme-20260928/` et dans la recette
 `web/deploy/preview/candidate-keycloak-theme-20260928.yml`.

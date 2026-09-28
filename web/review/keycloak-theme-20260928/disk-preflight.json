@@ -1,0 +1,8 @@
+{
+  "available_before_import": 17228234752,
+  "filesystem_size": 102888095744,
+  "candidate_image_size": 762335501,
+  "conservative_import_work": 1658888730,
+  "reserve15pct": 15433214361,
+  "cache_removed": "web/.cache/build (Go objects only)"
+}

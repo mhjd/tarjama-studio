@@ -1,0 +1,48 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 734B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 170B done
+#3 DONE 0.0s
+
+#4 [builder 1/2] FROM quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c
+#4 resolve quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 7.41kB done
+#5 DONE 0.0s
+
+#6 [stage-1 2/5] COPY --from=builder /opt/keycloak/ /opt/keycloak/
+#6 CACHED
+
+#7 [builder 2/2] RUN /opt/keycloak/bin/kc.sh build
+#7 CACHED
+
+#8 [stage-1 3/5] COPY --chown=1000:1000 entrypoint.sh /opt/keycloak/bin/tarjama-start
+#8 CACHED
+
+#9 [stage-1 4/5] COPY --chown=1000:1000 themes/ /opt/keycloak/themes/
+#9 DONE 0.0s
+
+#10 [stage-1 5/5] RUN rm -rf /opt/keycloak/data && ln -s /tmp/keycloak-data /opt/keycloak/data
+#10 DONE 0.2s
+
+#11 exporting to image
+#11 exporting layers 0.1s done
+#11 exporting manifest sha256:dea98c02a8a575f8ebf3be9a1702d6e1ff5be4e082b0143baf7d436ba820158a done
+#11 exporting config sha256:01acc33f97d11d47cdc53f56ba6c438d768123800cbca15a29777d36f1ebf612 done
+#11 exporting attestation manifest sha256:c9215676b398e1653fe07633a1226f503531ec4497341123403d62a674487f38 done
+#11 exporting manifest list sha256:4c5fff0b831ad52ed8e6677bd6f59590f3d30f3ccd5c6084f89ec33cb894edb0
+#11 exporting manifest list sha256:4c5fff0b831ad52ed8e6677bd6f59590f3d30f3ccd5c6084f89ec33cb894edb0 done
+#11 naming to docker.io/library/tarjama-keycloak:review done
+#11 unpacking to docker.io/library/tarjama-keycloak:review 0.0s done
+#11 naming to docker.io/library/tarjama-keycloak:theme-v1-b2b4f08 done
+#11 unpacking to docker.io/library/tarjama-keycloak:theme-v1-b2b4f08 0.0s done
+#11 DONE 0.2s

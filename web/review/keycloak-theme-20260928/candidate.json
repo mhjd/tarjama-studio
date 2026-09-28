@@ -1,0 +1,45 @@
+{
+  "source_commit": "b2b4f082266507a5294ff8107442c7c273487cce",
+  "tag": "tarjama-keycloak:theme-v1-b2b4f08",
+  "image": "preview.local/atelier/web@sha256:dea98c02a8a575f8ebf3be9a1702d6e1ff5be4e082b0143baf7d436ba820158a",
+  "docker_image_id": "sha256:4c5fff0b831ad52ed8e6677bd6f59590f3d30f3ccd5c6084f89ec33cb894edb0",
+  "platform": "linux/amd64",
+  "keycloak_version": "26.7.4",
+  "theme": "tarjama-v1",
+  "theme_type": "login",
+  "realm": "tarjama",
+  "candidate_plan_revision": "e70128bdfb709a8f",
+  "public_revision_unchanged": "00305da3b4b44e06",
+  "deployed": false,
+  "realm_theme_activated": false,
+  "checks": {
+    "browser_scenarios_passed": 4,
+    "contract_tests_passed": 11,
+    "keycloak_database_dump_restore": "PASS",
+    "registration_login_errors_logout": "PASS at all three viewports",
+    "totp_enrollment_invalid_code_and_fresh_code": "PASS desktop, test-only enrollment action",
+    "locale_fr_en": "PASS",
+    "private_accounts_and_backchannel_revocation": "PASS",
+    "production_passwords_or_keys_used": false,
+    "provider_calls": 0,
+    "public_runtime_changed": false
+  },
+  "viewports": {
+    "macbook-air-15": [
+      1440,
+      932
+    ],
+    "iphone-15": [
+      393,
+      852
+    ],
+    "pixel-6": [
+      412,
+      915
+    ]
+  },
+  "browser": "Chromium (viewport simulation, not physical devices or iOS Safari)",
+  "screenshots": 17,
+  "disk_available_after_import": 17226891264,
+  "rollback_image": "preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4"
+}

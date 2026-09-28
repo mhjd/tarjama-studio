@@ -1,0 +1,4 @@
+# The realm is mounted by the recipe; only these sources belong in the image.
+**
+!Dockerfile
+!entrypoint.sh

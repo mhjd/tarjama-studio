@@ -320,7 +320,7 @@ web-media-performance:
 
 .PHONY: web-keycloak-image web-keycloak-test web-keycloak-recipe web-identity-link
 web-keycloak-image:
-	docker build --platform linux/amd64 -f web/deploy/keycloak/Dockerfile -t tarjama-keycloak:review web/deploy/keycloak
+	docker build --platform linux/amd64 --label org.opencontainers.image.revision=$$(git rev-parse HEAD) -f web/deploy/keycloak/Dockerfile -t tarjama-keycloak:review web/deploy/keycloak
 web-keycloak-test: web-keycloak-image
 	sh web/scripts/keycloak-test.sh
 web-keycloak-recipe:

@@ -67,6 +67,7 @@ ciblées avec détecteur de courses réussies. Les empreintes des sources testé
 figurent dans `qualification.json`. Les neuf captures finales ont été produites
 par les tests ; les vues ordinateur, mobile et récupération ont été examinées.
 
-Les corrections restent candidates sur `web-vps`, à déployer seulement dans la
-procédure publique actuelle après instruction du propriétaire, en conservant les
-adaptations administrateur. Elles ne valent pas activation du thème Keycloak.
+Après validation des captures et accord distinct du propriétaire, les corrections
+ont été déployées en révision `176b335c5056984a` : voir le
+[compte rendu de déploiement](DEPLOYMENT_UI_20260928.md). Les adaptations
+administrateur sont conservées. Le thème Keycloak n'est pas activé par ce déploiement.

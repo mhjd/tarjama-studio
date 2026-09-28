@@ -1,0 +1,37 @@
+[
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-preview-check-34a33135-8zgw8",
+      "log": "=== RUN   TestFrontendRelease\n    frontend_release_live_test.go:69: CSS served with expected SHA256 6b072b90bab06e45c8dd1f3dfb12ea69cc397640690023b942634b02a6d71e30\n    frontend_release_live_test.go:69: JS served with expected SHA256 ef54f20976bc2fe5d41ac82aff7be5454a747ab2d37cbedd5bc8259a90f9948d\n--- PASS: TestFrontendRelease (1.01s)\nPASS\n"
+    }
+  ]
+}

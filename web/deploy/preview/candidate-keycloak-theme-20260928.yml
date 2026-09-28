@@ -1,10 +1,9 @@
-# CANDIDATE ONLY — visual approval required. Do not deploy automatically.
-# Public routing remains managed by the administrator. Only Keycloak image differs.
+# Theme candidate only; NOT deployed. Rebased onto public UI revision 176b335c5056984a.
 version: 1
 services:
   web:
     enabled: true
-    image: preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b
+    image: preview.local/atelier/web@sha256:0f8286b455cd2f973fc90eb3b1ac62cfd58bb67f14d397f530a32736f13548c1
     args:
     - api
     uid: 10001
@@ -262,24 +261,26 @@ jobs:
     tmp: 32Mi
     timeout: 480
   preview-check:
-    image: preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd
+    image: preview.local/atelier/web@sha256:a520b8f908c764df255295b8d691830566d1fd66a5287dc72a6195fce1ba388f
     uid: 10001
     gid: 10001
     args:
     - -test.v
     - -test.run
-    - ^TestPreviewLive$/(HTTPAndOIDCStart|SSOHeaders|GatewayTLS)$
+    - ^TestFrontendRelease$
     - -test.timeout
-    - 4m
+    - 2m
     env:
       PREVIEW_LIVE: atelier
       GOMAXPROCS: '1'
+      EXPECTED_CSS_PATH: /assets/index-uFQAKx4D.css
+      EXPECTED_CSS_SHA256: 6b072b90bab06e45c8dd1f3dfb12ea69cc397640690023b942634b02a6d71e30
+      EXPECTED_JS_PATH: /assets/index-DKyItcJX.js
+      EXPECTED_JS_SHA256: ef54f20976bc2fe5d41ac82aff7be5454a747ab2d37cbedd5bc8259a90f9948d
     secrets: []
     connect:
     - web
-    egress:
-    - public-web
-    - oidc
+    egress: []
     resources:
       cpu: 500m
       memory: 256Mi

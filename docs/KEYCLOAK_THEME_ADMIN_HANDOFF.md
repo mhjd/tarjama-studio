@@ -14,9 +14,10 @@ est déjà public à `https://tarjama.runagen.com` ; son exposition doit le rest
 
 Passation lue :
 `/home/codex/.keycloak-transition-admin-20260928-y4j4c0ym/PUBLIC_HANDOFF.md`.
-Révision active observée : `00305da3b4b44e06`, six services prêts. Le nom historique
-`active-keycloak-private-20260928.yml` n’indique pas l’exposition actuelle :
-l’ouverture a été faite côté routage administrateur, sans déploiement applicatif.
+Base actualisée après le déploiement UI approuvé : `176b335c5056984a`, recette
+`active-subtitle-density-20260928.yml`. La candidate du thème a été réalignée sur
+cette base pour conserver les champs compacts et la récupération du lecteur.
+L'ouverture publique reste gérée par le routage administrateur.
 
 Conserver le domaine unique, les entrées `/sign-in` et `/sign-up`, les routes
 OIDC natives et `/resources/`, l’administration privée sur
@@ -36,7 +37,8 @@ Keycloak n’est nécessaire. Pas de migration applicative à lancer pour ce th�
 - Commit source de l’image : `b2b4f082266507a5294ff8107442c7c273487cce`.
 - Tag Docker : `tarjama-keycloak:theme-v1-b2b4f08`.
 - Image importée : `preview.local/atelier/web@sha256:dea98c02a8a575f8ebf3be9a1702d6e1ff5be4e082b0143baf7d436ba820158a`.
-- Plan validé : `e70128bdfb709a8f`, non appliqué.
+- Plan actualisé : `29bd0ed9ca04cd7b`, non appliqué ; l'ancien plan
+  `e70128bdfb709a8f` concernait la base antérieure aux corrections UI.
 - Résultats : 4 scénarios navigateur PASS (connexion/inscription/erreurs/
   déconnexion aux trois formats, MFA TOTP sur ordinateur, isolation/révocation),
   13 contrats PASS, dump/restauration Keycloak PASS. 17 captures produites ;

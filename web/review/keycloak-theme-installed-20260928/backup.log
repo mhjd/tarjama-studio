@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-backup-b1e904dc-226rl",
+      "log": "413d6db2dee7fc5df13954019dcfba85fde637582390e33b882c604e5e61d10d  /storage/backups/pre-reliability-20260928T200237Z.dump\nBackup complete; no media modified.\ncb7c0a1344922633bff82ec25389cec81feaebff646505326ee2ff9b231ac5a1  /identity-backups/dumps/keycloak-20260928T200239Z.dump\nKeycloak backup complete. Off-host copy and restore verification still required.\n"
+    },
+    {
+      "pod": "pv-job-backup-cd47084b-bvspl",
+      "log": "07f9935a63b203734d44788aa0e0d93c8c2b6cf4c12b37d5ccac7a473f2f95c4  /storage/backups/pre-reliability-20260928T134740Z.dump\nBackup complete; no media modified.\ncfbe0a39487ae0446ef0fae932835df2358c948ae70acaa95cf8f5a9ce403254  /identity-backups/dumps/keycloak-20260928T134742Z.dump\nKeycloak backup complete. Off-host copy and restore verification still required.\n"
+    },
+    {
+      "pod": "pv-job-backup-e164de02-lxr5g",
+      "log": "3fa1d156c1331a9ddd6bafbe0c01cdc836827e46532aac8d43b77bc56721134b  /storage/backups/pre-reliability-20260928T164400Z.dump\nBackup complete; no media modified.\n6fb4c4b0afc52a57d1e2220f471fe1915580c055a3b08ee3e1a1a8ee023ecc95  /identity-backups/dumps/keycloak-20260928T164402Z.dump\nKeycloak backup complete. Off-host copy and restore verification still required.\n"
+    }
+  ]
+}

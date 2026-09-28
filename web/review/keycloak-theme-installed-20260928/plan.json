@@ -1,0 +1,69 @@
+{
+  "revision": "29bd0ed9ca04cd7b",
+  "services": [
+    "authdb",
+    "db",
+    "egress",
+    "keycloak",
+    "web",
+    "worker"
+  ],
+  "jobs": [
+    "backup",
+    "migrate",
+    "preview-check",
+    "reference-check"
+  ],
+  "images": {
+    "authdb": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "db": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "egress": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a",
+    "keycloak": "preview.local/atelier/web@sha256:dea98c02a8a575f8ebf3be9a1702d6e1ff5be4e082b0143baf7d436ba820158a",
+    "web": "preview.local/atelier/web@sha256:0f8286b455cd2f973fc90eb3b1ac62cfd58bb67f14d397f530a32736f13548c1",
+    "worker": "preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb",
+    "backup": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+    "migrate": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+    "preview-check": "preview.local/atelier/web@sha256:a520b8f908c764df255295b8d691830566d1fd66a5287dc72a6195fce1ba388f",
+    "reference-check": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd"
+  },
+  "volumes": {
+    "database": {
+      "size": "2Gi"
+    },
+    "identity-backups": {
+      "size": "1Gi"
+    },
+    "identity-database": {
+      "size": "2Gi"
+    },
+    "library": {
+      "size": "14Gi"
+    }
+  },
+  "service_addresses": {
+    "authdb": "pv-authdb:5432",
+    "db": "pv-db:5432",
+    "egress": "pv-egress:8092",
+    "keycloak": "pv-keycloak:8080",
+    "web": "web:8080"
+  },
+  "data_deleted": false,
+  "cpu_limits_m": 3750,
+  "memory_limits_mi": 4224,
+  "storage_requested_gi": 19,
+  "services_to_stop": [],
+  "services_removed": [],
+  "services_disabled": [],
+  "services_to_reconcile": [
+    "authdb",
+    "db",
+    "egress",
+    "keycloak",
+    "web",
+    "worker"
+  ],
+  "may_recreate_services": true,
+  "applied": false,
+  "database_rollback": false,
+  "ok": true
+}

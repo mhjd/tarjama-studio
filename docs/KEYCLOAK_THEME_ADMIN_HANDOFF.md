@@ -1,6 +1,10 @@
 # Thème Keycloak Tarjama — candidate du 28 septembre 2026
 
-**Ne pas déployer ni activer avant validation visuelle du propriétaire.**
+**Actualisation : accord explicite d'activation et de déploiement reçu.**
+L'image du thème est installée en révision `29bd0ed9ca04cd7b` ; la sélection
+du thème et le profil sans prénom/nom restent à appliquer via l'administration
+privée. Voir [la demande d'activation](KEYCLOAK_THEME_ACTIVATION_REQUEST_20260928.md).
+Ne pas annoncer le nouveau formulaire comme actif avant cette dernière opération.
 Cette passation concerne l’apparence de l’authentification et l’inscription
 sans demande de prénom ou de nom. Tarjama
 est déjà public à `https://tarjama.runagen.com` ; son exposition doit le rester.
@@ -8,7 +12,7 @@ est déjà public à `https://tarjama.runagen.com` ; son exposition doit le rest
 > **Mise à jour : inscription avec email et mot de passe uniquement.**
 > Le thème et son digest ne changent pas. Appliquer aussi le réglage de
 > [profil utilisateur](KEYCLOAK_REGISTRATION_PROFILE.md) lors de l’activation.
-> Cette préparation reste sans modification de l’application publique.
+> Le déploiement de l'image ne change pas ces réglages persistés en base.
 
 ## Base à préserver
 
@@ -37,7 +41,7 @@ Keycloak n’est nécessaire. Pas de migration applicative à lancer pour ce th�
 - Commit source de l’image : `b2b4f082266507a5294ff8107442c7c273487cce`.
 - Tag Docker : `tarjama-keycloak:theme-v1-b2b4f08`.
 - Image importée : `preview.local/atelier/web@sha256:dea98c02a8a575f8ebf3be9a1702d6e1ff5be4e082b0143baf7d436ba820158a`.
-- Plan actualisé : `29bd0ed9ca04cd7b`, non appliqué ; l'ancien plan
+- Plan actualisé : `29bd0ed9ca04cd7b`, appliqué après l'accord ; l'ancien plan
   `e70128bdfb709a8f` concernait la base antérieure aux corrections UI.
 - Résultats : 4 scénarios navigateur PASS (connexion/inscription/erreurs/
   déconnexion aux trois formats, MFA TOTP sur ordinateur, isolation/révocation),

@@ -1,0 +1,66 @@
+{
+  "observed_at": "20260928T155445Z",
+  "result": "BLOCKED_BEFORE_BUSINESS_TEST",
+  "revision": "00305da3b4b44e06",
+  "services": {
+    "pv-authdb": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-db": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-egress": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-keycloak": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "pv-review": {
+      "replicas": 0,
+      "ready": 0
+    },
+    "pv-worker": {
+      "replicas": 1,
+      "ready": 1
+    },
+    "web": {
+      "replicas": 1,
+      "ready": 1
+    }
+  },
+  "active_ready_services": 6,
+  "source_handoff": "/home/codex/.keycloak-transition-admin-20260928-y4j4c0ym/LIVE_HANDOFF.md",
+  "source_handoff_sha256": "f1ba7ff78119e5641e20a273b44a9c6170fdd0033fb7eb92935b1fa36ff4efd7",
+  "transport_checks": {
+    "private_https_via_127_0_0_1": {
+      "curl_exit_code": 7,
+      "http_code": "000"
+    },
+    "public_https": {
+      "curl_exit_code": 7,
+      "http_code": "000"
+    },
+    "tls_bypass": false
+  },
+  "discussion_error": "invalid_work_trace_layout: unexpected file type: /home/codex/.discussions/.namespace.lock",
+  "projects_created": 0,
+  "provider_requests_in_this_attempt": 0,
+  "ai_spend_in_this_attempt_usd": 0,
+  "provider_balance": null,
+  "provider_balance_reason": "No provider balance queried; no secret read.",
+  "deployment_or_protection_changes": false,
+  "business_steps": {
+    "correction": "NOT_RUN",
+    "translation": "NOT_RUN",
+    "export": "NOT_RUN"
+  },
+  "recipe_difference_confirmed": {
+    "field": "services.keycloak.env.KC_HOSTNAME_ADMIN",
+    "repository": "https://localhost:9443",
+    "admin_live": "https://tarjama.runagen.com:9443"
+  }
+}

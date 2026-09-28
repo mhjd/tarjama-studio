@@ -1,5 +1,13 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **28 septembre — transition Keycloak préparée après qualification admin :**
+> sept recettes graduelles validées/planifiées, images qualifiées inchangées,
+> bootstrap privé avec `master.attributes.frontendUrl=https://localhost:9443`,
+> migration 005 et mappings explicites en maintenance, retour avec mappings
+> inverses. Aucun déploiement, SQL réel ou proxy modifié. Accord séparé requis.
+> [Ordre, gates et retour](KEYCLOAK_TRANSITION_20260928.md).
+
+
 > **28 septembre — images Keycloak/public accounts préparées, sans déploiement :**
 > web, worker et Keycloak construits/importés en série depuis `aebc87f`, avec
 > réserve disque de 15 % après estimation du pic. Candidate arrêtée validée et

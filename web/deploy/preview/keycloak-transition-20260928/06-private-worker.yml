@@ -1,0 +1,421 @@
+# PREPARED ONLY. Requires separate owner authorization and phase gates.
+# See docs/KEYCLOAK_TRANSITION_20260928.md. May recreate existing services.
+version: 1
+services:
+  web:
+    enabled: true
+    image: preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b
+    args:
+    - api
+    uid: 10001
+    gid: 10001
+    port: 8090
+    env:
+      APP_MODE: production
+      LISTEN_ADDR: 0.0.0.0:8090
+      PUBLIC_ORIGIN: https://tarjama.runagen.com
+      OIDC_ISSUER: https://tarjama.runagen.com/realms/tarjama
+      OIDC_CLIENT_ID: tarjama-web
+      OIDC_CLIENT_SECRET_FILE: /run/oidc/client_secret
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+      OIDC_PROVIDER: keycloak
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-keycloak-client
+      path: /run/oidc
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - keycloak-https
+    resources:
+      cpu: 500m
+      memory: 512Mi
+    tmp: 64Mi
+    health:
+      path: /readyz
+  worker:
+    enabled: true
+    image: preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb
+    args:
+    - worker
+    uid: 10001
+    gid: 10001
+    env:
+      APP_MODE: production
+      PUBLIC_ORIGIN: https://tarjama.runagen.com
+      DATABASE_URL_FILE: /run/db/database_url
+      ENCRYPTION_KEY_FILE: /run/encryption/encryption_key
+      GROQ_API_KEY_FILE: /run/groq/api_key
+      MEDIA_ENGINE: isolated-jobs
+      VPS_JOBS_URL: https://172.31.250.1:40002
+      VPS_JOBS_TOKEN_FILE: /run/isolated-jobs/token
+      VPS_JOBS_CA_FILE: /run/isolated-jobs/ca.crt
+      STORAGE_DIR: /storage
+      GOMAXPROCS: '1'
+      OPENROUTER_API_KEY_FILE: /run/openrouter/api_key
+      REFERENCE_CORPUS_DIR: /app/references
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-encryption
+      path: /run/encryption
+    - name: tarjama-groq
+      path: /run/groq
+    - name: isolated-jobs
+      path: /run/isolated-jobs
+    - name: openrouter
+      path: /run/openrouter
+    volumes:
+    - name: library
+      path: /storage
+    connect:
+    - db
+    egress:
+    - public-web
+    - isolated-jobs
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+  egress:
+    enabled: true
+    image: preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a
+    args:
+    - egress
+    uid: 10003
+    gid: 10003
+    port: 8092
+    env:
+      LISTEN_ADDR: 0.0.0.0:8092
+      WARP_HTTP_PROXY: 172.31.250.2:40001
+      GOMAXPROCS: '1'
+    egress:
+    - warp-downloads
+    resources:
+      cpu: 250m
+      memory: 128Mi
+    tmp: 16Mi
+  db:
+    enabled: true
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 70
+    gid: 70
+    port: 5432
+    args:
+    - postgres
+    - -c
+    - unix_socket_directories=/tmp
+    - -c
+    - max_connections=40
+    - -c
+    - shared_buffers=128MB
+    env:
+      POSTGRES_DB: tarjama
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/db-admin/postgres_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=peer
+      PGDATA: /data/pgdata
+      PGSERVICE: preview-init
+      PGSERVICEFILE: /configuration/pg_service.conf
+    secrets:
+    - name: tarjama-db-admin
+      path: /run/db-admin
+    configs:
+    - name: postgres-client
+      path: /configuration
+    volumes:
+    - name: database
+      path: /data
+    resources:
+      cpu: 750m
+      memory: 768Mi
+    tmp: 64Mi
+  authdb:
+    enabled: true
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 70
+    gid: 70
+    port: 5432
+    args:
+    - postgres
+    - -c
+    - unix_socket_directories=/tmp
+    - -c
+    - max_connections=30
+    - -c
+    - shared_buffers=64MB
+    env:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/keycloak-db-admin/password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=peer
+      PGDATA: /data/pgdata
+      PGSERVICE: keycloak-init
+      PGSERVICEFILE: /configuration/pg_service.conf
+    secrets:
+    - name: tarjama-keycloak-db
+      path: /run/keycloak-db
+    - name: tarjama-keycloak-db-admin
+      path: /run/keycloak-db-admin
+    configs:
+    - name: keycloak-db-init
+      path: /docker-entrypoint-initdb.d
+    - name: keycloak-db-client
+      path: /configuration
+    volumes:
+    - name: identity-database
+      path: /data
+    resources:
+      cpu: 500m
+      memory: 512Mi
+    tmp: 64Mi
+  keycloak:
+    enabled: true
+    image: preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4
+    uid: 1000
+    gid: 1000
+    port: 8080
+    env:
+      KC_HOSTNAME: https://tarjama.runagen.com
+      KC_HOSTNAME_ADMIN: https://localhost:9443
+      KC_HTTP_RELATIVE_PATH: /
+      KC_HTTP_ENABLED: 'true'
+      KC_HTTP_MANAGEMENT_HEALTH_ENABLED: 'false'
+      KC_PROXY_HEADERS: xforwarded
+      KC_DB_URL: jdbc:postgresql://pv-authdb:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      TARJAMA_PUBLIC_ORIGIN: https://tarjama.runagen.com
+      TARJAMA_BACKCHANNEL_URL: http://web:8080/auth/backchannel-logout
+    secrets:
+    - name: tarjama-keycloak-db
+      path: /run/keycloak-db
+    - name: tarjama-keycloak-client
+      path: /run/keycloak-client
+    configs:
+    - name: keycloak-realm
+      path: /configuration
+    connect:
+    - authdb
+    - web
+    egress: []
+    resources:
+      cpu: 1000m
+      memory: 1536Mi
+    tmp: 256Mi
+    health:
+      path: /health/ready
+jobs:
+  migrate:
+    image: preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b
+    uid: 10001
+    gid: 10001
+    args:
+    - migrate
+    env:
+      DATABASE_URL_FILE: /run/db/database_url
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    connect:
+    - db
+    resources:
+      cpu: 250m
+      memory: 256Mi
+    timeout: 300
+  backup:
+    image: docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    uid: 10001
+    gid: 10001
+    command:
+    - /bin/sh
+    args:
+    - -c
+    - /bin/sh /configuration/backup.sh && /bin/sh /configuration/identity-backup.sh
+    secrets:
+    - name: tarjama-db-app
+      path: /run/db
+    - name: tarjama-keycloak-db
+      path: /run/keycloak-db
+    configs:
+    - name: deploy-backup
+      path: /configuration
+    volumes:
+    - name: library
+      path: /storage
+    - name: identity-backups
+      path: /identity-backups
+    connect:
+    - db
+    - authdb
+    resources:
+      cpu: 250m
+      memory: 256Mi
+    tmp: 32Mi
+    timeout: 480
+  preview-check:
+    image: preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd
+    uid: 10001
+    gid: 10001
+    args:
+    - -test.v
+    - -test.run
+    - ^TestPreviewLive$/(HTTPAndOIDCStart|SSOHeaders|GatewayTLS)$
+    - -test.timeout
+    - 4m
+    env:
+      PREVIEW_LIVE: atelier
+      GOMAXPROCS: '1'
+    secrets: []
+    connect:
+    - web
+    egress:
+    - public-web
+    - oidc
+    resources:
+      cpu: 500m
+      memory: 256Mi
+    tmp: 32Mi
+    timeout: 300
+  reference-check:
+    image: preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd
+    uid: 10001
+    gid: 10001
+    args:
+    - -test.v
+    - -test.run
+    - ^TestReferenceDeployment$
+    - -test.timeout
+    - 4m
+    env:
+      PREVIEW_LIVE: atelier
+      REFERENCE_CORPUS_DIR: /app/references
+      OPENROUTER_API_KEY_FILE: /run/openrouter/api_key
+      GOMAXPROCS: '1'
+    secrets:
+    - name: openrouter
+      path: /run/openrouter
+    egress:
+    - public-web
+    resources:
+      cpu: 500m
+      memory: 384Mi
+    tmp: 32Mi
+    timeout: 300
+volumes:
+  library:
+    size: 14Gi
+  database:
+    size: 2Gi
+  identity-database:
+    size: 2Gi
+  identity-backups:
+    size: 1Gi
+configs:
+  postgres-client:
+    pg_service.conf: '[preview-init]
+
+      host=/tmp
+
+      '
+  deploy-backup:
+    backup.sh: "#!/bin/sh\nset -eu\numask 077\nexport PGHOST=pv-db PGPORT=5432 PGDATABASE=tarjama\
+      \ PGUSER=tarjama PGCONNECT_TIMEOUT=3\nexport PGPASSWORD=\"$(cat /run/db/app_db_password)\"\
+      \nfor attempt in $(seq 1 30); do\n  if psql -X -w -Atqc 'SELECT 1' >/dev/null\
+      \ 2>/tmp/db-ready.err; then break; fi\n  sleep 2\ndone\npsql -X -w -Atqc 'SELECT\
+      \ 1' >/dev/null\nmkdir -p /storage/backups\nout=/storage/backups/pre-reliability-$(date\
+      \ -u +%Y%m%dT%H%M%SZ).dump\nset -C\n: > \"$out\"\nset +C\npg_dump -w -Fc > \"\
+      $out\"\npg_restore --list \"$out\" >/dev/null\nsha256sum \"$out\"\nprintf 'Backup\
+      \ complete; no media modified.\\n'\n"
+    identity-backup.sh: "#!/bin/sh\nset -eu\numask 077\nexport PGHOST=pv-authdb PGPORT=5432\
+      \ PGDATABASE=keycloak PGUSER=keycloak PGCONNECT_TIMEOUT=3\nPGPASSWORD=$(cat\
+      \ /run/keycloak-db/password)\nexport PGPASSWORD\nfor attempt in $(seq 1 30);\
+      \ do\n  if psql -X -w -Atqc 'SELECT 1' >/dev/null 2>/tmp/authdb-ready.err; then\
+      \ break; fi\n  sleep 2\ndone\npsql -X -w -Atqc 'SELECT 1' >/dev/null\nmkdir\
+      \ -p /identity-backups/dumps\nout=/identity-backups/dumps/keycloak-$(date -u\
+      \ +%Y%m%dT%H%M%SZ).dump\n# A failed dump is never published as a completed backup.\n\
+      set -C\n: > \"$out.partial\"\nset +C\npg_dump -w -Fc > \"$out.partial\"\npg_restore\
+      \ --list \"$out.partial\" >/dev/null\nmv \"$out.partial\" \"$out\"\nsha256sum\
+      \ \"$out\"\nprintf 'Keycloak backup complete. Off-host copy and restore verification\
+      \ still required.\\n'\n"
+  keycloak-realm:
+    tarjama-realm.json: "{\n  \"realm\": \"tarjama\",\n  \"displayName\": \"Tarjama\"\
+      ,\n  \"enabled\": true,\n  \"sslRequired\": \"all\",\n  \"registrationAllowed\"\
+      : true,\n  \"registrationEmailAsUsername\": true,\n  \"loginWithEmailAllowed\"\
+      : true,\n  \"duplicateEmailsAllowed\": false,\n  \"verifyEmail\": false,\n \
+      \ \"resetPasswordAllowed\": false,\n  \"editUsernameAllowed\": false,\n  \"\
+      rememberMe\": false,\n  \"bruteForceProtected\": true,\n  \"permanentLockout\"\
+      : false,\n  \"failureFactor\": 5,\n  \"waitIncrementSeconds\": 60,\n  \"maxFailureWaitSeconds\"\
+      : 900,\n  \"ssoSessionIdleTimeout\": 86400,\n  \"ssoSessionMaxLifespan\": 86400,\n\
+      \  \"accessTokenLifespan\": 300,\n  \"accessCodeLifespan\": 60,\n  \"accessCodeLifespanUserAction\"\
+      : 600,\n  \"passwordPolicy\": \"length(12) and notUsername(undefined) and notEmail(undefined)\"\
+      ,\n  \"internationalizationEnabled\": true,\n  \"supportedLocales\": [\n   \
+      \ \"fr\",\n    \"en\"\n  ],\n  \"defaultLocale\": \"fr\",\n  \"clients\": [\n\
+      \    {\n      \"clientId\": \"tarjama-web\",\n      \"name\": \"Tarjama\",\n\
+      \      \"enabled\": true,\n      \"protocol\": \"openid-connect\",\n      \"\
+      publicClient\": false,\n      \"clientAuthenticatorType\": \"client-secret\"\
+      ,\n      \"secret\": \"${TARJAMA_OIDC_SECRET}\",\n      \"standardFlowEnabled\"\
+      : true,\n      \"implicitFlowEnabled\": false,\n      \"directAccessGrantsEnabled\"\
+      : false,\n      \"serviceAccountsEnabled\": false,\n      \"fullScopeAllowed\"\
+      : false,\n      \"redirectUris\": [\n        \"${TARJAMA_PUBLIC_ORIGIN}/auth/callback\"\
+      \n      ],\n      \"webOrigins\": [\n        \"${TARJAMA_PUBLIC_ORIGIN}\"\n\
+      \      ],\n      \"defaultClientScopes\": [\n        \"profile\",\n        \"\
+      email\"\n      ],\n      \"attributes\": {\n        \"pkce.code.challenge.method\"\
+      : \"S256\",\n        \"post.logout.redirect.uris\": \"${TARJAMA_PUBLIC_ORIGIN}/\"\
+      ,\n        \"backchannel.logout.url\": \"${TARJAMA_BACKCHANNEL_URL}\",\n   \
+      \     \"backchannel.logout.session.required\": \"true\",\n        \"backchannel.logout.revoke.offline.tokens\"\
+      : \"true\"\n      }\n    }\n  ],\n  \"requiredCredentials\": [\n    \"password\"\
+      \n  ],\n  \"requiredActions\": [\n    {\n      \"alias\": \"UPDATE_PASSWORD\"\
+      ,\n      \"name\": \"UPDATE_PASSWORD\",\n      \"providerId\": \"UPDATE_PASSWORD\"\
+      ,\n      \"enabled\": true,\n      \"defaultAction\": false,\n      \"priority\"\
+      : 0\n    },\n    {\n      \"alias\": \"UPDATE_PROFILE\",\n      \"name\": \"\
+      UPDATE_PROFILE\",\n      \"providerId\": \"UPDATE_PROFILE\",\n      \"enabled\"\
+      : false,\n      \"defaultAction\": false,\n      \"priority\": 1\n    },\n \
+      \   {\n      \"alias\": \"VERIFY_PROFILE\",\n      \"name\": \"VERIFY_PROFILE\"\
+      ,\n      \"providerId\": \"VERIFY_PROFILE\",\n      \"enabled\": false,\n  \
+      \    \"defaultAction\": false,\n      \"priority\": 2\n    },\n    {\n     \
+      \ \"alias\": \"VERIFY_EMAIL\",\n      \"name\": \"VERIFY_EMAIL\",\n      \"\
+      providerId\": \"VERIFY_EMAIL\",\n      \"enabled\": false,\n      \"defaultAction\"\
+      : false,\n      \"priority\": 3\n    }\n  ]\n}\n"
+  keycloak-db-client:
+    pg_service.conf: '[keycloak-init]
+
+      host=/tmp
+
+      '
+  keycloak-db-init:
+    10-keycloak.sh: '#!/bin/sh
+
+      set -eu
+
+      KC_DATABASE_PASSWORD=$(cat /run/keycloak-db/password)
+
+      export KC_DATABASE_PASSWORD
+
+      : "${KC_DATABASE_PASSWORD:?identity DB role password required}"
+
+      # Runs only on the first start of this dedicated PostgreSQL volume.
+
+      psql -X -v ON_ERROR_STOP=1 --host /tmp --username postgres --dbname postgres
+      <<''SQL''
+
+      \getenv role_password KC_DATABASE_PASSWORD
+
+      CREATE ROLE keycloak LOGIN PASSWORD :''role_password'' NOSUPERUSER NOCREATEDB
+      NOCREATEROLE;
+
+      CREATE DATABASE keycloak OWNER keycloak;
+
+      REVOKE ALL ON DATABASE keycloak FROM PUBLIC;
+
+      SQL
+
+      '

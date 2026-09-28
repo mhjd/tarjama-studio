@@ -1,0 +1,10 @@
+{
+  "realm": "master",
+  "required_attributes": {
+    "frontendUrl": "https://localhost:9443"
+  },
+  "tarjama_issuer_unchanged": "https://tarjama.runagen.com/realms/tarjama",
+  "application": "administrator-private-bootstrap-only",
+  "merge_existing_attributes": true,
+  "public_master_and_admin_routes": "denied"
+}

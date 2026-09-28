@@ -1,0 +1,105 @@
+{
+  "source": "/home/codex/.keycloak-admin-handoff-20260928-final-lpwtsuav",
+  "read_at": "2026-09-28T09:32:59.904841+00:00",
+  "qualification_performed_by": "administrator, not application agent",
+  "evidence": {
+    "qualification.json": {
+      "started_utc": "20260928T091658Z",
+      "production_changed": false,
+      "fixture": "/tmp/vps-keycloak-qualification-g7o2l4d1",
+      "evidence": "/var/lib/vps-admin-evidence/keycloak-private-20260928T091658Z",
+      "synthetic_dump_restore": {
+        "result": "PASS",
+        "sha256": "3f17c66dc0c231385358d04b69163d40e2fb4e9738cb8061dd059fa43aac7966",
+        "size": 249056
+      },
+      "browser": {
+        "tls_verification_enabled": true,
+        "chromium_sandbox": true,
+        "private_media_range": "PASS",
+        "public_final_web_image": "PASS",
+        "registration_isolation_logout_secure_cookies_assets": "PASS",
+        "admin_default_redirect_blocked": false,
+        "admin_initial_failure": {
+          "page": "https://localhost:9443/admin/master/console/",
+          "body": "Danger alert:\nSomething went wrong\n\nTimeout when waiting for 3rd party check iframe message.\n\nTry again",
+          "responses": [
+            {
+              "path": "https://tarjama.runagen.com:19443/realms/master/protocol/openid-connect/3p-cookies/step1.html",
+              "status": 404
+            }
+          ]
+        },
+        "master_frontend_url_required": "https://localhost:9443",
+        "admin_console_login": "PASS",
+        "registration_rate_limit_and_spoof_resistance": "PASS"
+      },
+      "rate_limits": {
+        "missing_forwarded_header": "PASS",
+        "registration_per_ip_5_per_minute": "PASS",
+        "registration_global_20_per_minute": "PASS",
+        "identity_300_per_10_seconds": "PASS",
+        "retry_after": "PASS"
+      },
+      "ssh_tls": "PASS",
+      "result": "PASS"
+    },
+    "images-and-state.json": {
+      "utc": "2026-09-28T09:04:12.292486+00:00",
+      "candidate_images": {
+        "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73": true,
+        "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a": true,
+        "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd": true,
+        "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b": true,
+        "preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb": true,
+        "preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4": true
+      },
+      "deployments": [
+        {
+          "name": "pv-db",
+          "desired": 1,
+          "ready": 1
+        },
+        {
+          "name": "pv-egress",
+          "desired": 1,
+          "ready": 1
+        },
+        {
+          "name": "pv-review",
+          "desired": 0,
+          "ready": 0
+        },
+        {
+          "name": "pv-worker",
+          "desired": 1,
+          "ready": 1
+        },
+        {
+          "name": "web",
+          "desired": 1,
+          "ready": 1
+        }
+      ],
+      "disk_pressure": [
+        {
+          "node": "vps-node",
+          "condition": [
+            {
+              "lastHeartbeatTime": "2026-09-28T08:59:44Z",
+              "lastTransitionTime": "2026-09-28T08:12:08Z",
+              "message": "kubelet has no disk pressure",
+              "reason": "KubeletHasNoDiskPressure",
+              "status": "False",
+              "type": "DiskPressure"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "sha256": {
+    "qualification.json": "a84ddcfc5d44c913576fa9fb48046dbcbf6d7f4b1cdc01e24a388032c50d4ef2",
+    "images-and-state.json": "725831906d4282a8d469f234663531402b0ffb23d39226eb08abc4c859d43b4d"
+  }
+}

@@ -1,5 +1,13 @@
 # Images Keycloak préparées — 28 septembre 2026
 
+> **Suite du 28 septembre, qualification administrateur finale :** présence CRI
+> des six références confirmée, essais privés TLS/console/limites/médias réussis.
+> Le réglage `master.attributes.frontendUrl=https://localhost:9443` est requis au
+> bootstrap. Les réserves plus anciennes ci-dessous sont historiques ; la
+> [procédure de transition actuelle](KEYCLOAK_TRANSITION_20260928.md) distingue
+> ces preuves des contrôles K3s/données réelles encore nécessaires. Aucune bascule.
+
+
 Suite à `/home/codex/.keycloak-admin-handoff-20260928-4QGMcB/ADMIN_HANDOFF.md`.
 Sources : `aebc87f190ac78167573d9821cf23177403a2518` sur `web-vps`.
 Cette révision ajoute uniquement un label de provenance au build Keycloak et

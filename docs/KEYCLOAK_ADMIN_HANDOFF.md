@@ -1,77 +1,68 @@
-# Retour administrateur — images du 28 septembre, aucune bascule
+# Retour administrateur — transition préparée, pas exécutée
 
-Réponse à `/home/codex/.keycloak-admin-handoff-20260928-4QGMcB/ADMIN_HANDOFF.md`.
-Cette passation remplace le précédent état « images à construire ».
-Lire [le rapport des images](KEYCLOAK_IMAGES_20260928.md),
-[le contrat de routage](KEYCLOAK_SINGLE_DOMAIN_20260927.md) et
-[les preuves structurées](../web/deploy/keycloak/qualification-20260928.json).
+Suite à `/home/codex/.keycloak-admin-handoff-20260928-final-lpwtsuav/ADMIN_HANDOFF.md`.
+Les preuves CRI et la qualification privée PASS ont été lues et conservées avec
+leur provenance dans `web/deploy/keycloak/admin-qualification-20260928.json`.
 
 ## Prompt à transmettre
 
-Les nouvelles images Tarjama sont construites et importées depuis
-`aebc87f190ac78167573d9821cf23177403a2518`, sur `web-vps`, dépôt
-`/home/codex/projects/tarjama-studio`. Les builds/imports ont été sérialisés,
-avec marge calculée après pic >= 15 % du disque, et 4 × taille Docker par import.
-Seuls les caches reconstructibles identifiés de Tarjama ont été nettoyés ; preuves,
-projets, vidéos, dumps, anciennes images et volumes sont conservés.
+La proposition de transition est prête sur `web-vps` dans le dépôt Tarjama :
 
-Références exactes :
+- `docs/KEYCLOAK_TRANSITION_20260928.md` : ordre, gates, impact comptes/données,
+  sauvegardes, migrations, vérifications et retour ;
+- `web/deploy/preview/keycloak-transition-20260928/` : sept recettes de phase ;
+- `web/deploy/keycloak/master-private-contract.json` : réglage privé attendu,
+  à fusionner dans les attributs existants du realm master pendant le bootstrap ;
+- `web/deploy/keycloak/transition-qualification-20260928.json` : résultats de
+  préparation, révisions `validate`/`plan`, absence d’application.
 
-- web : `preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b`
-- worker : `preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb`
-- Keycloak : `preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4`
+**Aucune image n'a changé** : digests qualifiés du build `aebc87f` conservés,
+ainsi que l’egress réparé et les volumes historiques. Aucun service, proxy,
+identité réelle, migration SQL ou sauvegarde planifiée n'a été modifié.
 
-Correspondance IDs Docker immuables / tags datés / tailles / digests dans
-`web/deploy/keycloak/images-20260928.json`. Les copies Docker sont conservées
-sur ce VPS pour réimport, sans prétendre constituer une sauvegarde hors VPS.
+Ordre proposé après accord :
 
-`web/deploy/preview/keycloak-candidate-20260927.yml` est régénérée, sans
-placeholders, avec les six services **désactivés**. `validate` et `plan` passent :
-révision `9017da632b208055`, `applied: false`, volumes déclarés 19 Gio.
-L’atelier actif reste `39aef9dd3599278d`, web/worker/db/egress prêts.
-Ne pas appliquer cette candidate arrêtée sur cet atelier.
+1. Recontrôler baseline, CRI, marge disque, PVC/secrets, copies de retour et impacts
+   des recréations possibles. Préparer le raccordement privé K3s/TLS durable.
+2. `01-authdb`, puis `02-private-bootstrap` : anciens web/worker conservés actifs.
+   Créer le socle identité dédié, régler **master.attributes.frontendUrl à
+   https://localhost:9443**, vérifier la console complète et les refus publics.
+   Ne pas changer l’issuer Tarjama ni exposer master/admin.
+3. Créer/tester l’administrateur nominatif MFA, révoquer le bootstrap, puis
+   `03-private-identity-ready` qui retire son montage. Recontrôler le login.
+4. Fermer les admissions, stabiliser les traitements puis `04-maintenance`
+   (web/worker arrêtés explicitement). Sauvegarde cohérente et restauration sur
+   copies, inventaire SQL, migration 005 si absente, mappings d’identités en
+   simulation puis application explicite, vérification des UUID/projets et
+   révocation des sessions/flows de l’ancienne origine.
+5. `05-private-web`, puis `06-private-worker` après leurs gates : deux comptes,
+   données existantes, isolation/média/SSO, puis vidéo courte et reprise des jobs.
+   Garder les restrictions privées tant que l'ouverture publique n'est pas autorisée.
+6. Retour : fermer admissions, maintenance, sauvegarder l'état récent, inverser
+   uniquement les mappings appliqués, révoquer sessions, puis `07-return-authelia`
+   et restaurer séparément le routage privé de l’aperçu. Aucune suppression de
+   nouveaux comptes, projets, textes, bases ou volumes.
 
-L’image Keycloak finale a réussi le parcours navigateur Docker isolé :
-inscription sans SMTP, connexion/logout, isolation de deux comptes, cookies,
-assets, révocation back-channel, puis dump/restauration SQL et rôle restreint.
-Le web de ce test est exécuté depuis les sources du build ; cela ne qualifie
-ni Kubernetes ni votre proxy/TLS. Le worker final valide le corpus et expose
-les outils sans réseau. Aucun fournisseur IA ni secret réel n’a été utilisé.
+À préparer avant la fenêtre autorisée :
 
-Travail administratif restant :
+- certificat/CA durables, confiance Mac, renouvellement et upstreams K3s ;
+- point de reprise cohérent bases/médias/secrets, avec taille/marge contrôlées ;
+- exécuteur admin borné pour `identity-link --file` utilisant l’image web exacte,
+  le seul accès DB applicatif et un JSON privé en lecture seule ; ce job/montage
+  ne figure pas dans la recette et ne doit pas être improvisé par l'application ;
+- liste privée des utilisateurs à associer, identité cible créée/vérifiée avant
+  son premier callback Tarjama, mappings inverses et journal d'application ;
+- répétition sur copies de la migration et du retour avant d'écrire dans les bases
+  réelles, puis qualification réseau/HTTP/TLS/limites sur le raccordement réel.
 
-1. Vérifier **maintenant par CRI** la présence des nouveaux digests, puis de toutes
-   les références de la candidate, et refaire cette vérification juste avant une
-   éventuelle activation. Le courtier a confirmé les imports ; l’agent applicatif
-   ne dispose pas d’accès CRI indépendant. Les jobs privés historiques
-   `preview-check`/`reference-check` ne qualifient pas la future origine publique.
-2. Qualifier la console privée complète à `https://localhost:9443` via SSH/TLS,
-   avec certificat vérifiable et parcours master/admin privé. Aucun `-k`, aucune
-   exposition de master/admin pour corriger un problème de redirection.
-3. Finaliser la limitation des inscriptions/requêtes, distincte de la protection
-   brute-force du realm. Le routage Caddy annoncé à 33 cas synthétiques doit
-   ensuite être qualifié sur les vrais chemins applicatifs et médias, les
-   cookies et les en-têtes HTTPS, dans un cadre isolé autorisé.
-4. Documenter une rétention locale bornée et une restauration reproductible.
-   Le propriétaire **reporte les sauvegardes hors VPS**, risque de perte du VPS
-   accepté ; conserver les dumps/copies actuels. Ne pas traiter ce report comme
-   une sauvegarde opérationnelle, ni activer une planification implicitement.
+Les limites isolées 5 inscriptions/min/IP, 20/min global et 300 requêtes
+identité/10 s/IP sont intégrées comme critères de vérification, pas comme déjà
+actives en production. Le contrat de rétention proposé (3 nouvelles générations,
+512 Mio cumulés dans identity-backups, validation/restauration avant remplacement)
+reste opérateur : aucun automate de purge/planification ajouté. Le report des
+sauvegardes hors VPS par le propriétaire est respecté ; dumps existants conservés.
 
-Le contrat reste : `tarjama.runagen.com`, `/sign-in` et `/sign-up` vers Tarjama,
-issuer `https://tarjama.runagen.com/realms/tarjama`, Keycloak à la racine `/` sans
-préfixe `/identity`. Aucun SMTP, email vérifié obligatoire ou récupération
-automatique. Les quatre secrets existants ne sont ni lus ni renouvelés.
-L’identité reste `(issuer, subject)` ; aucune association automatique par email.
-
-Préserver les PVC, la clé de chiffrement et Authelia des services personnels.
-L’egress demeure exactement :
-`preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a`.
-
-**Aucune bascule, ouverture publique, activation ou migration réelle sans accord
-séparé.** L’import des images et la validation de recette ne constituent pas cet
-accord. La coordination directe via `discussion --compact list` reste bloquée
-par `invalid_work_trace_layout` sur `.discussions/.namespace.lock` ; aucun verrou
-modifié, aucun message administrateur prétendument transmis.
-
-Retour attendu : présence CRI des images, qualification console privée/TLS,
-limitation des requêtes et état du routage, sans valeur secrète.
+**Ne pas déployer la candidate à six services arrêtés sur l’atelier actif.**
+`validate`/`plan` ne sont pas une autorisation. Attendre l'accord séparé du
+propriétaire couvrant l'interruption/migration/bascule ; l'ouverture publique
+nécessite son autorisation explicite. Ce document ne lance aucune de ces actions.

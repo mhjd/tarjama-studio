@@ -1,5 +1,13 @@
 # Keycloak : domaine unique, sans email automatique — 27 septembre 2026
 
+> **Suite du 28 septembre, qualification administrateur finale :** présence CRI
+> des six références confirmée, essais privés TLS/console/limites/médias réussis.
+> Le réglage `master.attributes.frontendUrl=https://localhost:9443` est requis au
+> bootstrap. Les réserves plus anciennes ci-dessous sont historiques ; la
+> [procédure de transition actuelle](KEYCLOAK_TRANSITION_20260928.md) distingue
+> ces preuves des contrôles K3s/données réelles encore nécessaires. Aucune bascule.
+
+
 > **État actualisé le 28 septembre :** les images des sources `aebc87f` sont
 > construites et importées ; la candidate arrêtée passe `validate`/`plan`
 > (`9017da632b208055`). Voir [les digests, preuves et limites](KEYCLOAK_IMAGES_20260928.md).

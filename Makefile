@@ -335,3 +335,9 @@ web-keycloak-source-test:
 	KEYCLOAK_SOURCE_TEST=1 sh web/scripts/keycloak-test.sh
 web-keycloak-recipe-test:
 	python3 -m unittest discover -s web/keycloak-tests -p 'test_*.py'
+
+.PHONY: web-keycloak-transition web-keycloak-transition-test
+web-keycloak-transition:
+	python3 web/scripts/keycloak-transition.py $(ARGS)
+web-keycloak-transition-test:
+	python3 -m unittest discover -s web/keycloak-tests -p 'test_transition.py'

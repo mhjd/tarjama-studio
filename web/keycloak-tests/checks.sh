@@ -11,6 +11,7 @@ while(true) {
   await new Promise(r=>setTimeout(r,1000));
 }
 JS
+node /work/web/keycloak-tests/configure-profile.mjs
 go run ./cmd/tarjama migrate
 cd /work/web/frontend
 npm run build

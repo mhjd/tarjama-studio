@@ -75,9 +75,7 @@ for (const device of devices) {
       await capture(page, `${device.name}-02-register`);
       const email = `theme-${device.name}@example.test`;
       await page.locator('#email').fill(email);
-      for (const id of ['firstName','lastName']) {
-        if (await page.locator('#'+id).count()) await page.locator('#'+id).fill('Démo');
-      }
+      await expect(page.locator('#firstName, #lastName')).toHaveCount(0);
       await page.locator('#password').fill('short');
       await page.locator('#password-confirm').fill('different');
       await submit(page);

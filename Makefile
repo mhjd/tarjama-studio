@@ -353,3 +353,8 @@ web-keycloak-theme-test: web-keycloak-image
 .PHONY: web-keycloak-theme-gallery
 web-keycloak-theme-gallery:
 	python3 web/scripts/keycloak-theme-gallery.py web/.cache/keycloak-test/preview
+
+.PHONY: web-keycloak-profile-prepare
+# Offline only: make web-keycloak-profile-prepare < profile-before.json > profile-after.json
+web-keycloak-profile-prepare:
+	@python3 web/scripts/keycloak-user-profile.py

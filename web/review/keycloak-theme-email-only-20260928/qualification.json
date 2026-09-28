@@ -1,0 +1,16 @@
+{
+  "image": "preview.local/atelier/web@sha256:dea98c02a8a575f8ebf3be9a1702d6e1ff5be4e082b0143baf7d436ba820158a",
+  "image_unchanged": true,
+  "profile_transform": "web/scripts/keycloak-user-profile.py",
+  "profile_transform_sha256": "d5110db4ef21ae20614e86d3aa044a8763c1fa0f82d4bc7441497443a110dc8f",
+  "browser_scenarios_passed": 4,
+  "contract_tests_passed": 13,
+  "registration_without_name_fields": "PASS desktop, iPhone 15 and Pixel 6 viewports",
+  "existing_names_preserved": "PASS",
+  "mfa_logout_revocation_isolation": "PASS",
+  "database_dump_restore": "PASS",
+  "screenshots": 17,
+  "public_configuration_changed": false,
+  "public_revision_observed": "00305da3b4b44e06",
+  "profile_fixtures": "Synthetic realm only; do not apply these example JSON files to production"
+}

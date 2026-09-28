@@ -1,0 +1,62 @@
+ Network tarjama-keycloak-test_isolated Creating 
+ Network tarjama-keycloak-test_isolated Creating 
+ Network tarjama-keycloak-test_isolated Created 
+ Network tarjama-keycloak-test_isolated Created 
+ Container tarjama-keycloak-test-appdb-1 Creating 
+ Container tarjama-keycloak-test-authdb-1 Creating 
+ Container tarjama-keycloak-test-appdb-1 Created 
+ Container tarjama-keycloak-test-authdb-1 Created 
+ Container tarjama-keycloak-test-keycloak-1 Creating 
+ Container tarjama-keycloak-test-keycloak-1 Created 
+ Container tarjama-keycloak-test-appdb-1 Starting 
+ Container tarjama-keycloak-test-authdb-1 Starting 
+ Container tarjama-keycloak-test-appdb-1 Started 
+ Container tarjama-keycloak-test-authdb-1 Started 
+ Container tarjama-keycloak-test-authdb-1 Waiting 
+ Container tarjama-keycloak-test-authdb-1 Healthy 
+ Container tarjama-keycloak-test-keycloak-1 Starting 
+ Container tarjama-keycloak-test-keycloak-1 Started 
+ Container tarjama-keycloak-test-appdb-1 Waiting 
+ Container tarjama-keycloak-test-appdb-1 Healthy 
+ Container tarjama-keycloak-test-checks-run-60925ef7271b Creating 
+ Container tarjama-keycloak-test-checks-run-60925ef7271b Created 
+Native profile configuration: names omitted, existing user names preserved — PASS
+
+> tarjama-web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1898 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.52 kB │ gzip:  0.32 kB
+dist/assets/index-azkMHHhD.css   14.73 kB │ gzip:  3.94 kB
+dist/assets/index-CoxadpW2.js   242.55 kB │ gzip: 75.79 kB
+✓ built in 3.13s
+[WebServer] 2026/09/28 18:27:16 Tarjama API prête
+
+Running 4 tests using 1 worker
+
+  ✓  1 ../keycloak-tests/identity.spec.ts:33:5 › one-origin Keycloak with sign-in/sign-up entrypoints, no email workflow, private accounts and revocation (8.6s)
+  ✓  2 ../keycloak-tests/theme.spec.ts:48:7 › theme: registration, errors, login and logout — macbook-air-15 (33.8s)
+  ✓  3 ../keycloak-tests/theme.spec.ts:48:7 › theme: registration, errors, login and logout — iphone-15 (4.4s)
+  ✓  4 ../keycloak-tests/theme.spec.ts:48:7 › theme: registration, errors, login and logout — pixel-6 (3.8s)
+
+  4 passed (52.8s)
+DO
+Dedicated identity database dump/restore and restricted DB role: PASS
+ Container tarjama-keycloak-test-keycloak-1 Stopping 
+ Container tarjama-keycloak-test-appdb-1 Stopping 
+ Container tarjama-keycloak-test-appdb-1 Stopped 
+ Container tarjama-keycloak-test-appdb-1 Removing 
+ Container tarjama-keycloak-test-appdb-1 Removed 
+ Container tarjama-keycloak-test-keycloak-1 Stopped 
+ Container tarjama-keycloak-test-keycloak-1 Removing 
+ Container tarjama-keycloak-test-keycloak-1 Removed 
+ Container tarjama-keycloak-test-authdb-1 Stopping 
+ Container tarjama-keycloak-test-authdb-1 Stopped 
+ Container tarjama-keycloak-test-authdb-1 Removing 
+ Container tarjama-keycloak-test-authdb-1 Removed 
+ Network tarjama-keycloak-test_isolated Removing 
+ Network tarjama-keycloak-test_isolated Removed 

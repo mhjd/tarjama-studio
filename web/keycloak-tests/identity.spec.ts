@@ -22,9 +22,7 @@ async function register(page: Page, email: string) {
   await page.getByRole("link", { name: "Créer mon compte" }).click();
   await expect(page).toHaveURL(new RegExp(origin + "/realms/tarjama/"));
   await page.locator("#email").fill(email);
-  for (const id of ["firstName", "lastName"]) {
-    if (await page.locator(`#${id}`).count()) await page.locator(`#${id}`).fill("Test");
-  }
+  await expect(page.locator("#firstName, #lastName")).toHaveCount(0);
   await page.locator("#password").fill(password);
   await page.locator("#password-confirm").fill(password);
   expect((await page.request.get(`${origin}/api/session`)).status()).toBe(401);

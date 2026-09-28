@@ -6,6 +6,10 @@ couleurs et la pile typographique de `web/frontend/src/styles.css` : fond
 Inter/system-ui/sans-serif. Comme l’application, il utilise la police système
 si Inter n’est pas installée. Aucun téléchargement de police ou CDN.
 
+Le formulaire d’inscription demande uniquement l’email et le mot de passe
+(avec confirmation). Ce choix relève du [profil Keycloak](KEYCLOAK_REGISTRATION_PROFILE.md),
+à appliquer séparément au realm existant ; aucun nom n’est demandé.
+
 ## Périmètre et maintenance
 
 `web/deploy/keycloak/themes/tarjama-v1/login/` hérite de `keycloak.v2` dans

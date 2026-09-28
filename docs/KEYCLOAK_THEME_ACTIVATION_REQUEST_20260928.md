@@ -1,4 +1,8 @@
-# Activation administrateur restante — accord propriétaire reçu
+# Activation administrateur — demande historique terminée
+
+> Terminée le 28 septembre à 20:32 UTC ; qualification publique PASS à 20:36 UTC.
+> Voir `KEYCLOAK_THEME_ADMIN_HANDOFF.md` et la passation administrateur `THEME_HANDOFF.md`.
+> Les instructions suivantes documentent la préparation, pas une action à relancer.
 
 Le propriétaire a validé la présentation et demandé explicitement « active le »
 puis « puis déploie ». L'autorisation couvre le thème de connexion/inscription

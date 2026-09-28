@@ -1127,24 +1127,79 @@ textarea.project-title {
 }
 
 /* Keep the reason and recovery action where playback normally lives. */
-.player.player-unavailable {
+.media-recovery.player {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 }
-.player-unavailable p {
+.media-recovery p {
   margin: 2px 0 0;
   font-size: 12px;
 }
-.player-unavailable button {
+.media-recovery button {
   font-size: 13px;
-  max-width: 150px;
+  max-width: 180px;
+}
+.recovery-summary strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+.recovery-details {
+  margin: 0;
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.recovery-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #c4d4bb;
+  padding: 6px 0;
+}
+.recovery-detail-body {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.recovery-details ol {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.recovery-details li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  padding: 6px 0;
+}
+.recovery-details li[aria-current="step"] {
+  color: #cbeab6;
+  font-weight: 600;
+}
+.recovery-details small {
+  font-size: 11px;
 }
 @media (max-width: 640px) {
-  .player-unavailable strong {
+  .media-recovery strong {
     font-size: 13px;
   }
-  .player-unavailable button {
+  .media-recovery button {
     padding: 8px;
     max-width: 125px;
+  }
+  .media-recovery.player {
+    gap: 4px 8px;
+  }
+  .media-recovery.player .recovery-detail-body {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    padding: 12px;
+    border: 1px solid #425650;
+    border-radius: 12px;
+    background: #1b2726;
+    box-shadow: 0 -8px 32px #080d0e66;
   }
 }

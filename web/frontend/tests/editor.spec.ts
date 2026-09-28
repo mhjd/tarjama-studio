@@ -783,21 +783,21 @@ for (const uploaded of [true, false]) {
       await expect(
         page.getByRole("button", { name: "Créer la vidéo", exact: true }),
       ).toBeDisabled();
-      await expect(page.getByLabel("Récupérer la vidéo")).toContainText(
-        "une semaine",
-      );
+      await expect(
+        page.getByRole("region", { name: "Lecteur indisponible" }),
+      ).toContainText("une semaine");
     } else {
       await expect(
         page.getByRole("button", { name: "Créer la vidéo", exact: true }),
       ).toBeEnabled();
       await expect(
         page.getByRole("button", {
-          name: "Récupérer la vidéo pour la lecture",
+          name: "Récupérer la vidéo",
         }),
       ).toBeEnabled();
-      await expect(page.getByLabel("Récupérer la vidéo")).toContainText(
-        "automatiquement",
-      );
+      await expect(
+        page.getByRole("region", { name: "Lecteur indisponible" }),
+      ).toContainText("automatiquement");
     }
     await page
       .getByText("Exporter les sous-titres seuls (SRT)", { exact: true })

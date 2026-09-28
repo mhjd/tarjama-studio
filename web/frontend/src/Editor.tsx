@@ -25,6 +25,7 @@ import {
 } from "./api";
 import { Drafts } from "./drafts";
 import { SubtitleInput } from "./SubtitleInput";
+import { MediaRecovery } from "./MediaRecovery";
 import { JobProgress, isAutomaticTextRecovery } from "./JobProgress";
 import { canVisitStep, currentStep, steps, type ProjectStep } from "./routes";
 const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -212,6 +213,17 @@ export function Editor({
     setConnectionLost(false);
     setJobs(x.jobs);
     if (!d.dirty) d.adopt(x.project);
+    else if (x.project.generation === d.project.generation) {
+      // Media can finish restoring while a subtitle draft is still being typed.
+      // Refresh only availability, preserving text, versions and pending edits.
+      d.adopt({
+        ...d.project,
+        media: x.project.media,
+        media_expired: x.project.media_expired,
+        media_expires_at: x.project.media_expires_at,
+        media_uploaded: x.project.media_uploaded,
+      });
+    }
   }
   const titleSave = useRef<Promise<void>>(Promise.resolve());
   function saveTitle() {
@@ -442,11 +454,15 @@ export function Editor({
     selectedExport &&
     ["queued", "running", "waiting_provider"].includes(selectedExport.state);
   const exportReady = selectedExport?.state === "succeeded";
-  const recoveryActive = jobs.some(
-    (j) =>
-      (j.kind.startsWith("restore_") || j.kind.startsWith("export_")) &&
-      ["queued", "running", "waiting_provider"].includes(j.state),
-  );
+  const recoveryJob = jobs
+    .filter(
+      (j) =>
+        j.generation === p.generation &&
+        !["succeeded", "expired"].includes(j.state) &&
+        (j.kind.startsWith("restore_") ||
+          (j.kind.startsWith("export_") && j.source_version === p.version)),
+    )
+    .at(-1);
   function restorePlayback() {
     return action(async () => {
       d.adopt(
@@ -454,15 +470,9 @@ export function Editor({
       );
     });
   }
-  function showReimport() {
-    const input = document.querySelector<HTMLInputElement>(
-      "#media-recovery input",
-    );
-    input?.scrollIntoView({ block: "center" });
-    input?.focus({ preventScroll: true });
-  }
   function visibleJob(job: Job) {
-    if (job.kind.startsWith("restore_")) return job.generation === p.generation;
+    if (job.kind.startsWith("restore_")) return false;
+    if (p.media_expired && !p.media && job === recoveryJob) return false;
     if (job.kind === "translate")
       return step === "traduire" && translationPending;
     if (job.kind.startsWith("export_"))
@@ -908,51 +918,6 @@ export function Editor({
           </button>
         </section>
       )}
-      {p.media_expired && !p.media && (
-        <section
-          id="media-recovery"
-          className="panel"
-          aria-label="Récupérer la vidéo"
-        >
-          <h2>Vos textes sont conservés</h2>
-          {p.url && !p.media_uploaded ? (
-            <>
-              <p>
-                La vidéo a été supprimée après 24 heures. Elle sera
-                retéléchargée automatiquement lors du prochain export vidéo. Les
-                fichiers SRT restent disponibles.
-              </p>
-              <button
-                disabled={busy || uploading || recoveryActive}
-                onClick={() => void restorePlayback()}
-              >
-                Récupérer la vidéo pour la lecture
-              </button>
-            </>
-          ) : (
-            <>
-              <p>
-                La vidéo a été supprimée après une semaine. Réimportez la même
-                vidéo originale pour l’écouter ou créer un nouvel export vidéo.
-                La transcription et la traduction corrigées sont conservées ;
-                les fichiers SRT restent disponibles.
-              </p>
-              <label>
-                Réimporter la vidéo originale
-                <input
-                  type="file"
-                  accept="video/*"
-                  disabled={busy || uploading || recoveryActive}
-                  onChange={(e) => {
-                    if (e.target.files?.[0])
-                      void sendFile(e.target.files[0], true);
-                  }}
-                />
-              </label>
-            </>
-          )}
-        </section>
-      )}
       {step === "exporter" && p.stage === "ready" && (
         <section className="panel export-panel">
           <h2>Votre vidéo sous-titrée</h2>
@@ -1036,33 +1001,36 @@ export function Editor({
           )}
         </section>
       )}
-      {showMissingPlayer && (
-        <section
-          ref={player}
-          className="player player-unavailable"
-          aria-label="Lecteur indisponible"
-        >
-          <div role="status">
-            <strong>
-              {recoveryActive || uploading
-                ? "Récupération de la vidéo…"
-                : "Vidéo expirée"}
-            </strong>
-            <p>Vos sous-titres sont conservés.</p>
-          </div>
-          <button
-            disabled={busy || uploading || recoveryActive}
-            onClick={() =>
-              p.url && !p.media_uploaded
-                ? void restorePlayback()
-                : showReimport()
-            }
-          >
-            {p.url && !p.media_uploaded
-              ? "Récupérer la vidéo"
-              : "Réimporter la vidéo"}
-          </button>
-        </section>
+      {p.media_expired && !p.media && (
+        <MediaRecovery
+          job={recoveryJob}
+          uploaded={!p.url || Boolean(p.media_uploaded)}
+          busy={busy}
+          uploading={uploading}
+          disconnected={connectionLost}
+          sticky={Boolean(showMissingPlayer)}
+          panelRef={player}
+          recover={() => void restorePlayback()}
+          retry={() =>
+            recoveryJob &&
+            void action(async () => {
+              await request(
+                `/api/projects/${p.id}/jobs/${recoveryJob.id}/retry`,
+                "POST",
+              );
+            })
+          }
+          cancel={() =>
+            recoveryJob &&
+            void action(async () => {
+              await request(
+                `/api/projects/${p.id}/jobs/${recoveryJob.id}/cancel`,
+                "POST",
+              );
+            })
+          }
+          upload={(file) => void sendFile(file, true)}
+        />
       )}
       {showPlayer && (
         <section

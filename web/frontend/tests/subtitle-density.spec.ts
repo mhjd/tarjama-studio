@@ -163,7 +163,7 @@ for (const width of [1440, 393, 412]) {
             ? [
                 {
                   id: "restore",
-                  kind: "restore_media",
+                  kind: "restore_download",
                   state: "running",
                   generation: data.project.generation,
                   progress: 0,
@@ -218,8 +218,11 @@ for (const width of [1440, 393, 412]) {
           exact: true,
         });
         await recover.click();
-        await expect(notice).toContainText("Récupération de la vidéo…");
-        await expect(recover).toBeDisabled();
+        await expect(notice).toContainText("Téléchargement de la vidéo…");
+        await expect(recover).toHaveCount(0);
+        await expect(
+          notice.getByRole("button", { name: "Annuler la récupération" }),
+        ).toBeEnabled();
         expect(requests).toBe(1);
         restored = true;
         await expect(

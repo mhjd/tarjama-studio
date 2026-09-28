@@ -1,10 +1,15 @@
 # Thème Keycloak Tarjama — candidate du 28 septembre 2026
 
-**Actualisation : accord explicite d'activation et de déploiement reçu.**
-L'image du thème est installée en révision `29bd0ed9ca04cd7b` ; la sélection
-du thème et le profil sans prénom/nom restent à appliquer via l'administration
-privée. Voir [la demande d'activation](KEYCLOAK_THEME_ACTIVATION_REQUEST_20260928.md).
-Ne pas annoncer le nouveau formulaire comme actif avant cette dernière opération.
+**Actualisation : activation terminée et confirmée par l’administrateur.**
+L’image est installée en révision `29bd0ed9ca04cd7b`. Le propriétaire a exécuté
+le helper privé : sélection de `tarjama-v1` et profil sans prénom/nom, reçu API
+PASS du 28 septembre à 20:32 UTC. Qualification publique à 20:36 UTC PASS :
+inscription, erreur de confirmation, connexion/déconnexion, ressources du thème,
+cookies et refus des routes administratives publiques. Paramètres MFA préservés ;
+parcours MFA du thème non rejoué en production. Aucun changement des protections.
+Source : `/home/codex/.keycloak-transition-admin-20260928-y4j4c0ym/THEME_HANDOFF.md`.
+La [demande d’activation](KEYCLOAK_THEME_ACTIVATION_REQUEST_20260928.md) est historique ;
+ne pas la rejouer.
 Cette passation concerne l’apparence de l’authentification et l’inscription
 sans demande de prénom ou de nom. Tarjama
 est déjà public à `https://tarjama.runagen.com` ; son exposition doit le rester.

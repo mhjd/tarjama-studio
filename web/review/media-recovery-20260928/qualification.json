@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-28",
+  "deployed": false,
+  "live_revision_unchanged": "29bd0ed9ca04cd7b",
+  "browser": "Chromium",
+  "viewports": [
+    [
+      1440,
+      932
+    ],
+    [
+      393,
+      852
+    ],
+    [
+      412,
+      915
+    ]
+  ],
+  "full_run_passed": 30,
+  "final_targeted_run_passed": 12,
+  "go_race_suites_passed": 6,
+  "frontend_build": "PASS",
+  "real_download": "BLOCKED: media broker HTTP 429, cause unspecified",
+  "api_credits_used": 0,
+  "notes": "Final targeted run follows compact spacing adjustment; states simulated; no real mobile device qualification."
+}

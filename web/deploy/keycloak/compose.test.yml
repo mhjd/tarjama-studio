@@ -78,6 +78,7 @@ services:
     network_mode: service:keycloak
     working_dir: /work/web/backend
     environment:
+      KEYCLOAK_THEME_TEST: ${KEYCLOAK_THEME_TEST:-0}
       APP_MODE: test
       PUBLIC_ORIGIN: http://localhost:8091
       LISTEN_ADDR: 127.0.0.1:8090

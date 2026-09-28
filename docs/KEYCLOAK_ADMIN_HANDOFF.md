@@ -1,5 +1,11 @@
 # Retour administrateur — pile privée qualifiée, ouverture à autoriser
 
+> **Document historique de préparation à l’ouverture.** L’administrateur a
+> ouvert Tarjama le 28 septembre vers 16:45 UTC ; ne pas réappliquer la fermeture
+> privée. Voir `PUBLIC_HANDOFF.md` dans la passation de transition et, pour le
+> thème candidat, [la nouvelle passation](KEYCLOAK_THEME_ADMIN_HANDOFF.md).
+
+
 État actuel : phase 06, révision `00305da3b4b44e06`. Sources :
 
 - `/home/codex/.keycloak-transition-admin-20260928-y4j4c0ym/LIVE_HANDOFF.md` ;

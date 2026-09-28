@@ -1,5 +1,15 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **28 septembre, 16:45 UTC — Tarjama est public :**
+> ouverture administrateur confirmée dans `PUBLIC_HANDOFF.md`, sans changement
+> de la révision `00305da3b4b44e06`. Conserver le routage public, l’administration
+> privée 9443 et l’ancien aperçu en 503. Les mentions « toujours privée » ou
+> « ouverture à autoriser » ci-dessous sont historiques.
+> Une candidate de thème Keycloak est préparée séparément ; **activation après
+> validation visuelle uniquement**. [Thème](KEYCLOAK_THEME.md),
+> [passation et retour arrière](KEYCLOAK_THEME_ADMIN_HANDOFF.md).
+
+
 > **28 septembre — transition Keycloak terminée, application toujours privée :**
 > phase 06 `00305da3b4b44e06`, propriétaire reconnecté à ses données, isolation et
 > révocation réelles vérifiées, parcours court import/correction/traduction/export

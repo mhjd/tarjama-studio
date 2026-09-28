@@ -1,7 +1,7 @@
 import { defineConfig } from "../frontend/node_modules/@playwright/test/index.js";
 export default defineConfig({
   testDir: ".",
-  testMatch: "identity.spec.ts",
+  testMatch: process.env.KEYCLOAK_THEME_TEST === "1" ? ["identity.spec.ts", "theme.spec.ts"] : "identity.spec.ts",
   outputDir: "../.cache/keycloak-test/results",
   workers: 1,
   timeout: 90000,

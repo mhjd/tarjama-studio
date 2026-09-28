@@ -4,13 +4,18 @@ export TEST_UID=$(id -u) TEST_GID=$(id -g)
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$root"
 python3 - <<'PY'
-import json
+import json, os
 from pathlib import Path
 out=Path('web/.cache/keycloak-test')
 out.mkdir(parents=True, exist_ok=True)
 realm=json.loads(Path('web/deploy/keycloak/tarjama-realm.json').read_text())
 # Only the test copy allows loopback HTTP. No SMTP exists in this test.
 realm['sslRequired']='external'
+if os.environ.get('KEYCLOAK_THEME_TEST') == '1':
+    realm['loginTheme']='tarjama-v1'
+    # Test-only enrollment capability; never change the live MFA policy.
+    realm['requiredActions'].append({'alias':'CONFIGURE_TOTP', 'name':'Configure OTP',
+        'providerId':'CONFIGURE_TOTP', 'enabled':True, 'defaultAction':False, 'priority':4})
 (out/'tarjama-realm.json').write_text(json.dumps(realm))
 (out/'tarjama-realm.json').chmod(0o644)
 for directory,key in [('db','password'),('client','client_secret'),('bootstrap','password')]:

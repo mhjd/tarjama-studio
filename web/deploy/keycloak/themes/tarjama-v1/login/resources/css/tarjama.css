@@ -1,0 +1,116 @@
+/* Tarjama login theme v1. Native Keycloak fields, actions and validation stay intact. */
+:root, :root.pf-v5-theme-dark {
+  color-scheme: dark;
+  --pf-v5-global--FontFamily--text: Inter, system-ui, sans-serif;
+  --pf-v5-global--FontFamily--heading: Inter, system-ui, sans-serif;
+  --pf-v5-global--Color--100: #e5ece9;
+  --pf-v5-global--Color--200: #b3c2bd;
+  --pf-v5-global--BackgroundColor--100: #192624;
+  --pf-v5-global--BackgroundColor--200: #111719;
+  --pf-v5-global--BorderColor--100: #52665e;
+  --pf-v5-global--primary-color--100: #b2d89d;
+  --pf-v5-global--primary-color--200: #c4e6ac;
+  --pf-v5-global--link--Color: #c4e6ac;
+  --pf-v5-global--link--Color--hover: #d6efc7;
+  --pf-v5-global--danger-color--100: #ffb4ab;
+  --pf-v5-global--danger-color--200: #ffb4ab;
+}
+.login-pf body#keycloak-bg {
+  background: #111719;
+  color: #e5ece9;
+  font: 16px/1.6 Inter, system-ui, sans-serif;
+  min-height: 100vh;
+  min-height: 100svh;
+  height: auto;
+}
+.pf-v5-c-login {
+  min-height: 100svh; padding: 48px 24px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pf-v5-c-login__container {
+  width: 100%; max-width: 480px; margin: auto; padding: 0;
+  display: flex; flex-direction: column; gap: 28px;
+}
+#kc-header { padding: 0; margin: 0; }
+#kc-header-wrapper {
+  margin: 0; color: #c7e6b7 !important; font-size: 30px; font-weight: 650;
+  letter-spacing: 0; text-transform: none; line-height: 1.4;
+}
+#kc-header-wrapper span { color: #e5ece9; font-size: 24px; margin-inline-start: 12px; }
+.pf-v5-c-login__main {
+  width: 100%; background: #192624; border: 1px solid #3a4947; border-radius: 20px;
+  box-shadow: 0 12px 48px #00000020; min-width: 0; margin: 0;
+}
+.pf-v5-c-login__main-header {
+  border: 0; padding: 32px 32px 24px; gap: 16px;
+  /* Native locale utilities use a second grid column; use a single stack. */
+  display: flex; flex-direction: column; align-items: stretch;
+}
+#kc-page-title {
+  font: 650 28px/1.2 Inter, system-ui, sans-serif;
+  letter-spacing: -0.035em; overflow-wrap: anywhere;
+}
+.pf-v5-c-login__main-header-utilities { align-self: flex-start; }
+.pf-v5-c-login__main-body { padding: 0 32px 28px; }
+.pf-v5-c-form { gap: 22px; }
+.pf-v5-c-form__label { font-size: 15px; font-weight: 550; color: #e5ece9; }
+.pf-v5-c-form-control {
+  background: #101b19; border-radius: 10px; border: 1px solid #52665e;
+  --pf-v5-c-form-control--BackgroundColor: #101b19;
+  --pf-v5-c-form-control--Color: #e5ece9;
+  --pf-v5-c-form-control--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--before--BorderWidth: 0;
+}
+.pf-v5-c-form-control::before, .pf-v5-c-form-control::after { border: 0; }
+.pf-v5-c-form-control input, .pf-v5-c-form-control select {
+  min-height: 48px; border-radius: inherit; font: inherit; padding: 10px 14px; color: #e5ece9;
+}
+.pf-v5-c-form-control input:focus { outline: none; }
+.pf-v5-c-form-control:focus-within { outline: 3px solid #b0df90; outline-offset: 3px; }
+.pf-v5-c-form-control.pf-m-error { border-color: #ffb4ab; }
+.pf-v5-c-input-group { gap: 8px; }
+.pf-v5-c-button {
+  min-height: 48px; padding: 10px 16px; border-radius: 10px;
+  font: 600 16px/1.5 Inter, system-ui, sans-serif;
+}
+.pf-v5-c-button::after { border-radius: 10px; }
+.pf-v5-c-button.pf-m-primary {
+  background: #b2d89d; color: #162119; border: 1px solid #b2d89d;
+}
+.pf-v5-c-button.pf-m-primary:hover { background: #c4e6ac; color: #162119; }
+.pf-v5-c-button.pf-m-control, .pf-v5-c-button.pf-m-secondary {
+  background: #202c2b; color: #e5ece9; border: 1px solid #52665e;
+}
+.pf-v5-c-button.pf-m-control { min-width: 48px; }
+.pf-v5-c-button.pf-m-control::after { border: 0; }
+a { color: #c4e6ac; text-underline-offset: 4px; }
+a:hover { color: #d6efc7; }
+a:focus-visible, button:focus-visible, input[type=submit]:focus-visible, select:focus-visible {
+  outline: 3px solid #b0df90; outline-offset: 3px;
+}
+.pf-v5-c-login__main-footer-band { background: transparent; padding: 16px 0 0; }
+.pf-v5-c-login__main-footer-band-item { color: #b3c2bd; line-height: 1.6; }
+.pf-v5-c-login__main-footer-band a { display: inline-block; min-height: 44px; padding-block: 8px; }
+.pf-v5-c-helper-text__item-text.pf-m-error, .kc-feedback-text { color: #ffb4ab; }
+.pf-v5-c-alert {
+  background: #302421; border: 1px solid #875d52; border-radius: 10px;
+  color: #ffcec7; padding: 16px; overflow-wrap: anywhere;
+}
+.pf-v5-c-alert__title { color: inherit; }
+.pf-v5-c-alert.pf-m-info, .pf-v5-c-alert.pf-m-success { background: #20362c; border-color: #5f8267; }
+.pf-v5-c-alert.pf-m-info .kc-feedback-text, .pf-v5-c-alert.pf-m-success .kc-feedback-text { color: #c4e6ac; }
+.tarjama-footer { border-top: 1px solid #3a4947; padding: 20px 32px; font-size: 13px; color: #b3c2bd; }
+.tarjama-footer p { margin: 0 0 10px; }
+.tarjama-footer a { display: inline-block; min-height: 44px; padding: 10px 0; }
+#kc-logout-confirm .instruction { margin-bottom: 20px; color: #b3c2bd; }
+#kc-totp-secret-qr-code { background: white; padding: 8px; max-width: 100%; }
+#kc-totp-settings { overflow-wrap: anywhere; }
+@media (max-width: 540px) {
+  .pf-v5-c-login { padding: 24px 16px; }
+  .pf-v5-c-login__container { gap: 20px; }
+  .pf-v5-c-login__main-header { padding: 24px 20px 20px; }
+  .pf-v5-c-login__main-body { padding: 0 20px 20px; }
+  .tarjama-footer { padding: 16px 20px; }
+  #kc-page-title { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }

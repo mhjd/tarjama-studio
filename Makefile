@@ -345,3 +345,11 @@ web-keycloak-transition:
 	python3 web/scripts/keycloak-transition.py $(ARGS)
 web-keycloak-transition-test:
 	python3 -m unittest discover -s web/keycloak-tests -p 'test_transition.py'
+
+.PHONY: web-keycloak-theme-test
+# Real Keycloak/OIDC with disposable accounts; no public ports or provider calls.
+web-keycloak-theme-test: web-keycloak-image
+	KEYCLOAK_THEME_TEST=1 sh web/scripts/keycloak-test.sh
+.PHONY: web-keycloak-theme-gallery
+web-keycloak-theme-gallery:
+	python3 web/scripts/keycloak-theme-gallery.py web/.cache/keycloak-test/preview

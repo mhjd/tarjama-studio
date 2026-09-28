@@ -1,5 +1,14 @@
 # Keycloak : domaine unique, sans email automatique — 27 septembre 2026
 
+> **État actualisé le 28 septembre :** les images des sources `aebc87f` sont
+> construites et importées ; la candidate arrêtée passe `validate`/`plan`
+> (`9017da632b208055`). Voir [les digests, preuves et limites](KEYCLOAK_IMAGES_20260928.md).
+> Les paragraphes historiques ci-dessous sur les placeholders et le créneau
+> de construction décrivent l’état du 27 septembre, désormais dépassé.
+> Le contrôle CRI, la console privée/TLS et les limites de requêtes restent
+> à qualifier. Les sauvegardes hors VPS sont reportées par le propriétaire.
+
+
 Ce document remplace le contrat à trois origines publiques/privées et SMTP du
 commit `9d1f6a9` et le préfixe `/identity` proposé dans `2ee17b7`. Il intègre
 la dernière correction du propriétaire après la passation

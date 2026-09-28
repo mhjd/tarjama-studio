@@ -1,10 +1,9 @@
-# DRAFT: current image digests pending coordinated build/import. NOT DEPLOYABLE.
 # STOPPED CANDIDATE. Check image provenance, private administration and public routing; see docs/KEYCLOAK_SINGLE_DOMAIN_20260927.md.
 version: 1
 services:
   web:
     enabled: false
-    image: REQUIRED_WEB_IMAGE
+    image: preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b
     args:
     - api
     uid: 10001
@@ -44,7 +43,7 @@ services:
       path: /readyz
   worker:
     enabled: false
-    image: REQUIRED_WORKER_IMAGE
+    image: preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb
     args:
     - worker
     uid: 10001
@@ -180,7 +179,7 @@ services:
     tmp: 64Mi
   keycloak:
     enabled: false
-    image: REQUIRED_KEYCLOAK_IMAGE
+    image: preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4
     uid: 1000
     gid: 1000
     port: 8080
@@ -217,7 +216,7 @@ services:
       path: /health/ready
 jobs:
   migrate:
-    image: REQUIRED_WEB_IMAGE
+    image: preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b
     uid: 10001
     gid: 10001
     args:

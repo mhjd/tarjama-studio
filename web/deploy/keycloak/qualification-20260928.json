@@ -1,0 +1,498 @@
+{
+  "source_commit": "aebc87f190ac78167573d9821cf23177403a2518",
+  "recorded_at": "2026-09-28T05:58:27.657272+00:00",
+  "recipe_sha256": "f33409d70bab5649413d7d2a01c0306c2c965a6f6d1a0266d5631f73df807b03",
+  "imports": {
+    "web": {
+      "ok": true,
+      "image": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "imagePullPolicy": "Never",
+      "platform": "linux/amd64",
+      "next": "Reporter cette référence dans la recette, puis validate et plan. Aucune application démarrée."
+    },
+    "worker": {
+      "ok": true,
+      "image": "preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb",
+      "imagePullPolicy": "Never",
+      "platform": "linux/amd64",
+      "next": "Reporter cette référence dans la recette, puis validate et plan. Aucune application démarrée."
+    },
+    "keycloak": {
+      "ok": true,
+      "image": "preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4",
+      "imagePullPolicy": "Never",
+      "platform": "linux/amd64",
+      "next": "Reporter cette référence dans la recette, puis validate et plan. Aucune application démarrée."
+    }
+  },
+  "validate": {
+    "revision": "9017da632b208055",
+    "services": [
+      "authdb",
+      "db",
+      "egress",
+      "keycloak",
+      "web",
+      "worker"
+    ],
+    "jobs": [
+      "backup",
+      "migrate",
+      "preview-check",
+      "reference-check"
+    ],
+    "images": {
+      "authdb": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "db": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "egress": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a",
+      "keycloak": "preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4",
+      "web": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "worker": "preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb",
+      "backup": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "migrate": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "preview-check": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd",
+      "reference-check": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd"
+    },
+    "volumes": {
+      "database": {
+        "size": "2Gi"
+      },
+      "identity-backups": {
+        "size": "1Gi"
+      },
+      "identity-database": {
+        "size": "2Gi"
+      },
+      "library": {
+        "size": "14Gi"
+      }
+    },
+    "service_addresses": {
+      "authdb": "pv-authdb:5432",
+      "db": "pv-db:5432",
+      "egress": "pv-egress:8092",
+      "keycloak": "pv-keycloak:8080",
+      "web": "web:8080"
+    },
+    "data_deleted": false,
+    "cpu_limits_m": 3750,
+    "memory_limits_mi": 4224,
+    "storage_requested_gi": 19,
+    "ok": true,
+    "validated": true,
+    "applied": false
+  },
+  "plan": {
+    "revision": "9017da632b208055",
+    "services": [
+      "authdb",
+      "db",
+      "egress",
+      "keycloak",
+      "web",
+      "worker"
+    ],
+    "jobs": [
+      "backup",
+      "migrate",
+      "preview-check",
+      "reference-check"
+    ],
+    "images": {
+      "authdb": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "db": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "egress": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a",
+      "keycloak": "preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4",
+      "web": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "worker": "preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb",
+      "backup": "docker.io/library/postgres@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "migrate": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "preview-check": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd",
+      "reference-check": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd"
+    },
+    "volumes": {
+      "database": {
+        "size": "2Gi"
+      },
+      "identity-backups": {
+        "size": "1Gi"
+      },
+      "identity-database": {
+        "size": "2Gi"
+      },
+      "library": {
+        "size": "14Gi"
+      }
+    },
+    "service_addresses": {
+      "authdb": "pv-authdb:5432",
+      "db": "pv-db:5432",
+      "egress": "pv-egress:8092",
+      "keycloak": "pv-keycloak:8080",
+      "web": "web:8080"
+    },
+    "data_deleted": false,
+    "cpu_limits_m": 3750,
+    "memory_limits_mi": 4224,
+    "storage_requested_gi": 19,
+    "services_to_stop": [],
+    "applied": false,
+    "database_rollback": false,
+    "ok": true
+  },
+  "disk_operations": [
+    {
+      "operation": "build-keycloak",
+      "command": [
+        "web/.cache/make",
+        "web-keycloak-image"
+      ],
+      "total_bytes": 102888095744,
+      "reserve_bytes": 15433214362,
+      "estimated_peak_bytes": 1073741824,
+      "before_available_bytes": 18723889152,
+      "projected_available_bytes": 17650147328,
+      "started_at": 1790574677.823154,
+      "exit_code": 0,
+      "minimum_available_bytes": 18544365568,
+      "after_available_bytes": 18343120896,
+      "ended_at": 1790574691.8253977
+    },
+    {
+      "operation": "build-web",
+      "command": [
+        "web/.cache/make",
+        "web-api-image"
+      ],
+      "total_bytes": 102888095744,
+      "reserve_bytes": 15433214362,
+      "estimated_peak_bytes": 1073741824,
+      "before_available_bytes": 17857675264,
+      "projected_available_bytes": 16783933440,
+      "started_at": 1790574755.230394,
+      "exit_code": 0,
+      "minimum_available_bytes": 17327824896,
+      "after_available_bytes": 17393479680,
+      "ended_at": 1790574781.233671
+    },
+    {
+      "operation": "build-worker",
+      "command": [
+        "web/.cache/make",
+        "web-worker-image"
+      ],
+      "total_bytes": 102888095744,
+      "reserve_bytes": 15433214362,
+      "estimated_peak_bytes": 536870912,
+      "before_available_bytes": 17351000064,
+      "projected_available_bytes": 16814129152,
+      "started_at": 1790574806.4008906,
+      "exit_code": 0,
+      "minimum_available_bytes": 17232924672,
+      "after_available_bytes": 17254567936,
+      "ended_at": 1790574814.4026856
+    },
+    {
+      "operation": "import-keycloak",
+      "command": [
+        "vps-preview",
+        "image-import",
+        "atelier",
+        "--name",
+        "web",
+        "--image",
+        "sha256:1457f4403bd94b577d7d228f46cb42a835f8f49ad51e34d459514fdf2de192a7"
+      ],
+      "total_bytes": 102888095744,
+      "reserve_bytes": 15433214362,
+      "estimated_peak_bytes": 3049049628,
+      "before_available_bytes": 18620215296,
+      "projected_available_bytes": 15571165668,
+      "started_at": 1790574719.2197587,
+      "exit_code": 0,
+      "minimum_available_bytes": 17534230528,
+      "after_available_bytes": 17857626112,
+      "ended_at": 1790574737.2228684
+    },
+    {
+      "operation": "import-web",
+      "command": [
+        "vps-preview",
+        "image-import",
+        "atelier",
+        "--name",
+        "web",
+        "--image",
+        "sha256:3b9b04a63055920576fcf11705e7f9786effe9c5335bad7e67a6e8040ccd2b95"
+      ],
+      "total_bytes": 102888095744,
+      "reserve_bytes": 15433214362,
+      "estimated_peak_bytes": 622852064,
+      "before_available_bytes": 17393311744,
+      "projected_available_bytes": 16770459680,
+      "started_at": 1790574787.0952613,
+      "exit_code": 0,
+      "minimum_available_bytes": 17299156992,
+      "after_available_bytes": 17351041024,
+      "ended_at": 1790574791.096715
+    },
+    {
+      "operation": "import-worker",
+      "command": [
+        "vps-preview",
+        "image-import",
+        "atelier",
+        "--name",
+        "web",
+        "--image",
+        "sha256:937421e112d29a8c9bf4d4f3feea442c726eb29aaa311dac4d043bc2fed694e7"
+      ],
+      "total_bytes": 102888095744,
+      "reserve_bytes": 15433214362,
+      "estimated_peak_bytes": 768879940,
+      "before_available_bytes": 17253269504,
+      "projected_available_bytes": 16484389564,
+      "started_at": 1790574837.262084,
+      "exit_code": 0,
+      "minimum_available_bytes": 17169248256,
+      "after_available_bytes": 17216700416,
+      "ended_at": 1790574841.2636278
+    },
+    {
+      "operation": "prepare-test-cache",
+      "command": [
+        "web/scripts/tools.sh",
+        "sh",
+        "-c",
+        "go mod download && go build -o /work/web/.cache/keycloak-images-20260928/tarjama-test ./cmd/tarjama"
+      ],
+      "total_bytes": 102888095744,
+      "reserve_bytes": 15433214362,
+      "estimated_peak_bytes": 1073741824,
+      "before_available_bytes": 17215930368,
+      "projected_available_bytes": 16142188544,
+      "started_at": 1790574878.8325424,
+      "exit_code": 0,
+      "minimum_available_bytes": 16422977536,
+      "after_available_bytes": 16552906752,
+      "ended_at": 1790574914.8426836
+    },
+    {
+      "operation": "test-keycloak-image",
+      "command": [
+        "sh",
+        "web/scripts/keycloak-test.sh"
+      ],
+      "total_bytes": 102888095744,
+      "reserve_bytes": 15433214362,
+      "estimated_peak_bytes": 536870912,
+      "before_available_bytes": 16552833024,
+      "projected_available_bytes": 16015962112,
+      "started_at": 1790574938.9480712,
+      "exit_code": 0,
+      "minimum_available_bytes": 16537776128,
+      "after_available_bytes": 16538185728,
+      "ended_at": 1790575018.9580953
+    }
+  ],
+  "disk_final": {
+    "total": 102888095744,
+    "used": 86333284352,
+    "available": 16538034176
+  },
+  "tests": {
+    "recipe_tests": 3,
+    "candidate_preservation": "passed",
+    "worker_reference_tools": "passed-without-network",
+    "keycloak_image_browser": "passed-9.9s",
+    "keycloak_dump_restore": "passed",
+    "real_providers_called": false,
+    "cri_independently_verified": false
+  },
+  "live_status_after": {
+    "ok": true,
+    "url": "https://atelier.preview.runagen.com",
+    "revision": "39aef9dd3599278d",
+    "partial": false,
+    "services": {
+      "pv-db": {
+        "replicas": 1,
+        "ready": 1
+      },
+      "pv-egress": {
+        "replicas": 1,
+        "ready": 1
+      },
+      "pv-review": {
+        "replicas": 0,
+        "ready": 0
+      },
+      "pv-worker": {
+        "replicas": 1,
+        "ready": 1
+      },
+      "web": {
+        "replicas": 1,
+        "ready": 1
+      }
+    },
+    "pods": [
+      {
+        "pod": "pv-db-6d7cc5bc68-926ng",
+        "component": "db",
+        "phase": "Running",
+        "reasons": []
+      },
+      {
+        "pod": "pv-egress-86768bc659-l6mxw",
+        "component": "egress",
+        "phase": "Running",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-backup-24bd7e45-fzg4r",
+        "component": "backup",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-backup-76861d04-pxkkn",
+        "component": "backup",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-backup-9ce26b3c-nq455",
+        "component": "backup",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-backup-c2fc20fe-2chd6",
+        "component": "backup",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-backup-f1fa61d2-w68vj",
+        "component": "backup",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-preview-check-0c7c7360-b6smv",
+        "component": "preview-check",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-preview-check-2282c95d-srtnn",
+        "component": "preview-check",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-preview-check-651d0c95-8xssr",
+        "component": "preview-check",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-preview-check-7d68235f-mdmbj",
+        "component": "preview-check",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-job-preview-check-d6d00ed5-787sn",
+        "component": "preview-check",
+        "phase": "Succeeded",
+        "reasons": []
+      },
+      {
+        "pod": "pv-worker-75fd99fd4b-jsbss",
+        "component": "worker",
+        "phase": "Running",
+        "reasons": []
+      },
+      {
+        "pod": "web-7bd4d6d4bb-c8f8l",
+        "component": "web",
+        "phase": "Running",
+        "reasons": []
+      }
+    ],
+    "jobs": [
+      {
+        "name": "pv-job-backup-24bd7e45",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-backup-76861d04",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-backup-9ce26b3c",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-backup-c2fc20fe",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-backup-f1fa61d2",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-preview-check-0c7c7360",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-preview-check-2282c95d",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-preview-check-651d0c95",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-preview-check-7d68235f",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      },
+      {
+        "name": "pv-job-preview-check-d6d00ed5",
+        "active": 0,
+        "succeeded": 1,
+        "failed": 0,
+        "suspended": false
+      }
+    ]
+  }
+}

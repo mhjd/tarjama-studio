@@ -1,5 +1,15 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **28 septembre — images Keycloak/public accounts préparées, sans déploiement :**
+> web, worker et Keycloak construits/importés en série depuis `aebc87f`, avec
+> réserve disque de 15 % après estimation du pic. Candidate arrêtée validée et
+> planifiée : `9017da632b208055`. Console privée/TLS, contrôle CRI et limitation
+> des requêtes restent administratifs. Sauvegardes hors VPS reportées par le
+> propriétaire ; copies/dumps existants conservés. Aucune bascule ni ouverture.
+> [Rapport et digests](KEYCLOAK_IMAGES_20260928.md),
+> [passation administrateur](KEYCLOAK_ADMIN_HANDOFF.md).
+
+
 > **27 septembre, décision actualisée — domaine unique, sans email :**
 > `tarjama.runagen.com`, entrées `/sign-in` et `/sign-up`, sans préfixe `/identity`,
 > sans SMTP, validation email

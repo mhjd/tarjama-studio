@@ -1,0 +1,32 @@
+{
+  "status": "built-and-imported-not-deployed",
+  "source_commit": "aebc87f190ac78167573d9821cf23177403a2518",
+  "created_at": "2026-09-28T05:54:30.060238+00:00",
+  "docker": {
+    "web": {
+      "id": "sha256:3b9b04a63055920576fcf11705e7f9786effe9c5335bad7e67a6e8040ccd2b95",
+      "tag": "tarjama-web:keycloak-20260928-aebc87f",
+      "size_bytes": 155713016,
+      "architecture": "amd64",
+      "source_commit": "aebc87f190ac78167573d9821cf23177403a2518"
+    },
+    "worker": {
+      "id": "sha256:937421e112d29a8c9bf4d4f3feea442c726eb29aaa311dac4d043bc2fed694e7",
+      "tag": "tarjama-worker:keycloak-20260928-aebc87f",
+      "size_bytes": 192219985,
+      "architecture": "amd64",
+      "source_commit": "aebc87f190ac78167573d9821cf23177403a2518"
+    },
+    "keycloak": {
+      "id": "sha256:1457f4403bd94b577d7d228f46cb42a835f8f49ad51e34d459514fdf2de192a7",
+      "tag": "tarjama-keycloak:keycloak-20260928-aebc87f",
+      "size_bytes": 762262407,
+      "architecture": "amd64",
+      "source_commit": "aebc87f190ac78167573d9821cf23177403a2518"
+    }
+  },
+  "cri_verification": "pending-administrator; broker acknowledged import, direct CRI access unavailable",
+  "web": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+  "worker": "preview.local/atelier/web@sha256:cd36a50a4ffae2ee97630eda4eda26e702fbff2ca392b29b1e8206d6d14119cb",
+  "keycloak": "preview.local/atelier/web@sha256:d214360d5a06cb111d456baa766224a7863d341f1d3a9b72d3cbc64070da98a4"
+}

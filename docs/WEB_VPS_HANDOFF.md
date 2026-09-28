@@ -1,5 +1,12 @@
 # Passation complète — Tarjama Studio web sur VPS
 
+> **28 septembre — répétition administrateur terminée, aucune transition autorisée :**
+> restauration/migration/association/inversion sur copies PASS, CA durable et
+> chemin SSH/TLS/K3s testés ; exécuteur root borné installé. Plans actualisés :
+> la phase 04 annonce correctement l’arrêt web/worker. DNS, fenêtre autorisée,
+> point de reprise final et qualifications réelles restent nécessaires.
+> [État actuel et prochaines étapes](KEYCLOAK_TRANSITION_20260928.md).
+
 > **28 septembre — transition Keycloak préparée après qualification admin :**
 > sept recettes graduelles validées/planifiées, images qualifiées inchangées,
 > bootstrap privé avec `master.attributes.frontendUrl=https://localhost:9443`,

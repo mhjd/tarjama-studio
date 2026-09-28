@@ -1,0 +1,100 @@
+{
+  "source_directory": "/home/codex/.keycloak-transition-admin-20260928-y4j4c0ym",
+  "evidence_kind": "administrator-reported-isolated-rehearsal",
+  "sources": {
+    "ADMIN_HANDOFF.md": {
+      "sha256": "d3751dde3c8cc72581f7da640e04f50bc670943a0cb1bcc3022d2e1b914bfa11"
+    },
+    "REPORT.md": {
+      "sha256": "d51fc1becaea48d6b0dc2156acac9b6c2164f88587da3f61f7b16def47154b9a"
+    },
+    "rehearsal.json": {
+      "sha256": "ff3dd1013c90485bf6988a28ea0d788e4168892e9581a842d8ae3f4c5e0cee71"
+    }
+  },
+  "production_transition_executed": false,
+  "rehearsal": {
+    "utc": "20260928T101714Z",
+    "production_mutated": false,
+    "namespace": "keycloak-transition-rehearsal",
+    "result": "PASS",
+    "restored_snapshot": "PASS",
+    "migrations_before": [
+      "001_initial.sql",
+      "002_isolated_media.sql",
+      "003_openrouter.sql",
+      "004_text_attempts.sql"
+    ],
+    "migration_005": "PASS",
+    "mapping_dry_run": {
+      "utc": "2026-09-28T10:17:29.284371+00:00",
+      "namespace": "keycloak-transition-rehearsal",
+      "apply": false,
+      "mapping_sha256": "241c68ab2adc6a1c6daf3919f50f0354956bd8bd23986ea6b5c5e65849a095d7",
+      "image": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "job": "admin-identity-e39f435d14e1",
+      "result": "PASS",
+      "evidence": "/var/lib/vps-admin-evidence/admin-identity-e39f435d14e1"
+    },
+    "mapping_forward": {
+      "utc": "2026-09-28T10:17:37.659913+00:00",
+      "namespace": "keycloak-transition-rehearsal",
+      "apply": true,
+      "mapping_sha256": "241c68ab2adc6a1c6daf3919f50f0354956bd8bd23986ea6b5c5e65849a095d7",
+      "image": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "job": "admin-identity-c73d1bcf3daf",
+      "result": "PASS",
+      "evidence": "/var/lib/vps-admin-evidence/admin-identity-c73d1bcf3daf"
+    },
+    "mapping_reverse_dry_run": {
+      "utc": "2026-09-28T10:17:46.364078+00:00",
+      "namespace": "keycloak-transition-rehearsal",
+      "apply": false,
+      "mapping_sha256": "deea0566675ea18e2ba247a847ee669f1bc107e2a50ce786ddd5b7872c6df234",
+      "image": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "job": "admin-identity-fc05a4e2d2ae",
+      "result": "PASS",
+      "evidence": "/var/lib/vps-admin-evidence/admin-identity-fc05a4e2d2ae"
+    },
+    "mapping_reverse": {
+      "utc": "2026-09-28T10:17:54.361455+00:00",
+      "namespace": "keycloak-transition-rehearsal",
+      "apply": true,
+      "mapping_sha256": "deea0566675ea18e2ba247a847ee669f1bc107e2a50ce786ddd5b7872c6df234",
+      "image": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+      "job": "admin-identity-2a606dc8ae69",
+      "result": "PASS",
+      "evidence": "/var/lib/vps-admin-evidence/admin-identity-2a606dc8ae69"
+    },
+    "identity_round_trip_preserves_users_projects_jobs": "PASS",
+    "old_image_after_005_and_reverse_owner_projects": "PASS",
+    "project_count": 2,
+    "durable_tls_ssh_to_kubernetes_service": "PASS"
+  },
+  "limitations": [
+    "Synthetic identity subjects must never be applied to production.",
+    "Old API used test mode and synthetic session/encryption key; real Authelia login and provider-key decryption not qualified.",
+    "Rehearsal copies are not the final frozen cutover recovery point.",
+    "Actual Keycloak Service, bootstrap/MFA, public TLS/discovery and business workflow remain to qualify."
+  ],
+  "administrator_observation": {
+    "utc": "2026-09-28T10:25:55Z",
+    "active_revision": "39aef9dd3599278d",
+    "free_bytes": 20483092480,
+    "production_schema": "001–004",
+    "dns": "NXDOMAIN"
+  },
+  "required_dns": {
+    "type": "A",
+    "name": "tarjama",
+    "zone": "runagen.com",
+    "value": "178.32.16.177",
+    "ttl": 300
+  },
+  "identity_executor": {
+    "path": "/usr/local/sbin/vps-keycloak-identity-link",
+    "root_only": true,
+    "apply_requires_stopped_web_and_worker": true,
+    "human_authorization_still_required": true
+  }
+}

@@ -1,68 +1,76 @@
-# Retour administrateur — transition préparée, pas exécutée
+# Retour administrateur — répétition intégrée, transition non exécutée
 
-Suite à `/home/codex/.keycloak-admin-handoff-20260928-final-lpwtsuav/ADMIN_HANDOFF.md`.
-Les preuves CRI et la qualification privée PASS ont été lues et conservées avec
-leur provenance dans `web/deploy/keycloak/admin-qualification-20260928.json`.
+Suite à `/home/codex/.keycloak-transition-admin-20260928-y4j4c0ym/ADMIN_HANDOFF.md`,
+`REPORT.md` et `rehearsal.json`, lus intégralement. Provenance/empreintes et preuve
+conservées dans `web/deploy/keycloak/admin-rehearsal-20260928.json`.
 
-## Prompt à transmettre
+## État actuel
 
-La proposition de transition est prête sur `web-vps` dans le dépôt Tarjama :
+- Répétition administrateur PASS sur copies : restauration, migration 005,
+  simulation/association/inversion et retour avec l’ancienne API. Elle utilise
+  une session et une clé de chiffrement synthétiques ; aucun login Authelia réel
+  ni déchiffrement de clés fournisseurs qualifié par ce banc.
+- CA/certificat durables créés, chemin Mac SSH → TLS vérifié → Service K3s testé.
+  Exécuteur root `vps-keycloak-identity-link` installé, sans privilège ajouté à codex.
+  Unités privées admin/limiteur/renouvellement préparées, non activées.
+- Sept recettes inchangées, `validate`/`plan` rejoués après correction du courtier.
+  Le plan 04 annonce bien web/worker dans `services_to_stop` ; preuves dans
+  `web/deploy/keycloak/transition-plan-revised-20260928.json`. Les anciens reçus
+  restent conservés ; leurs listes d’arrêts vides sont historiques.
+- Aucune image ni recette modifiée. Revision active `39aef9dd3599278d` et readiness
+  des quatre services inchangées avant/après ces contrôles en lecture seule.
+  Aucune phase, migration réelle, association ou activation exécutée.
 
-- `docs/KEYCLOAK_TRANSITION_20260928.md` : ordre, gates, impact comptes/données,
-  sauvegardes, migrations, vérifications et retour ;
-- `web/deploy/preview/keycloak-transition-20260928/` : sept recettes de phase ;
-- `web/deploy/keycloak/master-private-contract.json` : réglage privé attendu,
-  à fusionner dans les attributs existants du realm master pendant le bootstrap ;
-- `web/deploy/keycloak/transition-qualification-20260928.json` : résultats de
-  préparation, révisions `validate`/`plan`, absence d’application.
+## Prochain échange avec l’administrateur
 
-**Aucune image n'a changé** : digests qualifiés du build `aebc87f` conservés,
-ainsi que l’egress réparé et les volumes historiques. Aucun service, proxy,
-identité réelle, migration SQL ou sauvegarde planifiée n'a été modifié.
+La préparation est intégrée au dépôt Tarjama sur `web-vps`. Ne pas répéter les
+constructions, la création de CA ou le banc déjà réussis sans nouvelle raison.
+La procédure de référence est `docs/KEYCLOAK_TRANSITION_20260928.md`, avec les sept
+recettes dans `web/deploy/preview/keycloak-transition-20260928/` et le contrat
+`web/deploy/keycloak/master-private-contract.json`.
 
-Ordre proposé après accord :
+Avant tout lancement :
 
-1. Recontrôler baseline, CRI, marge disque, PVC/secrets, copies de retour et impacts
-   des recréations possibles. Préparer le raccordement privé K3s/TLS durable.
-2. `01-authdb`, puis `02-private-bootstrap` : anciens web/worker conservés actifs.
-   Créer le socle identité dédié, régler **master.attributes.frontendUrl à
-   https://localhost:9443**, vérifier la console complète et les refus publics.
-   Ne pas changer l’issuer Tarjama ni exposer master/admin.
-3. Créer/tester l’administrateur nominatif MFA, révoquer le bootstrap, puis
-   `03-private-identity-ready` qui retire son montage. Recontrôler le login.
-4. Fermer les admissions, stabiliser les traitements puis `04-maintenance`
-   (web/worker arrêtés explicitement). Sauvegarde cohérente et restauration sur
-   copies, inventaire SQL, migration 005 si absente, mappings d’identités en
-   simulation puis application explicite, vérification des UUID/projets et
-   révocation des sessions/flows de l’ancienne origine.
-5. `05-private-web`, puis `06-private-worker` après leurs gates : deux comptes,
-   données existantes, isolation/média/SSO, puis vidéo courte et reprise des jobs.
-   Garder les restrictions privées tant que l'ouverture publique n'est pas autorisée.
-6. Retour : fermer admissions, maintenance, sauvegarder l'état récent, inverser
-   uniquement les mappings appliqués, révoquer sessions, puis `07-return-authelia`
-   et restaurer séparément le routage privé de l’aperçu. Aucune suppression de
-   nouveaux comptes, projets, textes, bases ou volumes.
+1. Le propriétaire crée l’entrée DNS A `tarjama` → `178.32.16.177` dans la zone
+   `runagen.com`, TTL 300 ou défaut. Pas d’AAAA sans qualification IPv6. Le DNS
+   seul n’autorise aucune route publique ni transition.
+2. Obtenir l’accord séparé de maintenance, avec disponibilité du propriétaire
+   pour MFA et vérification du compte cible. Budget prudent proposé : créneau de
+   30 minutes, dont environ 10–15 minutes de coupure, sans garantie de durée.
+3. Recontrôler baseline, présence CRI, DiskPressure, marge disque, volumes/secrets
+   et activité. Les déploiements peuvent recréer les services inchangés.
 
-À préparer avant la fenêtre autorisée :
+Pendant une fenêtre ensuite autorisée uniquement, suivre les phases avec arrêt
+à chaque contrôle, jamais une boucle :
 
-- certificat/CA durables, confiance Mac, renouvellement et upstreams K3s ;
-- point de reprise cohérent bases/médias/secrets, avec taille/marge contrôlées ;
-- exécuteur admin borné pour `identity-link --file` utilisant l’image web exacte,
-  le seul accès DB applicatif et un JSON privé en lecture seule ; ce job/montage
-  ne figure pas dans la recette et ne doit pas être improvisé par l'application ;
-- liste privée des utilisateurs à associer, identité cible créée/vérifiée avant
-  son premier callback Tarjama, mappings inverses et journal d'application ;
-- répétition sur copies de la migration et du retour avant d'écrire dans les bases
-  réelles, puis qualification réseau/HTTP/TLS/limites sur le raccordement réel.
+- 01–03 : authdb, Keycloak, raccordement privé au vrai Service, confiance navigateur
+  explicite, `master.attributes.frontendUrl=https://localhost:9443`, admin nominatif
+  MFA et révocation du bootstrap. Les unités préparées restent inactives avant
+  cette autorisation. Le compte utilisateur cible réel doit être créé et sa
+  possession vérifiée avant son premier callback Tarjama.
+- 04 : fermer les admissions, stabiliser les traitements, arrêter web/worker,
+  refaire les dumps et comparer les médias figés à l’archive avant réutilisation.
+  Si elle diffère, recalculer la capacité ; ne pas écraser/purger les copies
+  validées. Les 19,08 Gio libres observés à 10:25:55 UTC restent à remesurer.
+  Vérifier les points de reprise, migrer 005 si absente, puis mappings réels via
+  l’exécuteur root en simulation/application explicitement autorisée. Ne jamais
+  réutiliser les sujets aléatoires du banc. Conserver les inverses et le journal
+  privé des applications réussies ; vérifier UUID/projets et révoquer les sessions.
+- Avant 05 : TLS public, discovery depuis web sur l’issuer exact et restrictions
+  privées qualifiés. 05 : propriétaire retrouvant ses données, second compte
+  isolé, login/logout/cookies/médias/révocation et console privée vérifiés.
+- 06 : reprise contrôlée des jobs et parcours métier court, appels fournisseurs
+  compris seulement dans le périmètre autorisé. L’ouverture aux visiteurs reste
+  soumise à une autorisation distincte.
+- Retour : maintenance, point de reprise récent, inversion des seuls mappings
+  appliqués, sessions révoquées, puis 07 et routage Authelia rétabli séparément.
+  Préserver comptes, textes, médias, bases et volumes, y compris ceux créés après
+  bascule. Le rollback de recette ne restaure ni les données ni les identités.
 
-Les limites isolées 5 inscriptions/min/IP, 20/min global et 300 requêtes
-identité/10 s/IP sont intégrées comme critères de vérification, pas comme déjà
-actives en production. Le contrat de rétention proposé (3 nouvelles générations,
-512 Mio cumulés dans identity-backups, validation/restauration avant remplacement)
-reste opérateur : aucun automate de purge/planification ajouté. Le report des
-sauvegardes hors VPS par le propriétaire est respecté ; dumps existants conservés.
+Les sauvegardes hors VPS restent reportées selon la décision du propriétaire.
+Les copies de répétition ne sont pas le point de coupure définitif. Le contrat
+proposé de rétention des nouvelles générations Keycloak reste manuel, sans purge
+ni planification activée ; copies historiques conservées.
 
-**Ne pas déployer la candidate à six services arrêtés sur l’atelier actif.**
-`validate`/`plan` ne sont pas une autorisation. Attendre l'accord séparé du
-propriétaire couvrant l'interruption/migration/bascule ; l'ouverture publique
-nécessite son autorisation explicite. Ce document ne lance aucune de ces actions.
+**Ne déployer aucune phase ni la candidate désactivée avant l’accord séparé.**
+La lecture de cette passation, les plans réussis et la répétition ne l’accordent pas.

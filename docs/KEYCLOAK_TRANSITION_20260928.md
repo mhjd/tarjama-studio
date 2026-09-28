@@ -18,9 +18,20 @@ pas une séquence à lancer sans contrôle intermédiaire.
   bases synthétiques, TLS vérifié, navigateur sandboxé, vrai tunnel depuis le Mac,
   inscription/isolation/logout/cookies/assets, média privé Range 206 et refus 404
   entre comptes, console privée, limites de requêtes, dump/restauration.
-- Ces preuves lèvent les réserves du précédent rapport **pour le banc isolé**.
-  Elles ne qualifient pas encore le raccordement Kubernetes, son certificat
-  durable, le bootstrap nominatif/MFA ni les comptes réels.
+- Complément administrateur : `/home/codex/.keycloak-transition-admin-20260928-y4j4c0ym/`.
+  Répétition PASS sur copie restaurée dans K3s : migration 005, simulation,
+  association/inversion, utilisateurs rétablis, projets/jobs inchangés et lecture
+  des deux projets du propriétaire avec l’ancienne API. CA/certificat durables
+  créés ; tunnel Mac → TLS validé → Service K3s → API sur copie vérifié.
+  [Preuve et limites](../web/deploy/keycloak/admin-rehearsal-20260928.json).
+- Ces preuves restent **isolées** : ancienne API en mode test, session et clé de
+  chiffrement synthétiques. Login Authelia réel, déchiffrement des clés fournisseurs
+  et reprise métier complète ne sont pas qualifiés. Les sujets des mappings du
+  banc sont aléatoires : ne jamais les appliquer aux utilisateurs réels.
+- Les unités privées admin/limiteur/renouvellement sont préparées, non activées.
+  Le vrai Service `pv-keycloak`, le bootstrap nominatif/MFA et le réglage master
+  restent à vérifier pendant les phases autorisées. Le schéma réel est 001–004
+  selon le contrôle administrateur à 10:25:55 UTC ; aucun SQL réel appliqué.
 
 Aucune image ne doit changer pour cette transition : le réglage master est une
 configuration persistante administrée pendant le bootstrap. L’entrypoint et le
@@ -51,6 +62,23 @@ n'est pas terminée. L'administrateur doit permettre les parcours de test privé
 et la discovery OIDC depuis le web K3s vers **l'issuer HTTPS exact**, avec TLS
 vérifié et restrictions d'accès appropriées ; il ne suffit pas de bloquer aussi
 ces requêtes. Aucun contournement SSRF/TLS, aucune ouverture de master/admin.
+
+## Prérequis immédiats : DNS et fenêtre autorisée
+
+Le contrôle administrateur a trouvé `tarjama.runagen.com` en NXDOMAIN. Le
+propriétaire doit créer chez le fournisseur de `runagen.com` : type **A**, nom
+**tarjama**, valeur **178.32.16.177**, TTL **300** ou défaut. Ne pas ajouter d’AAAA
+sans qualification IPv6. Ce document ne modifie pas le DNS et un enregistrement
+DNS ne vaut pas autorisation d’ouvrir l’application.
+
+Après résolution, restent l’accord explicite de maintenance et les contrôles
+finaux : images présentes, capacité réelle, absence d’activité incompatible,
+point de reprise cohérent et restrictions d’accès. Le TLS public et la discovery
+sur l’issuer exact doivent réussir avant 05. Prévoir un créneau de 30 minutes
+avec le propriétaire disponible pour MFA et possession du compte ; 10–15 minutes
+de coupure constituent un budget prudent proposé par l’admin, pas une mesure.
+Aucune phase, même 01–03, ne doit partir avant accord : elles peuvent recréer
+les services existants. L’ouverture aux visiteurs demande un accord distinct.
 
 ## Recettes et ordre
 
@@ -84,9 +112,15 @@ vps-preview status atelier
 vps-preview logs atelier --component authdb
 ```
 
-Attention : le champ `services_to_stop` des plans reçus est vide, **y compris
-pour la phase 04**. Il ne suffit pas à évaluer l'interruption : relire les
-`enabled: false` de web/worker dans la recette et le tableau ci-dessus.
+Les sept `validate`/`plan` ont été rejoués après correction du courtier, sans
+application : [plans actualisés](../web/deploy/keycloak/transition-plan-revised-20260928.json).
+Le plan 04 annonce désormais `web` et `worker` dans `services_to_stop` et
+`services_disabled`. `services_removed` distingue les retraits ; cette intention
+peut inclure un service déjà arrêté et ne remplace pas le statut des pods.
+`services_to_reconcile` et `may_recreate_services` signalent les recréations
+possibles, même sans arrêt explicite. Le manifeste historique
+`transition-qualification-20260928.json` est conservé comme preuve antérieure ;
+ses listes d’arrêts vides sont remplacées par celles des plans actualisés.
 
 Ne pas automatiser une boucle `deploy` sur ces fichiers. La readiness n’atteste
 ni un bootstrap complet ni une sauvegarde restaurable. Si une étape échoue,
@@ -94,8 +128,14 @@ conserver les diagnostics privés, ne pas passer à la suivante.
 
 ## Bootstrap privé obligatoire : phase 02
 
-1. Installer le certificat privé durable et sa confiance sur le poste admin par
-   la procédure administrée. Établir le tunnel vérifié :
+1. Utiliser la CA/certificat durables déjà préparés par l’administrateur. Après
+   création du vrai Service, activer le raccordement privé administré qui lit son
+   ClusterIP, puis vérifier le certificat. La CA publique est déjà sur le Mac dans
+   `~/Library/Application Support/vps/keycloak/ca.crt` ; aucune confiance globale
+   n’a été installée. Traiter explicitement la confiance du navigateur après
+   vérification de l’empreinte dans `REPORT.md`, sans copier la clé privée de CA.
+   Le renouvellement est préparé mais non actif ; son scénario à échéance reste
+   à qualifier. Établir le tunnel vérifié :
    `ssh -N -T -o ExitOnForwardFailure=yes -L 127.0.0.1:9443:127.0.0.1:9443 vps`.
    TLS doit être validé avec la CA durable ; aucun `-k`.
 2. Attendre authdb, puis Keycloak. Le premier démarrage crée son schéma via
@@ -142,8 +182,14 @@ reporter la migration ou définir une reprise explicite avant de continuer.
 état des médias nécessaires, recettes, correspondances d'identité et références
 aux secrets/clé de chiffrement. Aucun secret dans un dépôt ou rapport. Le job
 `backup` n’est qu’une sauvegarde SQL ; ce n’est pas une copie des médias/secrets.
-La stratégie de copie locale des médias doit être chiffrée et approuvée par
-l’admin avant la fenêtre ; si elle ne tient pas dans la marge, arrêter la procédure.
+La répétition dispose d’un dump SQL de 2,29 Mo et d’une archive média de 3,608 Go,
+privés root : dump restauré sur copie, archive testée et comparée aux fichiers.
+Ils ne constituent **pas** le point de coupure final : refaire les dumps après arrêt des écritures et comparer intégralement
+l’archive aux médias figés avant toute réutilisation. Si les fichiers diffèrent,
+recalculer la capacité avant nouvelle copie et reporter si elle ne tient pas.
+Ne pas écraser/purger les copies précédentes pour gagner la place. Les 19,08 Gio
+libres observés à 10:25:55 UTC ne sont pas une garantie de capacité future ni de
+place pour deux nouvelles bibliothèques complètes.
 
 Après contrôle de capacité, lancer explicitement `vps-preview run atelier backup`,
 attendre **Succeeded**, relever taille/SHA256 et tester une restauration dans des
@@ -186,10 +232,12 @@ Exiger Succeeded, vérifier la présence de 005 et les compteurs. Aucun `down SQ
 n’est prévu : 005 est additive, les anciennes images n'utilisent pas ses ajouts.
 Le code source de l’ancienne API (`78a5fe2`) utilise des colonnes explicites
 pour lire/insérer les sessions, compatibles avec l’ajout de 005 et son défaut.
-La compatibilité réelle de retour doit aussi être testée sur la copie restaurée
-avant la fenêtre, avec les mêmes données et images ; la lecture du SQL ne remplace
-pas ce contrôle. En cas d'erreur transactionnelle, garder web/worker arrêtés et
-examiner le schéma avant de relancer, jamais de `DROP` improvisé.
+La répétition administrateur a vérifié ce retour avec les images exactes sur
+copie restaurée : l’ancien binaire de migration accepte 005 et l’ancienne API
+retrouve les deux projets après inversion. Cela ne qualifie ni un vrai login
+Authelia ni les clés fournisseurs ; les vérifier lors du retour réel si nécessaire.
+En cas d'erreur transactionnelle, garder web/worker arrêtés et examiner le schéma
+avant de relancer, jamais de `DROP` improvisé.
 
 ## Comptes existants : association explicite, pas par email
 
@@ -217,13 +265,25 @@ est une transaction, pas toute la liste. Le binaire refuse une source différent
 ou une cible déjà rattachée et ne fusionne jamais. S'il existe déjà un espace
 cible, arrêter et examiner ses données, ne pas le supprimer pour forcer le passage.
 
-Dans un exécuteur administré temporaire utilisant **l’image web qualifiée**, avec
-seulement DB applicative, son secret existant et le fichier JSON privé en lecture
-seule, lancer `identity-link --file /run/identity-map/map.json`, puis le même avec
-`--apply` après succès et accord. L’image garde son entrypoint `tarjama` ; ne pas
-lui donner de token Kubernetes, credential admin Keycloak ou accès médias.
-Cet exécuteur est à préparer par l’admin : `vps-preview run` n'invente pas ce job
-et le montage privé n'est pas présent dans les recettes préparées.
+L’exécuteur root borné est désormais installé et qualifié sur copie :
+`/usr/local/sbin/vps-keycloak-identity-link`. Il fixe l’image web et la commande,
+monte uniquement l’accès DB applicatif et le JSON privé (root 0600, 16 Ko maximum),
+sans médias, clé IA, token Kubernetes ou credential admin Keycloak dans le Job.
+Simulation par défaut, durée 300 s, aucun retry automatique ; retrait des ressources
+temporaires et journaux privés. Aucun nouveau privilège au compte codex.
+
+Commandes **administrateur, pendant la fenêtre autorisée seulement** :
+
+```sh
+sudo /usr/local/sbin/vps-keycloak-identity-link --mapping /CHEMIN/PRIVE/map.json
+# Après simulation, point de reprise et accord de migration :
+sudo /usr/local/sbin/vps-keycloak-identity-link --mapping /CHEMIN/PRIVE/map.json --apply
+```
+
+`--apply` exige web/worker arrêtés, mais le garde-fou ne remplace pas l’accord
+humain. L’outil ne crée pas le compte cible, ne vérifie pas sa possession et ne
+ferme pas lui-même l’application. Ne pas utiliser les JSON synthétiques du banc.
+`vps-preview run` n’invente pas ce job : le montage privé reste hors des recettes.
 
 Pour un environnement opérateur où ce binaire et la DB sont déjà configurés,
 le raccourci existant est `make web-identity-link ARGS='--file CHEMIN_PRIVE'`, puis

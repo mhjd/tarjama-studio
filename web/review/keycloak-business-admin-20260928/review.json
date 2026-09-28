@@ -1,0 +1,42 @@
+{
+  "reviewed_at": "2026-09-28T16:21:10.541090+00:00",
+  "source_directory": "/home/codex/.keycloak-business-admin-20260928",
+  "source_manifest_sha256": "e19a9df5c92225b569b2ee4b1aa6bc9d7e3ba0f31348ecd203244b6acc67bc0e",
+  "artifact_checks": {
+    "sha256_and_bytes_verified": 21,
+    "srt_ar_cues": 25,
+    "srt_fr_cues": 25,
+    "identical_timestamps": true,
+    "non_overlapping_and_in_video_duration": true
+  },
+  "pipeline_result": "PASS_REPORTED_BY_ADMIN_WITH_ARTIFACT_REVIEW",
+  "review_operations": "Read existing files only; no processing, network or deployment action.",
+  "new_jobs": 0,
+  "new_provider_calls": 0,
+  "text_cost_usd": 0.002257475,
+  "transcription_cost_usd": null,
+  "provider_balance": null,
+  "visual_review": {
+    "files": [
+      "frame-1.png",
+      "frame-2.png",
+      "frame-3.png",
+      "02-arabic.png",
+      "03-french.png",
+      "04-export.png"
+    ],
+    "observations": [
+      "French captions are visible within all three sampled video frames.",
+      "At 105 seconds captions overlap original bottom-screen graphics.",
+      "Desktop export shows Télécharger la vidéo as primary button."
+    ]
+  },
+  "remaining_limits": [
+    "Input locking during correction not demonstrated by these artifacts.",
+    "No independent full video decode or listening performed during this review; administrator reports full decode PASS.",
+    "No mobile evidence in this artifact set.",
+    "No religious-reference or web-search qualification on this news sample; web_calls=0 and web_usage_unknown=true.",
+    "SRT French cues 16 and 17 split 45 000 euros across the boundary (72.200 seconds); poor standalone cue readability, not a demonstrated numeric mistranslation."
+  ],
+  "private_access_preserved": true
+}

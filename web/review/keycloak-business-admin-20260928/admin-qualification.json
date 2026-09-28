@@ -1,0 +1,104 @@
+{
+  "pipeline_result": "PASS",
+  "project": "10e13003f35f1fc6d1f58021db38ea6c",
+  "started": "2026-09-28T16:01:52.871Z",
+  "initial_runner_result": {
+    "started": "2026-09-28T16:01:52.871Z",
+    "result": "FAIL",
+    "manual_retries": 0,
+    "project": "10e13003f35f1fc6d1f58021db38ea6c",
+    "correction_seconds": 132.219,
+    "arabic_edit_reload": "PASS",
+    "translation_seconds": 12.522,
+    "translation_reload": "PASS",
+    "export_seconds": 86.57,
+    "error": "Expected values to be strictly equal:",
+    "finished": "2026-09-28T16:06:04.864Z"
+  },
+  "collection_result": {
+    "result": "PASS",
+    "utc": "2026-09-28T16:07:49.846Z",
+    "existing_project": "10e13003f35f1fc6d1f58021db38ea6c",
+    "subtitles": [
+      "ar",
+      "fr"
+    ],
+    "new_jobs": 0,
+    "new_provider_calls": 0
+  },
+  "jobs": [
+    {
+      "kind": "download",
+      "state": "succeeded"
+    },
+    {
+      "kind": "transcribe",
+      "state": "succeeded"
+    },
+    {
+      "kind": "cleanup",
+      "state": "succeeded"
+    },
+    {
+      "kind": "translate",
+      "state": "succeeded"
+    },
+    {
+      "kind": "export_fr_high",
+      "state": "succeeded"
+    }
+  ],
+  "segments": 25,
+  "provider_usage": [
+    {
+      "kind": "cleanup",
+      "code": "ok",
+      "usage": [
+        {
+          "cost": 0.001236675,
+          "total_tokens": 4434,
+          "prompt_tokens": 2614,
+          "completion_tokens": 1820
+        }
+      ],
+      "model_calls": 1,
+      "web_calls": 0,
+      "elapsed_ms": 19191,
+      "billing_may_be_incomplete": false,
+      "web_usage_unknown": true
+    },
+    {
+      "kind": "translate",
+      "code": "ok",
+      "usage": [
+        {
+          "cost": 0.0010208,
+          "total_tokens": 4684,
+          "prompt_tokens": 3523,
+          "completion_tokens": 1161
+        }
+      ],
+      "model_calls": 1,
+      "web_calls": 0,
+      "elapsed_ms": 9490,
+      "billing_may_be_incomplete": false,
+      "web_usage_unknown": true
+    }
+  ],
+  "reported_text_cost_usd": 0.002257475,
+  "manual_retries": 0,
+  "video_full_decode": "PASS",
+  "audio_signal_mean_db": -23.7,
+  "audio_signal_peak_db": -4.7,
+  "visual_subtitle_samples_seconds": [
+    10,
+    57,
+    105
+  ],
+  "limitations": [
+    "No human listening or linguistic accuracy certification",
+    "Arabic input lock during processing not conclusively recorded by this runner",
+    "Transcription cost and provider balances unavailable",
+    "Initial runner failed only on subtitle URL missing .srt/version; artifacts collected separately without new jobs"
+  ]
+}

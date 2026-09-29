@@ -1,0 +1,13 @@
+
+> tarjama-web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1899 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.52 kB │ gzip:  0.32 kB
+dist/assets/index-24XOwtBy.css   17.11 kB │ gzip:  4.39 kB
+dist/assets/index-Boq7bJtW.js   247.62 kB │ gzip: 77.29 kB
+✓ built in 2.76s

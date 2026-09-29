@@ -93,9 +93,12 @@ for (const width of [1440, 393, 412]) {
       ).toBeDisabled();
     }
     expect(requests).toBe(0);
-    await page
-      .getByText("Exporter les sous-titres seuls (SRT)", { exact: true })
-      .click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Exporter les sous-titres",
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Télécharger le français · SRT" }),
     ).toBeEnabled();

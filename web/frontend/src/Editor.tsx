@@ -433,10 +433,11 @@ export function Editor({
       step !== "corriger" && (p.stage === "review" || p.stage === "ready");
   const translationPending = p.stage === "translating";
   const showSegments =
-    step === "corriger" ||
-    ((step === "traduire" || step === "exporter") && !translationPending);
+    step === "corriger" || (step === "traduire" && !translationPending);
   const showPlayer =
-    Boolean(p.media) && !(step === "traduire" && translationPending);
+    Boolean(p.media) &&
+    step !== "exporter" &&
+    !(step === "traduire" && translationPending);
   const showMissingPlayer =
     !p.media && p.media_expired && showSegments && canVisitStep(p, "corriger");
   const validating =
@@ -471,6 +472,29 @@ export function Editor({
             (j.kind.startsWith("export_") && j.source_version === p.version)),
       )
       .at(-1);
+  function subtitleDownloads() {
+    return (
+      <div className="subtitle-download-actions">
+        <button
+          disabled={busy || uploading}
+          onClick={() => void action(() => downloadSubtitles(d.project, "ar"))}
+        >
+          Télécharger l’arabe · SRT
+        </button>
+        {p.translation_source > 0 && (
+          <button
+            className="primary"
+            disabled={busy || uploading}
+            onClick={() =>
+              void action(() => downloadSubtitles(d.project, "fr"))
+            }
+          >
+            Télécharger le français · SRT
+          </button>
+        )}
+      </div>
+    );
+  }
   function restorePlayback() {
     return action(async () => {
       d.adopt(
@@ -936,97 +960,128 @@ export function Editor({
         </section>
       )}
       {step === "exporter" && p.stage === "ready" && (
-        <section className="panel export-panel">
-          <h2>Votre vidéo sous-titrée</h2>
-          <p className="export-edit-help">
-            Une correction ? Modifiez les textes ci-dessous, puis validez à
-            nouveau pour créer une vidéo à jour.
-          </p>
-          <div className="row">
-            <p className="export-language">Sous-titres français</p>
-            <label>
-              Qualité
-              <select
-                value={quality}
-                onChange={(e) => setQuality(e.target.value)}
-              >
-                <option value="low">Low · partage WhatsApp</option>
-                <option value="high">High · YouTube</option>
-              </select>
-            </label>
-          </div>
-          <p>
-            Les vidéos exportées sont conservées 24 heures. Les sous-titres
-            restent disponibles sans limite de durée.
-          </p>
-          <p>
-            Low produit un fichier plus léger. La taille finale dépend de la
-            durée.
-          </p>
-          {activeRecovery && !exportReady && (
-            <p role="status">
-              {exportActive
-                ? "La création attend la fin de la récupération de la vidéo."
-                : "Attendez la fin de la récupération de la vidéo avant de lancer sa création. Les sous-titres SRT restent disponibles."}
-            </p>
-          )}
-          {exportReady && selectedExport ? (
-            <a
-              className="button primary export-download"
-              href={`/api/projects/${p.id}/exports/${selectedExport.id}`}
-              download
-              aria-disabled={busy || uploading || undefined}
-              onClick={(event) => {
-                event.preventDefault();
-                void action(async () => downloadVideo(selectedExport));
-              }}
-            >
-              Télécharger la vidéo
-            </a>
-          ) : (
+        <>
+          <div className="export-review-link">
             <button
-              className="primary"
-              disabled={
-                busy ||
-                uploading ||
-                Boolean(exportActive) ||
-                Boolean(activeRecovery) ||
-                (!p.media && (!p.url || p.media_uploaded))
-              }
-              onClick={() =>
-                void action(async () => {
-                  if (
-                    selectedExport?.source_version === d.project.version &&
-                    ["cancelled", "failed"].includes(selectedExport.state)
-                  ) {
-                    await request(
-                      `/api/projects/${p.id}/jobs/${selectedExport.id}/retry`,
-                      "POST",
-                    );
-                    return;
-                  }
-                  await request(`/api/projects/${p.id}/exports`, "POST", {
-                    version: d.project.version,
-                    track: "fr",
-                    quality,
-                  });
-                })
-              }
+              disabled={busy || uploading}
+              onClick={() => void navigateStep("traduire")}
             >
-              {busy
-                ? "Envoi de la demande…"
-                : activeRecovery
-                  ? "En attente de la vidéo"
-                  : exportActive
-                    ? "Création en cours…"
-                    : selectedExport?.state === "cancelled"
-                      ? "Reprendre la création"
-                      : selectedExport?.state === "failed"
-                        ? "Réessayer la création"
-                        : "Créer la vidéo"}
+              Modifier la traduction
             </button>
-          )}
-        </section>
+          </div>
+          <div className="export-options">
+            <section
+              className="panel export-panel"
+              aria-labelledby="video-export-title"
+            >
+              <h2 id="video-export-title">Votre vidéo sous-titrée</h2>
+              <p>
+                Créez une vidéo avec les sous-titres français intégrés à
+                l’image.
+              </p>
+              <div className="row">
+                <p className="export-language">Sous-titres français</p>
+                <label>
+                  Qualité
+                  <select
+                    value={quality}
+                    onChange={(e) => setQuality(e.target.value)}
+                  >
+                    <option value="low">Low · partage WhatsApp</option>
+                    <option value="high">High · YouTube</option>
+                  </select>
+                </label>
+              </div>
+              <p>
+                Les vidéos exportées sont conservées 24 heures. Les sous-titres
+                restent disponibles sans limite de durée.
+              </p>
+              <p>
+                Low produit un fichier plus léger. La taille finale dépend de la
+                durée.
+              </p>
+              {activeRecovery && !exportReady && (
+                <p role="status">
+                  {exportActive
+                    ? "La création attend la fin de la récupération de la vidéo."
+                    : "Attendez la fin de la récupération de la vidéo avant de lancer sa création. Les sous-titres SRT restent disponibles."}
+                </p>
+              )}
+              {exportReady && selectedExport ? (
+                <a
+                  className="button primary export-download"
+                  href={`/api/projects/${p.id}/exports/${selectedExport.id}`}
+                  download
+                  aria-disabled={busy || uploading || undefined}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void action(async () => downloadVideo(selectedExport));
+                  }}
+                >
+                  Télécharger la vidéo
+                </a>
+              ) : (
+                <button
+                  className="primary"
+                  disabled={
+                    busy ||
+                    uploading ||
+                    Boolean(exportActive) ||
+                    Boolean(activeRecovery) ||
+                    (!p.media && (!p.url || p.media_uploaded))
+                  }
+                  onClick={() =>
+                    void action(async () => {
+                      if (
+                        selectedExport?.source_version === d.project.version &&
+                        ["cancelled", "failed"].includes(selectedExport.state)
+                      ) {
+                        await request(
+                          `/api/projects/${p.id}/jobs/${selectedExport.id}/retry`,
+                          "POST",
+                        );
+                        return;
+                      }
+                      await request(`/api/projects/${p.id}/exports`, "POST", {
+                        version: d.project.version,
+                        track: "fr",
+                        quality,
+                      });
+                    })
+                  }
+                >
+                  {busy
+                    ? "Envoi de la demande…"
+                    : activeRecovery
+                      ? "En attente de la vidéo"
+                      : exportActive
+                        ? "Création en cours…"
+                        : selectedExport?.state === "cancelled"
+                          ? "Reprendre la création"
+                          : selectedExport?.state === "failed"
+                            ? "Réessayer la création"
+                            : "Créer la vidéo"}
+                </button>
+              )}
+            </section>
+            <section
+              className="panel subtitle-export-panel"
+              aria-labelledby="subtitle-export-title"
+            >
+              <h2 id="subtitle-export-title">Exporter les sous-titres</h2>
+              <p>
+                Format SRT, compatible avec les logiciels de montage et les
+                lecteurs vidéo. Les textes et leurs horodatages sont conservés,
+                sans le style de Tarjama.
+              </p>
+              {subtitleDownloads()}
+              <p className="subtitle-export-note">
+                Disponibles immédiatement, même si la vidéo a expiré ou est en
+                cours de récupération.
+              </p>
+            </section>
+          </div>
+        </>
       )}
       {p.media_expired && !p.media && (
         <MediaRecovery
@@ -1273,24 +1328,7 @@ export function Editor({
                 Fichiers texte avec les horodatages, sans le style de Tarjama,
                 pour votre logiciel de montage.
               </p>
-              <button
-                disabled={busy}
-                onClick={() =>
-                  void action(() => downloadSubtitles(d.project, "ar"))
-                }
-              >
-                Télécharger l’arabe · SRT
-              </button>
-              {p.translation_source > 0 && (
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    void action(() => downloadSubtitles(d.project, "fr"))
-                  }
-                >
-                  Télécharger le français · SRT
-                </button>
-              )}
+              {subtitleDownloads()}
             </details>
           )}
           {p.translation_source > 0 &&

@@ -269,6 +269,9 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   expect((await download.body()).length).toBeGreaterThan(1000);
   // Correcting an already rendered project invalidates that render without losing it.
   const originalExport = await link.getAttribute("href");
+  await page
+    .getByRole("button", { name: "Modifier la traduction", exact: true })
+    .click();
   const revisedFrench = page.getByRole("textbox", {
     name: "Français one",
     exact: true,
@@ -291,6 +294,9 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   await page.getByRole("button", { name: "Créer la vidéo" }).click();
   await expect(link).toBeVisible({ timeout: 30000 });
   expect(await link.getAttribute("href")).not.toBe(originalExport);
+  await page
+    .getByRole("button", { name: "Modifier la traduction", exact: true })
+    .click();
   const revisedArabic = page.getByRole("textbox", {
     name: "Arabe one",
     exact: true,
@@ -771,9 +777,7 @@ for (const uploaded of [true, false]) {
       await route.fulfill({ response, json: data });
     });
     await page.goto("/projets/fixture/exporter");
-    await expect(
-      page.getByRole("textbox", { name: "Français one", exact: true }),
-    ).toHaveValue("Ma traduction conservée");
+    await expect(page.locator(".segments")).toHaveCount(0);
     await expect(page.locator("video")).toHaveCount(0);
     await expect(page.locator(".job")).toHaveCount(0);
     if (uploaded) {
@@ -799,11 +803,20 @@ for (const uploaded of [true, false]) {
         page.getByRole("region", { name: "Lecteur indisponible" }),
       ).toContainText("automatiquement");
     }
-    await page
-      .getByText("Exporter les sous-titres seuls (SRT)", { exact: true })
-      .click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Exporter les sous-titres",
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Télécharger le français · SRT" }),
     ).toBeEnabled();
+    await page
+      .getByRole("button", { name: "Modifier la traduction", exact: true })
+      .click();
+    await expect(
+      page.getByRole("textbox", { name: "Français one", exact: true }),
+    ).toHaveValue("Ma traduction conservée");
   });
 }

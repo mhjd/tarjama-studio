@@ -1203,3 +1203,44 @@ textarea.project-title {
     box-shadow: 0 -8px 32px #080d0e66;
   }
 }
+
+/* Exports are destinations, separate from the subtitle review workflow. */
+.export-review-link {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 16px;
+}
+.export-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.export-options > .panel {
+  min-width: 0;
+  margin-top: 0;
+}
+.export-options h2 {
+  margin-top: 0;
+}
+.export-options .row {
+  display: block;
+}
+.subtitle-download-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.subtitle-download-actions button {
+  flex: 1 1 180px;
+}
+.subtitle-export-note {
+  color: #b3c3bc;
+  font-size: 14px;
+}
+@media (max-width: 800px) {
+  .export-options {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

@@ -49,7 +49,10 @@ compare les pixels de la paire fusionnée à ceux d'un segment déjà réuni.
 Le téléchargement SRT via l'API et Playwright vérifie aussi que les segments de
 relecture restent intacts. Aucun crédit IA ni projet utilisateur utilisé.
 
-Preuves : `web/review/export-pairs-20260929/`. Changement préparé, non déployé.
+Preuves : `web/review/export-pairs-20260929/`. Changement déployé le 29 septembre, révision `32eba7cc205e8816`.
+Recette : `web/deploy/preview/active-export-pairs-20260929.yml`.
+Le rendu réel demandé pour Sirat est suivi dans
+[la passation opérationnelle](REQUESTED_REEXPORT_20260929.md).
 
 Résultat : **15 tests Go avec détecteur de courses et 4 tests Playwright réussis**,
 build frontend réussi. Image extraite du rendu synthétique inspectée : phrase

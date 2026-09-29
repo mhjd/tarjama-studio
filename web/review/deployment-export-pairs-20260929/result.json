@@ -1,0 +1,12 @@
+{
+  "revision": "32eba7cc205e8816",
+  "source_commit": "548fbf6",
+  "services_ready": 6,
+  "requested_export_job": "8be9cd4fb00f9880c7ad7011f1d46dd7",
+  "quality": "high",
+  "size_bytes": 329924759,
+  "subtitle_texts_unchanged": true,
+  "new_transcription_or_translation_requested": false,
+  "export_state": "succeeded",
+  "public_browser_session_retested": false
+}

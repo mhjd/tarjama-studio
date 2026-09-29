@@ -51,7 +51,7 @@ traitement actif, et la création d'une tâche pour une nouvelle version.
 Preuves du déploiement et du traitement :
 `web/review/deployment-export-pairs-20260929/`.
 
-## Exécution en cours — ne pas relancer le job
+## Exécution terminée — ne pas relancer le job
 
 Révision déployée `32eba7cc205e8816`, recette
 `web/deploy/preview/active-export-pairs-20260929.yml`. Images :
@@ -66,9 +66,13 @@ Six services prêts et contrôle des assets/readiness/refus anonyme
 Job de supervision : **`pv-job-requested-export-b6eb3a0c`**.
 Job applicatif : **`8be9cd4fb00f9880c7ad7011f1d46dd7`**.
 Qualité réellement retrouvée : **High**, version des textes 6, génération 2.
-Le traitement a quitté la file d'attente et est en cours. En cas d'interruption de
-l'agent, reprendre uniquement `status` et `logs --component requested-export` ;
-ne pas relancer la commande de création.
+Le traitement applicatif et sa supervision ont réussi. Le MP4 final fait
+**329 924 759 octets** ; l'empreinte de tous les segments est inchangée.
+Six services prêts après la création du fichier. Aucun appel transcription,
+correction ou traduction déclenché. Aucun nouveau test navigateur authentifié
+public ni inspection visuelle de ce MP4 réel : les preuves vérifient le succès
+du pipeline, le fichier non vide et la conservation des textes.
+Ne pas relancer la commande de création.
 
 Le rendu sera disponible dans l'interface :
 https://tarjama.runagen.com/projets/2d15866edf3d955172ad22add35a7e91/exporter

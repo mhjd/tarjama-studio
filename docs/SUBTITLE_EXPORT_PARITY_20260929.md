@@ -1,5 +1,9 @@
 # Exports regroupés et taille Gros — 29 septembre 2026
 
+> Suite : la nouvelle [règle par paires de moins de 10 mots](EXPORT_PAIR_GROUPING_20260929.md)
+> remplace les critères historiques ci-dessous dans la prochaine candidate.
+> La taille Gros et les garanties de conservation restent inchangées.
+
 ## Décisions
 
 À la demande du propriétaire, les téléchargements SRT utilisent le regroupement

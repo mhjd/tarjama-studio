@@ -21,8 +21,8 @@ func TestGroupedVideoMatchesJoinedReference(t *testing.T) {
 	source := filepath.Join(dir, "source.mp4")
 	mediaTestCommand(t, "ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=0x31453b:s=640x360:d=4", "-f", "lavfi", "-i", "sine=duration=4", "-c:v", "libx264", "-threads", "1", "-c:a", "aac", "-shortest", source)
 	inputs := [][]Segment{
-		{{ID: "one", Start: 0, End: 700, Arabic: "نعم", French: "En effet"}, {ID: "two", Start: 750, End: 3500, Arabic: "هذا الشرح ضروري", French: "cette explication reste nécessaire."}},
-		{{ID: "one", Start: 0, End: 3500, Arabic: "نعم هذا الشرح ضروري", French: "En effet cette explication reste nécessaire."}},
+		{{ID: "one", Start: 0, End: 2000, Arabic: "نعم", French: "en disant : « Sans la difficulté,"}, {ID: "two", Start: 2000, End: 4000, Arabic: "هذا الشرح ضروري", French: "tout le monde serait chef. »"}},
+		{{ID: "one", Start: 0, End: 4000, Arabic: "نعم هذا الشرح ضروري", French: "en disant : « Sans la difficulté, tout le monde serait chef. »"}},
 	}
 	var reference []byte
 	for i, segments := range inputs {
@@ -60,7 +60,7 @@ func TestGroupedVideoMatchesJoinedReference(t *testing.T) {
 	}
 }
 
-func TestAutomaticExportCuesDesktopExamples(t *testing.T) {
+func TestAutomaticExportCuePairs(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		input []exportCue
@@ -69,8 +69,8 @@ func TestAutomaticExportCuesDesktopExamples(t *testing.T) {
 		{"flash", []exportCue{{0, 700, "En effet"}, {750, 3500, "cette explication reste nécessaire."}}, []exportCue{{0, 3500, "En effet cette explication reste nécessaire."}}},
 		{"pause", []exportCue{{0, 700, "En effet"}, {1300, 4000, "cette explication arrive après une pause."}}, []exportCue{{0, 700, "En effet"}, {1300, 4000, "cette explication arrive après une pause."}}},
 		{"too fast", []exportCue{{0, 500, "Oui"}, {500, 1000, "Cette phrase est beaucoup trop longue pour être fusionnée et lue correctement."}}, []exportCue{{0, 500, "Oui"}, {500, 1000, "Cette phrase est beaucoup trop longue pour être fusionnée et lue correctement."}}},
-		{"backward", []exportCue{{0, 3000, "Une phrase complète."}, {3000, 4000, "Oui."}}, []exportCue{{0, 4000, "Une phrase complète. Oui."}}},
-		{"chain", []exportCue{{0, 1000, "Une"}, {1000, 2000, "petite"}, {2000, 3000, "phrase"}, {3000, 5000, "Une autre phrase."}}, []exportCue{{0, 3000, "Une petite phrase"}, {3000, 5000, "Une autre phrase."}}},
+		{"two short sentences", []exportCue{{0, 3000, "Une phrase complète."}, {3000, 4000, "Oui."}}, []exportCue{{0, 4000, "Une phrase complète. Oui."}}},
+		{"chain", []exportCue{{0, 1000, "Une"}, {1000, 2000, "petite"}, {2000, 3000, "phrase"}, {3000, 5000, "Une autre phrase."}}, []exportCue{{0, 2000, "Une petite"}, {2000, 5000, "phrase Une autre phrase."}}},
 		{"hour offset and empty", []exportCue{{3600000, 3600700, "  En effet "}, {3600700, 3600750, " "}, {3600750, 3603500, "cette explication reste nécessaire."}, {3603500, 3603500, "invalide"}}, []exportCue{{3600000, 3603500, "En effet cette explication reste nécessaire."}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -109,19 +109,6 @@ func TestExportCueReadingBoundaries(t *testing.T) {
 			}
 		})
 	}
-	for _, tc := range []struct {
-		cue   exportCue
-		merge bool
-	}{
-		{exportCue{0, 833, "un deux trois"}, true},
-		{exportCue{0, 834, "un deux trois"}, false},
-		{exportCue{0, 2000, "un deux"}, true},
-		{exportCue{0, 2000, "un deux trois"}, false},
-	} {
-		if tc.cue.needsMerge() != tc.merge {
-			t.Fatalf("short cue boundary: %#v", tc.cue)
-		}
-	}
 }
 
 func TestGroupedExportsKeepEditingSegments(t *testing.T) {
@@ -149,5 +136,73 @@ func TestGroupedExportsKeepEditingSegments(t *testing.T) {
 	escaped := ASS([]Segment{{Start: 0, End: 2000, French: "{\\pos(1,2)}\nSalut"}}, 1280, 720, "fr")
 	if !strings.Contains(escaped, "｛＼pos(1,2)｝\\NSalut") {
 		t.Fatal("ASS escaping lost", escaped)
+	}
+}
+
+func TestShortPhraseExportGrouping(t *testing.T) {
+	segments := []Segment{
+		{ID: "a", Start: 1450000, End: 1452000, French: "en disant : « Sans la difficulté,", Arabic: "بقوله : لولا المشقة"},
+		{ID: "b", Start: 1452000, End: 1454000, French: "tout le monde serait chef. »", Arabic: "ساد الناس كلهم."},
+	}
+	before := append([]Segment(nil), segments...)
+	for _, track := range []string{"fr", "ar"} {
+		cues := automaticExportCues(segments, track)
+		if len(cues) != 1 || cues[0].Start != 1450000 || cues[0].End != 1454000 {
+			t.Fatalf("%s: %#v", track, cues)
+		}
+		if got := SRT(segments, track); strings.Count(got, " --> ") != 1 || !strings.Contains(got, "00:24:10,000 --> 00:24:14,000") {
+			t.Fatal(got)
+		}
+		if got := ASS(segments, 1280, 720, track); strings.Count(got, "Dialogue: ") != 1 || !strings.Contains(got, "0:24:10.00,0:24:14.00") {
+			t.Fatal(got)
+		}
+	}
+	if !reflect.DeepEqual(before, segments) {
+		t.Fatal("review segments modified")
+	}
+}
+
+func TestExportPairWordLimit(t *testing.T) {
+	nine := "un un un un un un un un un"
+	ten := nine + " un"
+	for _, tc := range []struct {
+		name, left, right string
+		count             int
+	}{
+		{"nine and nine", nine, nine, 1},
+		{"nine and ten", nine, ten, 2},
+		{"ten and nine", ten, nine, 2},
+		{"tiny followed by ten", "Oui", ten, 2},
+		{"ten followed by tiny", ten, "Oui", 2},
+		{"punctuation is not a word", "« " + nine + " »", "Oui.", 1},
+		{"arabic", "واحد اثنان ثلاثة أربعة خمسة ستة سبعة ثمانية تسعة", "نعم", 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			segments := []Segment{{Start: 0, End: 2000, French: tc.left}, {Start: 2000, End: 4000, French: tc.right}}
+			if got := automaticExportCues(segments, "fr"); len(got) != tc.count {
+				t.Fatalf("got %#v", got)
+			}
+		})
+	}
+	for _, tc := range []struct {
+		name                 string
+		rightStart, rightEnd int64
+		rightText            string
+	}{
+		{"pause", 2600, 4600, "tout le monde serait chef. »"},
+		{"too fast", 500, 1000, "tout le monde serait chef. »"},
+		{"long text despite few words", 2000, 6000, strings.Repeat("a", 85)},
+		{"too long duration", 2000, 7001, "tout le monde serait chef. »"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			end := int64(2000)
+			if tc.rightStart < end {
+				end = tc.rightStart
+			}
+			segments := []Segment{{Start: 0, End: end, French: "en disant : « Sans la difficulté,"}, {Start: tc.rightStart, End: tc.rightEnd, French: tc.rightText}}
+			if got := automaticExportCues(segments, "fr"); len(got) != 2 {
+				t.Fatalf("unexpected merge: %#v", got)
+			}
+		})
 	}
 }

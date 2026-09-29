@@ -1,0 +1,10 @@
+{
+  "go_tests_passed": 15,
+  "race_detector": true,
+  "playwright_tests_passed": 4,
+  "build": "passed",
+  "example": "Screenshot phrases, shown times 24:10-24:14; synthetic render uses 0-4 seconds",
+  "render_frame_inspected": true,
+  "rule": "pair of original adjacent cues, each strictly fewer than 10 words; reading guards retained",
+  "deployed": false
+}

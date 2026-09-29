@@ -2,6 +2,7 @@ package studio
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
@@ -13,10 +14,19 @@ type exportCue struct {
 	Text       string
 }
 
-// Port of automatic groupExportCues in ui/electron/export-options.ts.
-// Millisecond comparisons avoid floating point ambiguity at the boundaries.
-func (c exportCue) needsMerge() bool {
-	return len(strings.Fields(c.Text)) <= 2 || (c.End-c.Start)*6 < 5000
+// Count whitespace-separated words containing a letter or digit: standalone
+// quotation marks and punctuation are not words (in either language).
+func exportWordCount(text string) int {
+	count := 0
+	for _, field := range strings.Fields(text) {
+		for _, r := range field {
+			if unicode.IsLetter(r) || unicode.IsNumber(r) {
+				count++
+				break
+			}
+		}
+	}
+	return count
 }
 
 func canMergeExportCues(left, right exportCue) bool {
@@ -43,17 +53,14 @@ func automaticExportCues(segments []Segment, track string) []exportCue {
 	grouped := make([]exportCue, 0, len(cues))
 	for i := 0; i < len(cues); i++ {
 		current := cues[i]
-		for i+1 < len(cues) && current.needsMerge() && canMergeExportCues(current, cues[i+1]) {
+		// Pair original neighbours only; never grow a group by chaining merges.
+		if i+1 < len(cues) && exportWordCount(current.Text) < 10 &&
+			exportWordCount(cues[i+1].Text) < 10 && canMergeExportCues(current, cues[i+1]) {
 			i++
 			current.End = cues[i].End
 			current.Text += " " + cues[i].Text
 		}
-		if n := len(grouped); n > 0 && current.needsMerge() && canMergeExportCues(grouped[n-1], current) {
-			grouped[n-1].End = current.End
-			grouped[n-1].Text += " " + current.Text
-		} else {
-			grouped = append(grouped, current)
-		}
+		grouped = append(grouped, current)
 	}
 	return grouped
 }

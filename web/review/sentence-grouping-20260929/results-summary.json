@@ -1,0 +1,486 @@
+{
+  "dev-s1": {
+    "input_sha256": "06b8344d739b7eb8564b6ee6bbd7e5d6b92400eca3b17de72323e7371231817c",
+    "translation_sha256": null,
+    "sources": {
+      "evaluate.py": "78d686009f0d99944d5238c4e04a13fb65d4fae1b8108b9ff89f0d0630d3f09a",
+      "candidate.py": "cdc081dfe40fbc5049e941ac0e630c2a083d837ab67d0e61d0b997eeb96c7d48",
+      "prepare.py": "7249678a3b3f14f98230d50c4992c53d7f2bf4b99aa95a53691a471adac475f1",
+      "sentences.py": "eebe83471710369fddec43c090bb9753a2bec8647a2372a4c310bc01b429491a"
+    },
+    "metrics": {
+      "pairs": {
+        "mean_words": 10.26360338573156,
+        "median_words": 10,
+        "word_bins": {
+          "1-3": 33,
+          "4-9": 336,
+          "10-16": 391,
+          "17+": 67
+        },
+        "screen_time_bins": {
+          "1-3": 0.019764028783540274,
+          "4-9": 0.33042469004336456,
+          "10-16": 0.5362436488034126,
+          "17+": 0.11356763236968254
+        },
+        "within_sentence_cuts": 387,
+        "non_punctuated_cuts": 168,
+        "orphans": {
+          "prefix": 4,
+          "suffix": 7,
+          "middle": 0
+        },
+        "sentence_imbalance": 448.9306902181256,
+        "cues": 827,
+        "one_word": 5,
+        "fleeting": 12,
+        "above_17_cps": 281,
+        "above_21_cps": 130,
+        "duration_ms": {
+          "min": 460,
+          "median": 4220,
+          "p95": 6920,
+          "max": 11480
+        },
+        "cps": {
+          "min": 2.8508771929824563,
+          "median": 14.573991031390134,
+          "p95": 27.272727272727273,
+          "max": 75.67567567567568
+        },
+        "max_anticipation_ms": 4840,
+        "gaps_over_500ms": 0,
+        "max_gap_ms": 40,
+        "unchanged_input_cues": 688,
+        "exceptions": null
+      },
+      "prototype": {
+        "mean_words": 10.276029055690072,
+        "median_words": 10,
+        "word_bins": {
+          "1-3": 48,
+          "4-9": 312,
+          "10-16": 399,
+          "17+": 67
+        },
+        "screen_time_bins": {
+          "1-3": 0.02669589308420206,
+          "4-9": 0.30745302144049536,
+          "10-16": 0.5523080491765252,
+          "17+": 0.11354303629877742
+        },
+        "within_sentence_cuts": 350,
+        "non_punctuated_cuts": 145,
+        "orphans": {
+          "prefix": 3,
+          "suffix": 5,
+          "middle": 0
+        },
+        "sentence_imbalance": 456.52765107694125,
+        "cues": 826,
+        "one_word": 11,
+        "fleeting": 11,
+        "above_17_cps": 269,
+        "above_21_cps": 114,
+        "duration_ms": {
+          "min": 480,
+          "median": 4200,
+          "p95": 6940,
+          "max": 11480
+        },
+        "cps": {
+          "min": 2.8508771929824563,
+          "median": 14.52991452991453,
+          "p95": 26.573426573426573,
+          "max": 75.67567567567568
+        },
+        "max_anticipation_ms": 6500,
+        "gaps_over_500ms": 1,
+        "max_gap_ms": 720,
+        "unchanged_input_cues": 707,
+        "exceptions": 230
+      },
+      "sentence": {
+        "mean_words": 10.703656998738966,
+        "median_words": 10,
+        "word_bins": {
+          "1-3": 23,
+          "4-9": 292,
+          "10-16": 411,
+          "17+": 67
+        },
+        "screen_time_bins": {
+          "1-3": 0.014876924926512778,
+          "4-9": 0.29852991367281134,
+          "10-16": 0.5730818253662111,
+          "17+": 0.11351133603446478
+        },
+        "within_sentence_cuts": 344,
+        "non_punctuated_cuts": 145,
+        "orphans": {
+          "prefix": 1,
+          "suffix": 5,
+          "middle": 0
+        },
+        "sentence_imbalance": 457.1106725562656,
+        "cues": 793,
+        "one_word": 3,
+        "fleeting": 9,
+        "above_17_cps": 276,
+        "above_21_cps": 114,
+        "duration_ms": {
+          "min": 480,
+          "median": 4360,
+          "p95": 6960,
+          "max": 11480
+        },
+        "cps": {
+          "min": 2.8508771929824563,
+          "median": 14.663461538461538,
+          "p95": 26.775956284153004,
+          "max": 75.67567567567568
+        },
+        "max_anticipation_ms": 6500,
+        "gaps_over_500ms": 2,
+        "max_gap_ms": 980,
+        "unchanged_input_cues": 641,
+        "exceptions": 230
+      }
+    },
+    "icu": "72",
+    "seconds": 1.555,
+    "invariants_passed": true,
+    "layout": {
+      "checked_cues": 793,
+      "all_inside_video": true,
+      "all_merged_groups_at_most_two_line_bands": true
+    },
+    "input_files": {
+      "/home/codex/.tarjama-sirat-grouping-input/segments.json": "06b8344d739b7eb8564b6ee6bbd7e5d6b92400eca3b17de72323e7371231817c"
+    }
+  },
+  "reserved-dedew-s1": {
+    "input_sha256": "2b5bc9bc7c07277fece00c0b183e73c5e5e5bd7459a80e1a7612f8f737f024c4",
+    "translation_sha256": "f01efc2c240aa1d6c3315e2864111280d427c1ad4cfcb6ef509fb47a74afe7c4",
+    "sources": {
+      "evaluate.py": "78d686009f0d99944d5238c4e04a13fb65d4fae1b8108b9ff89f0d0630d3f09a",
+      "candidate.py": "cdc081dfe40fbc5049e941ac0e630c2a083d837ab67d0e61d0b997eeb96c7d48",
+      "prepare.py": "7249678a3b3f14f98230d50c4992c53d7f2bf4b99aa95a53691a471adac475f1",
+      "sentences.py": "eebe83471710369fddec43c090bb9753a2bec8647a2372a4c310bc01b429491a"
+    },
+    "metrics": {
+      "pairs": {
+        "mean_words": 8.936170212765957,
+        "median_words": 9,
+        "word_bins": {
+          "1-3": 18,
+          "4-9": 173,
+          "10-16": 129,
+          "17+": 9
+        },
+        "screen_time_bins": {
+          "1-3": 0.026854134737122677,
+          "4-9": 0.40983096777059597,
+          "10-16": 0.517336354145843,
+          "17+": 0.045978543346438326
+        },
+        "within_sentence_cuts": 203,
+        "non_punctuated_cuts": 48,
+        "orphans": {
+          "prefix": 0,
+          "suffix": 1,
+          "middle": 2
+        },
+        "sentence_imbalance": 94.78130495262273,
+        "cues": 329,
+        "one_word": 2,
+        "fleeting": 11,
+        "above_17_cps": 208,
+        "above_21_cps": 141,
+        "duration_ms": {
+          "min": 200,
+          "median": 2360,
+          "p95": 5500,
+          "max": 7540
+        },
+        "cps": {
+          "min": 4.2105263157894735,
+          "median": 19.68503937007874,
+          "p95": 36.25,
+          "max": 85.0
+        },
+        "max_anticipation_ms": 4840,
+        "gaps_over_500ms": 0,
+        "max_gap_ms": 160,
+        "unchanged_input_cues": 274,
+        "exceptions": null
+      },
+      "prototype": {
+        "mean_words": 10.137931034482758,
+        "median_words": 10,
+        "word_bins": {
+          "1-3": 6,
+          "4-9": 123,
+          "10-16": 150,
+          "17+": 11
+        },
+        "screen_time_bins": {
+          "1-3": 0.007131344799417128,
+          "4-9": 0.31071026427924847,
+          "10-16": 0.6267414390744707,
+          "17+": 0.05541695184686375
+        },
+        "within_sentence_cuts": 172,
+        "non_punctuated_cuts": 40,
+        "orphans": {
+          "prefix": 0,
+          "suffix": 1,
+          "middle": 0
+        },
+        "sentence_imbalance": 99.65140726218517,
+        "cues": 290,
+        "one_word": 0,
+        "fleeting": 7,
+        "above_17_cps": 185,
+        "above_21_cps": 109,
+        "duration_ms": {
+          "min": 580,
+          "median": 3060,
+          "p95": 5600,
+          "max": 7540
+        },
+        "cps": {
+          "min": 6.993006993006993,
+          "median": 18.96551724137931,
+          "p95": 36.075949367088604,
+          "max": 56.666666666666664
+        },
+        "max_anticipation_ms": 4840,
+        "gaps_over_500ms": 7,
+        "max_gap_ms": 1100,
+        "unchanged_input_cues": 204,
+        "exceptions": 116
+      },
+      "sentence": {
+        "mean_words": 10.208333333333334,
+        "median_words": 10,
+        "word_bins": {
+          "1-3": 1,
+          "4-9": 128,
+          "10-16": 148,
+          "17+": 11
+        },
+        "screen_time_bins": {
+          "1-3": 0.0008841146696726565,
+          "4-9": 0.32767499944742834,
+          "10-16": 0.6159626903609399,
+          "17+": 0.0554781955219592
+        },
+        "within_sentence_cuts": 170,
+        "non_punctuated_cuts": 40,
+        "orphans": {
+          "prefix": 0,
+          "suffix": 1,
+          "middle": 0
+        },
+        "sentence_imbalance": 100.17903926719914,
+        "cues": 288,
+        "one_word": 0,
+        "fleeting": 5,
+        "above_17_cps": 189,
+        "above_21_cps": 109,
+        "duration_ms": {
+          "min": 600,
+          "median": 3060,
+          "p95": 5600,
+          "max": 7540
+        },
+        "cps": {
+          "min": 6.993006993006993,
+          "median": 19.03409090909091,
+          "p95": 36.075949367088604,
+          "max": 56.666666666666664
+        },
+        "max_anticipation_ms": 5000,
+        "gaps_over_500ms": 6,
+        "max_gap_ms": 1100,
+        "unchanged_input_cues": 200,
+        "exceptions": 116
+      }
+    },
+    "icu": "72",
+    "seconds": 0.728,
+    "invariants_passed": true,
+    "layout": {
+      "checked_cues": 288,
+      "all_inside_video": true,
+      "all_merged_groups_at_most_two_line_bands": true
+    },
+    "input_files": {
+      "/home/codex/projects/tarjama-studio/data/model_outputs/luna-comparison-20260924-01/corpus-deepseek-v4.1-flash/input.json": "2b5bc9bc7c07277fece00c0b183e73c5e5e5bd7459a80e1a7612f8f737f024c4",
+      "/home/codex/projects/tarjama-studio/data/model_outputs/luna-comparison-20260924-01/corpus-deepseek-v4.1-flash/translation.json": "f01efc2c240aa1d6c3315e2864111280d427c1ad4cfcb6ef509fb47a74afe7c4"
+    }
+  },
+  "control-news-s1": {
+    "input_sha256": "4219cd60c3a72e6ea3275351dbb585490f38a0d54e1a8635738b2154c8dac85e",
+    "translation_sha256": null,
+    "sources": {
+      "evaluate.py": "78d686009f0d99944d5238c4e04a13fb65d4fae1b8108b9ff89f0d0630d3f09a",
+      "candidate.py": "cdc081dfe40fbc5049e941ac0e630c2a083d837ab67d0e61d0b997eeb96c7d48",
+      "prepare.py": "7249678a3b3f14f98230d50c4992c53d7f2bf4b99aa95a53691a471adac475f1",
+      "sentences.py": "eebe83471710369fddec43c090bb9753a2bec8647a2372a4c310bc01b429491a"
+    },
+    "metrics": {
+      "pairs": {
+        "mean_words": 12.607142857142858,
+        "median_words": 13,
+        "word_bins": {
+          "1-3": 0,
+          "4-9": 10,
+          "10-16": 12,
+          "17+": 6
+        },
+        "screen_time_bins": {
+          "1-3": 0.0,
+          "4-9": 0.257283509675788,
+          "10-16": 0.4666819435335393,
+          "17+": 0.2760345467906727
+        },
+        "within_sentence_cuts": 8,
+        "non_punctuated_cuts": 3,
+        "orphans": {
+          "prefix": 0,
+          "suffix": 0,
+          "middle": 0
+        },
+        "sentence_imbalance": 16.66625174698321,
+        "cues": 28,
+        "one_word": 0,
+        "fleeting": 0,
+        "above_17_cps": 19,
+        "above_21_cps": 4,
+        "duration_ms": {
+          "min": 1780,
+          "median": 4640,
+          "p95": 7080,
+          "max": 7560
+        },
+        "cps": {
+          "min": 9.851301115241636,
+          "median": 18.527547537786447,
+          "p95": 22.433460076045627,
+          "max": 24.375
+        },
+        "max_anticipation_ms": 0,
+        "gaps_over_500ms": 0,
+        "max_gap_ms": 0,
+        "unchanged_input_cues": 28,
+        "exceptions": null
+      },
+      "prototype": {
+        "mean_words": 12.607142857142858,
+        "median_words": 13,
+        "word_bins": {
+          "1-3": 0,
+          "4-9": 10,
+          "10-16": 12,
+          "17+": 6
+        },
+        "screen_time_bins": {
+          "1-3": 0.0,
+          "4-9": 0.257283509675788,
+          "10-16": 0.4666819435335393,
+          "17+": 0.2760345467906727
+        },
+        "within_sentence_cuts": 8,
+        "non_punctuated_cuts": 3,
+        "orphans": {
+          "prefix": 0,
+          "suffix": 0,
+          "middle": 0
+        },
+        "sentence_imbalance": 16.66625174698321,
+        "cues": 28,
+        "one_word": 0,
+        "fleeting": 0,
+        "above_17_cps": 19,
+        "above_21_cps": 4,
+        "duration_ms": {
+          "min": 1780,
+          "median": 4640,
+          "p95": 7080,
+          "max": 7560
+        },
+        "cps": {
+          "min": 9.851301115241636,
+          "median": 18.527547537786447,
+          "p95": 22.433460076045627,
+          "max": 24.375
+        },
+        "max_anticipation_ms": 0,
+        "gaps_over_500ms": 0,
+        "max_gap_ms": 0,
+        "unchanged_input_cues": 28,
+        "exceptions": 16
+      },
+      "sentence": {
+        "mean_words": 12.607142857142858,
+        "median_words": 13,
+        "word_bins": {
+          "1-3": 0,
+          "4-9": 10,
+          "10-16": 12,
+          "17+": 6
+        },
+        "screen_time_bins": {
+          "1-3": 0.0,
+          "4-9": 0.257283509675788,
+          "10-16": 0.4666819435335393,
+          "17+": 0.2760345467906727
+        },
+        "within_sentence_cuts": 8,
+        "non_punctuated_cuts": 3,
+        "orphans": {
+          "prefix": 0,
+          "suffix": 0,
+          "middle": 0
+        },
+        "sentence_imbalance": 16.66625174698321,
+        "cues": 28,
+        "one_word": 0,
+        "fleeting": 0,
+        "above_17_cps": 19,
+        "above_21_cps": 4,
+        "duration_ms": {
+          "min": 1780,
+          "median": 4640,
+          "p95": 7080,
+          "max": 7560
+        },
+        "cps": {
+          "min": 9.851301115241636,
+          "median": 18.527547537786447,
+          "p95": 22.433460076045627,
+          "max": 24.375
+        },
+        "max_anticipation_ms": 0,
+        "gaps_over_500ms": 0,
+        "max_gap_ms": 0,
+        "unchanged_input_cues": 28,
+        "exceptions": 16
+      }
+    },
+    "icu": "72",
+    "seconds": 0.182,
+    "invariants_passed": true,
+    "layout": {
+      "checked_cues": 28,
+      "all_inside_video": true,
+      "all_merged_groups_at_most_two_line_bands": true
+    },
+    "input_files": {
+      "/home/codex/projects/tarjama-studio/web/.cache/real-ui-10min/ui-review-tenmin_short3/transcription-macbook-air15-m4.json": "4219cd60c3a72e6ea3275351dbb585490f38a0d54e1a8635738b2154c8dac85e"
+    }
+  }
+}

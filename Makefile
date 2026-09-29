@@ -85,6 +85,10 @@ web-grouping-experiment-test:
 web-grouping-experiment-qualify:
 	python3 -B web/review/grouping-generalization-20260929/check_qualification.py -v
 
+.PHONY: web-sentence-grouping-experiment
+web-sentence-grouping-experiment:
+	python3 web/review/sentence-grouping-20260929/run.py $(ARGS)
+
 .PHONY: web-tools web-deps web-test web-build web-dev web-dev-down web-config web-up web-down web-migrate web-backup web-import web-gc
 web-tools:
 	docker build -f web/deploy/Dockerfile.tools -t tarjama-web-tools:test web

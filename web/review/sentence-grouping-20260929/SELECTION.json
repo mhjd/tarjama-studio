@@ -1,0 +1,19 @@
+{
+  "candidate": "S1",
+  "decision": "selected_for_reserved_evaluation_not_production",
+  "sources": {
+    "web/review/sentence-grouping-20260929/candidate.py": "cdc081dfe40fbc5049e941ac0e630c2a083d837ab67d0e61d0b997eeb96c7d48",
+    "web/review/sentence-grouping-20260929/evaluate.py": "78d686009f0d99944d5238c4e04a13fb65d4fae1b8108b9ff89f0d0630d3f09a",
+    "web/review/conference-grouping-20260929/prepare.py": "7249678a3b3f14f98230d50c4992c53d7f2bf4b99aa95a53691a471adac475f1",
+    "web/review/sentence-grouping-20260929/sentences.py": "eebe83471710369fddec43c090bb9753a2bec8647a2372a4c310bc01b429491a"
+  },
+  "image": "sha256:e9a5dff6011038495545b5959cf685de8a9abc13f3711c8457fb3cb1be04530e",
+  "development": "web/.cache/sentence-grouping-20260929/dev-s1",
+  "rationale": "Invariants pass; internal cuts 387 to 344, unpunctuated cuts 168 to 145, short cues 33 to 23. All 97 changed regions and all orphan cases read; tradeoffs retained. No reserved results observed.",
+  "limits": [
+    "Punctuation is not syntax",
+    "No audio comprehension evaluation",
+    "Only one independent lecture available",
+    "Short news control partially exposed previously"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "deployed": false,
+  "go_tests_passed": 13,
+  "go_race_detector": true,
+  "playwright_tests_passed": 22,
+  "frontend_build": "passed",
+  "desktop_size_preset": "large",
+  "font_parity": "declaration only; Arial falls back to Noto Sans in test image",
+  "real_provider_calls": 0,
+  "real_user_data_modified": false
+}

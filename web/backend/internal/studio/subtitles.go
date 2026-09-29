@@ -12,14 +12,12 @@ func srtTime(ms int64) string {
 	return fmt.Sprintf("%02d:%02d:%02d,%03d", ms/3600000, ms/60000%60, ms/1000%60, ms%1000)
 }
 
-// Plain UTF-8 SubRip, without ASS styling or additional invented timestamps.
+// Plain UTF-8 SubRip with the same readable cue grouping as video exports.
+// Only export cues are merged; saved editing segments and text stay unchanged.
 func SRT(segments []Segment, track string) string {
 	var out strings.Builder
-	for i, s := range segments {
-		text := s.French
-		if track == "ar" {
-			text = s.Arabic
-		}
+	for i, s := range automaticExportCues(segments, track) {
+		text := s.Text
 		// Blank lines delimit cues in SRT; collapse them inside a subtitle.
 		lines := strings.FieldsFunc(text, func(r rune) bool { return r == '\r' || r == '\n' })
 		fmt.Fprintf(&out, "%d\r\n%s --> %s\r\n%s\r\n\r\n", i+1, srtTime(s.Start), srtTime(s.End), strings.Join(lines, "\r\n"))

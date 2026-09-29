@@ -124,7 +124,7 @@ func TestExportCueReadingBoundaries(t *testing.T) {
 	}
 }
 
-func TestGroupedASSKeepsEditingSegmentsAndSRT(t *testing.T) {
+func TestGroupedExportsKeepEditingSegments(t *testing.T) {
 	segments := []Segment{
 		{ID: "first", Start: 3600000, End: 3600700, French: "En effet", Arabic: "هذا نص طويل"},
 		{ID: "second", Start: 3600750, End: 3605000, French: "cette explication reste nécessaire.", Arabic: "هذه عبارة أخرى"},
@@ -140,8 +140,11 @@ func TestGroupedASSKeepsEditingSegmentsAndSRT(t *testing.T) {
 	if !reflect.DeepEqual(segments, original) {
 		t.Fatal("export changed saved segments")
 	}
-	if srt := SRT(segments, "fr"); strings.Count(srt, " --> ") != 2 || !strings.Contains(srt, "01:00:00,750 --> 01:00:05,000") {
-		t.Fatal("SRT must preserve editing cues", srt)
+	if srt := SRT(segments, "fr"); strings.Count(srt, " --> ") != 1 || !strings.Contains(srt, "01:00:00,000 --> 01:00:05,000\r\nEn effet cette explication reste nécessaire.") {
+		t.Fatal("SRT must match grouped video cues", srt)
+	}
+	if !reflect.DeepEqual(segments, original) {
+		t.Fatal("SRT export changed saved segments")
 	}
 	escaped := ASS([]Segment{{Start: 0, End: 2000, French: "{\\pos(1,2)}\nSalut"}}, 1280, 720, "fr")
 	if !strings.Contains(escaped, "｛＼pos(1,2)｝\\NSalut") {

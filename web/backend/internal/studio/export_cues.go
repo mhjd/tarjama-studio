@@ -7,7 +7,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// Video-only cues: grouping must never change the saved editing segments or SRT.
+// Shared video/SRT cues: grouping never changes the saved editing segments.
 type exportCue struct {
 	Start, End int64 // milliseconds
 	Text       string

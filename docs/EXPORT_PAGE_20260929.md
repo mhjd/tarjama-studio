@@ -13,7 +13,9 @@ Deux sections explicites, au même niveau :
 
 - Vidéo sous-titrée : choix Low/High, création/reprise ou téléchargement du MP4 prêt.
 - Exporter les sous-titres : boutons SRT français et arabe toujours visibles,
-  sans accordéon ; horodatages conservés, pas de style incrusté.
+  sans accordéon ; regroupement automatique des sous-titres courts comme dans
+  la vidéo, avec les bornes temporelles du groupe, sans style incrusté.
+  Voir [la qualification du regroupement](SUBTITLE_EXPORT_PARITY_20260929.md).
 
 Les sections sont côte à côte sur ordinateur et empilées sous 800 px. Le SRT
 reste utilisable lorsque la vidéo a expiré ou pendant sa récupération. Le blocage

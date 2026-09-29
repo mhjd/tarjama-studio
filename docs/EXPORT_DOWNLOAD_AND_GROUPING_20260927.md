@@ -1,5 +1,10 @@
 # Action de téléchargement et regroupement — 27 septembre 2026
 
+> Actualisation du 29 septembre : le SRT utilise désormais le même regroupement
+> automatique que la vidéo. La taille web par défaut correspond au réglage Gros
+> du desktop. Voir [la qualification](SUBTITLE_EXPORT_PARITY_20260929.md).
+> Les indications historiques sur le SRT non regroupé ci-dessous sont dépassées.
+
 ## Action principale — préparée, non déployée
 
 Lorsque le rendu correspondant à la qualité sélectionnée, à la version des

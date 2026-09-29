@@ -1071,8 +1071,9 @@ export function Editor({
               <h2 id="subtitle-export-title">Exporter les sous-titres</h2>
               <p>
                 Format SRT, compatible avec les logiciels de montage et les
-                lecteurs vidéo. Les textes et leurs horodatages sont conservés,
-                sans le style de Tarjama.
+                lecteurs vidéo. Les sous-titres trop courts sont regroupés comme
+                dans la vidéo, sans le style de Tarjama. Vos segments de
+                relecture restent inchangés.
               </p>
               {subtitleDownloads()}
               <p className="subtitle-export-note">
@@ -1325,8 +1326,9 @@ export function Editor({
             <details className="translation-help">
               <summary>Exporter les sous-titres seuls (SRT)</summary>
               <p>
-                Fichiers texte avec les horodatages, sans le style de Tarjama,
-                pour votre logiciel de montage.
+                Fichiers SRT avec les sous-titres trop courts regroupés comme
+                dans la vidéo, pour votre logiciel de montage. Vos segments de
+                relecture restent inchangés.
               </p>
               {subtitleDownloads()}
             </details>

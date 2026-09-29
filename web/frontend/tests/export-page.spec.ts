@@ -109,3 +109,51 @@ for (const viewport of [
     expect(mutations).toBe(0);
   });
 }
+
+test("downloaded SRT groups short subtitles while review keeps separate edits", async ({
+  page,
+}) => {
+  await page.goto("/projets");
+  await page.getByRole("button", { name: "Compte test alice" }).click();
+  const { project } = await (
+    await page.request.get("/api/projects/fixture")
+  ).json();
+  if (project.stage === "arabic") {
+    await page.goto("/projets/fixture/corriger");
+    await page
+      .getByRole("button", { name: "Valider et traduire", exact: true })
+      .click();
+  } else {
+    await page.goto("/projets/fixture/traduire");
+  }
+  const first = page.getByRole("textbox", {
+    name: "Français one",
+    exact: true,
+  });
+  await expect(first).toBeVisible();
+  await first.fill("Oui.");
+  await page
+    .getByRole("textbox", { name: "Français two", exact: true })
+    .fill("Bienvenue à tous.");
+  await page
+    .getByRole("button", { name: "Valider et exporter", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/exporter$/);
+  const downloading = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Télécharger le français · SRT", exact: true })
+    .click();
+  const file = await downloading;
+  expect(file.suggestedFilename()).toMatch(/_fr\.srt$/);
+  expect(await readFile((await file.path())!, "utf8")).toBe(
+    "1\r\n00:00:00,000 --> 00:00:04,000\r\nOui. Bienvenue à tous.\r\n\r\n",
+  );
+  await page
+    .getByRole("button", { name: "Modifier la traduction", exact: true })
+    .click();
+  await expect(first).toHaveValue("Oui.");
+  await expect(
+    page.getByRole("textbox", { name: "Français two", exact: true }),
+  ).toHaveValue("Bienvenue à tous.");
+  await expect(page.locator(".segment")).toHaveCount(2);
+});

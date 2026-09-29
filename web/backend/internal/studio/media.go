@@ -249,15 +249,14 @@ func assText(s string) string {
 func ASS(s []Segment, w, h int, track string) string {
 	font := "Noto Naskh Arabic"
 	if track == "fr" {
-		font = "Noto Sans"
+		font = "Arial"
 	}
-	factor := .075
-	if track == "ar" {
-		factor = .12
-	}
-	size := max(18, int(float64(min(w, h))*factor))
-	margin := max(12, w/20)
-	out := fmt.Sprintf("[Script Info]\nScriptType: v4.00+\nPlayResX: %d\nPlayResY: %d\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,%s,%d,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,3,2,0,2,%d,%d,%d,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n", w, h, font, size, margin, margin, max(16, h/20))
+	// Desktop subtitleFontSize and writeAssSubtitles.
+	// Match the desktop "large" preset, chosen as the hosted default.
+	size := max(18, int(math.Round(float64(min(w, h))*0.0667*1.15)))
+	margin := max(20, int(math.Round(float64(w)*0.05)))
+	verticalMargin := max(18, int(math.Round(float64(h)*0.058)))
+	out := fmt.Sprintf("[Script Info]\nScriptType: v4.00+\nPlayResX: %d\nPlayResY: %d\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,%s,%d,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,%d,%d,%d,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n", w, h, font, size, margin, margin, verticalMargin)
 	for _, x := range automaticExportCues(s, track) {
 		out += fmt.Sprintf("Dialogue: 0,%s,%s,Default,,0,0,0,,%s\n", assTime(x.Start), assTime(x.End), assText(x.Text))
 	}

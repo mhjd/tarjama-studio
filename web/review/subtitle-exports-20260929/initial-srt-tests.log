@@ -1,0 +1,160 @@
+ Network tarjama-preopening-check_test Creating 
+ Network tarjama-preopening-check_test Creating 
+ Network tarjama-preopening-check_test Created 
+ Network tarjama-preopening-check_test Created 
+ Container tarjama-preopening-check-db-1 Creating 
+ Container tarjama-preopening-check-db-1 Created 
+ Container tarjama-preopening-check-db-1 Starting 
+ Container tarjama-preopening-check-db-1 Started 
+ Container tarjama-preopening-check-db-1 Waiting 
+ Container tarjama-preopening-check-db-1 Healthy 
+ Container tarjama-preopening-check-checks-run-aaefd38bbb6f Creating 
+ Container tarjama-preopening-check-checks-run-aaefd38bbb6f Created 
+=== RUN   TestAutomaticExportCuesDesktopExamples
+=== RUN   TestAutomaticExportCuesDesktopExamples/flash
+=== RUN   TestAutomaticExportCuesDesktopExamples/pause
+=== RUN   TestAutomaticExportCuesDesktopExamples/too_fast
+=== RUN   TestAutomaticExportCuesDesktopExamples/backward
+=== RUN   TestAutomaticExportCuesDesktopExamples/chain
+=== RUN   TestAutomaticExportCuesDesktopExamples/hour_offset_and_empty
+--- PASS: TestAutomaticExportCuesDesktopExamples (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/flash (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/pause (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/too_fast (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/backward (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/chain (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/hour_offset_and_empty (0.00s)
+=== RUN   TestExportCueReadingBoundaries
+=== RUN   TestExportCueReadingBoundaries/gap_500ms
+=== RUN   TestExportCueReadingBoundaries/gap_501ms
+=== RUN   TestExportCueReadingBoundaries/overlap_10ms
+=== RUN   TestExportCueReadingBoundaries/overlap_11ms
+=== RUN   TestExportCueReadingBoundaries/duration_7s
+=== RUN   TestExportCueReadingBoundaries/duration_beyond_7s
+=== RUN   TestExportCueReadingBoundaries/84_characters
+=== RUN   TestExportCueReadingBoundaries/85_characters
+=== RUN   TestExportCueReadingBoundaries/NFC_count
+=== RUN   TestExportCueReadingBoundaries/17_characters_per_second
+=== RUN   TestExportCueReadingBoundaries/18_characters_per_second
+--- PASS: TestExportCueReadingBoundaries (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/gap_500ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/gap_501ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/overlap_10ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/overlap_11ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/duration_7s (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/duration_beyond_7s (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/84_characters (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/85_characters (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/NFC_count (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/17_characters_per_second (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/18_characters_per_second (0.00s)
+=== RUN   TestGroupedExportsKeepEditingSegments
+--- PASS: TestGroupedExportsKeepEditingSegments (0.00s)
+=== RUN   TestExportWaitsForMediaRecovery
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/queued
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/running
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/waiting_provider
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/queued
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/running
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/waiting_provider
+--- PASS: TestExportWaitsForMediaRecovery (1.28s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_download/queued (0.24s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_download/running (0.22s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_download/waiting_provider (0.21s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_prepare/queued (0.21s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_prepare/running (0.20s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_prepare/waiting_provider (0.20s)
+=== RUN   TestConcurrentExportAndRecoveryDoNotOverlap
+--- PASS: TestConcurrentExportAndRecoveryDoNotOverlap (0.20s)
+=== RUN   TestExpiredExportRedownloadsWithoutTouchingTexts
+--- PASS: TestExpiredExportRedownloadsWithoutTouchingTexts (0.21s)
+=== RUN   TestRoutesCannotBypassWorkflowGuards
+--- PASS: TestRoutesCannotBypassWorkflowGuards (0.24s)
+=== RUN   TestSubtitlesWithoutMediaAndAfterArabicEdit
+--- PASS: TestSubtitlesWithoutMediaAndAfterArabicEdit (0.22s)
+=== RUN   TestSRTMultiline
+--- PASS: TestSRTMultiline (0.00s)
+=== RUN   TestGroupedSRTDownloadPreservesProject
+--- PASS: TestGroupedSRTDownloadPreservesProject (0.20s)
+=== RUN   TestRawTranscriptionCannotBeEdited
+--- PASS: TestRawTranscriptionCannotBeEdited (0.18s)
+PASS
+ok  	tarjama/web/internal/studio	3.568s
+
+> tarjama-web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1899 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.52 kB │ gzip:  0.33 kB
+dist/assets/index-24XOwtBy.css   17.11 kB │ gzip:  4.39 kB
+dist/assets/index-_7HlLecX.js   247.75 kB │ gzip: 77.31 kB
+✓ built in 2.91s
+
+Running 22 tests using 1 worker
+
+  ✓   1 tests/editor.spec.ts:11:3 › cleanup recovery stays neutral while provider waits and failures remain actionable (5.6s)
+  ✓   2 tests/editor.spec.ts:11:3 › translate recovery stays neutral while provider waits and failures remain actionable (5.2s)
+  ✓   3 tests/editor.spec.ts:66:1 › download shows durable stages and stops claiming activity when polling fails (8.0s)
+  ✓   4 tests/editor.spec.ts:119:1 › follow stays enabled on manual scroll, is explicit, and seeks the same subtitle (1.9s)
+  ✓   5 tests/editor.spec.ts:178:1 › private projects, unchanged blur, offline draft, IME flush, review and real export (9.0s)
+  ✓   6 tests/editor.spec.ts:337:1 › two tabs conflict keeps the second draft and blocks advancing (1.9s)
+  ✓   7 tests/editor.spec.ts:357:1 › file import is a first class creation path and real media converges to Arabic review (4.1s)
+  ✓   8 tests/editor.spec.ts:379:1 › blur saves only that field and never overwrites characters typed during a slow response (1.9s)
+  ✓   9 tests/editor.spec.ts:412:1 › step waits for compositionend when clicked while Arabic composition is active (3.4s)
+  ✓  10 tests/editor.spec.ts:445:1 › audio keeps playing while editing without stealing focus (1.4s)
+  ✓  11 tests/editor.spec.ts:468:1 › desktop playback shortcuts preserve text, range and button keyboard behavior (2.3s)
+  ✓  12 tests/editor.spec.ts:541:1 › source link copies the exact URL and reports clipboard refusal (1.5s)
+  ✓  13 tests/editor.spec.ts:574:1 › link download offers upload only after failure or cancellation (11.8s)
+  ✓  14 tests/editor.spec.ts:615:1 › raw Arabic is hidden until automatic cleanup has finished (3.3s)
+  ✓  15 tests/editor.spec.ts:663:3 › export cancelled: primary action resumes the existing job and exposes its state (4.9s)
+  ✓  16 tests/editor.spec.ts:663:3 › export failed: primary action resumes the existing job and exposes its state (4.9s)
+  ✓  17 tests/editor.spec.ts:748:3 › expired uploaded video keeps subtitles and offers the correct recovery (1.5s)
+  ✓  18 tests/editor.spec.ts:748:3 › expired YouTube video keeps subtitles and offers the correct recovery (1.3s)
+  ✓  19 tests/export-page.spec.ts:9:3 › export page offers video and SRT without review fields at 1440px (2.2s)
+  ✓  20 tests/export-page.spec.ts:9:3 › export page offers video and SRT without review fields at 393px (1.8s)
+  ✓  21 tests/export-page.spec.ts:9:3 › export page offers video and SRT without review fields at 412px (1.8s)
+  ✘  22 tests/export-page.spec.ts:113:1 › downloaded SRT groups short subtitles while review keeps separate edits (45.1s)
+
+
+  1) tests/export-page.spec.ts:113:1 › downloaded SRT groups short subtitles while review keeps separate edits 
+
+    [31mTest timeout of 45000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 45000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Valider et traduire', exact: true })[22m
+
+
+      119 |   await page
+      120 |     .getByRole("button", { name: "Valider et traduire", exact: true })
+    > 121 |     .click();
+          |      ^
+      122 |   const first = page.getByRole("textbox", {
+      123 |     name: "Français one",
+      124 |     exact: true,
+        at /work/web/frontend/tests/export-page.spec.ts:121:6
+
+    Error Context: ../.cache/preopening-check/playwright/export-page-downloaded-SRT-990a3-review-keeps-separate-edits/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/preopening-check/playwright/export-page-downloaded-SRT-990a3-review-keeps-separate-edits/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/preopening-check/playwright/export-page-downloaded-SRT-990a3-review-keeps-separate-edits/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    tests/export-page.spec.ts:113:1 › downloaded SRT groups short subtitles while review keeps separate edits 
+  21 passed (2.2m)
+
+ Container tarjama-preopening-check-db-1 Stopping 
+ Container tarjama-preopening-check-db-1 Stopped 
+ Container tarjama-preopening-check-db-1 Removing 
+ Container tarjama-preopening-check-db-1 Removed 
+ Network tarjama-preopening-check_test Removing 
+ Network tarjama-preopening-check_test Removed 

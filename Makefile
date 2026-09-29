@@ -70,6 +70,10 @@ correction-skill-test:
 	python3 -B -m unittest discover -s codex-skills/correct-tarjama-project/scripts -p 'test_*.py' -v
 
 # Hosted app only. These do not invoke the obsolete FastAPI/desktop workflows.
+.PHONY: web-sirat-grouping-preview
+web-sirat-grouping-preview:
+	python3 web/review/conference-grouping-20260929/run.py $(ARGS)
+
 .PHONY: web-tools web-deps web-test web-build web-dev web-dev-down web-config web-up web-down web-migrate web-backup web-import web-gc
 web-tools:
 	docker build -f web/deploy/Dockerfile.tools -t tarjama-web-tools:test web

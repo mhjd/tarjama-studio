@@ -74,6 +74,17 @@ correction-skill-test:
 web-sirat-grouping-preview:
 	python3 web/review/conference-grouping-20260929/run.py $(ARGS)
 
+.PHONY: web-grouping-experiment web-grouping-experiment-test web-grouping-experiment-qualify
+web-grouping-experiment:
+	python3 web/review/grouping-generalization-20260929/run.py $(ARGS)
+
+web-grouping-experiment-test:
+	python3 -B -m unittest discover -s web/review/grouping-generalization-20260929 -p 'test_*.py' -v
+
+# Deliberately fails for rejected candidate B; independent of application CI.
+web-grouping-experiment-qualify:
+	python3 -B web/review/grouping-generalization-20260929/check_qualification.py -v
+
 .PHONY: web-tools web-deps web-test web-build web-dev web-dev-down web-config web-up web-down web-migrate web-backup web-import web-gc
 web-tools:
 	docker build -f web/deploy/Dockerfile.tools -t tarjama-web-tools:test web

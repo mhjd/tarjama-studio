@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-job-requested-export-b6eb3a0c-z7tvh",
+      "log": "psql:/configuration/reexport.sql:60: NOTICE:  Owner requested export queued: job=8be9cd4fb00f9880c7ad7011f1d46dd7 quality=export_fr_high version=6 generation=2\nBEGIN\nSET\nSET\nCREATE TABLE\n2d15866edf3d955172ad22add35a7e91\nhttps://www.youtube.com/watch?v=YuV8IY-Bgoc\nDO\nCOMMIT\nRESULT_JOB=8be9cd4fb00f9880c7ad7011f1d46dd7\nExport 8be9cd4fb00f9880c7ad7011f1d46dd7: queued\nExport 8be9cd4fb00f9880c7ad7011f1d46dd7: running\n"
+    }
+  ]
+}

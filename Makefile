@@ -358,3 +358,7 @@ web-keycloak-theme-gallery:
 # Offline only: make web-keycloak-profile-prepare < profile-before.json > profile-after.json
 web-keycloak-profile-prepare:
 	@python3 web/scripts/keycloak-user-profile.py
+
+.PHONY: web-test-requested-reexport
+web-test-requested-reexport:
+	python3 web/scripts/test-requested-reexport.py

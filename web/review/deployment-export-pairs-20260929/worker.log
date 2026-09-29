@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "pv-worker-58594d54c6-69p8m",
+      "log": "2026/09/29 13:08:05 Local reference corpus loaded: tools=3\n2026/09/29 13:08:05 Text worker configured: model=openai/gpt-6-luna\n"
+    }
+  ]
+}

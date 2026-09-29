@@ -1,0 +1,51 @@
+[
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:0422883a80ce9a6d20d9aafa028a664677e26af5ab8aaa57d520d54393d1be91",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:19994f1cb8ab15277356be24380fba1982e62753d216ddb41a459effcdd5d39a",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:4142760f6d960312f4b7671321596033b6e02019235a0fcb6635bc04f02420dd",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:82365d566137914050b1a0dae634cb92cde71bb75a1db1c186418354e09aefb9",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:a520b8f908c764df255295b8d691830566d1fd66a5287dc72a6195fce1ba388f",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:b5655ab7a7f604ab66b3f87f9e03a1a8ffec648f1d748337b33434aa1e32179b",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  },
+  {
+    "ok": true,
+    "image": "preview.local/atelier/web@sha256:dea98c02a8a575f8ebf3be9a1702d6e1ff5be4e082b0143baf7d436ba820158a",
+    "imagePullPolicy": "Never",
+    "platform": "linux/amd64",
+    "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+  }
+]

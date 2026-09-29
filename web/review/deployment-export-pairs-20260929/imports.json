@@ -1,0 +1,26 @@
+[
+  {
+    "tag": "tarjama-web:pairs-548fbf6",
+    "docker_id": "sha256:48b603ed38cab0e37fb2f46389ae14e0d9b30245658b1a4c5a42405854613c6f",
+    "size": 155725660,
+    "result": {
+      "ok": true,
+      "image": "preview.local/atelier/web@sha256:a5b77b076cf175ed45e8df712320b8fdd23dd309fa3cd4d324d06e144a7cefd1",
+      "imagePullPolicy": "Never",
+      "platform": "linux/amd64",
+      "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+    }
+  },
+  {
+    "tag": "tarjama-worker:pairs-548fbf6",
+    "docker_id": "sha256:cd1cf1cbdd78a269607152c7bd7f1308411df2c3d3f65cba1ab3ae1db363bd0a",
+    "size": 192232649,
+    "result": {
+      "ok": true,
+      "image": "preview.local/atelier/web@sha256:7b2f52d2d0e6eaba02fc08adbc02341ee045294a73a0e46107ea446810e4d4cd",
+      "imagePullPolicy": "Never",
+      "platform": "linux/amd64",
+      "next": "Reporter cette r\u00e9f\u00e9rence dans la recette, puis validate et plan. Aucune application d\u00e9marr\u00e9e."
+    }
+  }
+]

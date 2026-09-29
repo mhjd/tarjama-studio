@@ -34,3 +34,34 @@ les projets utilisateurs. Aucune intégration ou activation de S1 en production.
 
 `results-summary.json` conserve les mesures et empreintes sans les corpus
 complets. Les artefacts détaillés et leurs SHA256 restent dans le cache privé.
+
+## Livraison vidéo demandée après évaluation
+
+Le propriétaire a ensuite demandé les vidéos. Le rendu complet de Sirat utilise
+l’ASS figé de S1, la copie source administrateur et l’image outils figée :
+
+```sh
+make web-sentence-grouping-video ARGS=render
+make web-sentence-grouping-video ARGS=verify
+make web-sentence-grouping-video ARGS=clips
+```
+
+Le premier encodage refuse tout écrasement ; `verify` décode intégralement le
+MP4, vérifie durée/résolution et identité des paquets audio AAC. `clips` extrait
+les passages 10:18–10:36 et 39:10–39:36 du MP4 fini, puis les décode aussi.
+Ressources bornées : 4 CPU, 1536 Mio, 2 heures maximum, sans réseau ; 17 Gio de
+marge disque exigés. Aucun changement de partition ni appel fournisseur.
+Les preuves sont dans `web/.cache/sentence-grouping-20260929/video-delivery/`.
+
+La source Dedew n’est pas disponible dans les copies locales : seul le SRT de
+ce benchmark peut être fourni. Le MP4 France 24 disponible est l’ancien export
+réel du parcours UI, fourni comme témoin, pas comme nouveau rendu S1.
+
+Rendu livré : 708798236 octets, 3612.829000 s,
+encodage 722.86 s. Décodage intégral réussi (251.03 s),
+paquets audio AAC identiques à la source. Les deux extraits et le témoin
+France 24 ont aussi été décodés intégralement. Image finale à 10:24 inspectée.
+Livraison préparée dans `tarjama-regroupement-phrases/` via vps-share ;
+le transfert vers le Mac se fait ensuite par `vps pull`.
+
+SHA256 du nouveau MP4 : `725d6cc653391a4c5bc2c66a8ff3c5b73c02150cdb80fefd2ea4e35d747f23b8`.

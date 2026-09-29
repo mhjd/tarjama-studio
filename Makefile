@@ -384,3 +384,7 @@ web-keycloak-profile-prepare:
 .PHONY: web-test-requested-reexport
 web-test-requested-reexport:
 	python3 web/scripts/test-requested-reexport.py
+
+.PHONY: web-sentence-grouping-video
+web-sentence-grouping-video:
+	python3 -B web/review/sentence-grouping-20260929/video.py $(ARGS)

@@ -1,0 +1,110 @@
+ Network tarjama-preopening-check_test Creating 
+ Network tarjama-preopening-check_test Creating 
+ Network tarjama-preopening-check_test Created 
+ Network tarjama-preopening-check_test Created 
+ Container tarjama-preopening-check-db-1 Creating 
+ Container tarjama-preopening-check-db-1 Created 
+ Container tarjama-preopening-check-db-1 Starting 
+ Container tarjama-preopening-check-db-1 Started 
+ Container tarjama-preopening-check-db-1 Waiting 
+ Container tarjama-preopening-check-db-1 Healthy 
+ Container tarjama-preopening-check-checks-run-47cc91b33397 Creating 
+ Container tarjama-preopening-check-checks-run-47cc91b33397 Created 
+=== RUN   TestAutomaticExportCuesDesktopExamples
+=== RUN   TestAutomaticExportCuesDesktopExamples/flash
+=== RUN   TestAutomaticExportCuesDesktopExamples/pause
+=== RUN   TestAutomaticExportCuesDesktopExamples/too_fast
+=== RUN   TestAutomaticExportCuesDesktopExamples/backward
+=== RUN   TestAutomaticExportCuesDesktopExamples/chain
+=== RUN   TestAutomaticExportCuesDesktopExamples/hour_offset_and_empty
+--- PASS: TestAutomaticExportCuesDesktopExamples (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/flash (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/pause (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/too_fast (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/backward (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/chain (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/hour_offset_and_empty (0.00s)
+=== RUN   TestExportCueReadingBoundaries
+=== RUN   TestExportCueReadingBoundaries/gap_500ms
+=== RUN   TestExportCueReadingBoundaries/gap_501ms
+=== RUN   TestExportCueReadingBoundaries/overlap_10ms
+=== RUN   TestExportCueReadingBoundaries/overlap_11ms
+=== RUN   TestExportCueReadingBoundaries/duration_7s
+=== RUN   TestExportCueReadingBoundaries/duration_beyond_7s
+=== RUN   TestExportCueReadingBoundaries/84_characters
+=== RUN   TestExportCueReadingBoundaries/85_characters
+=== RUN   TestExportCueReadingBoundaries/NFC_count
+=== RUN   TestExportCueReadingBoundaries/17_characters_per_second
+=== RUN   TestExportCueReadingBoundaries/18_characters_per_second
+--- PASS: TestExportCueReadingBoundaries (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/gap_500ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/gap_501ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/overlap_10ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/overlap_11ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/duration_7s (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/duration_beyond_7s (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/84_characters (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/85_characters (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/NFC_count (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/17_characters_per_second (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/18_characters_per_second (0.00s)
+=== RUN   TestGroupedASSKeepsEditingSegmentsAndSRT
+--- PASS: TestGroupedASSKeepsEditingSegmentsAndSRT (0.00s)
+=== RUN   TestExportWaitsForMediaRecovery
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/queued
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/running
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/waiting_provider
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/queued
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/running
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/waiting_provider
+--- PASS: TestExportWaitsForMediaRecovery (1.48s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_download/queued (0.25s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_download/running (0.29s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_download/waiting_provider (0.22s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_prepare/queued (0.26s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_prepare/running (0.23s)
+    --- PASS: TestExportWaitsForMediaRecovery/restore_prepare/waiting_provider (0.23s)
+=== RUN   TestConcurrentExportAndRecoveryDoNotOverlap
+--- PASS: TestConcurrentExportAndRecoveryDoNotOverlap (0.23s)
+=== RUN   TestExpiredExportRedownloadsWithoutTouchingTexts
+--- PASS: TestExpiredExportRedownloadsWithoutTouchingTexts (0.25s)
+=== RUN   TestRoutesCannotBypassWorkflowGuards
+--- PASS: TestRoutesCannotBypassWorkflowGuards (0.25s)
+=== RUN   TestSubtitlesWithoutMediaAndAfterArabicEdit
+--- PASS: TestSubtitlesWithoutMediaAndAfterArabicEdit (0.23s)
+=== RUN   TestRawTranscriptionCannotBeEdited
+--- PASS: TestRawTranscriptionCannotBeEdited (0.19s)
+PASS
+ok  	tarjama/web/internal/studio	3.657s
+
+> tarjama-web@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1899 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.52 kB │ gzip:  0.33 kB
+dist/assets/index-CMnDJkz8.css   16.56 kB │ gzip:  4.27 kB
+dist/assets/index-BVDv2_fV.js   246.75 kB │ gzip: 77.10 kB
+✓ built in 3.58s
+
+Running 8 tests using 1 worker
+
+  ✓  1 tests/editor.spec.ts:178:1 › private projects, unchanged blur, offline draft, IME flush, review and real export (11.3s)
+  ✓  2 tests/editor.spec.ts:657:3 › export cancelled: primary action resumes the existing job and exposes its state (5.4s)
+  ✓  3 tests/editor.spec.ts:657:3 › export failed: primary action resumes the existing job and exposes its state (5.2s)
+  ✓  4 tests/editor.spec.ts:742:3 › expired uploaded video keeps subtitles and offers the correct recovery (1.5s)
+  ✓  5 tests/editor.spec.ts:742:3 › expired YouTube video keeps subtitles and offers the correct recovery (1.6s)
+  ✓  6 tests/export-recovery-guard.spec.ts:4:3 › export waits for recovery without blocking subtitles at 1440px (10.1s)
+  ✓  7 tests/export-recovery-guard.spec.ts:4:3 › export waits for recovery without blocking subtitles at 393px (9.7s)
+  ✓  8 tests/export-recovery-guard.spec.ts:4:3 › export waits for recovery without blocking subtitles at 412px (10.3s)
+
+  8 passed (59.2s)
+ Container tarjama-preopening-check-db-1 Stopping 
+ Container tarjama-preopening-check-db-1 Stopped 
+ Container tarjama-preopening-check-db-1 Removing 
+ Container tarjama-preopening-check-db-1 Removed 
+ Network tarjama-preopening-check_test Removing 
+ Network tarjama-preopening-check_test Removed 

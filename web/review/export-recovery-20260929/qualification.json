@@ -1,0 +1,26 @@
+{
+  "date": "2026-09-29",
+  "deployed": false,
+  "full_ui_tests_passed": 24,
+  "final_targeted_ui_tests_passed": 8,
+  "go_race_tests_passed": 9,
+  "build": "PASS",
+  "viewports": [
+    [
+      1440,
+      915
+    ],
+    [
+      393,
+      915
+    ],
+    [
+      412,
+      915
+    ]
+  ],
+  "browser": "Chromium",
+  "real_devices": false,
+  "provider_calls": 0,
+  "live_jobs_modified": false
+}

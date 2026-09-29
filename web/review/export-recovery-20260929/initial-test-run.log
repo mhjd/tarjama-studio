@@ -1,0 +1,92 @@
+ Network tarjama-preopening-check_test Creating 
+ Network tarjama-preopening-check_test Creating 
+ Network tarjama-preopening-check_test Created 
+ Network tarjama-preopening-check_test Created 
+ Container tarjama-preopening-check-db-1 Creating 
+ Container tarjama-preopening-check-db-1 Created 
+ Container tarjama-preopening-check-db-1 Starting 
+ Container tarjama-preopening-check-db-1 Started 
+ Container tarjama-preopening-check-db-1 Waiting 
+ Container tarjama-preopening-check-db-1 Healthy 
+ Container tarjama-preopening-check-checks-run-fbff252c2b57 Creating 
+ Container tarjama-preopening-check-checks-run-fbff252c2b57 Created 
+=== RUN   TestAutomaticExportCuesDesktopExamples
+=== RUN   TestAutomaticExportCuesDesktopExamples/flash
+=== RUN   TestAutomaticExportCuesDesktopExamples/pause
+=== RUN   TestAutomaticExportCuesDesktopExamples/too_fast
+=== RUN   TestAutomaticExportCuesDesktopExamples/backward
+=== RUN   TestAutomaticExportCuesDesktopExamples/chain
+=== RUN   TestAutomaticExportCuesDesktopExamples/hour_offset_and_empty
+--- PASS: TestAutomaticExportCuesDesktopExamples (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/flash (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/pause (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/too_fast (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/backward (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/chain (0.00s)
+    --- PASS: TestAutomaticExportCuesDesktopExamples/hour_offset_and_empty (0.00s)
+=== RUN   TestExportCueReadingBoundaries
+=== RUN   TestExportCueReadingBoundaries/gap_500ms
+=== RUN   TestExportCueReadingBoundaries/gap_501ms
+=== RUN   TestExportCueReadingBoundaries/overlap_10ms
+=== RUN   TestExportCueReadingBoundaries/overlap_11ms
+=== RUN   TestExportCueReadingBoundaries/duration_7s
+=== RUN   TestExportCueReadingBoundaries/duration_beyond_7s
+=== RUN   TestExportCueReadingBoundaries/84_characters
+=== RUN   TestExportCueReadingBoundaries/85_characters
+=== RUN   TestExportCueReadingBoundaries/NFC_count
+=== RUN   TestExportCueReadingBoundaries/17_characters_per_second
+=== RUN   TestExportCueReadingBoundaries/18_characters_per_second
+--- PASS: TestExportCueReadingBoundaries (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/gap_500ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/gap_501ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/overlap_10ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/overlap_11ms (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/duration_7s (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/duration_beyond_7s (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/84_characters (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/85_characters (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/NFC_count (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/17_characters_per_second (0.00s)
+    --- PASS: TestExportCueReadingBoundaries/18_characters_per_second (0.00s)
+=== RUN   TestGroupedASSKeepsEditingSegmentsAndSRT
+--- PASS: TestGroupedASSKeepsEditingSegmentsAndSRT (0.00s)
+=== RUN   TestExportWaitsForMediaRecovery
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/queued
+    media_export_guard_test.go:73: SRT unavailable 404
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/running
+    media_export_guard_test.go:73: SRT unavailable 404
+=== RUN   TestExportWaitsForMediaRecovery/restore_download/waiting_provider
+    media_export_guard_test.go:73: SRT unavailable 404
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/queued
+    media_export_guard_test.go:73: SRT unavailable 404
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/running
+    media_export_guard_test.go:73: SRT unavailable 404
+=== RUN   TestExportWaitsForMediaRecovery/restore_prepare/waiting_provider
+    media_export_guard_test.go:73: SRT unavailable 404
+--- FAIL: TestExportWaitsForMediaRecovery (1.39s)
+    --- FAIL: TestExportWaitsForMediaRecovery/restore_download/queued (0.21s)
+    --- FAIL: TestExportWaitsForMediaRecovery/restore_download/running (0.28s)
+    --- FAIL: TestExportWaitsForMediaRecovery/restore_download/waiting_provider (0.23s)
+    --- FAIL: TestExportWaitsForMediaRecovery/restore_prepare/queued (0.24s)
+    --- FAIL: TestExportWaitsForMediaRecovery/restore_prepare/running (0.22s)
+    --- FAIL: TestExportWaitsForMediaRecovery/restore_prepare/waiting_provider (0.20s)
+=== RUN   TestConcurrentExportAndRecoveryDoNotOverlap
+--- PASS: TestConcurrentExportAndRecoveryDoNotOverlap (0.22s)
+=== RUN   TestExpiredExportRedownloadsWithoutTouchingTexts
+--- PASS: TestExpiredExportRedownloadsWithoutTouchingTexts (0.22s)
+=== RUN   TestRoutesCannotBypassWorkflowGuards
+--- PASS: TestRoutesCannotBypassWorkflowGuards (0.27s)
+=== RUN   TestSubtitlesWithoutMediaAndAfterArabicEdit
+--- PASS: TestSubtitlesWithoutMediaAndAfterArabicEdit (0.20s)
+=== RUN   TestRawTranscriptionCannotBeEdited
+--- PASS: TestRawTranscriptionCannotBeEdited (0.21s)
+FAIL
+FAIL	tarjama/web/internal/studio	2.519s
+FAIL
+
+ Container tarjama-preopening-check-db-1 Stopping 
+ Container tarjama-preopening-check-db-1 Stopped 
+ Container tarjama-preopening-check-db-1 Removing 
+ Container tarjama-preopening-check-db-1 Removed 
+ Network tarjama-preopening-check_test Removing 
+ Network tarjama-preopening-check_test Removed 

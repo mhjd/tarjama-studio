@@ -455,6 +455,9 @@ func (a *API) export(w http.ResponseWriter, r *http.Request) {
 		if p.Stage != "ready" || p.ConfirmedReview != p.Version {
 			return errors.New("Terminez la relecture avant l’export")
 		}
+		if err := guardMediaRecovery(r.Context(), tx, *p, "export_", ""); err != nil {
+			return err
+		}
 		if p.Media == "" && (p.URL == "" || p.MediaUploaded) {
 			return errors.New("Réimportez la vidéo originale pour créer une vidéo sous-titrée. Les exports SRT restent disponibles.")
 		}
@@ -691,6 +694,16 @@ func (a *API) cancel(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) retry(w http.ResponseWriter, r *http.Request) {
 	_, e := a.Store.Mutate(r.Context(), who(r).User, r.PathValue("id"), func(p *Project, tx pgx.Tx) error {
+		var kind string
+		if err := tx.QueryRow(r.Context(), "SELECT kind FROM jobs WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND generation=$4", r.PathValue("job"), p.ID, who(r).User, p.Generation).Scan(&kind); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrConflict
+			}
+			return err
+		}
+		if err := guardMediaRecovery(r.Context(), tx, *p, kind, r.PathValue("job")); err != nil {
+			return err
+		}
 		tag, e := tx.Exec(r.Context(), "UPDATE jobs SET progress=CASE WHEN state IN ('failed','cancelled') AND (kind IN ('prepare','download') OR kind LIKE 'export_%' OR kind LIKE 'restore_%') THEN 0 ELSE progress END,media_attempt=media_attempt+CASE WHEN state IN ('failed','cancelled') THEN 1 ELSE 0 END,state='queued',next_attempt_at=now(),attempts=0,text_failures=0,text_epoch=text_epoch+1,message='' WHERE id=$1 AND project_id=$2 AND owner_id=$3 AND state IN ('failed','cancelled','waiting_provider') AND generation=$4 AND (kind LIKE 'export_%' OR kind LIKE 'restore_%' OR source_version=$5)", r.PathValue("job"), p.ID, who(r).User, p.Generation, p.Version)
 		if e != nil {
 			return e
@@ -787,4 +800,26 @@ func (a *API) restoreMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonOut(w, p)
+}
+
+// Called with the project row locked by Store.Mutate: competing tabs cannot
+// enqueue/retry an export and a separate recovery at the same time.
+// An export may still restore its own expired source when no recovery is active.
+func guardMediaRecovery(ctx context.Context, tx pgx.Tx, p Project, kind, jobID string) error {
+	restoring := strings.HasPrefix(kind, "restore_")
+	if !restoring && !strings.HasPrefix(kind, "export_") {
+		return nil
+	}
+	var active bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM jobs
+      WHERE project_id=$1 AND generation=$2 AND id<>$3
+      AND state IN ('queued','running','waiting_provider')
+      AND (kind IN ('restore_download','restore_prepare') OR ($4 AND kind LIKE 'export_%')))`, p.ID, p.Generation, jobID, restoring).Scan(&active)
+	if err != nil {
+		return err
+	}
+	if active {
+		return fmt.Errorf("%w : attendez la fin de la récupération ou de la création vidéo en cours", ErrConflict)
+	}
+	return nil
 }

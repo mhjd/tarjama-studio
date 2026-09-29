@@ -8,8 +8,8 @@ trap 'exit 130' INT TERM
 if [ "$#" -eq 0 ]; then
   set -- correction-lock.spec.ts workflow-navigation.spec.ts routes.spec.ts
 fi
-docker compose -p tarjama-preopening-check -f web/deploy/compose.test.yml run --rm checks sh -c '
-  go test -race -count=1 -v ./internal/studio -run "Test(RawTranscriptionCannotBeEdited|RoutesCannotBypassWorkflowGuards|SubtitlesWithoutMediaAndAfterArabicEdit|AutomaticExportCuesDesktopExamples|ExportCueReadingBoundaries|GroupedASSKeepsEditingSegmentsAndSRT)$"
+docker compose -p tarjama-preopening-check -f web/deploy/compose.test.yml run --rm checks sh -ec '
+  go test -race -count=1 -v ./internal/studio -run "Test(RawTranscriptionCannotBeEdited|RoutesCannotBypassWorkflowGuards|SubtitlesWithoutMediaAndAfterArabicEdit|AutomaticExportCuesDesktopExamples|ExportCueReadingBoundaries|GroupedASSKeepsEditingSegmentsAndSRT|ExportWaitsForMediaRecovery|ConcurrentExportAndRecoveryDoNotOverlap|ExpiredExportRedownloadsWithoutTouchingTexts)$"
   cd /work/web/frontend
   npm run build
   npx playwright test "$@" --output ../.cache/preopening-check/playwright

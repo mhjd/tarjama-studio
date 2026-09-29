@@ -454,15 +454,23 @@ export function Editor({
     selectedExport &&
     ["queued", "running", "waiting_provider"].includes(selectedExport.state);
   const exportReady = selectedExport?.state === "succeeded";
-  const recoveryJob = jobs
-    .filter(
-      (j) =>
-        j.generation === p.generation &&
-        !["succeeded", "expired"].includes(j.state) &&
-        (j.kind.startsWith("restore_") ||
-          (j.kind.startsWith("export_") && j.source_version === p.version)),
-    )
-    .at(-1);
+  const activeRecovery = jobs.find(
+    (j) =>
+      j.generation === p.generation &&
+      j.kind.startsWith("restore_") &&
+      ["queued", "running", "waiting_provider"].includes(j.state),
+  );
+  const recoveryJob =
+    activeRecovery ??
+    jobs
+      .filter(
+        (j) =>
+          j.generation === p.generation &&
+          !["succeeded", "expired"].includes(j.state) &&
+          (j.kind.startsWith("restore_") ||
+            (j.kind.startsWith("export_") && j.source_version === p.version)),
+      )
+      .at(-1);
   function restorePlayback() {
     return action(async () => {
       d.adopt(
@@ -476,7 +484,11 @@ export function Editor({
     if (job.kind === "translate")
       return step === "traduire" && translationPending;
     if (job.kind.startsWith("export_"))
-      return step === "exporter" && job.source_version === p.version;
+      return (
+        step === "exporter" &&
+        job.source_version === p.version &&
+        job.generation === p.generation
+      );
     return step === "preparer" && currentStep(p) === "preparer";
   }
   function field(s: Segment, f: Field) {
@@ -780,6 +792,11 @@ export function Editor({
             {j.state === "failed" ||
             (j.state === "waiting_provider" && !isAutomaticTextRecovery(j)) ? (
               <button
+                disabled={
+                  busy ||
+                  uploading ||
+                  Boolean(activeRecovery && j.kind.startsWith("export_"))
+                }
                 onClick={() =>
                   void action(async () => {
                     await request(
@@ -946,6 +963,13 @@ export function Editor({
             Low produit un fichier plus léger. La taille finale dépend de la
             durée.
           </p>
+          {activeRecovery && !exportReady && (
+            <p role="status">
+              {exportActive
+                ? "La création attend la fin de la récupération de la vidéo."
+                : "Attendez la fin de la récupération de la vidéo avant de lancer sa création. Les sous-titres SRT restent disponibles."}
+            </p>
+          )}
           {exportReady && selectedExport ? (
             <a
               className="button primary export-download"
@@ -966,6 +990,7 @@ export function Editor({
                 busy ||
                 uploading ||
                 Boolean(exportActive) ||
+                Boolean(activeRecovery) ||
                 (!p.media && (!p.url || p.media_uploaded))
               }
               onClick={() =>
@@ -990,13 +1015,15 @@ export function Editor({
             >
               {busy
                 ? "Envoi de la demande…"
-                : exportActive
-                  ? "Création en cours…"
-                  : selectedExport?.state === "cancelled"
-                    ? "Reprendre la création"
-                    : selectedExport?.state === "failed"
-                      ? "Réessayer la création"
-                      : "Créer la vidéo"}
+                : activeRecovery
+                  ? "En attente de la vidéo"
+                  : exportActive
+                    ? "Création en cours…"
+                    : selectedExport?.state === "cancelled"
+                      ? "Reprendre la création"
+                      : selectedExport?.state === "failed"
+                        ? "Réessayer la création"
+                        : "Créer la vidéo"}
             </button>
           )}
         </section>

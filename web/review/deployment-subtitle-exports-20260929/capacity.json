@@ -1,0 +1,14 @@
+{
+  "source_commit": "830d8282dfa6e4e83b9c0db89d82ab6a32687553",
+  "deployment_performed": false,
+  "active_revision": "29bd0ed9ca04cd7b",
+  "filesystem_capacity_bytes": 102888095744,
+  "available_bytes": 13243248640,
+  "required_free_after_peak_bytes": 15433214361,
+  "shortfall_before_any_build_bytes": 2189965721,
+  "application_rebuildable_caches": [
+    "web/.cache/build",
+    "web/.cache/go"
+  ],
+  "note": "No images built/imported, no services restarted, no caches/data removed. Admin margin applies after build/import peak; import budget at least 4x image size."
+}

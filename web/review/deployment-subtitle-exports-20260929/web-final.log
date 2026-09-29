@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "logs": [
+    {
+      "pod": "web-565fb9fb47-4gmm7",
+      "log": "2026/09/29 07:30:38 Tarjama API prête\n"
+    }
+  ]
+}

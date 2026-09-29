@@ -1,0 +1,173 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 4.81kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#2 ...
+
+#3 [internal] load metadata for docker.io/library/golang:1.27.1-bookworm
+#3 DONE 1.3s
+
+#4 [internal] load metadata for docker.io/library/node:22.23.2-bookworm-slim
+#4 ...
+
+#2 [internal] load metadata for docker.io/library/debian:bookworm-slim
+#2 DONE 1.6s
+
+#4 [internal] load metadata for docker.io/library/node:22.23.2-bookworm-slim
+#4 DONE 2.0s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 575B done
+#5 DONE 0.0s
+
+#6 [api 1/4] FROM docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
+#6 resolve docker.io/library/debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 0.0s done
+#6 DONE 0.0s
+
+#7 [frontend 1/6] FROM docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9
+#7 resolve docker.io/library/node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9 0.0s done
+#7 DONE 0.1s
+
+#8 [backend 1/6] FROM docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195
+#8 resolve docker.io/library/golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195 0.0s done
+#8 DONE 0.2s
+
+#9 [frontend 2/6] WORKDIR /src/frontend
+#9 DONE 0.0s
+
+#10 [backend 2/6] WORKDIR /src/backend
+#10 DONE 0.0s
+
+#11 [internal] load build context
+#11 transferring context: 828.37kB 0.2s done
+#11 DONE 0.2s
+
+#12 [frontend 3/6] COPY frontend/package*.json ./
+#12 DONE 0.0s
+
+#13 [backend 3/6] COPY backend/go.mod backend/go.sum ./
+#13 DONE 0.0s
+
+#14 [backend 4/6] RUN go mod download
+#14 DONE 1.2s
+
+#15 [api 2/4] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir /storage && chown 10001:10001 /storage
+#15 0.416 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+#15 0.437 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+#15 0.441 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+#15 0.529 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+#15 0.614 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+#15 0.685 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [342 kB]
+
+#15 ...
+
+#16 [backend 5/6] COPY backend/ ./
+#16 DONE 0.1s
+
+#15 [api 2/4] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir /storage && chown 10001:10001 /storage
+#15 1.620 Fetched 9380 kB in 1s (7691 kB/s)
+#15 1.620 Reading package lists...
+#15 2.437 Reading package lists...
+#15 3.175 Building dependency tree...
+#15 3.420 Reading state information...
+#15 3.640 The following additional packages will be installed:
+#15 3.641   libssl3 openssl
+#15 3.669 The following NEW packages will be installed:
+#15 3.671   ca-certificates libssl3 openssl
+#15 3.723 0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
+#15 3.723 Need to get 3643 kB of archives.
+#15 3.723 After this operation, 8955 kB of additional disk space will be used.
+#15 3.723 Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.22-1~deb12u1 [2039 kB]
+#15 3.766 Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.22-1~deb12u1 [1442 kB]
+#15 3.773 Get:3 http://deb.debian.org/debian-security bookworm-security/main amd64 ca-certificates all 20250419~deb12u1 [162 kB]
+#15 3.965 debconf: delaying package configuration, since apt-utils is not installed
+#15 4.008 Fetched 3643 kB in 0s (38.1 MB/s)
+#15 4.035 Selecting previously unselected package libssl3:amd64.
+#15 4.035 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6096 files and directories currently installed.)
+#15 4.067 Preparing to unpack .../libssl3_3.0.22-1~deb12u1_amd64.deb ...
+#15 4.073 Unpacking libssl3:amd64 (3.0.22-1~deb12u1) ...
+#15 4.241 Selecting previously unselected package openssl.
+#15 4.242 Preparing to unpack .../openssl_3.0.22-1~deb12u1_amd64.deb ...
+#15 4.244 Unpacking openssl (3.0.22-1~deb12u1) ...
+#15 4.374 Selecting previously unselected package ca-certificates.
+#15 4.375 Preparing to unpack .../ca-certificates_20250419~deb12u1_all.deb ...
+#15 4.376 Unpacking ca-certificates (20250419~deb12u1) ...
+#15 4.435 Setting up libssl3:amd64 (3.0.22-1~deb12u1) ...
+#15 4.439 Setting up openssl (3.0.22-1~deb12u1) ...
+#15 4.447 Setting up ca-certificates (20250419~deb12u1) ...
+#15 4.565 debconf: unable to initialize frontend: Dialog
+#15 4.565 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#15 4.565 debconf: falling back to frontend: Readline
+#15 4.565 debconf: unable to initialize frontend: Readline
+#15 4.565 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+#15 4.565 debconf: falling back to frontend: Teletype
+#15 5.344 Updating certificates in /etc/ssl/certs...
+#15 6.352 150 added, 0 removed; done.
+#15 6.382 Processing triggers for libc-bin (2.36-9+deb12u14) ...
+#15 6.423 Processing triggers for ca-certificates (20250419~deb12u1) ...
+#15 6.432 Updating certificates in /etc/ssl/certs...
+#15 7.433 0 added, 0 removed; done.
+#15 7.433 Running hooks in /etc/ca-certificates/update.d...
+#15 7.437 done.
+#15 DONE 7.7s
+
+#17 [frontend 4/6] RUN npm ci
+#17 7.244 
+#17 7.244 added 75 packages, and audited 76 packages in 7s
+#17 7.244 
+#17 7.244 10 packages are looking for funding
+#17 7.244   run `npm fund` for details
+#17 7.246 
+#17 7.246 found 0 vulnerabilities
+#17 7.248 npm notice
+#17 7.248 npm notice New major version of npm available! 10.9.8 -> 12.1.0
+#17 7.248 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.1.0
+#17 7.248 npm notice To update run: npm install -g npm@12.1.0
+#17 7.248 npm notice
+#17 DONE 7.5s
+
+#18 [frontend 5/6] COPY frontend/ ./
+#18 DONE 0.1s
+
+#19 [backend 6/6] RUN CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama
+#19 ...
+
+#20 [frontend 6/6] RUN npm run build
+#20 0.487 
+#20 0.487 > tarjama-web@0.1.0 build
+#20 0.487 > tsc --noEmit && vite build
+#20 0.487 
+#20 4.821 vite v6.4.3 building for production...
+#20 4.958 transforming...
+#20 8.537 ✓ 1899 modules transformed.
+#20 8.743 rendering chunks...
+#20 8.752 computing gzip size...
+#20 8.770 dist/index.html                   0.52 kB │ gzip:  0.33 kB
+#20 8.770 dist/assets/index-24XOwtBy.css   17.11 kB │ gzip:  4.39 kB
+#20 8.770 dist/assets/index-_7HlLecX.js   247.75 kB │ gzip: 77.31 kB
+#20 8.770 ✓ built in 3.90s
+#20 DONE 9.0s
+
+#19 [backend 6/6] RUN CGO_ENABLED=0 go build -trimpath -o /tarjama ./cmd/tarjama
+#19 DONE 20.0s
+
+#21 [api 3/4] COPY --from=backend /tarjama /usr/local/bin/tarjama
+#21 DONE 0.1s
+
+#22 [api 4/4] COPY --from=frontend /src/frontend/dist /app/frontend
+#22 DONE 0.0s
+
+#23 exporting to image
+#23 exporting layers
+#23 exporting layers 0.9s done
+#23 exporting manifest sha256:0422883a80ce9a6d20d9aafa028a664677e26af5ab8aaa57d520d54393d1be91 done
+#23 exporting config sha256:f56c4cd938aadac63f08b96471f2e583999e6b8cefef5c69f50093977ab4dfd8 done
+#23 exporting attestation manifest sha256:edb6935ac0d1a047c7cd2dc85d2a6a21c52046624602de61fbe74508cab9d152 done
+#23 exporting manifest list sha256:e77137e093c40a246aa9e71a472f7a9453bb4c0cae92ff56b9b4137bef0b9b0b done
+#23 naming to docker.io/library/tarjama-web:exports-830d828 done
+#23 unpacking to docker.io/library/tarjama-web:exports-830d828
+#23 unpacking to docker.io/library/tarjama-web:exports-830d828 0.3s done
+#23 DONE 1.3s

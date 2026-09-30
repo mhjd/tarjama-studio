@@ -35,6 +35,7 @@ existants ne sont pas réécrits.
 Vérification : synchronisation et tests de parité desktop/web ; tests Go des
 références, du runner et du domaine métier, dont refus des outils de hadith et
 maintien de la consultation coranique. Aucun appel IA
-payant ni déploiement pour ce changement. Il s'agit d'une consigne au modèle,
+payant pour ce changement. Le déploiement a été autorisé séparément ensuite ;
+voir [le compte rendu](DEPLOY_QURAN_ONLY_20260930.md). Il s'agit d'une consigne au modèle,
 pas d'un contrôle déterministe de ses attributions ; son respect réel reste
 à qualifier sur une nouvelle traduction avant d'en garantir le comportement.

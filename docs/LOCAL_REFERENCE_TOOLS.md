@@ -1,4 +1,4 @@
-> Décision du 30 septembre 2026, préparée sans déploiement : seul `quran_fr`
+> Décision du 30 septembre 2026 : seul `quran_fr`
 > reste accessible au modèle. `sahih_ar` et `hadith_ar` sont désactivés ;
 > leur corpus et la consultation hors ligne sont conservés.
 > Voir [la politique actuelle](HADITH_REFERENCE_POLICY_20260930.md).

@@ -19,7 +19,7 @@ func TestExportWaitsForMediaRecovery(t *testing.T) {
 				s := testStore(t)
 				api, server := testAPI(t, s)
 				owner, p := readyVideo(t, s, api.Config.Storage, false)
-				if err := s.ExpireVideos(ctx, api.Config.Storage, time.Now().Add(25*time.Hour)); err != nil {
+				if err := s.ExpireVideos(ctx, api.Config.Storage, time.Now().Add(8*24*time.Hour)); err != nil {
 					t.Fatal(err)
 				}
 				_, err := s.Mutate(ctx, owner, p.ID, func(p *Project, tx pgx.Tx) error {
@@ -95,7 +95,7 @@ func TestConcurrentExportAndRecoveryDoNotOverlap(t *testing.T) {
 	s := testStore(t)
 	api, server := testAPI(t, s)
 	owner, p := readyVideo(t, s, api.Config.Storage, false)
-	if err := s.ExpireVideos(ctx, api.Config.Storage, time.Now().Add(25*time.Hour)); err != nil {
+	if err := s.ExpireVideos(ctx, api.Config.Storage, time.Now().Add(8*24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	token, csrf := sessionFor(t, s, owner)

@@ -187,7 +187,7 @@ export function MediaRecovery({
           <p>
             {uploaded
               ? "La vidéo importée a été supprimée après une semaine. Réimportez la même vidéo originale pour retrouver la lecture ou créer un export."
-              : "La vidéo a été supprimée après 24 heures. Elle sera récupérée automatiquement pour un export vidéo, ou à votre demande pour la lecture."}{" "}
+              : "La vidéo a été supprimée après une semaine. Elle sera récupérée automatiquement pour un export vidéo, ou à votre demande pour la lecture."}{" "}
             Les textes et les fichiers SRT restent disponibles.
           </p>
           {uploaded && !active && !finished && (

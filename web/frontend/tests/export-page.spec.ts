@@ -75,7 +75,7 @@ for (const viewport of [
         name: "Télécharger l’arabe · SRT",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     const v = (await video.boundingBox())!,
       s = (await subtitles.boundingBox())!;
     if (viewport.width > 800) expect(Math.abs(v.y - s.y)).toBeLessThan(2);
@@ -101,6 +101,13 @@ for (const viewport of [
     await expect(
       page.getByRole("textbox", { name: "Français one", exact: true }),
     ).toHaveValue("Traduction relue et conservée.");
+    await expect(page.getByRole("button", { name: /Télécharger .*SRT/ })).toHaveCount(0);
+    await expect(page.getByText("À propos de la traduction", { exact: true })).toHaveCount(0);
+    await page.goto("/projets/fixture/corriger");
+    await expect(page.getByRole("textbox", { name: "Arabe one", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Télécharger .*SRT/ })).toHaveCount(0);
+    await expect(page.getByText("À propos de la traduction", { exact: true })).toHaveCount(0);
+    await page.goto("/projets/fixture/traduire");
     await page
       .getByRole("button", { name: "Revenir à l’export", exact: true })
       .click();

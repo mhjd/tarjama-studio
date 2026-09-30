@@ -233,9 +233,8 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   await page
     .getByRole("textbox", { name: "Français one", exact: true })
     .fill("Bonjour à toutes et à tous.");
-  await page
-    .getByText("Exporter les sous-titres seuls (SRT)", { exact: true })
-    .click();
+  await expect(page.getByRole("button", { name: /Télécharger .*SRT/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Valider et exporter", exact: true }).click();
   const subtitleDownload = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Télécharger le français · SRT", exact: true })
@@ -247,10 +246,6 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   expect(srtText).toContain("00:00:00,000 --> 00:00:04,000");
   expect(srtText).toContain("Bienvenue à tous.");
   expect(srtText.match(/ --> /g)).toHaveLength(1);
-  await page
-    .getByRole("button", { name: "Valider et exporter", exact: true })
-    .last()
-    .click();
   await expect(
     page.getByRole("heading", { name: "Votre vidéo sous-titrée" }),
   ).toBeVisible();

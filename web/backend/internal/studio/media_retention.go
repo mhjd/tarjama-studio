@@ -13,11 +13,8 @@ func independentMediaJob(kind string) bool {
 	return strings.HasPrefix(kind, "export_") || strings.HasPrefix(kind, "restore_")
 }
 func renewMediaExpiry(p *Project, now time.Time) {
-	ttl := 24 * time.Hour
-	if p.MediaUploaded || p.URL == "" {
-		ttl = 7 * 24 * time.Hour
-	}
-	expires := now.Add(ttl)
+	expires := now.Add(7 * 24 * time.Hour)
+	p.MediaRetentionDays = 7
 	p.MediaExpiresAt = &expires
 }
 func removeVideo(root, name string) error {
@@ -39,8 +36,8 @@ func (s *Store) ExpireVideos(ctx context.Context, root string, now time.Time) er
  p.document->>'stage' IN ('arabic','review','ready')
  AND NOT EXISTS(SELECT 1 FROM jobs a WHERE a.project_id=p.id AND a.state IN ('queued','running','waiting_provider')) AND (
  (COALESCE(p.document->>'media','')<>'' AND
-   (p.document->>'media_expires_at' IS NULL OR (p.document->>'media_expires_at')::timestamptz<=$1))
- OR EXISTS(SELECT 1 FROM jobs j WHERE j.project_id=p.id AND j.kind LIKE 'export_%' AND j.state='succeeded' AND j.updated_at<=$1::timestamptz-interval '24 hours'))
+   (COALESCE((p.document->>'media_retention_days')::integer,0)<7 OR p.document->>'media_expires_at' IS NULL OR (p.document->>'media_expires_at')::timestamptz<=$1))
+ OR EXISTS(SELECT 1 FROM jobs j WHERE j.project_id=p.id AND j.kind LIKE 'export_%' AND j.state='succeeded' AND j.updated_at<=$1::timestamptz-interval '7 days'))
  ORDER BY p.created_at LIMIT 100`, now)
 	if err != nil {
 		return err
@@ -85,6 +82,15 @@ func (s *Store) ExpireVideos(ctx context.Context, root string, now time.Time) er
 					renewMediaExpiry(p, now)
 				}
 			}
+			// Upgrade persisted 24-hour link deadlines once, under the project lock.
+			// Uploaded sources already had seven days; do not extend them again.
+			if p.Media != "" && p.MediaRetentionDays < 7 {
+				if p.MediaExpiresAt != nil && !p.MediaUploaded && p.URL != "" {
+					expires := p.MediaExpiresAt.Add(6 * 24 * time.Hour)
+					p.MediaExpiresAt = &expires
+				}
+				p.MediaRetentionDays = 7
+			}
 			if p.Media != "" && p.MediaExpiresAt != nil && !p.MediaExpiresAt.After(now) {
 				names, err := tx.Query(ctx, `SELECT DISTINCT input->>'media' FROM jobs WHERE project_id=$1 AND kind IN ('prepare','restore_prepare') AND COALESCE(input->>'media','')<>''`, p.ID)
 				if err != nil {
@@ -117,7 +123,7 @@ func (s *Store) ExpireVideos(ctx context.Context, root string, now time.Time) er
 				p.MediaExpired = true
 				p.MediaExpiresAt = nil
 			}
-			exports, err := tx.Query(ctx, `SELECT id FROM jobs WHERE project_id=$1 AND kind LIKE 'export_%' AND state='succeeded' AND updated_at<=$2::timestamptz-interval '24 hours'`, p.ID, now)
+			exports, err := tx.Query(ctx, `SELECT id FROM jobs WHERE project_id=$1 AND kind LIKE 'export_%' AND state='succeeded' AND updated_at<=$2::timestamptz-interval '7 days'`, p.ID, now)
 			if err != nil {
 				return err
 			}
@@ -140,7 +146,7 @@ func (s *Store) ExpireVideos(ctx context.Context, root string, now time.Time) er
 				if err = removeVideo(root, id+".mp4"); err != nil {
 					return err
 				}
-				if _, err = tx.Exec(ctx, `UPDATE jobs SET state='expired',message='Vidéo supprimée après 24 heures',updated_at=now() WHERE id=$1`, id); err != nil {
+				if _, err = tx.Exec(ctx, `UPDATE jobs SET state='expired',message='Vidéo supprimée après une semaine',updated_at=now() WHERE id=$1`, id); err != nil {
 					return err
 				}
 			}

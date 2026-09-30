@@ -57,7 +57,17 @@ func TestVideoRetentionPreservesTextBackupAndActiveWork(t *testing.T) {
 	job := jobs[0]
 	output := storagePath(root, job.ID+".mp4")
 	os.WriteFile(output, []byte("rendered video"), 0600)
-	future := time.Now().Add(25 * time.Hour)
+	s.DB.Exec(ctx, "UPDATE jobs SET state='succeeded',updated_at=now() WHERE id=$1", job.ID)
+	if err = s.ExpireVideos(ctx, root, time.Now().Add(25*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{p.Media, upload.Media, job.ID + ".mp4"} {
+		if _, err := os.Stat(storagePath(root, name)); err != nil {
+			t.Fatal("video lost after one day", name, err)
+		}
+	}
+	s.DB.Exec(ctx, "UPDATE jobs SET state='queued' WHERE id=$1", job.ID)
+	future := time.Now().Add(8 * 24 * time.Hour)
 	if err = s.ExpireVideos(ctx, root, future); err != nil {
 		t.Fatal(err)
 	}
@@ -78,9 +88,6 @@ func TestVideoRetentionPreservesTextBackupAndActiveWork(t *testing.T) {
 			t.Fatal("video retained", name, err)
 		}
 	}
-	if _, err = os.Stat(storagePath(root, upload.Media)); err != nil {
-		t.Fatal("uploaded source deleted before a week", err)
-	}
 	if _, err = os.Stat(filepath.Join(backup, "keep.dump")); err != nil {
 		t.Fatal("backup lost", err)
 	}
@@ -93,6 +100,47 @@ func TestVideoRetentionPreservesTextBackupAndActiveWork(t *testing.T) {
 	}
 	if _, err = os.Stat(storagePath(root, upload.Media)); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("upload not expired", err)
+	}
+}
+
+func TestExistingMediaDeadlinesUpgradeOnceToOneWeek(t *testing.T) {
+	ctx := context.Background()
+	s := testStore(t)
+	root := t.TempDir()
+	for _, uploaded := range []bool{false, true} {
+		owner, p := readyVideo(t, s, root, uploaded)
+		now := time.Now().UTC().Truncate(time.Second)
+		oldExpiry := now.Add(-time.Hour)
+		if uploaded {
+			oldExpiry = now.Add(2 * 24 * time.Hour)
+		}
+		_, err := s.Mutate(ctx, owner, p.ID, func(q *Project, _ pgx.Tx) error {
+			q.MediaExpiresAt = &oldExpiry
+			q.MediaRetentionDays = 0
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantExpiry := oldExpiry
+		if !uploaded {
+			wantExpiry = oldExpiry.Add(6 * 24 * time.Hour)
+		}
+		for i := 0; i < 2; i++ {
+			if err := s.ExpireVideos(ctx, root, now.Add(time.Duration(i)*time.Minute)); err != nil {
+				t.Fatal(err)
+			}
+			got, err := s.Get(ctx, owner, p.ID)
+			if err != nil || got.MediaExpiresAt == nil || !got.MediaExpiresAt.Equal(wantExpiry) || got.MediaRetentionDays != 7 || got.Media != p.Media || got.Version != p.Version || !reflect.DeepEqual(got.Segments, p.Segments) {
+				t.Fatal("deadline upgrade changed data or repeated", uploaded, got, err)
+			}
+		}
+		if err := s.ExpireVideos(ctx, root, wantExpiry); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(storagePath(root, p.Media)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatal("video not removed at deadline", err)
+		}
 	}
 }
 
@@ -127,7 +175,7 @@ func TestExpiredExportRedownloadsWithoutTouchingTexts(t *testing.T) {
 	if _, err := w.Once(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.ExpireVideos(ctx, api.Config.Storage, time.Now().Add(25*time.Hour)); err != nil {
+	if err := s.ExpireVideos(ctx, api.Config.Storage, time.Now().Add(8*24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	code, _ = call(t, server, token, csrf, "POST", path, map[string]any{"version": p.Version, "track": "fr", "quality": "low"})
@@ -162,7 +210,7 @@ func TestRetentionGraceAndRestoreRejectsDifferentDuration(t *testing.T) {
 	if got.Media == "" || got.MediaExpiresAt == nil {
 		t.Fatal("legacy grace missing")
 	}
-	if err := s.ExpireVideos(ctx, api.Config.Storage, time.Now().Add(25*time.Hour)); err != nil {
+	if err := s.ExpireVideos(ctx, api.Config.Storage, time.Now().Add(8*24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	token, csrf := sessionFor(t, s, owner)
@@ -293,7 +341,7 @@ func TestRetentionRealMediaRestoreAndExport(t *testing.T) {
 		t.Fatal(err, string(output))
 	}
 	owner, p := readyVideo(t, s, a.Config.Storage, false)
-	if err := s.ExpireVideos(ctx, a.Config.Storage, time.Now().Add(25*time.Hour)); err != nil {
+	if err := s.ExpireVideos(ctx, a.Config.Storage, time.Now().Add(8*24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	token, csrf := sessionFor(t, s, owner)

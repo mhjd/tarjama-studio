@@ -479,12 +479,6 @@ export function Editor({
   function subtitleDownloads() {
     return (
       <div className="subtitle-download-actions">
-        <button
-          disabled={busy || uploading}
-          onClick={() => void action(() => downloadSubtitles(d.project, "ar"))}
-        >
-          Télécharger l’arabe · SRT
-        </button>
         {p.translation_source > 0 && (
           <button
             className="primary"
@@ -997,7 +991,7 @@ export function Editor({
                 </label>
               </div>
               <p>
-                Les vidéos exportées sont conservées 24 heures. Les sous-titres
+                Les vidéos exportées sont conservées une semaine. Les sous-titres
                 restent disponibles sans limite de durée.
               </p>
               <p>
@@ -1310,14 +1304,6 @@ export function Editor({
                   : "Correction arabe"}
             </h2>
           </div>
-          <details className="translation-help">
-            <summary>À propos de la traduction</summary>
-            <p>
-              La traduction reste modifiable. Les références identifiées peuvent
-              apparaître entre parenthèses dans les sous-titres. Leur absence ne
-              signifie pas que le passage ne contient aucune citation.
-            </p>
-          </details>
           {p.translation_source > 0 &&
             p.translation_source !== p.arabic_version && (
               <p className="notice">
@@ -1326,17 +1312,6 @@ export function Editor({
                 lancée.
               </p>
             )}
-          {editable && (
-            <details className="translation-help">
-              <summary>Exporter les sous-titres seuls (SRT)</summary>
-              <p>
-                Fichiers SRT avec les sous-titres trop courts regroupés comme
-                dans la vidéo, pour votre logiciel de montage. Vos segments de
-                relecture restent inchangés.
-              </p>
-              {subtitleDownloads()}
-            </details>
-          )}
           {p.translation_source > 0 &&
             (p.stage === "review" || p.stage === "ready") && (
               <details className="translation-help">

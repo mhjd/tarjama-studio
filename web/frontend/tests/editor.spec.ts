@@ -244,7 +244,9 @@ test("private projects, unchanged blur, offline draft, IME flush, review and rea
   expect(srt.suggestedFilename()).toMatch(/_fr\.srt$/);
   const srtText = await readFile((await srt.path())!, "utf8");
   expect(srtText).toContain("Bonjour à toutes et à tous.");
-  expect(srtText).toContain("00:00:00,000 --> 00:00:02,000");
+  expect(srtText).toContain("00:00:00,000 --> 00:00:04,000");
+  expect(srtText).toContain("Bienvenue à tous.");
+  expect(srtText.match(/ --> /g)).toHaveLength(1);
   await page
     .getByRole("button", { name: "Valider et exporter", exact: true })
     .last()

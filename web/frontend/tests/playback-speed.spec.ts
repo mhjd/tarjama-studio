@@ -11,6 +11,7 @@ for (const width of [320, 393, 412, 1440]) {
     await page.goto("/");
     await page.getByRole("button", { name: "Compte test alice" }).click();
     await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+    await page.getByRole("button", { name: "2. Corriger", exact: true }).click();
     const player = page.getByRole("region", { name: "Lecteur vidéo" });
     const video = page.locator("video");
     const speed = page.getByRole("combobox", { name: "Vitesse" });

@@ -126,6 +126,7 @@ for (const device of [
       await download.saveAs(`${dir}/sous-titres-test-${name}-fr-high.mp4`);
       expect(await download.failure()).toBeNull();
       await mark("08-telechargement");
+      await page.getByRole("button", { name: "Modifier la traduction", exact: true }).click();
       await french.fill("Bonjour à tous, voici le texte corrigé.");
       await french.blur();
       await expect(link).toHaveCount(0);

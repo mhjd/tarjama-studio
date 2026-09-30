@@ -13,6 +13,7 @@ for (const viewport of [
     await page.goto("/");
     await page.getByRole("button", { name: "Compte test alice" }).click();
     await page.getByRole("button", { name: /Cours d’arabe/ }).click();
+    await page.getByRole("button", { name: "2. Corriger", exact: true }).click();
     const player = page.getByRole("region", { name: "Lecteur vidéo" });
     const play = page.getByRole("button", { name: "Lecture", exact: true });
     await expect(play).toBeVisible();

@@ -206,11 +206,15 @@ export function Editor({
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [step]);
   async function refresh() {
+    const before = d.project;
     const x = await request<{ project: Project; jobs: Job[] }>(
       `/api/projects/${p.id}`,
     );
     if (!mounted.current) return;
     setConnectionLost(false);
+    // A save/action or another poll may have completed while this read was in flight.
+    // Never replace its acknowledgement with an older snapshot.
+    if (d.project !== before) return;
     setJobs(x.jobs);
     if (!d.dirty) d.adopt(x.project);
     else if (x.project.generation === d.project.generation) {

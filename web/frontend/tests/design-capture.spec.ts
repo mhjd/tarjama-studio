@@ -134,13 +134,9 @@ for (const size of sizes)
     ).toBeVisible();
     await page.locator(".export-panel").scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${dir}/04-export.png` });
-    if (size.width < 640) {
-      const create = await page
-        .getByRole("button", { name: "Créer la vidéo" })
-        .boundingBox();
-      const player = await page.locator(".player").boundingBox();
-      expect(create!.y + create!.height).toBeLessThan(player!.y);
-    }
+    // Export is now a dedicated page; editing and its player remain at step 3.
+    await expect(page.locator(".player")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Créer la vidéo" })).toBeVisible();
     await expect(
       page.getByRole("combobox", { name: "Sous-titres" }),
     ).toHaveCount(0);

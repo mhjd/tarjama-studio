@@ -58,3 +58,54 @@ images API/worker ; contrôle runtime du helper dans la qualification.
 
 L'étude des références religieuses est un travail suivant distinct : cette
 livraison ne change ni prompt ni texte traduit, et n'ajoute pas de parenthèses.
+
+## Correction découverte pendant la qualification UI
+
+Un rafraîchissement lancé avant une sauvegarde pouvait arriver après son accusé
+et réinstaller un ancien numéro de version : le parcours Mac synthétique a
+soumis version 5 alors que son PATCH venait de recevoir version 6, provoquant
+un HTTP 409 légitime du backend. `Editor.refresh` ignore désormais une réponse
+si l'objet projet a changé pendant la lecture. La prochaine interrogation
+récupère l'état récent ; les protections serveur contre les conflits restent.
+Un test Playwright retarde explicitement ce GET, acquitte une modification,
+puis vérifie la conservation du texte et de la version transmise à la validation.
+
+Les tests de parcours suivent aussi la séparation déjà livrée de l'export :
+retour explicite par « Modifier la traduction » avant d'éditer, lecteurs testés
+à l'étape Corriger et absence de lecteur attendue sur Export. L'attente SRT du
+parcours prend en compte le groupe de deux phrases courtes au lieu des anciennes
+bornes individuelles. Les premiers résultats en échec sont conservés dans les
+preuves ; ils ne sont pas comptés comme une qualification réussie.
+
+## Images finales et procédure préparée
+
+Source des images API/worker : `fb666ee9cd5a0293b1615af40d5798a38c0c8984`.
+Images importées localement, sans publication GHCR ni GitHub Actions :
+
+- API : `preview.local/atelier/web@sha256:9cc3a80a29a197a3a5f9ca06e68c4147a78726b9fcb945c92975ed8418880016`
+- Worker : `preview.local/atelier/web@sha256:fcef626b414e4c44a65881ce450366d41f190ea281772922ad662813e20533e9`
+- Qualification : `preview.local/atelier/web@sha256:a450bee49a1e4a42dfe012f0e973cb9d3889d33828758213522a926306493457`
+
+Recette `web/deploy/preview/active-sentence-grouping-20260930.yml`.
+Comparaison structurée avec la recette publique précédente : seuls ces trois
+images, la sélection des tests de qualification et le hash/chemin JS attendu
+changent. La configuration restante est identique. L'ancien job explicite
+`requested-export` est conservé mais n'est pas lancé par cette livraison.
+
+Sauvegarde réussie `pv-job-backup-94ea8553` :
+
+- application : `/storage/backups/pre-reliability-20260930T103056Z.dump`,
+  SHA256 `972a5b750148772bd7e2bb7224e7ea72d59aab296957dbe7b2aa8f8b38fec585` ;
+- identité : `/identity-backups/dumps/keycloak-20260930T103058Z.dump`,
+  SHA256 `03813af773fbb33b976d2c6734590c56dd098fbae839abc1915fecf166f2d060`.
+
+Aucune migration. Après tests : validation, plan, déploiement de cette seule
+recette puis `vps-preview run atelier preview-check`. Le contrôle vérifie les
+hashs des ressources réellement servies, le refus anonyme des projets et les
+quatre tests S1 dans le conteneur Kubernetes de qualification.
+
+Retour arrière applicatif si nécessaire :
+`vps-preview rollback atelier --revision 32eba7cc205e8816` après vérification de
+la disponibilité des anciennes images. Ne pas restaurer les bases pour ce
+changement sans migration ; le rollback du moteur ne restaure pas les données.
+Ne pas utiliser les anciennes recettes de transition Keycloak.

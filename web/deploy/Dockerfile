@@ -16,7 +16,7 @@ FROM debian:bookworm-slim AS api
 LABEL org.opencontainers.image.source="https://github.com/mhjd/tarjama-studio"
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates python3 libicu72 libass9 fonts-noto-core && rm -rf /var/lib/apt/lists/* && mkdir /storage && chown 10001:10001 /storage
 COPY --from=backend /tarjama /usr/local/bin/tarjama
-COPY backend/internal/subtitlelayout/ /app/subtitle-layout/
+COPY --chmod=755 backend/internal/subtitlelayout/ /app/subtitle-layout/
 COPY --from=frontend /src/frontend/dist /app/frontend
 USER 10001:10001
 ENV FRONTEND_DIR=/app/frontend STORAGE_DIR=/storage
@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN python3 -m venv /usr/local/yt-dlp && /usr/local/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default]==2026.8.19" && ln -s /usr/local/yt-dlp/bin/yt-dlp /usr/local/bin/yt-dlp
 COPY --from=backend /tarjama /usr/local/bin/tarjama
 COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
-COPY backend/internal/subtitlelayout/ /app/subtitle-layout/
+COPY --chmod=755 backend/internal/subtitlelayout/ /app/subtitle-layout/
 USER 10002:10002
 ENTRYPOINT ["/usr/local/bin/tarjama"]
 CMD ["media"]

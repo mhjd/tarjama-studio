@@ -15,8 +15,12 @@ func srtTime(ms int64) string {
 // Plain UTF-8 SubRip with the same readable cue grouping as video exports.
 // Only export cues are merged; saved editing segments and text stay unchanged.
 func SRT(segments []Segment, track string) string {
+	return renderSRT(automaticExportCues(segments, track))
+}
+
+func renderSRT(cues []exportCue) string {
 	var out strings.Builder
-	for i, s := range automaticExportCues(segments, track) {
+	for i, s := range cues {
 		text := s.Text
 		// Blank lines delimit cues in SRT; collapse them inside a subtitle.
 		lines := strings.FieldsFunc(text, func(r rune) bool { return r == '\r' || r == '\n' })
@@ -61,9 +65,14 @@ func (a *API) subtitles(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	content, err := groupedSRT(r.Context(), p.Segments, lang)
+	if err != nil {
+		http.Error(w, "Préparation des sous-titres indisponible ; réessayez.", http.StatusServiceUnavailable)
+		return
+	}
 	filename := strings.TrimSuffix(exportFilename(p.Title), ".mp4") + "_" + lang + ".srt"
 	w.Header().Set("Content-Type", "application/x-subrip; charset=utf-8")
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filename}))
 	w.Header().Set("Cache-Control", "no-store")
-	fmt.Fprint(w, SRT(p.Segments, lang))
+	fmt.Fprint(w, content)
 }

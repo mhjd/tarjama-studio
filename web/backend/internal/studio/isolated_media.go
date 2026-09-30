@@ -302,12 +302,16 @@ func (m *IsolatedMedia) Process(ctx context.Context, p MediaRequest, input, outp
 		}
 		w, h := Dimensions(info.Width, info.Height, quality)
 		if p.Operation == "export" {
+			content, err := groupedASS(ctx, p.Segments, w, h, p.Track)
+			if err != nil {
+				return info, err
+			}
 			f, e := os.CreateTemp(m.Storage, "subtitle-")
 			if e != nil {
 				return info, e
 			}
 			defer os.Remove(f.Name())
-			_, e = f.WriteString(ASS(p.Segments, w, h, p.Track))
+			_, e = f.WriteString(content)
 			closeErr := f.Close()
 			if e != nil {
 				return info, e

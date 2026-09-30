@@ -94,7 +94,7 @@ func TestGroupedSRTDownloadPreservesProject(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct{ track, merged, last string }{
-		{"fr", "En effet cette explication reste nécessaire.", "Ensuite."},
+		{"fr", "En effet cette explication\r\nreste nécessaire.", "Ensuite."},
 		{"ar", "نعم هذا الشرح ضروري", "نبدأ"},
 	} {
 		status, data := call(t, server, token, csrf, "GET", fmt.Sprintf("/api/projects/%s/subtitles/%s.srt?version=1", p.ID, tc.track), nil)

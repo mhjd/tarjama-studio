@@ -24,6 +24,7 @@ services:
     working_dir: /work/web/backend
     environment:
       MEDIA_TEST_ARTIFACTS: /work/web/.cache/media
+      SUBTITLE_LAYOUT_SCRIPT: /work/web/backend/internal/subtitlelayout/main.py
       XDG_CONFIG_HOME: /tmp/chromium-config
       XDG_CACHE_HOME: /tmp/chromium-cache
       TEST_DATABASE_URL: postgres://test:test-only@db:5432/tarjama_test?sslmode=disable

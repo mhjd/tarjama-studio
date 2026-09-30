@@ -247,6 +247,10 @@ func assText(s string) string {
 	return strings.NewReplacer("\\", "＼", "{", "｛", "}", "｝", "\r", "", "\n", "\\N").Replace(s)
 }
 func ASS(s []Segment, w, h int, track string) string {
+	return renderASS(automaticExportCues(s, track), w, h, track)
+}
+
+func renderASS(cues []exportCue, w, h int, track string) string {
 	font := "Noto Naskh Arabic"
 	if track == "fr" {
 		font = "Arial"
@@ -257,7 +261,7 @@ func ASS(s []Segment, w, h int, track string) string {
 	margin := max(20, int(math.Round(float64(w)*0.05)))
 	verticalMargin := max(18, int(math.Round(float64(h)*0.058)))
 	out := fmt.Sprintf("[Script Info]\nScriptType: v4.00+\nPlayResX: %d\nPlayResY: %d\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,%s,%d,&H00FFFFFF,&H000000FF,&H00000000,&HC0000000,0,0,0,0,100,100,0,0,3,1,0,2,%d,%d,%d,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n", w, h, font, size, margin, margin, verticalMargin)
-	for _, x := range automaticExportCues(s, track) {
+	for _, x := range cues {
 		out += fmt.Sprintf("Dialogue: 0,%s,%s,Default,,0,0,0,,%s\n", assTime(x.Start), assTime(x.End), assText(x.Text))
 	}
 	return out
@@ -358,7 +362,11 @@ func (m LocalMedia) Process(ctx context.Context, p MediaRequest, input, output s
 			if p.Quality == "low" {
 				crf = "28"
 			}
-			if e = os.WriteFile(filepath.Join(dir, "subtitles.ass"), []byte(ASS(p.Segments, w, h, p.Track)), 0600); e != nil {
+			content, err := groupedASS(ctx, p.Segments, w, h, p.Track)
+			if err != nil {
+				return info, err
+			}
+			if e = os.WriteFile(filepath.Join(dir, "subtitles.ass"), []byte(content), 0600); e != nil {
 				return info, e
 			}
 			filter = fmt.Sprintf("scale=%d:%d,setsar=1,ass=subtitles.ass", w, h)

@@ -109,3 +109,40 @@ Retour arrière applicatif si nécessaire :
 la disponibilité des anciennes images. Ne pas restaurer les bases pour ce
 changement sans migration ; le rollback du moteur ne restaure pas les données.
 Ne pas utiliser les anciennes recettes de transition Keycloak.
+
+## Résultat du déploiement
+
+Déployé le 30 septembre 2026 vers 10:49 UTC, révision **`53f5b3e75a7d75e1`**,
+sur **https://tarjama.runagen.com**. Six services Running/Ready, review désactivé.
+L'URL atelier retournée génériquement par le moteur n'est pas l'URL publique.
+
+- `web/scripts/test.sh` : succès complet, tests Go avec détecteur de courses,
+  `go vet`, build frontend, **82 tests Playwright réussis (7,2 minutes)**,
+  sauvegarde/restauration PostgreSQL sur la base synthétique.
+- Parcours enregistrés MacBook, Pixel et iPhone en émulation Chromium : import,
+  correction/traduction simulées, édition persistée, export FFmpeg réel,
+  téléchargement du MP4 et modification après export. Pas de nouvel appel IA.
+- Parité exacte du portage sur les trois corpus figés ; les 793 groupes Sirat
+  sont aussi reproduits dans l'image API sous UID 10001, réseau désactivé,
+  racine en lecture seule et limites de ressources (3,68 s).
+- `pv-job-preview-check-f30c9b56` Succeeded : frontend réellement servi conforme
+  aux SHA256 attendus, projets refusés sans connexion, quatre tests S1 PASS
+  dans Kubernetes (formats, ponctuation, annulation, échec explicite, échappement).
+- Corpus local chargé dans le nouveau worker : `tools=3`.
+
+Pendant la réconciliation, le premier démarrage API a échoué sur la découverte
+OIDC. Le redémarrage automatique a réussi une fois Keycloak prêt ; les six
+services sont ensuite Ready et le contrôle interne passe. Aucune modification
+OIDC/réseau ni contournement nécessaire. Un échec initial transitoire est conservé
+comme preuve, pas dissimulé derrière le statut final réussi.
+
+Limites : pas de nouveau parcours public authentifié depuis un vrai Mac/téléphone,
+pas de régénération de la vidéo Sirat dans le compte utilisateur, pas de nouvelle
+qualification fournisseur. Les preuves de rendu S1 déjà validées restent celles
+de l'expérience ; les anciens MP4 ne sont pas remplacés. Les projets, textes et
+protections restent inchangés. Le correctif de rafraîchissement est la seule
+modification de comportement du frontend incluse dans cette release.
+
+La proposition de références entre parenthèses est consignée dans
+[REFERENCE_DISPLAY_AUDIT_20260930.md](REFERENCE_DISPLAY_AUDIT_20260930.md) ; elle
+n'est pas présentée comme une fonctionnalité déjà activée.

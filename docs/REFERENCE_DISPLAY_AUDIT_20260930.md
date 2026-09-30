@@ -90,3 +90,7 @@ visible dans ce texte enregistré, mais ne permet pas de déduire si un outil a
 été utilisé lors de sa génération. L'export ne peut pas compléter ce numéro
 par simple regroupement ; il faudrait une identification vérifiée, distincte
 et explicite, sans relancer toute la traduction silencieusement.
+
+Après déploiement S1, le nouveau worker a confirmé le 30 septembre à 10:49 UTC
+`Local reference corpus loaded: tools=3`. Ceci confirme la disponibilité du
+corpus dans la version active, sans prouver un appel sur une citation donnée.

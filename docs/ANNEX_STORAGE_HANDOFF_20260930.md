@@ -1,5 +1,40 @@
 # Stockage Tarjama sur le disque annexe
 
+## Nouvelle décision : budget de surveillance de 40 Gio
+
+Le propriétaire autorise désormais 40 Gio pour la bibliothèque (30 septembre,
+après la migration). Changement administrateur en attente : la configuration
+relue dans `/etc/vps-maintenance/storage.json` contient toujours
+`budget_bytes: 15032385536` (14 Gio). La cible est **42949672960 octets**.
+Le disque annexe dispose d'environ 80 Gio libres à ce contrôle.
+
+Ce budget reste un seuil d'alerte, pas une réservation ou un quota physique.
+Il peut être porté à 40 Gio sans déplacer la bibliothèque ni redéployer Tarjama.
+Conserver les vérifications UUID/montage et l'alerte globale à 80 % du disque.
+Ne pas modifier les réservations de travail temporaires du courtier média.
+
+La recette actuellement déployée déclare toujours `library: 14Gi`, avec un
+plafond d'emplacement `max_storage_gi: 19`. Le contrat du courtier documente
+également un maximum de 16 Gi par volume et ne redimensionne pas les PVC
+existants. Ces valeurs Kubernetes ne constituent pas le budget physique de la
+bibliothèque. Ne pas écrire `40Gi` dans la recette puis redéployer pour modifier
+la seule surveillance ; une harmonisation éventuelle des déclarations et
+capacités demanderait une évolution administrée distincte du contrat.
+
+Message à transmettre :
+
+> Le propriétaire autorise le passage du budget de surveillance de Tarjama à
+> 40 Gio. Mets à jour la source administrée de `storage-monitoring.yml` puis
+> `/etc/vps-maintenance/storage.json` pour le seul chemin
+> `/srv/vps-storage/applications/atelier/library` :
+> `budget_bytes = 42949672960`. Préserve UUID/montage, alerte disque à 80 %,
+> déduplication des notifications et budgets des autres services. Vérifie le
+> collecteur et confirme le seuil effectif. C'est un seuil d'alerte, sans quota
+> physique : aucun déplacement, redimensionnement destructif de PVC, modification
+> de la recette active ni redéploiement applicatif nécessaire. Les déclarations
+> Kubernetes restent distinctes, sauf évolution administrative explicitement
+> préparée et qualifiée.
+
 ## État actuel : migration administrateur terminée et qualifiée
 
 Passation reçue :

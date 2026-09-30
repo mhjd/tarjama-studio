@@ -1,5 +1,52 @@
 # Stockage Tarjama sur le disque annexe
 
+## État actuel : migration administrateur terminée et qualifiée
+
+Passation reçue :
+`/home/codex/.tarjama-annex-storage-admin-20260930/README.md`.
+Reprise le 30 septembre à 14:17:58 UTC, qualification terminée à 14:28:04 UTC.
+Révision `4105dbd09a487ec3` inchangée, six services prêts. **Aucune modification
+de recette ni nouveau déploiement applicatif nécessaire.** Les sections de
+préparation plus bas sont historiques et ne doivent pas être rejouées.
+
+Le volume `library` est maintenant sur
+`/srv/vps-storage/applications/atelier/library`, disque `/dev/sdb`.
+Le PV/PVC reste identique et web/worker conservent `/storage` ; l'administrateur
+a vérifié le périphérique 8:16 dans leurs montages. Copie intégrale vérifiée
+par empreintes et métadonnées, droits et protections conservés. Bases
+PostgreSQL/Keycloak non déplacées. Les entrées/résultats du courtier
+`/var/lib/vps-jobs` restent sur le disque système ; ses temporaires de traitement
+sont en mémoire selon le profil. Ne pas annoncer que tout le traitement média
+utilise le disque annexe.
+
+Budget `library` conservé à **14 Gio**, surveillé par alerte : ce n'est pas un
+quota physique. Occupation constatée par l'administrateur : environ 3,12 Gio,
+disque annexe environ 80 Gio disponibles, partagés avec d'autres usages.
+Surveillance du montage/UUID, de ce budget et du seuil de 80 % du disque installée.
+
+Qualification administrateur sur fixture dédiée, sans IA : lecture Range et
+octets, retouche française persistée, export Low H264/AAC et rétention réelle
+réussis ; textes conservés après expiration des médias. Projet et session de test
+nettoyés. Les premiers essais de rétention ont échoué à cause d'une attente trop
+courte et d'une date synthétique mal formatée ; ces preuves sont conservées,
+la fixture a été corrigée et le cycle suivant a réussi, sans patch produit.
+L'agent applicatif a relu la passation et recontrôlé les six services prêts ;
+il n'a pas rejoué les essais métier ni consulté les reçus root privés.
+
+Original conservé par l'administrateur dans
+`/var/lib/vps-admin-evidence/annex-library-20260930/library-original` : pas de gain
+immédiat sur le disque principal tant que cette copie existe. Ne pas la supprimer
+ni la restaurer automatiquement : depuis la reprise, les nouvelles écritures
+sont sur l'annexe. Un retour demande l'arrêt coordonné des écritures et une
+copie actualisée annexe → principal, contrôlée avant bascule.
+
+L'absence de cible a été qualifiée sur un volume synthétique : accès refusé sans
+création de remplacement sur le principal. Aucun redémarrage ou débranchement
+du disque réel n'a été effectué ; contrôle au prochain reboot autorisé restant.
+Ce déplacement ne constitue pas une sauvegarde hors VPS.
+
+## Préparation historique
+
 Le propriétaire souhaite que le stockage vidéo utilise le disque annexe.
 Inventaire en lecture seule du 30 septembre 2026 :
 

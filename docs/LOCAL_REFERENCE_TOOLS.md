@@ -1,3 +1,8 @@
+> Décision du 30 septembre 2026, préparée sans déploiement : seul `quran_fr`
+> reste accessible au modèle. `sahih_ar` et `hadith_ar` sont désactivés ;
+> leur corpus et la consultation hors ligne sont conservés.
+> Voir [la politique actuelle](HADITH_REFERENCE_POLICY_20260930.md).
+
 # Outils locaux de références — 25 septembre 2026
 
 Les trois outils sont implémentés en Go, consultables hors réseau et raccordés à

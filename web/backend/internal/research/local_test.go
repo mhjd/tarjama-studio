@@ -13,6 +13,24 @@ import (
 
 type fixtureTools struct{ calls int }
 
+func TestHadithToolCallsAreRejected(t *testing.T) {
+	for _, name := range []string{"sahih_ar", "hadith_ar"} {
+		t.Run(name, func(t *testing.T) {
+			local := &fixtureTools{}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprintf(w, `{"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","tool_calls":[{"id":"disabled","type":"function","function":{"name":%q,"arguments":"{}"}}]}}]}`, name)
+			}))
+			defer server.Close()
+			runner := Runner{Client: server.Client(), Endpoint: server.URL, Model: "allowed", LocalTools: local}
+			_, err := runner.Run(context.Background(), "fixture", "", nil, nil)
+			var protocol *ProtocolError
+			if !errors.As(err, &protocol) || protocol.Code != "tool_forbidden" || local.calls != 0 {
+				t.Fatal("hadith call not rejected before execution", err, local.calls)
+			}
+		})
+	}
+}
+
 func (f *fixtureTools) Tools() []any {
 	return []any{map[string]any{"type": "function", "function": map[string]any{"name": "quran_fr"}}}
 }

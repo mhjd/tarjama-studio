@@ -258,7 +258,7 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 				}
 				seen[call.ID] = true
 				switch call.Function.Name {
-				case "quran_fr", "sahih_ar", "hadith_ar":
+				case "quran_fr":
 				default:
 					return out, &ProtocolError{Code: "tool_forbidden"}
 				}
@@ -274,7 +274,7 @@ func (r *Runner) Run(ctx context.Context, key, prompt string, input, schema any)
 				if err != nil {
 					// A validation error is data the model can correct, within the
 					// same fixed call/round budget. No provider request is retried.
-					value = map[string]string{"status": "invalid_query", "message": "Utilise une référence exacte OU un fragment arabe d'au moins trois mots. quran_fr : surah/verse >= 1, end_verse facultatif, plage <= 10. Hadith : collection et reference OU arabic_query. Aucun champ supplémentaire."}
+					value = map[string]string{"status": "invalid_query", "message": "Utilise une référence exacte OU un fragment arabe d'au moins trois mots. quran_fr : surah/verse >= 1, end_verse facultatif, plage <= 10. Aucun champ supplémentaire."}
 				}
 				encoded, err := json.Marshal(value)
 				if err != nil || len(encoded) > 512*1024 {

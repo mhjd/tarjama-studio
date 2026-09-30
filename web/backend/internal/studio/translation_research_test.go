@@ -25,9 +25,14 @@ func TestTranslationResearchAndProvenance(t *testing.T) {
 				t.Error("Parallel tools contract")
 			}
 			instruction, _ := json.Marshal(body["messages"])
-			for _, rule := range []string{"quran_fr", "sahih_ar", "hadith_ar", "Parallel"} {
+			for _, rule := range []string{"quran_fr", "Les outils de hadith sont désactivés", "Parallel"} {
 				if !strings.Contains(string(instruction), rule) {
 					t.Error("lost desktop rule", rule)
+				}
+			}
+			for _, retired := range []string{"sahih_ar", "hadith_ar"} {
+				if strings.Contains(string(instruction), retired) {
+					t.Error("prompt still advertises a disabled tool", retired)
 				}
 			}
 			content := `{"segments":[{"id":"a","text":"Bonjour"}]}`

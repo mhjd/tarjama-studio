@@ -171,7 +171,13 @@ func Load(dir string) (*Store, error) {
 	}
 	return s, nil
 }
+
+// Call is the model-facing boundary. Hadith lookup remains available offline,
+// but is neither advertised nor callable by the translation model.
 func (s *Store) Call(name string, raw json.RawMessage) (any, error) {
+	if name != "quran_fr" {
+		return nil, errors.New("reference tool disabled")
+	}
 	if len(raw) > 8192 {
 		return nil, errors.New("query too large")
 	}
@@ -328,7 +334,5 @@ func (s *Store) Tools() []any {
 			"end_verse":    map[string]any{"type": "integer", "minimum": 1, "maximum": 286, "description": "Facultatif : numéro du dernier verset, jamais un nombre de versets. Omettre pour un seul verset. Si présent : verse <= end_verse <= verse+9."},
 			"arabic_query": str("Recherche par fragment d'au moins trois mots : fournir UNIQUEMENT arabic_query. Pour une référence exacte : omettre arabic_query et fournir surah/verse, sans end_verse pour un seul verset."),
 		}, []string{}),
-		makeTool("sahih_ar", "Bukhari ou Muslim : arabe uniquement, à traduire. Numérotation de l'édition retournée ; un numéro n'est pas nécessairement une référence Sunnah.com. Référence exacte OU fragment.", map[string]any{"collection": map[string]any{"type": "string", "enum": []string{"bukhari", "muslim"}}, "reference": str("Identifiant exact de l'édition locale"), "arabic_query": str("Fragment arabe, au moins trois mots")}, []string{"collection"}),
-		makeTool("hadith_ar", "Autres recueils arabes installés : référence OU fragment. corpus_unavailable si recueil absent. Le modèle traduit lui-même l'arabe.", map[string]any{"collection": str("Nom du recueil local, par exemple abudawud, riyadussalihin"), "reference": str("Identifiant exact de l'édition locale"), "arabic_query": str("Fragment arabe, au moins trois mots")}, []string{"collection"}),
 	}
 }

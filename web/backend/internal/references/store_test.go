@@ -73,6 +73,23 @@ func TestRejectUnsafeOrAmbiguousQueries(t *testing.T) {
 		t.Fatal("arbitrary tool")
 	}
 }
+
+func TestModelOnlyHasQuranAccess(t *testing.T) {
+	_, s := fixture(t)
+	definitions, err := json.Marshal(s.Tools())
+	if err != nil || len(s.Tools()) != 1 || !strings.Contains(string(definitions), `"name":"quran_fr"`) {
+		t.Fatal("expected only the Quran tool", string(definitions), err)
+	}
+	result, err := s.Call("quran_fr", json.RawMessage(`{"surah":1,"verse":1}`))
+	if err != nil || result.(Result).Status != "found" {
+		t.Fatal("Quran lookup unavailable", result, err)
+	}
+	for _, name := range []string{"sahih_ar", "hadith_ar"} {
+		if result, err := s.Call(name, json.RawMessage(`{"collection":"muslim","reference":"1907a"}`)); err == nil || result != nil {
+			t.Fatal("disabled tool returned data", name, result, err)
+		}
+	}
+}
 func TestTamperDetected(t *testing.T) {
 	dir, _ := fixture(t)
 	f, _ := os.OpenFile(filepath.Join(dir, "entries.jsonl"), os.O_APPEND|os.O_WRONLY, 0600)

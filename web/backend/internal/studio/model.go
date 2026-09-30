@@ -149,3 +149,18 @@ func TextChunks(s []Segment) [][]Segment {
 	}
 	return out
 }
+
+// TextChunkContext is the read-only neighboring context used by the worker and
+// standalone qualification. The returned segments are not translation targets.
+func TextChunkContext(chunks [][]Segment, index int) []Segment {
+	context := []Segment{}
+	if index > 0 {
+		previous := chunks[index-1]
+		context = append(context, previous[max(0, len(previous)-2):]...)
+	}
+	if index+1 < len(chunks) {
+		next := chunks[index+1]
+		context = append(context, next[:min(2, len(next))]...)
+	}
+	return context
+}

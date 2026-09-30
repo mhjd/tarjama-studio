@@ -567,15 +567,7 @@ func (w *Worker) text(ctx context.Context, j Job) error {
 	}
 	i := len(raw)
 	chunks = smallerTextRetry(chunks, i, j.TextFailures)
-	contextSegments := []Segment{}
-	if i > 0 {
-		previous := chunks[i-1]
-		contextSegments = append(contextSegments, previous[max(0, len(previous)-2):]...)
-	}
-	if i+1 < len(chunks) {
-		next := chunks[i+1]
-		contextSegments = append(contextSegments, next[:min(2, len(next))]...)
-	}
+	contextSegments := TextChunkContext(chunks, i)
 	attempt, e := w.Store.beginTextAttempt(ctx, j, i)
 	if errors.Is(e, errTextBudget) {
 		return &ProviderError{Code: "text_attempt_budget", Public: "Le traitement n’a pas pu se terminer. Votre progression est conservée. Vous pouvez réessayer."}

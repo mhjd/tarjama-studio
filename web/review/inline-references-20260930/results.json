@@ -1,0 +1,86 @@
+[
+  {
+    "path": "data/model_outputs/inline-reference-20260930-sirat-01",
+    "seconds": 7.26664479,
+    "duration_ms": 55120,
+    "segments": 16,
+    "model_calls": 2,
+    "local_calls": 2,
+    "invalid_queries": 0,
+    "reported_cost_usd": 0.00100611,
+    "references": [
+      {
+        "segment_id": "107405c4fac63db9542cfc2cbc81f9f8",
+        "reference": "17:31",
+        "text": "« Et ne tuez pas vos enfants par crainte de pauvreté » (sourate 17, verset 31)."
+      },
+      {
+        "segment_id": "c8a6c9af71d6f196f1fdaa13c46d5fa9",
+        "reference": "6:151",
+        "text": "Et dans un autre verset : « Ne tuez pas vos enfants pour cause de pauvreté » (sourate 6, verset 151)."
+      }
+    ],
+    "request_sha256": "3a0401a0e630b89b78d140166ab5b9318bfe147f37718e055db779e3c06e75c6"
+  },
+  {
+    "path": "data/model_outputs/inline-reference-20260930-sirat-chunk0-01",
+    "seconds": 47.00623851,
+    "duration_ms": 597080,
+    "segments": 145,
+    "model_calls": 6,
+    "local_calls": 6,
+    "invalid_queries": 2,
+    "reported_cost_usd": 0.0069735299999999995,
+    "references": [
+      {
+        "segment_id": "7f70188746e6b9c0cc2152150f98946b",
+        "reference": "21:107",
+        "text": "« Et Nous ne t'avons envoyé qu'en miséricorde pour l'univers. » (sourate 21, verset 107)"
+      },
+      {
+        "segment_id": "107405c4fac63db9542cfc2cbc81f9f8",
+        "reference": "17:31",
+        "text": "« Et ne tuez pas vos enfants par crainte de pauvreté » (sourate 17, verset 31)."
+      },
+      {
+        "segment_id": "c8a6c9af71d6f196f1fdaa13c46d5fa9",
+        "reference": "6:151",
+        "text": "Et dans un autre verset : « Ne tuez pas vos enfants pour cause de pauvreté » (sourate 6, verset 151)."
+      }
+    ],
+    "request_sha256": "ec64942a50bc996954135060190ee778fd75ac28af2e48db6d42f99d68625ae3"
+  },
+  {
+    "path": "data/model_outputs/inline-reference-20260930-sirat-chunk0-02",
+    "seconds": 54.306105317,
+    "duration_ms": 597080,
+    "segments": 145,
+    "model_calls": 3,
+    "local_calls": 5,
+    "invalid_queries": 1,
+    "reported_cost_usd": 0.0049018049999999995,
+    "references": [
+      {
+        "segment_id": "7f70188746e6b9c0cc2152150f98946b",
+        "reference": "21:107",
+        "text": "« Et Nous ne t'avons envoyé qu'en miséricorde pour l'univers. » (sourate 21, verset 107)"
+      },
+      {
+        "segment_id": "107405c4fac63db9542cfc2cbc81f9f8",
+        "reference": "17:31",
+        "text": "« Ne tuez pas vos enfants par crainte de pauvreté. » (sourate 17, verset 31)"
+      },
+      {
+        "segment_id": "c8a6c9af71d6f196f1fdaa13c46d5fa9",
+        "reference": "6:151",
+        "text": "Et dans un autre verset : « Ne tuez pas vos enfants pour cause de pauvreté. » (sourate 6, verset 151)"
+      },
+      {
+        "segment_id": "4a59e05d3a5ac33a49651331fb6dfdbb",
+        "reference": "4:22",
+        "text": "Dieu, exalté soit-Il, a dit : « N’épousez pas les femmes que vos pères ont épousées. » (sourate 4, verset 22)"
+      }
+    ],
+    "request_sha256": "e5deb3986e0cc2800ea067916b91e3dadcdacc2a0d3d52de0514d3261d346906"
+  }
+]

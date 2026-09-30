@@ -388,3 +388,8 @@ web-test-requested-reexport:
 .PHONY: web-sentence-grouping-video
 web-sentence-grouping-video:
 	python3 -B web/review/sentence-grouping-20260929/video.py $(ARGS)
+
+# Paid, bounded excerpt through the application prompt and actual local tools.
+.PHONY: web-inline-reference-check
+web-inline-reference-check: web-prompts-check
+	REFERENCE_CHECK_OUTPUT="$(REFERENCE_CHECK_OUTPUT)" web/scripts/inline-reference-check.sh

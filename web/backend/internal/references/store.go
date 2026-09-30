@@ -318,12 +318,16 @@ func (s *Store) Lookup(name string, q Query) (Result, error) {
 }
 func (s *Store) Tools() []any {
 	str := func(desc string) any { return map[string]any{"type": "string", "description": desc} }
-	integer := map[string]any{"type": "integer", "minimum": 1}
 	makeTool := func(name, description string, p map[string]any, required []string) any {
 		return map[string]any{"type": "function", "function": map[string]any{"name": name, "description": description, "parameters": map[string]any{"type": "object", "additionalProperties": false, "properties": p, "required": required}}}
 	}
 	return []any{
-		makeTool("quran_fr", "Référence coranique locale : sourate/verset (plage maximale 10), OU fragment arabe. Renvoie l'arabe et le français de l'édition. Les candidats textuels exigent vérification. Ne complète pas une citation partielle.", map[string]any{"surah": integer, "verse": integer, "end_verse": integer, "arabic_query": str("Fragment arabe, au moins trois mots ; exclusif avec sourate/verset")}, []string{}),
+		makeTool("quran_fr", "Référence coranique locale : sourate/verset (plage maximale 10), OU fragment arabe. Renvoie l'arabe et le français de l'édition. Les candidats textuels exigent vérification. Ne complète pas une citation partielle.", map[string]any{
+			"surah":        map[string]any{"type": "integer", "minimum": 1, "maximum": 114, "description": "Numéro de sourate ; uniquement pour une référence exacte."},
+			"verse":        map[string]any{"type": "integer", "minimum": 1, "maximum": 286, "description": "Numéro du verset demandé, ou premier verset de la plage."},
+			"end_verse":    map[string]any{"type": "integer", "minimum": 1, "maximum": 286, "description": "Facultatif : numéro du dernier verset, jamais un nombre de versets. Omettre pour un seul verset. Si présent : verse <= end_verse <= verse+9."},
+			"arabic_query": str("Recherche par fragment d'au moins trois mots : fournir UNIQUEMENT arabic_query. Pour une référence exacte : omettre arabic_query et fournir surah/verse, sans end_verse pour un seul verset."),
+		}, []string{}),
 		makeTool("sahih_ar", "Bukhari ou Muslim : arabe uniquement, à traduire. Numérotation de l'édition retournée ; un numéro n'est pas nécessairement une référence Sunnah.com. Référence exacte OU fragment.", map[string]any{"collection": map[string]any{"type": "string", "enum": []string{"bukhari", "muslim"}}, "reference": str("Identifiant exact de l'édition locale"), "arabic_query": str("Fragment arabe, au moins trois mots")}, []string{"collection"}),
 		makeTool("hadith_ar", "Autres recueils arabes installés : référence OU fragment. corpus_unavailable si recueil absent. Le modèle traduit lui-même l'arabe.", map[string]any{"collection": str("Nom du recueil local, par exemple abudawud, riyadussalihin"), "reference": str("Identifiant exact de l'édition locale"), "arabic_query": str("Fragment arabe, au moins trois mots")}, []string{"collection"}),
 	}

@@ -116,3 +116,23 @@ func TestLunaMediumRequestBudget(t *testing.T) {
 		}
 	}
 }
+
+func TestTextChunkContextUsesOnlyTwoNeighbors(t *testing.T) {
+	chunks := [][]Segment{
+		{{ID: "a"}, {ID: "b"}, {ID: "c"}},
+		{{ID: "d"}, {ID: "e"}},
+		{{ID: "f"}, {ID: "g"}, {ID: "h"}},
+	}
+	for index, want := range []string{"de", "bcfg", "de"} {
+		got := ""
+		for _, s := range TextChunkContext(chunks, index) {
+			got += s.ID
+		}
+		if got != want {
+			t.Fatalf("chunk %d: %q, want %q", index, got, want)
+		}
+	}
+	if len(TextChunkContext(chunks[:1], 0)) != 0 {
+		t.Fatal("single chunk has no neighbors")
+	}
+}

@@ -1313,9 +1313,9 @@ export function Editor({
           <details className="translation-help">
             <summary>À propos de la traduction</summary>
             <p>
-              La traduction reste modifiable. La vérification automatique des
-              citations religieuses n’est pas activée ; vérifiez les références
-              avant publication.
+              La traduction reste modifiable. Les références identifiées peuvent
+              apparaître entre parenthèses dans les sous-titres. Leur absence ne
+              signifie pas que le passage ne contient aucune citation.
             </p>
           </details>
           {p.translation_source > 0 &&

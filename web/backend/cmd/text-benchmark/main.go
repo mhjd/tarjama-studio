@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"tarjama/web/internal/references"
 	"tarjama/web/internal/studio"
 	"time"
 )
@@ -96,6 +97,7 @@ func main() {
 }
 func run() error {
 	input := flag.String("input", "", "public JSON segments fixture")
+	chunkIndex := flag.Int("chunk-index", -1, "select an actual application chunk with neighboring context")
 	output := flag.String("output", "", "new immutable result directory")
 	printResult := flag.Bool("print-result", false, "print a bounded public-fixture result for qualification")
 	read := flag.Bool("read-next", false, "read next bounded text page from a completed run")
@@ -120,8 +122,16 @@ func run() error {
 	if err = studio.ValidateSegments(s); err != nil {
 		return err
 	}
-	if len(studio.TextChunks(s)) != 1 {
-		return errors.New("fixture must fit one application chunk")
+	chunks := studio.TextChunks(s)
+	contextSegments := []studio.Segment{}
+	if *chunkIndex >= 0 {
+		if *chunkIndex >= len(chunks) {
+			return errors.New("chunk index out of range")
+		}
+		contextSegments = studio.TextChunkContext(chunks, *chunkIndex)
+		s = chunks[*chunkIndex]
+	} else if len(chunks) != 1 {
+		return errors.New("fixture must fit one application chunk, or select --chunk-index")
 	}
 	// Mkdir, never MkdirAll for the run: refuse overwriting any earlier evidence.
 	if err = os.MkdirAll(filepath.Dir(*output), 0700); err != nil {
@@ -138,6 +148,13 @@ func run() error {
 		return errors.New("registered OpenRouter secret unavailable")
 	}
 	p := studio.NewProviders()
+	if path := os.Getenv("REFERENCE_CORPUS_DIR"); path != "" {
+		corpus, err := references.Load(path)
+		if err != nil {
+			return errors.New("reference corpus unavailable")
+		}
+		p.References = corpus
+	}
 	p.Client.Transport = &auditTransport{dir: *output, base: http.DefaultTransport}
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Minute)
 	defer cancel()
@@ -162,7 +179,7 @@ func run() error {
 		return errors.New("provider network unavailable after bounded wait")
 	}
 	start := time.Now()
-	result, err := p.Text(ctx, strings.TrimSpace(string(key)), "translate", s, nil)
+	result, err := p.Text(ctx, strings.TrimSpace(string(key)), "translate", s, contextSegments)
 	if err != nil {
 		return err
 	} // One generation attempt, no hidden quota-spending retry.
@@ -172,6 +189,10 @@ func run() error {
 	}
 	hash := sha256.Sum256(b)
 	summary := map[string]any{"model": studio.TextModel, "segments": len(s), "duration_ms": s[len(s)-1].End - s[0].Start, "elapsed_seconds": time.Since(start).Seconds(), "translation_sha256": hex.EncodeToString(hash[:]), "output_tokens_budget": studio.TextMaxOutputTokens, "timestamp": time.Now().UTC().Format(time.RFC3339)}
+	summary["chunk_index"] = *chunkIndex
+	summary["context_segments"] = len(contextSegments)
+	summary["start_ms"] = s[0].Start
+	summary["end_ms"] = s[len(s)-1].End
 	summary["prompt_version"] = studio.PromptVersion("translate")
 	if len(result.Grounding) > 0 {
 		var audit map[string]any

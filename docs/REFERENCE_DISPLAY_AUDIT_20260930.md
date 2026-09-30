@@ -1,5 +1,7 @@
 # Affichage des références — investigation du 30 septembre 2026
 
+Suite autorisée et qualifiée : voir [l’activation du prompt](INLINE_REFERENCES_RELEASE_20260930.md). Le constat ci-dessous décrit la version précédente.
+
 Demande du propriétaire : une référence courte dans le sous-titre, entre
 parenthèses, choisie par le modèle, plutôt qu'un panneau supplémentaire.
 Cette note distingue l'état actuel de la proposition. Aucun prompt, appel IA,

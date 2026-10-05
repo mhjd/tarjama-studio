@@ -78,7 +78,7 @@ func PrepareASR(response ASRResponse) ([]ASRSegment, error) {
 func MergeASR(chunks []ASRChunk, duration int64) ([]Segment, error) {
 	var merged []ASRSegment
 	for _, c := range chunks {
-		s, e := PrepareASR(c.Response)
+		s, e := prepareASRChunk(c)
 		if e != nil {
 			return nil, e
 		}
@@ -91,9 +91,6 @@ func MergeASR(chunks []ASRChunk, duration int64) ([]Segment, error) {
 			}
 		}
 		for _, x := range s {
-			if x.End > c.Duration+1 {
-				return nil, errors.New("Timestamp Groq hors morceau")
-			}
 			x.Start += c.Start
 			x.End = math.Min(float64(duration)/1000, x.End+c.Start)
 			if len(merged) > 0 {
@@ -477,7 +474,7 @@ func (w *Worker) transcribe(ctx context.Context, j Job) error {
 	if e != nil {
 		return w.providerFailure(ctx, j, scope, e)
 	}
-	if _, e = PrepareASR(response); e != nil {
+	if _, e = prepareASRChunk(ASRChunk{Start: start, Duration: info.ChunkDuration, Response: response}); e != nil {
 		for i, segment := range response.Segments {
 			if math.IsNaN(segment.Start) || math.IsInf(segment.Start, 0) || math.IsNaN(segment.End) || math.IsInf(segment.End, 0) || segment.Start < 0 || segment.End < segment.Start {
 				log.Printf("ASR invalid timestamp job=%s segment=%d start=%g end=%g blank=%t", j.ID, i, segment.Start, segment.End, strings.TrimSpace(segment.Text) == "")

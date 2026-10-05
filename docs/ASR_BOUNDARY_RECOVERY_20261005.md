@@ -84,3 +84,29 @@ que les cinq autres pods sont inchangés. Aucun droit nouveau n’est donné aux
 
 Ne pas relancer un projet supprimé pour valider cette livraison. Un futur parcours
 métier réel reste distinct du rejeu des réponses fournisseur de cet incident.
+
+## Livraison effective
+
+Worker corrigé actif le5octobre à10:45:42UTC :
+`preview.local/atelier/web@sha256:04ebb99ade53f09d3c11ad190707fb4bb2a1ac49d8133bc2235516d72ba5d88a`.
+Révision administrée `1a5c5236a931b5e3`, recette
+`web/deploy/preview/active-asr-bounds-20261005.json` ; ancienne révision
+`d3526b5cd9653ad8`, ancien worker c69c5adc conservé pour repli.
+
+Vérifications à10:47:36UTC : six services prêts, HTTPS200, cinq autres pods
+inchangés, worker sans erreur de job/panic dans le journal borné. Protections,
+CPU750m/mémoire768Mi, identités et références de secrets inchangés. Aucun appel IA.
+Le repli n’a pas été exercé en production.
+
+Le premier essai d’application ciblée a échoué avant tout changement : chemin
+Ansible des collections absent du contexte root. La procédure reprend désormais
+la valeur configurée du service courtier, sans installer ni mettre à jour les
+collections. Ne pas répéter une application sans diagnostiquer son refus.
+
+### Avant le prochain déploiement Tarjama
+
+Intégrer le correctif `2725543` à `web-vps` (revoir/cherry-pick, sans force-push)
+avant de reconstruire le worker. La branche de travail originale est restée propre
+à `0f33c2d`. Partir de la recette active nouvelle, pas d’une ancienne recette
+référençant c69c5adc ; sinon une future publication réintroduirait la régression.
+Aucun parcours de nouvel appel IA n’a été exécuté pour cette maintenance.

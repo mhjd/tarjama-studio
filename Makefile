@@ -1,7 +1,134 @@
 .PHONY: cli tui whisper-benchmark dev-api dev-api-reload dev-ui build-ui electron-build desktop-tools desktop-build desktop-package desktop-dist desktop-win-portable desktop-linux-appimage desktop-security-test desktop-windows-release desktop-linux-release desktop-release-checksums desktop-release desktop-dev npm-audit correction-skill-test
 
+CLI_PYTHON ?= $(if $(wildcard .venv-tts/bin/python),.venv-tts/bin/python,python3)
+.DEFAULT_GOAL := cli
+
+.PHONY: voice-audition voice-audition-sync voice-audition-test voice-audition-db
+voice-audition:
+	python3 -B tools/voice_audition/server.py $(ARGS)
+
+.PHONY: voice-audition-benchmark
+voice-audition-benchmark:
+	.venv-tts/bin/python -B tools/voice_audition/generate_benchmarks.py $(ARGS)
+
+.PHONY: voice-audition-videos
+voice-audition-videos:
+	.venv-asr/bin/python -B tools/voice_audition/render_videos.py $(ARGS)
+
+voice-audition-sync:
+	python3 -B tools/voice_audition/server.py --sync-only $(ARGS)
+
+voice-audition-test:
+	python3 -B -m unittest discover -s tools/voice_audition -p 'test_*.py' -v
+	node --test tools/voice_audition/test_app.cjs
+
+voice-audition-db:
+	@test -f data/workspaces/voice-audition/voices.sqlite3 || (echo 'Lancer make voice-audition ou make voice-audition-sync avant inspection.'; exit 1)
+	sqlite3 -header -column data/workspaces/voice-audition/voices.sqlite3 "SELECT path, decision, updated_at FROM voices ORDER BY decision, path;"
+.PHONY: cli-api-build cli-api-test cli-tools-setup
+cli-api-build:
+	mkdir -p web/.cache
+	cd web/backend && GOCACHE="$(CURDIR)/web/.cache/native-go-build" go build -o ../.cache/local-api ./cmd/local-api
+
+cli-api-test:
+	cd web/backend && GOCACHE="$(CURDIR)/web/.cache/native-go-build" go test ./cmd/local-api ./internal/research
+
+cli-tools-setup:
+	.venv-tts/bin/python -m pip install --upgrade 'yt-dlp[default]'
+
 cli:
+	$(CLI_PYTHON) -B web/cli/main.py $(ARGS)
+
+.PHONY: cli-chatgpt
+cli-chatgpt:
+	$(CLI_PYTHON) -B web/cli/chatgpt_review.py $(ARGS)
+
+.PHONY: cli-asr-retry-chunk
+cli-asr-retry-chunk:
+	$(CLI_PYTHON) -B web/cli/retry_asr_chunk.py $(ARGS)
+
+ifeq ($(firstword $(ARGS)),api)
+cli: cli-api-build
+endif
+
+.PHONY: cli-legacy cli-test cli-tts-setup cli-asr-setup cli-tts-smoke
+cli-legacy:
 	.venv-asr/bin/python scripts/tarjama_cli.py $(ARGS)
+
+cli-test:
+	python3 -B -m unittest discover -s web/cli -p 'test_*.py' -v
+
+TTS_PYTHON ?= python3.12
+cli-tts-setup:
+	$(TTS_PYTHON) -m venv .venv-tts
+	.venv-tts/bin/python -m pip install -r web/cli/requirements-tts.txt
+
+.PHONY: cli-piper-setup cli-piper cli-piper-compare
+cli-piper-setup:
+	$(TTS_PYTHON) -m venv .venv-piper
+	.venv-piper/bin/python -m pip install -r web/cli/requirements-piper.txt
+	mkdir -p web/.cache/piper
+	.venv-piper/bin/python -m piper.download_voices --download-dir web/.cache/piper fr_FR-tom-medium fr_FR-upmc-medium
+
+cli-piper:
+	$(MAKE) cli CLI_PYTHON=.venv-piper/bin/python ARGS='$(ARGS)'
+
+cli-piper-compare:
+	.venv-piper/bin/python -B web/cli/piper_compare.py $(ARGS)
+
+.PHONY: cli-pocket-setup cli-pocket-sample
+cli-pocket-setup:
+	$(TTS_PYTHON) -m venv .venv-pocket
+	.venv-pocket/bin/python -m pip install -r web/cli/requirements-pocket.txt
+
+cli-pocket-sample:
+	.venv-pocket/bin/python -B web/cli/pocket_sample.py $(ARGS)
+
+.PHONY: cli-retime
+cli-retime:
+	$(CLI_PYTHON) -B web/cli/retime_video.py $(ARGS)
+
+.PHONY: cli-qwen-compare
+cli-qwen-compare:
+	.venv-tts/bin/python -B web/cli/qwen_compare.py $(ARGS)
+
+.PHONY: cli-qwen-sample
+cli-qwen-sample:
+	.venv-tts/bin/python -B web/cli/qwen_sample.py $(ARGS)
+
+.PHONY: cli-qwen-batch-benchmark
+cli-qwen-batch-benchmark:
+	.venv-tts/bin/python -B web/cli/benchmark_qwen_batch.py $(ARGS)
+
+.PHONY: cli-subtitle-audit
+cli-subtitle-audit:
+	$(CLI_PYTHON) -B web/cli/audit_subtitle_timing.py $(ARGS)
+
+.PHONY: cli-subtitle-experiment
+cli-subtitle-experiment:
+	$(CLI_PYTHON) -B web/cli/experiment_audio_subtitles.py $(ARGS)
+
+.PHONY: cli-subtitle-align
+ALIGN_PYTHON ?= $(if $(wildcard .venv-asr/bin/python),.venv-asr/bin/python,.venv-cli-asr/bin/python)
+cli-subtitle-align:
+	$(ALIGN_PYTHON) -B web/cli/align_subtitles.py $(ARGS)
+
+.PHONY: cli-canary-setup cli-canary-align
+cli-canary-setup:
+	uv venv --python 3.11 .venv-canary
+	uv pip install --python .venv-canary/bin/python -r web/cli/requirements-canary.txt
+
+cli-canary-align:
+	.venv-canary/bin/python -B web/cli/canary_alignment.py $(ARGS)
+
+cli-asr-setup:
+	$(TTS_PYTHON) -m venv .venv-cli-asr
+	.venv-cli-asr/bin/python -m pip install -r web/cli/requirements-asr.txt
+
+# Explicit real-model check; downloads local weights, no paid API calls.
+cli-tts-smoke:
+	@test -n "$(TTS_SMOKE_OUTPUT)" || (echo 'Indiquer un nouveau TTS_SMOKE_OUTPUT sous exports/.'; exit 1)
+	.venv-tts/bin/python -B web/cli/smoke_tts.py --output "$(TTS_SMOKE_OUTPUT)" $(if $(filter 1,$(TTS_SMOKE_CLONE)),--clone,)
 
 tui:
 	.venv-asr/bin/python scripts/tarjama_cli.py tui

@@ -23,6 +23,7 @@ import (
 var prompts embed.FS
 
 const TextModel = "openai/gpt-6-luna"
+const TextReasoningEffort = "medium"
 const TextMaxOutputTokens = 32768
 const GroqModel = "whisper-large-v3"
 
@@ -172,7 +173,7 @@ func (p *HTTPProviders) textWithResearch(ctx context.Context, key, kind string, 
 	}
 	runner := research.Runner{Client: p.Client, Endpoint: endpoint, Model: model, LocalTools: p.References}
 	if model == TextModel {
-		runner.ReasoningEffort = "medium"
+		runner.ReasoningEffort = TextReasoningEffort
 	}
 	output, err := runner.Run(ctx, key, string(prompt), input, schema)
 	result.Grounding, _ = json.Marshal(output.Audit)

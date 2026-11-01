@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>À l’oreille — casting de voix</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/benchmark.css"><script src="/app.js" defer></script></head>
+<body>
+<header><a class="brand" href="#audition"><span class="brand-icon">◖</span> À l’oreille<span class="brand-sub">LE CASTING</span></a><nav aria-label="Navigation"><button id="tab-audition" class="tab active">Découvrir</button><button id="tab-favorites" class="tab">Ma sélection <span id="favorite-count">0</span></button></nav><span id="save-status" role="status">Connexion…</span></header>
+<main>
+<div id="error" role="alert" hidden></div>
+<section id="audition">
+<div class="intro"><p class="eyebrow">CML-TTS / FRANÇAIS / ENHANCED UNIQUEMENT</p><h1>Une voix.<br>Un coup de cœur.</h1><p class="subtitle">Écoute. Garde ce qui te plaît.<br>Le reste peut attendre.</p></div>
+<div class="deck-area"><div class="progress"><span id="progress-label">Chargement du catalogue…</span><span id="remaining"></span></div><progress id="progress" max="1" value="0" aria-label="Voix examinées"></progress>
+<article id="voice-card" class="voice-card"><div class="card-top"><span class="pill">FRANÇAIS</span><span class="enhanced">✧ Enhanced</span></div><div id="gesture-label" aria-hidden="true"></div><div class="sound-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p class="voice-label">FAISONS CONNAISSANCE</p><h2 id="voice-name">Une nouvelle voix</h2><p id="voice-file" class="voice-file"></p><audio id="main-audio" controls preload="none" aria-label="Écouter la voix"></audio><p class="audio-hint">L’extrait original, sans nouvelle génération.</p><a id="source-link" target="_blank" rel="noreferrer">Voir la source ↗</a></article>
+<div id="finished" class="empty" hidden><span>✦</span><h2>Tu as fait le tour.</h2><p>Ta prochaine voix se trouve peut-être déjà dans ta sélection.</p><button id="show-selection" class="primary">Écouter ma sélection</button></div>
+<div class="actions"><button id="pass" class="decision pass" aria-label="Passer cette voix"><span>×</span>Passer <kbd>←</kbd></button><button id="keep" class="decision keep" aria-label="Garder cette voix"><span>♡</span>Garder <kbd>→</kbd></button></div><button id="undo" class="undo">↶ Annuler le dernier choix</button><p class="keyboard-hint">Espace pour écouter · glisse la carte pour choisir</p></div>
+</section>
+<section id="favorites" hidden>
+<div class="selection-heading"><div><p class="eyebrow">LES VOIX QUI RESTENT</p><h1>Ma sélection<span class="dot">.</span></h1><p class="subtitle">Classe les voix par préférence et garde tes commentaires.</p></div><button id="export" class="outline">Exporter la sélection ↗</button></div>
+<div class="benchmark-info"><p id="benchmark-label">Importance de la logique · début 5 min 17 s · Qwen3-TTS · température 0,3</p><span id="benchmark-progress" role="status">Chargement des vidéos…</span><p>Même passage pour chaque voix. Français à vitesse naturelle, image et original recalés, fond à −24 dB pendant le doublage. Sous-titres courts alignés sur les mots. Narration synthétique.</p></div>
+<div id="comparison" hidden><div class="comparison-title"><h2>Le face-à-face</h2><button id="clear-comparison" class="outline">Fermer</button></div><div class="compare-mode" role="group" aria-label="Contenu à comparer"><button id="compare-clones" class="outline chosen" aria-pressed="true">Vidéos doublées</button><button id="compare-references" class="outline" aria-pressed="false">Références originales</button></div><div id="comparison-slots"></div><p>Une seule lecture à la fois pour alterner facilement entre les deux voix.</p></div>
+<p id="selection-help">La meilleure voix en premier : utilise Monter / Descendre. Les notes s’enregistrent en quittant le champ. « Comparer » ouvre deux voix côte à côte.</p>
+<div id="favorite-grid"></div><div id="no-favorites" class="empty" hidden><span>♡</span><h2>Tout commence par une écoute.</h2><p>Les voix que tu gardes apparaîtront ici.</p><button id="back-discovery" class="primary">Découvrir les voix</button></div></section>
+</main>
+<footer><span class="footer-mark">Écouter plutôt que deviner.</span><details><summary>Source & données</summary><p>Extraits <a href="https://huggingface.co/kyutai/tts-voices/tree/main/cml-tts/fr" target="_blank" rel="noreferrer">Kyutai / CML-TTS français</a>. Fichiers _enhanced.wav uniquement. Les choix sont enregistrés dans SQLite après chaque action confirmée.</p><code id="database-path"></code></details><span>LOCAL · SANS COMPTE · SANS API PAYANTE</span></footer>
+</body></html>

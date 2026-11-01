@@ -1,0 +1,4 @@
+pocket-tts==3.3.0
+torch==2.14.1
+soundfile==0.14.0
+PyYAML==6.0.3

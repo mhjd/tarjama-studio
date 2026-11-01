@@ -1,0 +1,4 @@
+# Isolated from the TTS/Whisper environments: official experimental timestamps.
+nemo_toolkit[asr]==3.0.0
+torch==2.12.1
+torchaudio==2.11.0
